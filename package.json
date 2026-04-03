@@ -1,0 +1,22 @@
+{
+  "name": "igra-na-klik",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @igra/shared",
+    "dev:server": "npm run dev -w @igra/server",
+    "dev:host": "npm run dev -w @igra/host",
+    "dev:controller": "npm run dev -w @igra/controller",
+    "dev": "npm run build:shared && concurrently \"npm:dev:server\" \"npm:dev:host\" \"npm:dev:controller\"",
+    "build": "npm run build:shared && npm run build -w @igra/server && npm run build -w @igra/host && npm run build -w @igra/controller",
+    "clean": "rimraf packages/*/dist packages/*/node_modules node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.10"
+  }
+}
