@@ -10,6 +10,7 @@ import { RoomManager } from '../room/RoomManager.js';
 import { GameManager } from '../game/GameManager.js';
 import { GameRegistry } from '../game/GameRegistry.js';
 import { TestGameModule } from '../game/games/test-game/TestGameModule.js';
+import { QuizGameModule } from '../game/games/quiz/QuizGameModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 
@@ -32,6 +33,7 @@ export function setupSocket(
   const roomManager = new RoomManager();
   const gameRegistry = new GameRegistry();
   gameRegistry.register(new TestGameModule());
+  gameRegistry.register(new QuizGameModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

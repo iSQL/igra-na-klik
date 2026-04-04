@@ -284,7 +284,99 @@ after all questions → 'game-over' → final leaderboard
 
 ---
 
-## Phase 4: Draw & Guess Game
+## Phase 4: Polish — Sounds, Haptics, Reconnection, PWA
+
+**Goal**: Production-quality polish for the existing platform and Quiz game. Sounds on host, haptic feedback on controllers, robust reconnection, PWA for controller, mobile-optimized UI.
+
+### Packages
+- `packages/host`: `howler`, `@types/howler`
+- `packages/controller`: `vite-plugin-pwa` (dev)
+
+### 4A: Host Sounds (Howler.js)
+
+Sound effects play on the host (TV) during key moments. Using Howler.js for reliable cross-browser audio.
+
+**Files to create:**
+- `src/audio/SoundManager.ts` — singleton wrapping Howler.js. Methods: `play('tick')`, `play('correct')`, `play('wrong')`, `play('reveal')`, `play('victory')`, `play('join')`, `play('countdown')`. Handles preloading, volume control, prevents overlap on rapid triggers.
+- `src/audio/sounds/` — directory with free/CC0 `.mp3` files (or generate with Web Audio API as fallback: simple sine/square wave beeps for tick, ascending tone for correct, descending for wrong, fanfare chord for victory)
+- `src/hooks/useSound.ts` — React hook: `const { play } = useSound()`. Wraps SoundManager for component use.
+
+**Files to modify:**
+- `src/games/quiz/QuizGameHost.tsx` — tick sound during answering countdown, reveal sound on showing-results, correct/wrong stinger, victory on final leaderboard
+- `src/components/PlayerList.tsx` — play 'join' sound when a new player appears
+
+**Sound trigger map:**
+
+| Moment | Sound | When |
+|---|---|---|
+| Player joins lobby | `join` | `room:player-joined` event |
+| Question countdown | `tick` | each second during `answering` phase when ≤5s |
+| Results revealed | `reveal` | transition to `showing-results` |
+| Final leaderboard | `victory` | transition to `ended` phase |
+
+### 4B: Controller Haptics
+
+Vibration feedback on phones using `navigator.vibrate()`.
+
+**Files to create:**
+- `src/utils/haptics.ts` — `vibrate(pattern)` wrapper. Patterns: `tap: [50]`, `success: [50, 50, 100]`, `error: [100, 50, 100, 50, 100]`. No-op if API unavailable.
+- `src/hooks/useHaptics.ts` — React hook returning `{ tap, success, error }` functions
+
+**Files to modify:**
+- `src/games/quiz/components/AnswerButtons.tsx` — `tap` on button press, `success` on correct result, `error` on wrong result
+- `src/games/quiz/QuizGameController.tsx` — trigger haptics on phase transitions to results
+
+### 4C: Reconnection Hardening
+
+Currently disconnect = mark as disconnected. Need: grace period + automatic restore.
+
+**Server changes:**
+- `src/room/PlayerManager.ts` (modify) — on disconnect: start 30s `setTimeout`. If player reconnects with valid token, cancel timer and restore. If timer fires, fully remove player and emit `room:player-left`.
+- `src/socket/setup.ts` (modify) — on new connection, check for `reconnectToken` in handshake `auth` object. If found + valid, restore player's socket data and re-join room.
+- `src/socket/middleware/auth.ts` (new) — Socket.io middleware extracting `reconnectToken` from `socket.handshake.auth`
+
+**Controller changes:**
+- `src/socket.ts` (modify) — pass `reconnectToken` from localStorage in socket `auth` option. Add reconnection with exponential backoff (`reconnectionDelay: 1000`, `reconnectionDelayMax: 5000`).
+- `src/store/playerStore.ts` (modify) — ensure token persists across page reloads
+- `src/App.tsx` (modify) — show "Reconnecting..." overlay when `isConnected` is false but player exists
+
+**Reconnection state machine (server):**
+```
+CONNECTED →[socket disconnect]→ DISCONNECTED (start 30s timer)
+DISCONNECTED →[reconnect with valid token within 30s]→ CONNECTED (cancel timer, restore seat)
+DISCONNECTED →[30s elapsed]→ REMOVED (emit room:player-left, clean up)
+DISCONNECTED →[reconnect with invalid/no token]→ treat as new player
+```
+
+### 4D: PWA Setup (Controller)
+
+Make the controller installable as a standalone app on phones.
+
+**Files to create:**
+- `public/manifest.json` — `name: "Igra Na Klik"`, `short_name: "Igra"`, `start_url: "/"`, `display: "standalone"`, `theme_color: "#1a1a2e"`, `background_color: "#1a1a2e"`, icons
+- `public/icons/icon-192.png` — PWA icon 192x192
+- `public/icons/icon-512.png` — PWA icon 512x512
+
+**Files to modify:**
+- `vite.config.ts` — add `VitePWA({ registerType: 'autoUpdate', manifest: false (use public/manifest.json), workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg}'] } })`
+- `index.html` — add `<link rel="manifest" href="/manifest.json">`, `<meta name="theme-color">`, `<link rel="apple-touch-icon">`
+
+### 4E: Mobile UI Polish
+
+**Files to modify:**
+- `packages/controller/src/styles/global.css` — safe-area-inset padding (`env(safe-area-inset-*)`), prevent overscroll (`overscroll-behavior: none`), prevent zoom on input focus (`touch-action: manipulation`), min 48px touch targets, disable text selection on game elements (`user-select: none`)
+- `packages/controller/index.html` — add `<meta name="apple-mobile-web-app-capable" content="yes">`
+
+### Verification
+1. **Sounds**: Host plays tick during quiz countdown (≤5s), reveal on results, victory on final leaderboard. Sounds don't overlap or cut out.
+2. **Haptics**: On a real phone, feel vibration when tapping quiz answer buttons. Different pattern for correct vs wrong.
+3. **Reconnection**: Player joins game → close tab → reopen within 30s → player restored with score. After 30s → fully removed, host shows player gone.
+4. **PWA**: On Android Chrome, "Add to Home Screen" prompt appears. Installed app opens standalone without browser chrome.
+5. **Mobile UI**: No zoom on double-tap or input focus. No overscroll bounce. Safe area insets on notched phones.
+
+---
+
+## Phase 5: Draw & Guess Game
 
 **Goal**: Drawing game with live canvas streaming, turn rotation, and text-based guessing.
 
@@ -361,57 +453,6 @@ Phone touchmove → collect points (normalized 0-1)
 
 ---
 
-## Phase 5: Polish — Sounds, Haptics, Reconnection, PWA
-
-**Goal**: Production-quality polish across all areas.
-
-### Packages: `vite-plugin-pwa`, `workbox-window` (dev) on controller
-
-### Files to create/modify
-
-**packages/host**
-- `src/audio/SoundManager.ts` — Howler.js singleton, preloads sounds, play('countdown'|'correct'|'wrong'|'reveal'|'victory'|'tick'|'join')
-- `src/audio/sounds/` — sound effect files (free/CC0)
-- `src/hooks/useSound.ts` — React hook wrapping SoundManager
-- `src/games/quiz/QuizGameHost.tsx` (modify) — add sound triggers
-- `src/games/draw-guess/DrawGuessHost.tsx` (modify) — add sound triggers
-- `src/components/PlayerList.tsx` (modify) — play join sound
-
-**packages/controller**
-- `vite.config.ts` (modify) — add VitePWA plugin config
-- `public/manifest.json` — PWA manifest (standalone, dark theme)
-- `public/icons/` — PWA icons (192, 512, apple-touch-icon)
-- `src/utils/haptics.ts` — navigator.vibrate() wrapper with patterns (tap, success, error)
-- `src/hooks/useHaptics.ts` — React hook for haptic feedback
-- `src/games/quiz/components/AnswerButtons.tsx` (modify) — add haptic on tap + result
-- `src/games/draw-guess/components/DrawingPad.tsx` (modify) — haptic on tool change
-- `src/games/draw-guess/components/GuessingInput.tsx` (modify) — haptic on correct guess
-- `src/socket.ts` (modify) — reconnection with exponential backoff + reconnectToken
-- `src/store/playerStore.ts` (modify) — persist/restore reconnectToken from localStorage
-- `src/styles/global.css` (modify) — safe-area-inset, prevent zoom, no overscroll, min 48px touch targets
-
-**packages/server**
-- `src/room/PlayerManager.ts` (modify) — 30s grace period on disconnect, restore on valid token reconnect
-- `src/socket/setup.ts` (modify) — handle reconnection handshake
-- `src/socket/middleware/auth.ts` — extract reconnectToken from handshake auth
-
-### Reconnection state machine
-```
-CONNECTED →[disconnect]→ DISCONNECTED (30s timer starts)
-DISCONNECTED →[valid token within 30s]→ CONNECTED (restored)
-DISCONNECTED →[30s elapsed]→ REMOVED
-```
-
-### Verification
-1. Host plays sounds during quiz and draw-guess (no overlap/cutout)
-2. Phone vibrates on quiz answer tap and correct/wrong result
-3. Player disconnects + reconnects within 30s → restored with score intact
-4. After 30s → fully removed
-5. Controller installable as PWA on Android (standalone mode)
-6. Mobile: no zoom on double-tap, no overscroll, large touch targets, notch-safe
-
----
-
 ## File Count Summary
 
 | Phase | New files | Modified files |
@@ -419,9 +460,9 @@ DISCONNECTED →[30s elapsed]→ REMOVED
 | Phase 1: Scaffolding + Rooms | ~28 | 0 |
 | Phase 2: Game Framework | ~14 | 4 |
 | Phase 3: Quiz | ~11 | 3 |
-| Phase 4: Draw & Guess | ~14 | 2 |
-| Phase 5: Polish | ~6 | 10 |
-| **Total** | **~73** | **~19** |
+| Phase 4: Polish | ~8 | ~10 |
+| Phase 5: Draw & Guess | ~14 | 2 |
+| **Total** | **~75** | **~19** |
 
 ## Critical Files
 - `packages/shared/src/types/events.ts` — single source of truth for all socket communication
