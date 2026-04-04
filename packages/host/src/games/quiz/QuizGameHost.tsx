@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useSound } from '../../hooks/useSound';
 import { QuestionDisplay } from './components/QuestionDisplay';
 import { OptionGrid } from './components/OptionGrid';
 import { AnswerCounter } from './components/AnswerCounter';
@@ -8,6 +10,32 @@ import type { QuizOption, QuizResultData, QuizLeaderboardEntry } from '@igra/sha
 
 export default function QuizGameHost() {
   const gameState = useGameStore((s) => s.gameState);
+  const { play } = useSound();
+  const prevPhaseRef = useRef<string | null>(null);
+  const prevTimeRef = useRef<number>(Infinity);
+
+  useEffect(() => {
+    if (!gameState) return;
+    const { phase, timeRemaining } = gameState;
+
+    // Sound on phase transition
+    if (phase !== prevPhaseRef.current) {
+      if (phase === 'showing-results') play('reveal');
+      if (phase === 'ended') play('victory');
+      prevPhaseRef.current = phase;
+    }
+
+    // Tick sound during answering countdown (≤5s)
+    if (phase === 'answering') {
+      const currSec = Math.ceil(timeRemaining);
+      const prevSec = Math.ceil(prevTimeRef.current);
+      if (currSec !== prevSec && currSec <= 5 && currSec > 0) {
+        play('tick');
+      }
+    }
+    prevTimeRef.current = timeRemaining;
+  }, [gameState, play]);
+
   if (!gameState) return null;
 
   const { phase, timeRemaining, data } = gameState;

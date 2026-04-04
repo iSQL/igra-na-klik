@@ -24,6 +24,7 @@ export interface ClientToServerEvents {
     reconnectToken?: string;
   }) => void;
   'host:start-game': (data: { gameId: string }) => void;
+  'host:stop-game': () => void;
   'game:player-action': (data: {
     action: string;
     data: Record<string, unknown>;

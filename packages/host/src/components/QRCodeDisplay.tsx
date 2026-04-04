@@ -1,14 +1,21 @@
+import { useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface QRCodeDisplayProps {
   roomCode: string;
 }
 
-const CONTROLLER_URL =
-  import.meta.env.VITE_CONTROLLER_URL || 'http://localhost:5174';
-
 export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
-  const joinUrl = `${CONTROLLER_URL}?code=${roomCode}`;
+  const controllerBase = useMemo(() => {
+    if (import.meta.env.VITE_CONTROLLER_URL) {
+      return import.meta.env.VITE_CONTROLLER_URL as string;
+    }
+    // Derive from current host — same hostname, controller port
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}:5174`;
+  }, []);
+
+  const joinUrl = `${controllerBase}?code=${roomCode}`;
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -26,7 +33,7 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
           color: 'var(--text-secondary)',
         }}
       >
-        Scan or visit: {CONTROLLER_URL}
+        Scan or visit: {controllerBase}
       </p>
     </div>
   );

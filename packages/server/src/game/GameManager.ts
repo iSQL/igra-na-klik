@@ -140,6 +140,13 @@ export class GameManager {
     }
   }
 
+  stopGame(roomCode: string): { error?: string } {
+    const active = this.activeGames.get(roomCode);
+    if (!active) return { error: 'No active game' };
+    this.endGame(roomCode);
+    return {};
+  }
+
   private endGame(roomCode: string): void {
     const active = this.activeGames.get(roomCode);
     if (!active) return;

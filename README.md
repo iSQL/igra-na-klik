@@ -5,9 +5,10 @@ A party game platform where one device acts as the host display (TV/big screen) 
 ## How It Works
 
 1. Open the **host** on a TV or laptop — it automatically creates a room with a 4-letter code + QR code
-2. Players open the **controller** on their phones, enter the code (or scan the QR), and pick a name
+2. Players open the **controller** on their phones, scan the QR code or enter the room code, and pick a name
 3. The host lobby shows all connected players in real-time
 4. When ready, the host picks a mini-game and starts
+5. The host can stop the game at any time to return to game selection
 
 ## Tech Stack
 
@@ -15,19 +16,19 @@ A party game platform where one device acts as the host display (TV/big screen) 
 |---|---|---|
 | `@igra/shared` | TypeScript | Shared types, constants, utilities |
 | `@igra/server` | Node.js, Express, Socket.io | WebSocket server, room management |
-| `@igra/host` | React, Vite, Zustand, Framer Motion | TV/big screen display |
-| `@igra/controller` | React, Vite, Zustand | Phone controller UI |
+| `@igra/host` | React, Vite, Zustand, Framer Motion, Howler.js | TV/big screen display |
+| `@igra/controller` | React, Vite, Zustand | Phone controller UI (PWA) |
 
 ## Project Structure
 
 ```
 igra-na-klik/
 ├── packages/
-│   ├── shared/          # Types, socket event contracts, constants
-│   ├── server/          # WebSocket server + room system
+│   ├── shared/          # Types, socket event contracts, constants, game definitions
+│   ├── server/          # WebSocket server + room system + game modules
 │   ├── host/            # Host display (React + Vite, port 5173)
 │   └── controller/      # Phone controller (React + Vite, port 5174)
-├── PLAN.md              # Full implementation plan (5 phases)
+├── PLAN.md              # Full implementation plan
 ├── package.json         # npm workspaces root
 └── tsconfig.base.json   # Shared TypeScript config
 ```
@@ -63,6 +64,7 @@ This starts:
 2. Open `http://localhost:5174` on another tab or your phone
 3. Enter the 4-letter room code and a name
 4. The host screen updates to show the new player
+5. Pick a game and start!
 
 ### LAN Testing (phones on same Wi-Fi)
 
@@ -87,33 +89,57 @@ To test with real phones, expose the services on your local network:
 
 4. On your PC, open the host at `http://192.168.1.42:5173`
 
-5. On phones, open `http://192.168.1.42:5174` and join with the room code
+5. The QR code on the lobby screen will automatically use your machine's IP — phones can scan it directly
+
+6. On phones, open the URL from the QR code or go to `http://192.168.1.42:5174` and enter the room code
 
 > **Note:** The Vite dev servers are configured with `host: true` so they bind to `0.0.0.0` and are accessible on LAN. The `.env` tells the Socket.io server to accept connections from the LAN origins (CORS). Make sure your firewall allows ports 3001, 5173, and 5174.
 
 ## Current Status
 
-**Phase 2 complete** — pluggable game module system.
+**Phase 4 complete** — full quiz game with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
+- [x] **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
+- [x] **Phase 4** — Polish (sounds, haptics, reconnection, PWA, UX improvements)
 
-### Phase 2 Details
+### What's Implemented
 
-- `IGameModule` interface with lifecycle hooks (`onStart`, `onPlayerAction`, `onTick`, `onEnd`)
-- `GameManager` orchestrates game lifecycle with 1-second tick loop
-- `GameRegistry` for registering game modules by ID
-- `GameRouter` on host and controller lazy-loads game-specific React components
-- `GameSelectScreen` on host for choosing which game to play
-- Test game included: first player to press the button wins
+**Room System**
+- 4-letter room codes (excludes ambiguous chars O, I, L)
+- Host creates room, players join by code or QR scan
+- QR code uses the actual server hostname — works on LAN without config
+
+**Quiz Game**
+- 25-question bank, 10 random questions per game
+- Phase flow: question preview → answering (15s) → results reveal → leaderboard
+- Speed-based scoring: faster correct answers score more (up to 1000 pts)
+- Animated leaderboard with rank change tracking (Framer Motion)
+- Host shows answer distribution; controllers show colored answer buttons
+
+**Sound & Haptics**
+- Host plays programmatically generated tones (no external audio files) via Howler.js
+- Tick sounds during countdowns, correct/wrong sounds on reveal, victory fanfare
+- Controller vibrates on answer tap, correct/wrong feedback
+
+**Reconnection**
+- Token-based reconnection with 30s grace period
+- Token stored in `localStorage` — survives page refresh
+- Players restored with score intact if they reconnect in time
+
+**PWA (Controller)**
+- Installable as a standalone app on Android
+- Splash screen, theme color, touch-optimized layout
+- No zoom on input focus, overscroll prevention, safe-area support
+
+**Stop Game**
+- Host can stop the current game at any time via "Stop Game" button
+- Returns all clients to the game selection screen
 
 ### Upcoming
 
-See [PLAN.md](PLAN.md) for full details on remaining phases:
-
-- **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
-- **Phase 4** — Draw & Guess (live canvas streaming, word guessing)
-- **Phase 5** — Polish (sounds, haptics, reconnection, PWA)
+- **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, word guessing)
 
 ## Architecture
 
@@ -122,6 +148,23 @@ See [PLAN.md](PLAN.md) for full details on remaining phases:
 - Host creates a room → gets a 4-letter code (excludes ambiguous chars like O, I, L)
 - Players join by code → server assigns UUID + avatar color + reconnect token
 - Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within 30s, they're restored
+
+### Game Module System
+
+Each mini-game implements the `IGameModule` interface on the server:
+
+```typescript
+interface IGameModule {
+  readonly gameId: string;
+  onStart(room: Room): GameState;
+  onPlayerAction(room: Room, state: GameState, playerId: string, action: string, data: Record<string, unknown>): GameState | null;
+  onTick(room: Room, state: GameState, deltaMs: number): GameState | null;
+  onPlayerDisconnect(room: Room, state: GameState, playerId: string): GameState | null;
+  onEnd(room: Room, state: GameState): void;
+}
+```
+
+Host and controller each have a `GameRouter` that lazy-loads the appropriate React component by `gameId`.
 
 ### Socket Events
 
@@ -142,6 +185,7 @@ See [PLAN.md](PLAN.md) for full details on remaining phases:
 | Event | Direction | Description |
 |---|---|---|
 | `host:start-game` | host → server | Host starts selected game |
+| `host:stop-game` | host → server | Host stops current game |
 | `game:started` | server → all | Game has started |
 | `game:state-update` | server → host | Full game state update |
 | `game:player-state` | server → controller | Per-player game state (private data) |

@@ -38,6 +38,19 @@ export function registerGameHandlers(
     }
   });
 
+  socket.on('host:stop-game', () => {
+    const { roomCode, isHost } = socket.data;
+    if (!roomCode || !isHost) {
+      socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can stop a game' });
+      return;
+    }
+
+    const result = gameManager.stopGame(roomCode);
+    if (result.error) {
+      socket.emit('error', { code: 'STOP_ERROR', message: result.error });
+    }
+  });
+
   socket.on('game:player-action', (data) => {
     const { roomCode, playerId } = socket.data;
     if (!roomCode || !playerId) return;

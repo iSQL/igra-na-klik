@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import type { QuizResultData } from '@igra/shared';
 import { usePlayerStore } from '../../../store/playerStore';
+import { useHaptics } from '../../../hooks/useHaptics';
 
 interface RoundResultProps {
   results: QuizResultData;
@@ -7,11 +9,17 @@ interface RoundResultProps {
 
 export function RoundResult({ results }: RoundResultProps) {
   const playerId = usePlayerStore((s) => s.player?.id);
+  const haptics = useHaptics();
   if (!playerId) return null;
 
   const myAnswer = results.answers.find((a) => a.playerId === playerId);
   const myScore = results.scores.find((s) => s.playerId === playerId);
   const correct = myAnswer?.correct ?? false;
+
+  useEffect(() => {
+    if (correct) haptics.success();
+    else haptics.error();
+  }, []);
 
   return (
     <div

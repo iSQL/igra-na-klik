@@ -6,8 +6,32 @@ import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameScreen } from './screens/GameScreen';
 
+function ReconnectingOverlay() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 15, 35, 0.9)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Reconnecting...</p>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+          Please wait
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
-  const { player, setPlayer, setRoom, setConnected, reset } = usePlayerStore();
+  const { player, isConnected, setPlayer, setRoom, setConnected, reset } =
+    usePlayerStore();
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
 
   useEffect(() => {
@@ -93,7 +117,13 @@ export function App() {
     };
   }, []);
 
-  if (!player) return <JoinScreen />;
-  if (gameId) return <GameScreen />;
-  return <LobbyScreen />;
+  // Show reconnecting overlay when disconnected but player exists
+  const showReconnecting = player && !isConnected;
+
+  return (
+    <>
+      {showReconnecting && <ReconnectingOverlay />}
+      {!player ? <JoinScreen /> : gameId ? <GameScreen /> : <LobbyScreen />}
+    </>
+  );
 }

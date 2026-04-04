@@ -1,10 +1,21 @@
+import { useEffect, useRef } from 'react';
 import type { PublicPlayer } from '@igra/shared';
+import { useSound } from '../hooks/useSound';
 
 interface PlayerListProps {
   players: PublicPlayer[];
 }
 
 export function PlayerList({ players }: PlayerListProps) {
+  const { play } = useSound();
+  const prevCountRef = useRef(players.length);
+
+  useEffect(() => {
+    if (players.length > prevCountRef.current) {
+      play('join');
+    }
+    prevCountRef.current = players.length;
+  }, [players.length, play]);
   if (players.length === 0) {
     return (
       <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>

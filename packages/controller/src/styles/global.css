@@ -16,6 +16,10 @@
   --accent-hover: #5a52d5;
   --success: #2ecc71;
   --danger: #e74c3c;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 html,
@@ -27,6 +31,8 @@ body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 
 #root {
@@ -34,7 +40,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: calc(1rem + var(--safe-top)) calc(1rem + var(--safe-right)) calc(1rem + var(--safe-bottom)) calc(1rem + var(--safe-left));
 }
 
 button {
@@ -43,10 +49,28 @@ button {
   font-family: inherit;
   min-height: 48px;
   min-width: 48px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 input {
   font-family: inherit;
-  font-size: 1.2rem;
+  font-size: 1rem;
   min-height: 48px;
+  border-radius: 0;
+  -webkit-appearance: none;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type="text"],
+input[type="number"] {
+  font-size: 16px;
+}
+
+/* Game elements should not be selectable */
+.game-area,
+.game-area * {
+  user-select: none;
+  -webkit-user-select: none;
 }

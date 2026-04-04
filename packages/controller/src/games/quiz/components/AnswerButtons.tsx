@@ -1,5 +1,6 @@
 import type { QuizOption } from '@igra/shared';
 import { socket } from '../../../socket';
+import { useHaptics } from '../../../hooks/useHaptics';
 
 interface AnswerButtonsProps {
   options: QuizOption[];
@@ -8,8 +9,11 @@ interface AnswerButtonsProps {
 }
 
 export function AnswerButtons({ options, hasAnswered, selectedIndex }: AnswerButtonsProps) {
+  const haptics = useHaptics();
+
   const handleAnswer = (optionIndex: number) => {
     if (hasAnswered) return;
+    haptics.tap();
     socket.emit('game:player-action', {
       action: 'quiz:answer',
       data: { optionIndex },

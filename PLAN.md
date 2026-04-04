@@ -215,7 +215,7 @@ interface IGameModule {
 
 ---
 
-## Phase 3: Quiz Game
+## Phase 3: Quiz Game [DONE]
 
 **Goal**: Full quiz with timed questions, speed-based scoring, animated leaderboard on host, colored answer buttons on controllers.
 
@@ -284,7 +284,7 @@ after all questions → 'game-over' → final leaderboard
 
 ---
 
-## Phase 4: Polish — Sounds, Haptics, Reconnection, PWA
+## Phase 4: Polish — Sounds, Haptics, Reconnection, PWA [DONE]
 
 **Goal**: Production-quality polish for the existing platform and Quiz game. Sounds on host, haptic feedback on controllers, robust reconnection, PWA for controller, mobile-optimized UI.
 
