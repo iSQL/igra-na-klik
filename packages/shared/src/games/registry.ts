@@ -15,4 +15,11 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description: 'Timed multiple choice — fastest correct answer scores the most!',
   },
+  'draw-guess': {
+    id: 'draw-guess',
+    name: 'Draw & Guess',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description: 'Take turns drawing — others guess the word!',
+  },
 };

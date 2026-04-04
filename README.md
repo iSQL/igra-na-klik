@@ -97,12 +97,13 @@ To test with real phones, expose the services on your local network:
 
 ## Current Status
 
-**Phase 4 complete** — full quiz game with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — quiz + draw & guess, with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
 - [x] **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
 - [x] **Phase 4** — Polish (sounds, haptics, reconnection, PWA, UX improvements)
+- [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
 
 ### What's Implemented
 
@@ -137,9 +138,14 @@ To test with real phones, expose the services on your local network:
 - Host can stop the current game at any time via "Stop Game" button
 - Returns all clients to the game selection screen
 
-### Upcoming
-
-- **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, word guessing)
+**Draw & Guess**
+- 105-word bank across easy/medium/hard difficulties
+- Turn rotation with shuffled player order, 3 rounds by default
+- Drawer picks from 3 word choices (one per difficulty), 60s to draw
+- Live canvas streaming: normalized stroke points batched every 50ms
+- Progressive hints: letters reveal gradually as time elapses
+- Scoring: guessers earn up to 500 pts based on speed, drawer earns 100 per correct guesser
+- Full drawing toolbar on controller: 7 colors, 3 brush widths, clear button
 
 ## Architecture
 

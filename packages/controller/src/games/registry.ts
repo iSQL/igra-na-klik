@@ -5,4 +5,5 @@ type LazyGameComponent = () => Promise<{ default: ComponentType }>;
 export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'test-game': () => import('./test-game/TestGameController'),
   quiz: () => import('./quiz/QuizGameController'),
+  'draw-guess': () => import('./draw-guess/DrawGuessController'),
 };

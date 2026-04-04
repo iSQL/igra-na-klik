@@ -376,7 +376,7 @@ Make the controller installable as a standalone app on phones.
 
 ---
 
-## Phase 5: Draw & Guess Game
+## Phase 5: Draw & Guess Game [DONE]
 
 **Goal**: Drawing game with live canvas streaming, turn rotation, and text-based guessing.
 
