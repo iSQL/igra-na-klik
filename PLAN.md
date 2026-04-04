@@ -453,6 +453,63 @@ Phone touchmove → collect points (normalized 0-1)
 
 ---
 
+## Phase 6: Fibbage-style Bluffing ("Lažov") [DONE]
+
+**Goal**: Bluffing trivia game where players submit fake answers and try to fool each other. Ships **Serbian-only** — all in-game strings hardcoded in Serbian (Latin script). A future i18n retrofit with `react-i18next` will translate the rest of the platform.
+
+### Scoring
+- Truth finders: +500 per correct vote on the real answer
+- Fakers: +100 for each voter their fake fooled
+- Accidentally typing the real answer → credited as finding truth, submission excluded from voting pool
+- Identical fakes (case-insensitive) merged; fool bonus goes to both fakers per voter
+
+### Phase flow per question (5 questions per game)
+`showing-question` (5s) → `writing-answers` (30s) → `voting` (20s) → `showing-results` (8s) → `leaderboard` (5s) → next question or `ended`
+
+### Files created
+**packages/shared**
+- `src/types/fibbage.ts` — FibbageQuestion, Public variants, AnswerOption, VoteTally, FoolEntry, ResultData, LeaderboardEntry
+- `src/games/fibbage-questions.ts` — 34 Serbian trivia questions across jezik, životinje, telo, istorija, Srbija, nauka, hrana
+- `src/games/registry.ts` (modify) — `fibbage` GameDefinition with Serbian name "Lažov"
+- `src/index.ts` (modify) — barrel exports
+
+**packages/server**
+- `src/game/games/fibbage/FibbageState.ts` — internal state + phase-duration constants
+- `src/game/games/fibbage/FibbageModule.ts` — phase state machine, auto-finder detection, duplicate-fake merging, scoring
+- `src/socket/setup.ts` (modify) — register FibbageModule
+
+**packages/host** (Serbian strings)
+- `src/games/fibbage/FibbageHost.tsx` — phase router + tick/reveal/victory sounds
+- `src/games/fibbage/components/QuestionCard.tsx` — question + round + countdown
+- `src/games/fibbage/components/SubmissionCounter.tsx` — "{n}/{total} napisalo laž"
+- `src/games/fibbage/components/AnswerOptions.tsx` — numbered voting list ("Šta je pravi odgovor?")
+- `src/games/fibbage/components/VoteCounter.tsx` — "{n}/{total} glasalo"
+- `src/games/fibbage/components/ResultsReveal.tsx` — Framer Motion reveal with voter dots + "prevario/la" fool lists
+- `src/games/registry.ts` (modify) — fibbage lazy import
+- *Leaderboard reused directly from Quiz* — structurally compatible entry shape
+
+**packages/controller** (Serbian strings)
+- `src/games/fibbage/FibbageController.tsx` — phase router
+- `src/games/fibbage/components/AnswerInput.tsx` — 80-char textarea with "Pošalji"
+- `src/games/fibbage/components/VoteOptions.tsx` — tappable options; own fake grayed with "(tvoja laž)"
+- `src/games/fibbage/components/WaitingScreen.tsx` — generic waiting with message prop
+- `src/games/fibbage/components/RoundResult.tsx` — "Pogodio/la si!" / "Prevario/la si N!" / "Nije tačno"
+- `src/games/registry.ts` (modify) — fibbage lazy import
+
+### Verification
+1. Host game select shows "Lažov" card with Serbian description
+2. Writing phase: controllers show text input, host counter increments
+3. Voting phase: controllers show shuffled options, own fake grayed out
+4. Results phase: host animates reveal with voter dots; controllers show per-player result
+5. Auto-finder edge case: typing the real answer credits truth without creating a duplicate option
+6. Duplicate-fake edge case: two identical fakes merge into one option; both fakers get fool credit
+
+### Out of scope for this phase
+- i18n framework (planned separately — translate other games + platform UI; retrofit Fibbage into `locales/sr/fibbage.json`)
+- Custom question packs, category filters, configurable round count
+
+---
+
 ## File Count Summary
 
 | Phase | New files | Modified files |
@@ -462,7 +519,8 @@ Phone touchmove → collect points (normalized 0-1)
 | Phase 3: Quiz | ~11 | 3 |
 | Phase 4: Polish | ~8 | ~10 |
 | Phase 5: Draw & Guess | ~14 | 2 |
-| **Total** | **~75** | **~19** |
+| Phase 6: Fibbage (Lažov) | ~15 | 5 |
+| **Total** | **~90** | **~24** |
 
 ## Critical Files
 - `packages/shared/src/types/events.ts` — single source of truth for all socket communication

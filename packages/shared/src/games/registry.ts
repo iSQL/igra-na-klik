@@ -22,4 +22,11 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description: 'Take turns drawing — others guess the word!',
   },
+  fibbage: {
+    id: 'fibbage',
+    name: 'Lažov',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
+  },
 };

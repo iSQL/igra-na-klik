@@ -97,13 +97,14 @@ To test with real phones, expose the services on your local network:
 
 ## Current Status
 
-**All phases complete** — quiz + draw & guess, with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — quiz, draw & guess, and Fibbage-style bluffing (Serbian), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
 - [x] **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
 - [x] **Phase 4** — Polish (sounds, haptics, reconnection, PWA, UX improvements)
 - [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
+- [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
 
 ### What's Implemented
 
@@ -146,6 +147,16 @@ To test with real phones, expose the services on your local network:
 - Progressive hints: letters reveal gradually as time elapses
 - Scoring: guessers earn up to 500 pts based on speed, drawer earns 100 per correct guesser
 - Full drawing toolbar on controller: 7 colors, 3 brush widths, clear button
+
+**Lažov (Fibbage-style bluffing)** — *Serbian-only content*
+- 34-question Serbian trivia bank (Latin script), 5 questions per game
+- Phase flow: show question (5s) → write lies (30s) → vote (20s) → reveal (8s) → leaderboard
+- Players submit fake answers; all fakes + real answer shown as voting options
+- Scoring: +500 for finding the truth, +100 per voter fooled by your fake
+- Auto-finder detection: if a player types the real answer, they get truth credit and their submission is excluded from the voting pool
+- Duplicate fakes (case-insensitive) are merged — both fakers split the fool bonus
+- Players cannot vote for their own fake (visually grayed out)
+- All in-game UI strings hardcoded in Serbian (Latin); other games and platform UI remain English pending a future i18n retrofit
 
 ## Architecture
 

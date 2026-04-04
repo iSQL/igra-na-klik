@@ -5,5 +5,7 @@ export * from './constants.js';
 export * from './utils/room-code.js';
 export * from './types/quiz.js';
 export * from './types/draw-guess.js';
+export * from './types/fibbage.js';
 export * from './games/index.js';
 export * from './games/draw-words.js';
+export * from './games/fibbage-questions.js';
