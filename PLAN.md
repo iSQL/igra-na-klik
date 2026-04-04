@@ -64,7 +64,7 @@ interface IGameModule {
 
 ---
 
-## Phase 1: Project Scaffolding & Room System
+## Phase 1: Project Scaffolding & Room System [DONE]
 
 **Goal**: Monorepo setup, server with room CRUD, host shows lobby with QR code, controllers join by code.
 
@@ -155,7 +155,7 @@ interface IGameModule {
 
 ---
 
-## Phase 2: Pluggable Game Module System
+## Phase 2: Pluggable Game Module System [DONE]
 
 **Goal**: Build the game framework infrastructure. Register a trivial "test game" to verify the full pipeline.
 
