@@ -64,21 +64,53 @@ This starts:
 3. Enter the 4-letter room code and a name
 4. The host screen updates to show the new player
 
+### LAN Testing (phones on same Wi-Fi)
+
+To test with real phones, expose the services on your local network:
+
+1. Find your PC's local IP (e.g. `192.168.1.42`):
+   ```bash
+   # Windows
+   ipconfig
+   # macOS/Linux
+   ip addr show | grep "inet "
+   ```
+
+2. Create a `.env` file in the project root:
+   ```env
+   PORT=3001
+   HOST_ORIGIN=http://192.168.1.42:5173
+   CONTROLLER_ORIGIN=http://192.168.1.42:5174
+   ```
+
+3. Start with `npm run dev`
+
+4. On your PC, open the host at `http://192.168.1.42:5173`
+
+5. On phones, open `http://192.168.1.42:5174` and join with the room code
+
+> **Note:** The Vite dev servers are configured with `host: true` so they bind to `0.0.0.0` and are accessible on LAN. The `.env` tells the Socket.io server to accept connections from the LAN origins (CORS). Make sure your firewall allows ports 3001, 5173, and 5174.
+
 ## Current Status
 
-**Phase 1 complete** — project scaffolding and room system.
+**Phase 2 complete** — pluggable game module system.
 
-- [x] Monorepo with npm workspaces
-- [x] Shared types and typed Socket.io event contracts
-- [x] Server with room creation, player join/leave, reconnect token support
-- [x] Host lobby with room code, QR code, player list
-- [x] Controller with join screen (code + name input, URL pre-fill) and lobby
+- [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
+- [x] **Phase 2** — Pluggable game module framework with test game
+
+### Phase 2 Details
+
+- `IGameModule` interface with lifecycle hooks (`onStart`, `onPlayerAction`, `onTick`, `onEnd`)
+- `GameManager` orchestrates game lifecycle with 1-second tick loop
+- `GameRegistry` for registering game modules by ID
+- `GameRouter` on host and controller lazy-loads game-specific React components
+- `GameSelectScreen` on host for choosing which game to play
+- Test game included: first player to press the button wins
 
 ### Upcoming
 
 See [PLAN.md](PLAN.md) for full details on remaining phases:
 
-- **Phase 2** — Pluggable game module system (`IGameModule` interface, `GameManager`, lazy-loaded game components)
 - **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
 - **Phase 4** — Draw & Guess (live canvas streaming, word guessing)
 - **Phase 5** — Polish (sounds, haptics, reconnection, PWA)
@@ -93,6 +125,8 @@ See [PLAN.md](PLAN.md) for full details on remaining phases:
 
 ### Socket Events
 
+**Room events:**
+
 | Event | Direction | Description |
 |---|---|---|
 | `host:create-room` | host → server | Create a new room |
@@ -102,6 +136,26 @@ See [PLAN.md](PLAN.md) for full details on remaining phases:
 | `room:player-joined` | server → all | Broadcast: new player |
 | `room:player-left` | server → all | Broadcast: player disconnected |
 | `room:player-reconnected` | server → all | Broadcast: player restored |
+
+**Game events:**
+
+| Event | Direction | Description |
+|---|---|---|
+| `host:start-game` | host → server | Host starts selected game |
+| `game:started` | server → all | Game has started |
+| `game:state-update` | server → host | Full game state update |
+| `game:player-state` | server → controller | Per-player game state (private data) |
+| `game:player-action` | controller → server | Player sends a game action |
+| `game:phase-changed` | server → all | Game phase transition |
+| `game:ended` | server → all | Game finished with final scores |
+
+### Adding a New Game
+
+1. Add a `GameDefinition` entry in `packages/shared/src/games/registry.ts`
+2. Create a server module implementing `IGameModule` in `packages/server/src/game/games/`
+3. Register it in `packages/server/src/socket/setup.ts`
+4. Create host and controller React components in their respective `src/games/` directories
+5. Add lazy-import entries in `packages/host/src/games/registry.ts` and `packages/controller/src/games/registry.ts`
 
 ### Ports
 

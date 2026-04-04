@@ -7,12 +7,16 @@ import type {
   SocketData,
 } from '@igra/shared';
 import { RoomManager } from '../room/RoomManager.js';
+import { GameManager } from '../game/GameManager.js';
+import { GameRegistry } from '../game/GameRegistry.js';
+import { TestGameModule } from '../game/games/test-game/TestGameModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
+import { registerGameHandlers } from './handlers/game.js';
 
 export function setupSocket(
   httpServer: HttpServer,
   corsOrigins: string[]
-): { io: Server; roomManager: RoomManager } {
+): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -26,11 +30,23 @@ export function setupSocket(
   });
 
   const roomManager = new RoomManager();
+  const gameRegistry = new GameRegistry();
+  gameRegistry.register(new TestGameModule());
+
+  const gameManager = new GameManager(io, roomManager, gameRegistry);
 
   io.on('connection', (socket) => {
     console.log(`Client connected: ${socket.id}`);
     registerRoomHandlers(io, socket, roomManager);
+    registerGameHandlers(io, socket, gameManager);
+
+    socket.on('disconnect', () => {
+      const { roomCode, playerId } = socket.data;
+      if (roomCode && playerId) {
+        gameManager.handlePlayerDisconnect(roomCode, playerId);
+      }
+    });
   });
 
-  return { io, roomManager };
+  return { io, roomManager, gameManager };
 }

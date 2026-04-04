@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
 import { socket } from './socket';
 import { useRoomStore } from './store/roomStore';
+import { useGameStore } from './store/gameStore';
 import { LobbyScreen } from './screens/LobbyScreen';
+import { GameSelectScreen } from './screens/GameSelectScreen';
+import { GameScreen } from './screens/GameScreen';
 
 export function App() {
-  const { status, setRoom, addPlayer, removePlayer, setPlayerConnected, setStatus } =
+  const { status, setRoom, addPlayer, setPlayerConnected, setStatus } =
     useRoomStore();
+  const { setGameState, resetGame } = useGameStore();
 
   useEffect(() => {
     socket.connect();
@@ -27,11 +31,26 @@ export function App() {
       setPlayerConnected(playerId, true);
     });
 
+    socket.on('game:started', ({ gameState }) => {
+      setGameState(gameState);
+      setStatus('in-game');
+    });
+
+    socket.on('game:state-update', ({ gameState }) => {
+      setGameState(gameState);
+    });
+
+    socket.on('game:ended', () => {
+      setTimeout(() => {
+        resetGame();
+        setStatus('lobby');
+      }, 3000);
+    });
+
     socket.on('error', ({ message }) => {
       console.error('Server error:', message);
     });
 
-    // Auto-create room on connect
     socket.on('connect', () => {
       if (status === 'disconnected') {
         socket.emit('host:create-room', {});
@@ -44,6 +63,9 @@ export function App() {
       socket.off('room:player-joined');
       socket.off('room:player-left');
       socket.off('room:player-reconnected');
+      socket.off('game:started');
+      socket.off('game:state-update');
+      socket.off('game:ended');
       socket.off('error');
       socket.off('connect');
     };
@@ -57,7 +79,9 @@ export function App() {
       {status === 'creating' && (
         <p style={{ fontSize: '1.5rem' }}>Creating room...</p>
       )}
-      {(status === 'lobby' || status === 'game-select') && <LobbyScreen />}
+      {status === 'lobby' && <LobbyScreen />}
+      {status === 'game-select' && <GameSelectScreen />}
+      {status === 'in-game' && <GameScreen />}
     </>
   );
 }

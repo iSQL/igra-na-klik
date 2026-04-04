@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
+import { useGameStore } from './store/gameStore';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
+import { GameScreen } from './screens/GameScreen';
 
 export function App() {
   const { player, setPlayer, setRoom, setConnected, reset } = usePlayerStore();
+  const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
 
   useEffect(() => {
     socket.connect();
@@ -49,9 +52,31 @@ export function App() {
       });
     });
 
+    socket.on('game:started', ({ gameState }) => {
+      setGameState(gameState);
+    });
+
+    socket.on('game:state-update', ({ gameState }) => {
+      setGameState(gameState);
+    });
+
+    socket.on('game:player-state', ({ gameState }) => {
+      setGameState(gameState);
+      const playerId = usePlayerStore.getState().player?.id;
+      if (playerId && gameState.playerData[playerId]) {
+        setPlayerData(gameState.playerData[playerId]);
+      }
+    });
+
+    socket.on('game:ended', () => {
+      setTimeout(() => {
+        resetGame();
+      }, 3000);
+    });
+
     socket.on('error', ({ message }) => {
       console.error('Server error:', message);
-      reset();
+      if (!player) reset();
     });
 
     return () => {
@@ -60,10 +85,15 @@ export function App() {
       socket.off('player:joined');
       socket.off('room:player-joined');
       socket.off('room:player-left');
+      socket.off('game:started');
+      socket.off('game:state-update');
+      socket.off('game:player-state');
+      socket.off('game:ended');
       socket.off('error');
     };
   }, []);
 
   if (!player) return <JoinScreen />;
+  if (gameId) return <GameScreen />;
   return <LobbyScreen />;
 }
