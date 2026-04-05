@@ -17,7 +17,7 @@ export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
           color: isFinal ? 'var(--success)' : 'var(--text-primary)',
         }}
       >
-        {isFinal ? 'Final Standings' : 'Leaderboard'}
+        {isFinal ? 'Konačni poredak' : 'Rang lista'}
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

@@ -30,11 +30,11 @@ export function GuessList({ guesses }: GuessListProps) {
       }}
     >
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '0.25rem' }}>
-        Guesses
+        Pokušaji
       </p>
       {guesses.length === 0 && (
         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          No guesses yet...
+          Još nema pokušaja...
         </p>
       )}
       {guesses.map((g, i) => (
@@ -47,7 +47,7 @@ export function GuessList({ guesses }: GuessListProps) {
           }}
         >
           <span style={{ fontWeight: 600 }}>{g.playerName}:</span>{' '}
-          {g.correct ? 'Guessed it!' : g.text}
+          {g.correct ? 'Pogodio/la!' : g.text}
         </div>
       ))}
     </div>

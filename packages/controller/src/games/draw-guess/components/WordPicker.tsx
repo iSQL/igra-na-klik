@@ -16,7 +16,7 @@ export function WordPicker({ words, onPick }: WordPickerProps) {
         padding: '1rem',
       }}
     >
-      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>Choose a word to draw</p>
+      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>Izaberi reč za crtanje</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
         {words.map((word, i) => (
           <button

@@ -10,17 +10,17 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   },
   quiz: {
     id: 'quiz',
-    name: 'Quiz',
+    name: 'Kviz',
     minPlayers: 2,
     maxPlayers: 8,
-    description: 'Timed multiple choice — fastest correct answer scores the most!',
+    description: 'Pitanja na vreme — najbrži tačan odgovor nosi najviše poena!',
   },
   'draw-guess': {
     id: 'draw-guess',
-    name: 'Draw & Guess',
+    name: 'Crtaj i pogodi',
     minPlayers: 3,
     maxPlayers: 8,
-    description: 'Take turns drawing — others guess the word!',
+    description: 'Crtajte redom — ostali pogađaju reč!',
   },
   fibbage: {
     id: 'fibbage',

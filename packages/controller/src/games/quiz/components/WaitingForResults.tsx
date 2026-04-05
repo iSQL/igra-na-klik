@@ -30,8 +30,8 @@ export function WaitingForResults({ selectedIndex, optionColor }: WaitingForResu
       >
         ✓
       </div>
-      <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Answer locked in!</p>
-      <p style={{ color: 'var(--text-secondary)' }}>Waiting for results...</p>
+      <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Odgovor poslat!</p>
+      <p style={{ color: 'var(--text-secondary)' }}>Čekamo rezultate...</p>
     </div>
   );
 }

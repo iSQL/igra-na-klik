@@ -20,7 +20,7 @@ export function WordHint({ hint, wordLength, revealed, word }: WordHintProps) {
         {revealed && word ? word : hint}
       </p>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-        {wordLength} letters
+        {wordLength} slova
       </p>
     </div>
   );

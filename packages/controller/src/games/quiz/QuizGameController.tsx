@@ -28,9 +28,9 @@ export default function QuizGameController() {
           gap: '1rem',
         }}
       >
-        <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>Get ready!</p>
+        <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>Spremi se!</p>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Question {(data.questionIndex as number) + 1} of {data.totalQuestions as number}
+          Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
         </p>
       </div>
     );
@@ -83,13 +83,13 @@ export default function QuizGameController() {
         {myEntry && (
           <>
             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-              {phase === 'ended' ? 'Final rank' : 'Your rank'}
+              {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
             <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
               #{myEntry.rank}
             </p>
             <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-              {myEntry.score.toLocaleString()} pts
+              {myEntry.score.toLocaleString()} poena
             </p>
           </>
         )}

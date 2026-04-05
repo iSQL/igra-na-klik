@@ -38,9 +38,9 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
         }}
       >
         <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
-          Correct!
+          Tačno!
         </p>
-        <p style={{ color: 'var(--text-secondary)' }}>Waiting for others...</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Čekamo ostale...</p>
       </div>
     );
   }
@@ -93,7 +93,7 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Type your guess..."
+          placeholder="Upiši pokušaj..."
           autoComplete="off"
           style={{
             flex: 1,
@@ -117,7 +117,7 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
             fontWeight: 600,
           }}
         >
-          Guess
+          Pogodi
         </button>
       </form>
     </div>

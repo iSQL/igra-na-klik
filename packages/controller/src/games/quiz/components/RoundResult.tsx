@@ -37,7 +37,7 @@ export function RoundResult({ results }: RoundResultProps) {
         <>
           <div style={{ fontSize: '4rem' }}>✓</div>
           <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>
-            Correct!
+            Tačno!
           </p>
           <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent)' }}>
             +{myScore?.roundScore ?? 0}
@@ -47,10 +47,10 @@ export function RoundResult({ results }: RoundResultProps) {
         <>
           <div style={{ fontSize: '4rem' }}>✗</div>
           <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--danger)' }}>
-            {myAnswer ? 'Wrong!' : 'Too slow!'}
+            {myAnswer ? 'Netačno!' : 'Prekasno!'}
           </p>
           <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-            Correct answer:{' '}
+            Tačan odgovor:{' '}
             <strong>{results.question.options[results.question.correctIndex].text}</strong>
           </p>
         </>
@@ -58,7 +58,7 @@ export function RoundResult({ results }: RoundResultProps) {
 
       {myScore && (
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          Total: {myScore.totalScore.toLocaleString()}
+          Ukupno: {myScore.totalScore.toLocaleString()}
         </p>
       )}
     </div>

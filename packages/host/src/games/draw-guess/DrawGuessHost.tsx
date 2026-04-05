@@ -63,10 +63,10 @@ export default function DrawGuessHost() {
         }}
       >
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Turn {round}/{totalRounds}
+          Runda {round}/{totalRounds}
         </p>
         <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>
-          {host.drawerName} is choosing a word...
+          {host.drawerName} bira reč...
         </p>
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
           {timeRemaining}s
@@ -138,7 +138,7 @@ export default function DrawGuessHost() {
         }}
       >
         <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-          {phase === 'ended' ? 'Final Standings' : 'Leaderboard'}
+          {phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
         </p>
         <div style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {leaderboard.map((entry) => (
@@ -168,7 +168,7 @@ export default function DrawGuessHost() {
                 <span style={{ fontWeight: 600 }}>{entry.name}</span>
               </div>
               <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                {entry.score.toLocaleString()} pts
+                {entry.score.toLocaleString()} poena
               </span>
             </div>
           ))}

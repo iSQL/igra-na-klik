@@ -17,7 +17,7 @@ export function AnswerCounter({ answeredCount, totalPlayers }: AnswerCounterProp
       <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
         {answeredCount}
       </span>
-      /{totalPlayers} answered
+      /{totalPlayers} odgovorilo
     </div>
   );
 }

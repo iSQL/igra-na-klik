@@ -18,7 +18,7 @@ export function TurnResults({ word, scores }: TurnResultsProps) {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>The word was</p>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Reč je bila</p>
         <p style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--success)' }}>{word}</p>
       </div>
 

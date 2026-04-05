@@ -97,7 +97,7 @@ To test with real phones, expose the services on your local network:
 
 ## Current Status
 
-**All phases complete** — quiz, draw & guess, and Fibbage-style bluffing (Serbian), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, and Lažov (all Serbian), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -113,8 +113,8 @@ To test with real phones, expose the services on your local network:
 - Host creates room, players join by code or QR scan
 - QR code uses the actual server hostname — works on LAN without config
 
-**Quiz Game**
-- 25-question bank, 10 random questions per game
+**Kviz (Quiz) — Serbian**
+- 30-question Serbian trivia bank (Latin script), 10 random per game
 - Phase flow: question preview → answering (15s) → results reveal → leaderboard
 - Speed-based scoring: faster correct answers score more (up to 1000 pts)
 - Animated leaderboard with rank change tracking (Framer Motion)
@@ -139,8 +139,8 @@ To test with real phones, expose the services on your local network:
 - Host can stop the current game at any time via "Stop Game" button
 - Returns all clients to the game selection screen
 
-**Draw & Guess**
-- 105-word bank across easy/medium/hard difficulties
+**Crtaj i pogodi (Draw & Guess) — Serbian**
+- 105-word Serbian bank (Latin script) across easy/medium/hard difficulties
 - Turn rotation with shuffled player order, 3 rounds by default
 - Drawer picks from 3 word choices (one per difficulty), 60s to draw
 - Live canvas streaming: normalized stroke points batched every 50ms

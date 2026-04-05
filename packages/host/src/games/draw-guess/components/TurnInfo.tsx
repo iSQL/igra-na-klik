@@ -30,16 +30,16 @@ export function TurnInfo({
     >
       <div>
         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Turn {turnNumber}/{totalTurns}
+          Potez {turnNumber}/{totalTurns}
         </span>
         <span style={{ margin: '0 0.75rem', color: 'var(--text-secondary)' }}>|</span>
         <span style={{ fontSize: '1rem', fontWeight: 600 }}>
-          {drawerName} is drawing
+          {drawerName} crta
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <span style={{ fontSize: '0.9rem', color: 'var(--success)' }}>
-          {correctCount}/{totalGuessers} guessed
+          {correctCount}/{totalGuessers} pogodilo
         </span>
         <span
           style={{

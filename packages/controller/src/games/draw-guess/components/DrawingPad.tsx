@@ -273,7 +273,7 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
             minHeight: '36px',
           }}
         >
-          Clear
+          Obriši
         </button>
       </div>
     </div>

@@ -67,7 +67,7 @@ export default function QuizGameHost() {
             timeLimit={3}
           />
           <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-            Get ready...
+            Spremi se...
           </p>
         </>
       )}

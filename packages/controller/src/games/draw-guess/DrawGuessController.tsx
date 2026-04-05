@@ -49,7 +49,7 @@ export default function DrawGuessController() {
         }}
       >
         <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-          {host.drawerName} is choosing a word...
+          {host.drawerName} bira reč...
         </p>
         <p style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>
           {timeRemaining}s
@@ -88,7 +88,7 @@ export default function DrawGuessController() {
           padding: '1rem',
         }}
       >
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>The word was</p>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Reč je bila</p>
         <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
           {host.revealedWord}
         </p>
@@ -116,13 +116,13 @@ export default function DrawGuessController() {
         {myEntry && (
           <>
             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-              {phase === 'ended' ? 'Final rank' : 'Your rank'}
+              {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
             <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
               #{myEntry.rank}
             </p>
             <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-              {myEntry.score.toLocaleString()} pts
+              {myEntry.score.toLocaleString()} poena
             </p>
           </>
         )}

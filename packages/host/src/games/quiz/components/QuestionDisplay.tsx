@@ -22,7 +22,7 @@ export function QuestionDisplay({
   return (
     <div style={{ textAlign: 'center' }}>
       <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-        Question {questionIndex + 1} of {totalQuestions}
+        Pitanje {questionIndex + 1}/{totalQuestions}
       </p>
 
       <motion.h2
