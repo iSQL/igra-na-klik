@@ -1,5 +1,6 @@
 import type { PublicPlayer, Player, PublicRoom, RoomSettings } from './room.js';
 import type { GameState } from './game.js';
+import type { QuizImportQuestion } from '../games/quiz-import.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -23,7 +24,10 @@ export interface ClientToServerEvents {
     playerName: string;
     reconnectToken?: string;
   }) => void;
-  'host:start-game': (data: { gameId: string }) => void;
+  'host:start-game': (data: {
+    gameId: string;
+    customQuestions?: QuizImportQuestion[];
+  }) => void;
   'host:stop-game': () => void;
   'game:player-action': (data: {
     action: string;

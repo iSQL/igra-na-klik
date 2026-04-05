@@ -31,7 +31,11 @@ export class GameManager {
     private registry: GameRegistry
   ) {}
 
-  startGame(roomCode: string, gameId: string): { error?: string } {
+  startGame(
+    roomCode: string,
+    gameId: string,
+    customContent?: unknown
+  ): { error?: string } {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return { error: 'Room not found' };
     if (room.status !== 'lobby') return { error: 'Game already in progress' };
@@ -50,7 +54,7 @@ export class GameManager {
     room.status = 'in-game';
     room.currentGameId = gameId;
 
-    const gameState = module.onStart(room);
+    const gameState = module.onStart(room, customContent);
     this.emitGameState(roomCode, gameState);
     this.io.to(roomCode).emit('game:started', { gameId, gameState });
 

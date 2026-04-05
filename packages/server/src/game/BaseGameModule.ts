@@ -4,7 +4,7 @@ import type { IGameModule } from './IGameModule.js';
 export abstract class BaseGameModule implements IGameModule {
   abstract readonly gameId: string;
 
-  abstract onStart(room: Room): GameState;
+  abstract onStart(room: Room, customContent?: unknown): GameState;
 
   onPlayerAction(
     _room: Room,

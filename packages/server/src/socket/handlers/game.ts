@@ -32,7 +32,11 @@ export function registerGameHandlers(
       return;
     }
 
-    const result = gameManager.startGame(roomCode, data.gameId);
+    const result = gameManager.startGame(
+      roomCode,
+      data.gameId,
+      data.customQuestions
+    );
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });
     }

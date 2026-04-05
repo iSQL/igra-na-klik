@@ -3,7 +3,7 @@ import type { Room, GameState } from '@igra/shared';
 export interface IGameModule {
   readonly gameId: string;
 
-  onStart(room: Room): GameState;
+  onStart(room: Room, customContent?: unknown): GameState;
 
   onPlayerAction(
     room: Room,

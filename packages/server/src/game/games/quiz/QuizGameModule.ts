@@ -1,5 +1,5 @@
 import type { Room, GameState, QuizQuestionFull, QuizResultData, QuizLeaderboardEntry } from '@igra/shared';
-import { QUIZ_QUESTION_BANK } from '@igra/shared';
+import { QUIZ_QUESTION_BANK, parseQuizImport } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { QuizInternalState, QuizPhase, QuizPlayerAnswer } from './QuizState.js';
 
@@ -13,10 +13,19 @@ export class QuizGameModule extends BaseGameModule {
 
   private state!: QuizInternalState;
 
-  onStart(room: Room): GameState {
-    const shuffled = [...QUIZ_QUESTION_BANK]
+  onStart(room: Room, customContent?: unknown): GameState {
+    let sourceBank: QuizQuestionFull[] = QUIZ_QUESTION_BANK;
+    if (customContent !== undefined) {
+      const parsed = parseQuizImport(customContent);
+      if (parsed.ok) {
+        sourceBank = parsed.questions;
+      }
+      // On failure: silent fallback to default bank. Host already validated.
+    }
+
+    const shuffled = [...sourceBank]
       .sort(() => Math.random() - 0.5)
-      .slice(0, NUM_QUESTIONS);
+      .slice(0, Math.min(NUM_QUESTIONS, sourceBank.length));
 
     this.state = {
       questions: shuffled,

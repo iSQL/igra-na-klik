@@ -137,6 +137,7 @@ When the host opens a room, phones visiting the controller URL will see the code
 - Speed-based scoring: faster correct answers score more (up to 1000 pts)
 - Animated leaderboard with rank change tracking (Framer Motion)
 - Host shows answer distribution; controllers show colored answer buttons
+- **Custom question import**: host can upload a `.json` file of custom questions on the game-select screen — replaces the default bank for that game; persists in `localStorage` across refreshes; cleared by clicking "Ukloni"
 
 **Sound & Haptics**
 - Host plays programmatically generated tones (no external audio files) via Howler.js
@@ -184,6 +185,29 @@ When the host opens a room, phones visiting the controller URL will see the code
 - Players join by code → server assigns UUID + avatar color + reconnect token
 - Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within 30s, they're restored
 
+### Custom Quiz Questions
+
+The host can import a custom question pack (JSON file) on the game-select screen. The format is:
+
+```json
+[
+  {
+    "text": "Koji je glavni grad Srbije?",
+    "options": ["Niš", "Beograd", "Novi Sad", "Kragujevac"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]
+```
+
+Rules:
+- `text` — non-empty question string
+- `options` — 2–4 non-empty strings
+- `correctIndex` — 0-based index into `options`
+- `timeLimit` — optional, 5–60 seconds (defaults to 15)
+
+The imported pack replaces the built-in bank for that session. It is saved in `localStorage` on the host device and persists across page refreshes until explicitly removed.
+
 ### Game Module System
 
 Each mini-game implements the `IGameModule` interface on the server:
@@ -191,7 +215,7 @@ Each mini-game implements the `IGameModule` interface on the server:
 ```typescript
 interface IGameModule {
   readonly gameId: string;
-  onStart(room: Room): GameState;
+  onStart(room: Room, customContent?: unknown): GameState;
   onPlayerAction(room: Room, state: GameState, playerId: string, action: string, data: Record<string, unknown>): GameState | null;
   onTick(room: Room, state: GameState, deltaMs: number): GameState | null;
   onPlayerDisconnect(room: Room, state: GameState, playerId: string): GameState | null;

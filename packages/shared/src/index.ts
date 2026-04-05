@@ -9,3 +9,4 @@ export * from './types/fibbage.js';
 export * from './games/index.js';
 export * from './games/draw-words.js';
 export * from './games/fibbage-questions.js';
+export * from './games/quiz-import.js';

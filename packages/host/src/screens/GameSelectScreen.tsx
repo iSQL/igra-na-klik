@@ -1,13 +1,19 @@
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
+import { useQuizImportStore } from '../store/quizImportStore';
+import { QuizImportButton } from '../components/QuizImportButton';
 
 export function GameSelectScreen() {
   const setStatus = useRoomStore((s) => s.setStatus);
   const games = Object.values(GAME_DEFINITIONS);
 
   const handleSelect = (gameId: string) => {
-    socket.emit('host:start-game', { gameId });
+    const customQuestions =
+      gameId === 'quiz'
+        ? useQuizImportStore.getState().customQuestions ?? undefined
+        : undefined;
+    socket.emit('host:start-game', { gameId, customQuestions });
   };
 
   return (
@@ -33,9 +39,17 @@ export function GameSelectScreen() {
         }}
       >
         {games.map((game) => (
-          <button
+          <div
             key={game.id}
+            role="button"
+            tabIndex={0}
             onClick={() => handleSelect(game.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleSelect(game.id);
+              }
+            }}
             style={{
               padding: '1.5rem',
               background: 'var(--bg-card)',
@@ -43,6 +57,7 @@ export function GameSelectScreen() {
               textAlign: 'center',
               transition: 'transform 0.15s, background 0.15s',
               color: 'var(--text-primary)',
+              cursor: 'pointer',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--accent)';
@@ -68,7 +83,8 @@ export function GameSelectScreen() {
             >
               {game.minPlayers}-{game.maxPlayers} players
             </p>
-          </button>
+            {game.id === 'quiz' && <QuizImportButton />}
+          </div>
         ))}
       </div>
 
