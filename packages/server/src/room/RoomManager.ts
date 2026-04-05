@@ -102,6 +102,11 @@ export class RoomManager {
     };
   }
 
+  getActiveRoomCode(): string | null {
+    for (const code of this.rooms.keys()) return code;
+    return null;
+  }
+
   private generateUniqueCode(): string {
     let code: string;
     do {
