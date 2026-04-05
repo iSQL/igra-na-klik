@@ -95,6 +95,24 @@ To test with real phones, expose the services on your local network:
 
 > **Note:** The Vite dev servers are configured with `host: true` so they bind to `0.0.0.0` and are accessible on LAN. The `.env` tells the Socket.io server to accept connections from the LAN origins (CORS). Make sure your firewall allows ports 3001, 5173, and 5174.
 
+### Single-room mode (home use)
+
+If you only ever run one room at a time, you can enable single-room mode. Controllers will automatically fetch the active room code from the server — players only need to type their name, no code input needed.
+
+1. Add to your root `.env`:
+   ```env
+   SINGLE_ROOM_MODE=true
+   ```
+
+2. Create `packages/controller/.env`:
+   ```env
+   VITE_SINGLE_ROOM=true
+   ```
+
+3. Start normally with `npm run dev`.
+
+When the host opens a room, phones visiting the controller URL will see the code auto-filled and just need to enter their name. The room code field is hidden entirely.
+
 ## Current Status
 
 **All phases complete** — Kviz, Crtaj i pogodi, and Lažov (all Serbian), with sounds, haptics, reconnection, and PWA support.
