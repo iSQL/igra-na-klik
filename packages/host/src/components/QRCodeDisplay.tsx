@@ -33,7 +33,16 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
           color: 'var(--text-secondary)',
         }}
       >
-        Scan or visit: {controllerBase}
+        {controllerBase}
+      </p>
+      <p
+        style={{
+          marginTop: '0.25rem',
+          fontSize: '1rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        kod: <strong style={{ color: 'var(--accent)', fontFamily: 'monospace', letterSpacing: '0.15rem' }}>{roomCode}</strong>
       </p>
     </div>
   );

@@ -17,6 +17,7 @@ export function App() {
     socket.on('host:room-created', ({ room }) => {
       setRoom(room);
       setStatus('lobby');
+      window.history.replaceState(null, '', `?code=${room.code}`);
     });
 
     socket.on('room:player-joined', ({ player }) => {

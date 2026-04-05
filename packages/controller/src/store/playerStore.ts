@@ -35,6 +35,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   setConnected: (connected) => set({ isConnected: connected }),
   reset: () => {
     localStorage.removeItem(RECONNECT_TOKEN_KEY);
+    updateSocketAuth(undefined);
     set({ player: null, room: null, reconnectToken: null, isConnected: false });
   },
 }));

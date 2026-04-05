@@ -15,6 +15,6 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({
 });
 
 // Keep auth token in sync when it changes
-export function updateSocketAuth(token: string) {
+export function updateSocketAuth(token: string | undefined) {
   (socket.auth as Record<string, unknown>).reconnectToken = token;
 }
