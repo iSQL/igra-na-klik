@@ -1,0 +1,187 @@
+[
+  {
+    "text": "Koje drvo je narodni simbol Srbije i čest motiv u narodnoj poeziji?",
+    "options": ["Hrast", "Lipa", "Javor", "Grab"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji cvet se naziva 'srpski ljiljan' i zaštićen je biljka u Srbiji?",
+    "options": ["Ruža", "Visibaba", "Pančićev ljiljan", "Kaćun"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja biljka je sinonim za planinu Kopaonik i nalazi se na njenom grbu?",
+    "options": ["Planinska ruža", "Ramonda srbica", "Tisa", "Bor"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji je najstariji živi organizam u Srbiji — tisa star oko 1600 godina?",
+    "options": ["Tisa u Rubićima", "Tisa na Fruškoj gori", "Tisa u Vojlovici", "Tisa kod Vranja"],
+    "correctIndex": 2,
+    "timeLimit": 20
+  },
+  {
+    "text": "Kako se zove lekovita biljka čiji cvet se suši i koristi za čaj, a raste na srpskim livadama?",
+    "options": ["Kamilica", "Metvica", "Lavanda", "Hajdučka trava"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja vrsta hrasta u Srbiji daje žir bogat taninima, korišćen za štavljenje kože?",
+    "options": ["Lužnjak", "Kitnjak", "Sladun", "Cer"],
+    "correctIndex": 3,
+    "timeLimit": 20
+  },
+  {
+    "text": "U kom delu Srbije raste endemska biljka Ramonda srbica?",
+    "options": ["Fruška Gora", "Kopaonik", "Prokletije", "Rtanj"],
+    "correctIndex": 2,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja biljka raste na vrhu Rtnja i ima specifičan miris koji privlači turiste?",
+    "options": ["Timijan", "Majčina dušica", "Rtanjski čaj (mirodjija)", "Žalfija"],
+    "correctIndex": 2,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja drvenasta biljka u Srbiji cveta prva u proleće, često još po snegu?",
+    "options": ["Trešnja", "Lešnik", "Dren", "Bagrem"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji strano drvo, doneto u Srbiju, danas dominira kao najrasprostranjenije drvo u šumama?",
+    "options": ["Topola", "Bagrem (akacija)", "Paulovnija", "Kesten"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja biljka se u srpskom narodu zove 'trava iva' i smatra jakim lekovitim biljem?",
+    "options": ["Hajdučka trava", "Iva (planinac)", "Matičnjak", "Kopriva"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji je srpski naziv za biljku Salvia officinalis, poznatu lekovitu biljku?",
+    "options": ["Bosiljak", "Ruzmarin", "Žalfija", "Origano"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja vrsta koprive raste u Srbiji i koristi se za jelo i lek?",
+    "options": ["Žara kopriva (Urtica dioica)", "Mala kopriva", "Slepa kopriva", "Volovod"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koje drvo u Srbiji daje plod koji se zove 'šipurak' i bogat je vitaminom C?",
+    "options": ["Glog", "Divlja ruža (šipak)", "Trnjina", "Zova"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove zaštićena orhideja koja raste na Fruškoj gori?",
+    "options": ["Kaćun", "Vimčac", "Kokica", "Bela rada"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja biljka se u Srbiji naziva 'drvo sreće' zbog brzog rasta i koristi kao energetska kultura?",
+    "options": ["Paulovnija", "Topola", "Vrba", "Joha"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja trava je najraspostranjeniji korov u srpskim njivama?",
+    "options": ["Slak (Convolvulus arvensis)", "Zubača", "Divlja zob", "Štir"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Od kojeg srpskog lekovitog bilja se pravi 'slivovica' — narodni lek za prehladu?",
+    "options": ["Bazga (zova)", "Šipak", "Kleka", "Borovnica"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje crnogorično drvo je najraširenije u šumama Kopaonika i Zlatibora?",
+    "options": ["Jela", "Smrča", "Bor (Pinus sylvestris)", "Tisa"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji cvat lipe (Tilia sp.) se koristi kao čaj za smirenje i lakši san?",
+    "options": ["Sitan beli cvat", "Žuti cvat sa liskom", "Roze resice", "Ljubičasti pupoljci"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja lekovita biljka iz srpskih pašnjaka ima žuti cvat i zove se 'kantarion'?",
+    "options": ["Odoljen", "Kantarion (Hypericum perforatum)", "Žutilica", "Krkavina"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja jesenja biljka daje plod — crnu bobicu — koji se koristi za džem i rakiju u Srbiji?",
+    "options": ["Kupina", "Kleka", "Trnjina (crni trn)", "Dren"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje drvo se sadi u srpskim selima ispred kuće kao znak zdravlja i dugog života?",
+    "options": ["Orah", "Kruška", "Lipa", "Jasen"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je razlika između belog i crnog gloga u srpskoj flori?",
+    "options": [
+      "Razlikuju se bojom cveta i ploda",
+      "To je ista vrsta — razlika je samo u starosti",
+      "Crni glog uopšte ne raste u Srbiji",
+      "Beli glog je otrovniji"
+    ],
+    "correctIndex": 0,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koja je najrasprostranjenija vrsta jele u planinama Srbije?",
+    "options": ["Obična jela (Abies alba)", "Grčka jela", "Korejska jela", "Balzam jela"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja puzajuća biljka u Srbiji cveta roze/belim cvetom i smatra se korovom useva?",
+    "options": ["Slak (Convolvulus arvensis)", "Bršljan", "Divlja loza", "Plava patlidžan-trava"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja planinska biljka Srbije ima najkraće vreme cvetanja — svega nekoliko dana?",
+    "options": ["Visibaba", "Šafran (krokus)", "Runolist", "Planinska ljubičica"],
+    "correctIndex": 2,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja drvenasta vrsta iz porodice mahunarki se najčešće koristi kao medonosna biljka u Srbiji?",
+    "options": ["Bagrem (Robinia pseudoacacia)", "Gledičija", "Sofora", "Lijeska"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Kako se popularno zove Aesculus hippocastanum — poznato drvo po okruglim, bodljikavim plodovima?",
+    "options": ["Kesten", "Divlji kesten", "Bukva", "Grab"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja vrsta vrbe se najčešće viđa uz srpske reke i potoke, poznata po dugim, visećim granama?",
+    "options": ["Bela vrba", "Crna vrba", "Žalosna vrba (Salix babylonica)", "Rakita"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  }
+]
