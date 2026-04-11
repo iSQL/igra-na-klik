@@ -1,11 +1,35 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parseQuizImport } from '@igra/shared';
+import type { QuizImportQuestion } from '@igra/shared';
 import { useQuizImportStore } from '../store/quizImportStore';
+
+interface BuiltinPack {
+  id: string;
+  fileName: string;
+  count: number;
+  questions: QuizImportQuestion[];
+}
 
 export function QuizImportButton() {
   const { customQuestions, fileName, setCustom, clear } = useQuizImportStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [builtinPacks, setBuiltinPacks] = useState<BuiltinPack[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/question-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: BuiltinPack[] }) => {
+        if (!cancelled) setBuiltinPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBuiltinPacks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handlePick = () => {
     setError(null);
@@ -46,11 +70,25 @@ export function QuizImportButton() {
     reader.readAsText(file);
   };
 
+  const handleBuiltinChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.stopPropagation();
+    const id = e.target.value;
+    if (!id) return;
+    const pack = builtinPacks.find((p) => p.id === id);
+    if (!pack) return;
+    setCustom(pack.questions, pack.fileName);
+    setError(null);
+  };
+
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     clear();
     setError(null);
   };
+
+  // If the currently loaded pack matches a built-in by fileName, preselect it.
+  const selectedBuiltinId =
+    builtinPacks.find((p) => p.fileName === fileName)?.id ?? '';
 
   return (
     <div
@@ -70,6 +108,30 @@ export function QuizImportButton() {
         onChange={handleFile}
         style={{ display: 'none' }}
       />
+
+      {builtinPacks.length > 0 && (
+        <select
+          value={selectedBuiltinId}
+          onChange={handleBuiltinChange}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            padding: '0.4rem 0.6rem',
+            fontSize: '0.8rem',
+            borderRadius: '0.5rem',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--text-secondary)',
+            maxWidth: '220px',
+          }}
+        >
+          <option value="">Izaberi paket…</option>
+          {builtinPacks.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.id} ({p.count})
+            </option>
+          ))}
+        </select>
+      )}
 
       {customQuestions ? (
         <>

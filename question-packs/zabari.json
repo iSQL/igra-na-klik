@@ -1,0 +1,182 @@
+[
+  {
+    "text": "U kom okrugu se nalazi opština Žabari?",
+    "options": ["Pomoravski", "Braničevski", "Podunavski", "Šumadijski"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Pored koje velike reke se prostire teritorija opštine Žabari?",
+    "options": ["Dunav", "Mlava", "Velika Morava", "Pek"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Po čemu je naselje Žabari, prema narodnom predanju, dobilo ime?",
+    "options": ["Po uzgajivačima povrća", "Po barama i žabama", "Po zanatlijama", "Po starom plemenu"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji poznati vojvoda iz Prvog srpskog ustanka je rođen u ovom kraju (Melnica/Žabari)?",
+    "options": ["Hajduk Veljko", "Paulj Matejić", "Milenko Stojković", "Stevan Sinđelić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kom veku se u istorijskim izvorima prvi put pominje naselje Žabari?",
+    "options": ["14. veku", "16. veku", "18. veku", "19. veku"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje selo u opštini Žabari je poznato po staroj crkvi brvnari i modernom kompleksu hramova?",
+    "options": ["Simićevo", "Porodin", "Četereže", "Viteževo"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se ranije zvalo današnje selo Simićevo?",
+    "options": ["Rakince", "Punoševo", "Oreovica", "Vlaški Do"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Po kome je selo Simićevo dobilo današnje ime?",
+    "options": ["Simi Simiću", "Stanoju Simiću", "Pavlu Simiću", "Milanu Simiću"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje naselje u opštini je dobilo ime po kralju Aleksandru Obrenoviću?",
+    "options": ["Aleksandrovac", "Aleksandrovo", "Obrenovac", "Kraljevo"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kojoj oblasti, u širem geografskom smislu, pripada opština Žabari?",
+    "options": ["Stig", "Donje Pomoravlje", "Resava", "Homolje"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji tradicionalni sabor se održava u Četerežu svakog proleća?",
+    "options": ["Vaskršnji sabor", "Spasovdanski sabor", "Đurđevdanski uranak", "Vidovdanski skup"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je glavna privredna grana opštine Žabari kroz istoriju?",
+    "options": ["Rudarstvo", "Turizam", "Poljoprivreda", "Tekstilna industrija"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Gde se nalazilo sedište Žabarskog sreza u 19. veku?",
+    "options": ["U Požarevcu", "U Žabarima", "U Svilajncu", "U Petrovcu"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Crkva u Žabarima posvećena je kom svecu?",
+    "options": ["Svetom Savi", "Svetom Nikoli", "Vaznesenju Gospodnjem", "Svetom Iliji"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko ukupno naselja čini opštinu Žabari?",
+    "options": ["10", "15", "20", "25"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je antički put prolazio u blizini teritorije današnjih Žabara?",
+    "options": ["Via Militaris", "Via Egnatia", "Via Pontica", "Via Appia"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kojoj administrativnoj jedinici su Žabari pripadali tokom turske vladavine?",
+    "options": ["Smederevskom sandžaku", "Niškom pašaluku", "Vidinjskom sandžaku", "Kruševačkom sandžaku"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Selo Oreovica je poznato po čemu u ovom kraju?",
+    "options": ["Po rudniku uglja", "Po vinogradarstvu i voćarstvu", "Po fabrici stakla", "Po banjskom lečilištu"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kada su Žabari zvanično proglašeni za varošicu?",
+    "options": ["1839. godine", "1882. godine", "1905. godine", "1945. godine"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja planina se nalazi istočno od opštine Žabari?",
+    "options": ["Avala", "Bukulja", "Homoljske planine", "Jučhor"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje naselje u opštini Žabari se graniči sa opštinom Svilajnac?",
+    "options": ["Porodin", "Aleksandrovac", "Kočetin", "Viteževo"],
+    "correctIndex": 3,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kom ratu je vojvoda Paulj Matejić pokazao najveće junaštvo?",
+    "options": ["Balkanskim ratovima", "Prvom svetskom ratu", "Prvom srpskom ustanku", "Srpsko-turskom ratu"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta predstavlja manifestacija 'Četereško leto'?",
+    "options": ["Sportsko takmičenje", "Sajam poljoprivrede", "Kulturno-umetnički program", "Gastronomski festival"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je osnovna karakteristika reljefa opštine Žabari?",
+    "options": ["Visokoplaninski", "Ravničarsko-brežuljkasti", "Krasni", "Kanjonski"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje selo u opštini se pominje kao 'Miri-Evos' u starim mapama?",
+    "options": ["Mirijevo", "Sibnica", "Polatna", "Brzohode"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Gde se nalazi bista vojvode Paulja Matejića u opštini?",
+    "options": ["U Aleksandrovcu", "U Žabarima", "U Simićevu", "U Oreovici"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja opština se nalazi severno od Žabara?",
+    "options": ["Svilajnac", "Petrovac", "Požarevac", "Velika Plana"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najznačajnija kulturna ustanova u sedištu opštine?",
+    "options": ["Narodni muzej", "Centar za kulturu 'Vojvoda Paulj Matejić'", "Pozorište", "Galerija savremene umetnosti"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta dominira u arhitekturi sela Porodin?",
+    "options": ["Moderne višespratnice", "Stare moravske kuće", "Industrijske hale", "Zgrade od stakla"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Preko kog naselja vodi glavni put ka Velikoj Plani iz Žabara?",
+    "options": ["Preko Donje Livadice", "Preko Simićeva", "Preko Vlaškog Dola", "Preko Kočetina"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  }
+]

@@ -1,0 +1,197 @@
+[
+  {
+    "text": "Ko je režirao kultni film 'Ko to tamo peva' iz 1980. godine?",
+    "options": ["Emir Kusturica", "Slobodan Šijan", "Goran Marković", "Srđan Dragojević"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji srpski film je osvojio Zlatnu palmu u Kanu 1985. godine?",
+    "options": ["Otac na službenom putu", "Underground", "Dom za vešanje", "Sjećaš li se Doli Bel"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je režirao film 'Underground' koji je osvojio Zlatnu palmu 1995. godine?",
+    "options": ["Goran Paskaljević", "Srđan Karanović", "Emir Kusturica", "Dušan Makavejev"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji glumac tumači lik Maloga u filmu 'Lepa sela lepo gore'?",
+    "options": ["Dragan Bjelogrlić", "Nikola Kojo", "Sergej Trifunović", "Dragan Maksimović"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Ko je režirao film 'Rane' iz 1998. godine?",
+    "options": ["Srđan Dragojević", "Goran Marković", "Emir Kusturica", "Dejan Zečević"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji film Slobodana Šijana počinje čuvenom rečenicom 'Je l' ima neko da se javi za dobrovoljca'?",
+    "options": ["Maratonci trče počasni krug", "Ko to tamo peva", "Davitelj protiv davitelja", "Balkanski špijun"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji glumac je igrao Ilija Čvorović u filmu 'Balkanski špijun'?",
+    "options": ["Bata Živojinović", "Danilo Bata Stojković", "Pavle Vuisić", "Bora Todorović"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "U kojoj godini je snimljen film 'Maratonci trče počasni krug'?",
+    "options": ["1980", "1982", "1984", "1978"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji film prati sudbinu dva prijatelja iz Beograda koji se razilaze tokom rata u Bosni?",
+    "options": ["Rane", "Lepa sela lepo gore", "Nož", "Mi nismo anđeli"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Ko je režirao popularnu romantičnu komediju 'Mi nismo anđeli' iz 1992. godine?",
+    "options": ["Srđan Dragojević", "Goran Gajić", "Radivoje Andrić", "Dejan Zečević"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji glumac tumači anđela u filmu 'Mi nismo anđeli'?",
+    "options": ["Nikola Kojo", "Branka Katić", "Nebojša Glogovac", "Uroš Đurić"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja je glavna tema filma 'Zona Zamfirova' iz 2002. godine?",
+    "options": [
+      "Balkanski ratovi",
+      "Ljubavna priča u starom Nišu",
+      "Partizanski otpor",
+      "Život u Beogradu 90-ih"
+    ],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji reditelj stoji iza filma 'Zona Zamfirova'?",
+    "options": ["Zdravko Šotra", "Goran Marković", "Srđan Karanović", "Dejan Zečević"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji srpski film iz 1998. godine govori o ratnom veteranu u Beogradu, u režiji Gorana Paskaljevića?",
+    "options": ["Bure baruta", "Kordon", "Optimisti", "San zimske noći"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji glumac igra glavnu ulogu Marka u filmu 'Crni Gruja'?",
+    "options": ["Nikola Kojo", "Vojin Ćetković", "Vladimir Aleksić", "Sergej Trifunović"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji film Emira Kusturice se bavi ciganskom zajednicom i ima podnaslov 'Dom za vešanje'?",
+    "options": ["Crna mačka, beli mačor", "Dom za vešanje", "Arizona Dream", "Zavet"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji glumac je proslavljen ulogom Žike Pavlovića u seriji filmova 'Tesna koža'?",
+    "options": ["Pavle Vuisić", "Nikola Simić", "Milan 'Bata' Gutović", "Bora Todorović"],
+    "correctIndex": 2,
+    "timeLimit": 20
+  },
+  {
+    "text": "Ko je režirao filmove iz serijala 'Tesna koža'?",
+    "options": ["Mića Milošević", "Zoran Čalić", "Aleksandar Đorđević", "Goran Marković"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji film iz 1970. godine prikazuje slikara Milića od Mačve u ulozi crkvenog poglavara?",
+    "options": ["Boj na Kosovu", "Zaseda", "Majstor i Margarita", "Bitka na Neretvi"],
+    "correctIndex": 1,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koji kultni film Živojina Pavlovića iz 1967. prati život na marginama društva?",
+    "options": ["Kad budem mrtav i beo", "Buđenje pacova", "Zaseda", "Hajka"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji je režiser filma 'Sivi dom' i filma 'Sabirni centar'?",
+    "options": ["Goran Marković", "Srđan Karanović", "Dušan Kovačević", "Žika Mitrović"],
+    "correctIndex": 0,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koji srpski film iz 2010. godine govori o životu Mije Aleksića?",
+    "options": ["Žikina dinastija", "Montevideo, Bog te video!", "Šišanje", "Charlston za Ognjenku"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Ko je režirao film 'Montevideo, Bog te video!'?",
+    "options": ["Srđan Dragojević", "Dragan Bjelogrlić", "Goran Gajić", "Nikola Pejaković"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji glumac tumači Tihomira u filmu 'Profesionalac' Dušana Kovačevića?",
+    "options": ["Branislav Lečić", "Bora Todorović", "Nebojša Glogovac", "Dragan Nikolić"],
+    "correctIndex": 0,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koji film Dušana Makavejeva iz 1971. je bio zabranjen u Jugoslaviji zbog kontroverznog sadržaja?",
+    "options": [
+      "Ljubavni slučaj ili tragedija službenice PTT",
+      "W.R. Misterije organizma",
+      "Nevinost bez zaštite",
+      "Čovek nije tica"
+    ],
+    "correctIndex": 1,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koji srpski film iz 2006. godine, u režiji Srdana Golubovića, govori o četvorici ljudi povezanih transplantacijom srca?",
+    "options": ["Klopka", "Apsolutnih sto", "Krugovi", "Jagoda u supermarketu"],
+    "correctIndex": 0,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koji je debitantski film Emira Kusturice iz 1981. godine?",
+    "options": [
+      "Otac na službenom putu",
+      "Sjećaš li se, Doli Bel?",
+      "Dom za vešanje",
+      "Arizona Dream"
+    ],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Koja glumica je tumačila glavnu žensku ulogu u filmu 'Zona Zamfirova'?",
+    "options": ["Sloboda Mićalović", "Katarina Radivojević", "Branka Katić", "Mirjana Karanović"],
+    "correctIndex": 1,
+    "timeLimit": 20
+  },
+  {
+    "text": "Ko je napisao scenario za film 'Ko to tamo peva'?",
+    "options": ["Dušan Kovačević", "Gordan Mihić", "Slobodan Šijan", "Aleksandar Popović"],
+    "correctIndex": 0,
+    "timeLimit": 25
+  },
+  {
+    "text": "Koji srpski film iz 1974. godine, u režiji Aleksandra Petrovića, je adaptacija romana Mihaila Bulgakova?",
+    "options": ["Seobe", "Majstor i Margarita", "Skupljači perja", "Biće skoro propast sveta"],
+    "correctIndex": 1,
+    "timeLimit": 25
+  }
+]
