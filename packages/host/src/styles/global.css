@@ -39,3 +39,9 @@ button {
   border: none;
   font-family: inherit;
 }
+
+@keyframes igra-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
