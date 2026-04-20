@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -13,6 +13,8 @@ export default defineConfig({
       },
     }),
   ],
+  // Production build is served by the server under /play/; dev stays at root.
+  base: command === 'build' ? '/play/' : '/',
   server: {
     host: true,
     port: 5174,
@@ -22,6 +24,10 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      '/room-code': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
-});
+}));

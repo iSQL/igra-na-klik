@@ -10,9 +10,13 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
     if (import.meta.env.VITE_CONTROLLER_URL) {
       return import.meta.env.VITE_CONTROLLER_URL as string;
     }
-    // Derive from current host — same hostname, controller port
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:5174`;
+    // Dev: host runs on :5173, controller on :5174, same hostname.
+    // Prod (single-container deploy): controller is served at /play on the same origin.
+    const { protocol, hostname, port, origin } = window.location;
+    if (port === '5173') {
+      return `${protocol}//${hostname}:5174`;
+    }
+    return `${origin}/play`;
   }, []);
 
   const joinUrl = `${controllerBase}?code=${roomCode}`;

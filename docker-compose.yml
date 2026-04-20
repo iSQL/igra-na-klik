@@ -1,0 +1,12 @@
+services:
+  igra:
+    build: .
+    image: igra-na-klik:local
+    container_name: igra-na-klik
+    ports:
+      - "3001:3001"
+    environment:
+      # Controllers auto-fill the room code — friends only type their name.
+      # Set to "false" if you want the classic 4-letter code entry flow.
+      SINGLE_ROOM_MODE: "true"
+    restart: unless-stopped

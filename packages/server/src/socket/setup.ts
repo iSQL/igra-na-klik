@@ -20,7 +20,7 @@ import { authMiddleware, getReconnectToken } from './middleware/auth.js';
 
 export function setupSocket(
   httpServer: HttpServer,
-  corsOrigins: string[]
+  corsOrigins: string | string[]
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,

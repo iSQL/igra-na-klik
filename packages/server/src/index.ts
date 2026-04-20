@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { parseQuizImport } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
@@ -23,8 +24,15 @@ const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
   ? path.resolve(process.env.QUESTION_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'question-packs');
 
+// When deployed as a single container, host and controller live on the same
+// origin — no CORS list needed. Fall back to the configured origins otherwise.
+const SAME_ORIGIN_DEPLOY = process.env.SAME_ORIGIN_DEPLOY === 'true';
+const corsOrigins = SAME_ORIGIN_DEPLOY
+  ? true
+  : [HOST_ORIGIN, CONTROLLER_ORIGIN];
+
 const app = express();
-app.use(cors({ origin: [HOST_ORIGIN, CONTROLLER_ORIGIN] }));
+app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -87,12 +95,50 @@ app.get('/api/question-packs', async (_req, res) => {
 });
 
 const httpServer = createServer(app);
-const { roomManager } = setupSocket(httpServer, [HOST_ORIGIN, CONTROLLER_ORIGIN]);
+const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
+const { roomManager } = setupSocket(httpServer, socketOrigins);
 
 if (SINGLE_ROOM_MODE) {
   app.get('/room-code', (_req, res) => {
     res.json({ roomCode: roomManager.getActiveRoomCode() });
   });
+}
+
+// Static serving for single-container deployments: host at /, controller at /play.
+// Skipped automatically if the dist directories aren't present (e.g. `npm run dev`).
+const HOST_DIST_DIR = process.env.HOST_DIST_DIR
+  ? path.resolve(process.env.HOST_DIST_DIR)
+  : path.resolve(__dirname, '../../host/dist');
+const CONTROLLER_DIST_DIR = process.env.CONTROLLER_DIST_DIR
+  ? path.resolve(process.env.CONTROLLER_DIST_DIR)
+  : path.resolve(__dirname, '../../controller/dist');
+
+if (existsSync(CONTROLLER_DIST_DIR)) {
+  app.use('/play', express.static(CONTROLLER_DIST_DIR));
+  app.get('/play', (_req, res) => {
+    res.sendFile(path.join(CONTROLLER_DIST_DIR, 'index.html'));
+  });
+  app.get('/play/*', (_req, res) => {
+    res.sendFile(path.join(CONTROLLER_DIST_DIR, 'index.html'));
+  });
+  console.log(`Serving controller from ${CONTROLLER_DIST_DIR} at /play`);
+}
+
+if (existsSync(HOST_DIST_DIR)) {
+  app.use(express.static(HOST_DIST_DIR));
+  app.get('*', (req, res, next) => {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/socket.io') ||
+      req.path.startsWith('/play') ||
+      req.path === '/health' ||
+      req.path === '/room-code'
+    ) {
+      return next();
+    }
+    res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
+  });
+  console.log(`Serving host from ${HOST_DIST_DIR} at /`);
 }
 
 httpServer.listen(PORT, () => {

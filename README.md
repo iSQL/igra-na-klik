@@ -113,6 +113,64 @@ If you only ever run one room at a time, you can enable single-room mode. Contro
 
 When the host opens a room, phones visiting the controller URL will see the code auto-filled and just need to enter their name. The room code field is hidden entirely.
 
+## Deployment (Docker / Coolify)
+
+The repo ships with a production [Dockerfile](Dockerfile) that packages all three services into a single container on one domain:
+
+- Host (TV screen) served at `/`
+- Controller (phones) served at `/play`
+- Socket.io + API share the same origin, so no cross-origin CORS/WebSocket routing is needed
+
+### Build & run locally
+
+```bash
+docker build -t igra-na-klik .
+docker run --rm -p 3001:3001 igra-na-klik
+```
+
+Open `http://localhost:3001` on one device and `http://localhost:3001/play` on another.
+
+### Same-room nights with Docker Compose
+
+For occasional in-home parties where everyone's on the same Wi-Fi, running the server locally keeps all traffic on your LAN (no round-trip to a VPS). The repo includes a [docker-compose.yml](docker-compose.yml) that wraps the Dockerfile with sensible defaults so you don't have to remember flags.
+
+```bash
+docker compose up -d --build    # first time, or after pulling code changes
+docker compose up -d            # any subsequent night — starts instantly
+docker compose down             # when you're done
+docker compose logs -f          # if something looks wrong
+```
+
+Then on the TV/laptop hosting the game, open `http://<your-lan-ip>:3001` (find it with `ipconfig` on Windows or `ip addr` on Linux/macOS — e.g. `http://192.168.1.42:3001`). Phones scan the QR code on the lobby screen and land directly on the controller. `SINGLE_ROOM_MODE` is enabled in the compose file by default, so players only type their name — no room code entry.
+
+**First-run setup:**
+
+- Windows: allow port 3001 through Windows Defender Firewall for **Private** networks (you'll get a prompt on first run)
+- macOS: System Settings → Network → Firewall → allow Docker
+- Linux: `sudo ufw allow 3001/tcp` if you're running ufw
+
+**Why Compose over `docker run`?** The compose file codifies the port mapping, the `SINGLE_ROOM_MODE` env var, and the restart policy so you get a one-command start each night. It also makes it trivial to add auxiliary services later (e.g. a reverse proxy for HTTPS) without changing how you launch things.
+
+### Coolify (Hetzner VPS or similar)
+
+1. In Coolify, create a new **Application** → **Public Repository** (or your GitHub integration) pointing at this repo
+2. Choose **Dockerfile** as the build pack
+3. Set the exposed port to `3001`
+4. Add your domain; Coolify's Traefik terminates TLS and routes everything to the container
+5. (Optional) Set `SINGLE_ROOM_MODE=true` in the Coolify env vars if you want controllers to auto-fill the room code
+
+The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server to accept same-origin Socket.io connections without needing `HOST_ORIGIN` / `CONTROLLER_ORIGIN` configured.
+
+### Relevant env vars
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `3001` | HTTP + Socket.io port |
+| `SAME_ORIGIN_DEPLOY` | `true` in Docker | Relaxes CORS; host and controller share one origin |
+| `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so the controller auto-fills the active room |
+| `QUESTION_PACKS_DIR` | `./question-packs` | Override location of JSON question packs |
+| `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
+
 ## Current Status
 
 **All phases complete** — Kviz, Crtaj i pogodi, and Lažov (all Serbian), with sounds, haptics, reconnection, and PWA support.
