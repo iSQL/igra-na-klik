@@ -29,4 +29,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
   },
+  'slepi-telefoni': {
+    id: 'slepi-telefoni',
+    name: 'Slepi telefoni',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
+  },
 };

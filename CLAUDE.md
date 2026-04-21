@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with four games: Kviz (quiz), Crtaj i pogodi (draw & guess), and Lažov (Fibbage-style bluffing, Serbian-only content). Phases 1–6 of `PLAN.md` are all complete.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with four games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), and Slepi telefoni (Telestrations / Gartic Phone-style drawing chain). Lažov and Slepi telefoni are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
 
 ## Commands
 

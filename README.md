@@ -173,7 +173,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, and Lažov (all Serbian), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, and Slepi telefoni (all Serbian), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -181,6 +181,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - [x] **Phase 4** — Polish (sounds, haptics, reconnection, PWA, UX improvements)
 - [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
 - [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
+- [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
 
 ### What's Implemented
 
@@ -224,6 +225,16 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Progressive hints: letters reveal gradually as time elapses
 - Scoring: guessers earn up to 500 pts based on speed, drawer earns 100 per correct guesser
 - Full drawing toolbar on controller: 7 colors, 3 brush widths, clear button
+
+**Slepi telefoni (Telestrations / Gartic Phone-style)** — *Serbian-only content*
+- 3–8 players; each player writes one starting phrase, then the chain rotates through alternating draw→guess→draw→guess steps
+- Host picks **1–4 rounds** on the game-select screen — each round is one full pass around the circle, so with N players and R rounds every chain ends up `1 + R × (N−1)` items long (one prompt plus R alternations per other player)
+- Rotation math skips multiples of N so no player ever draws or guesses on their own chain, even across pass boundaries
+- Only **one** prompt phase per game — subsequent rounds continue the same chain instead of restarting with fresh prompts
+- Reveal, voting, winner replay, and final leaderboard all happen **once** at the very end; players never see other chains' content mid-game
+- Reveal shows each chain whole — drawings paired with their guesses side-by-side on the same screen
+- Scoring: a single vote round at the end — each chain's votes go to its originator; final leaderboard ranks by total votes received
+- Reuses the Crtaj i pogodi drawing pad and canvas; strokes stay private until reveal
 
 **Lažov (Fibbage-style bluffing)** — *Serbian-only content*
 - 34-question Serbian trivia bank (Latin script), 5 questions per game

@@ -6,9 +6,15 @@ const BRUSH_WIDTHS = [3, 6, 12];
 
 interface DrawingPadProps {
   timeRemaining: number;
+  strokeAction?: string;
+  clearAction?: string;
 }
 
-export function DrawingPad({ timeRemaining }: DrawingPadProps) {
+export function DrawingPad({
+  timeRemaining,
+  strokeAction = 'draw:stroke',
+  clearAction = 'draw:clear',
+}: DrawingPadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [color, setColor] = useState('#000000');
@@ -54,7 +60,7 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
   const flushBatch = useCallback(() => {
     if (currentPointsRef.current.length < 2) return;
     socket.emit('game:player-action', {
-      action: 'draw:stroke',
+      action: strokeAction,
       data: {
         points: [...currentPointsRef.current],
         color,
@@ -65,7 +71,7 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
     currentPointsRef.current = [
       currentPointsRef.current[currentPointsRef.current.length - 1],
     ];
-  }, [color, width]);
+  }, [color, width, strokeAction]);
 
   const startDrawing = useCallback(
     (x: number, y: number) => {
@@ -103,7 +109,7 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
     // Flush remaining points
     if (currentPointsRef.current.length >= 2) {
       socket.emit('game:player-action', {
-        action: 'draw:stroke',
+        action: strokeAction,
         data: {
           points: [...currentPointsRef.current],
           color,
@@ -112,7 +118,7 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
       });
     }
     currentPointsRef.current = [];
-  }, [color, width]);
+  }, [color, width, strokeAction]);
 
   const handleClear = useCallback(() => {
     const canvas = canvasRef.current;
@@ -120,8 +126,8 @@ export function DrawingPad({ timeRemaining }: DrawingPadProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvasSizeRef.current.w, canvasSizeRef.current.h);
-    socket.emit('game:player-action', { action: 'draw:clear', data: {} });
-  }, []);
+    socket.emit('game:player-action', { action: clearAction, data: {} });
+  }, [clearAction]);
 
   // Set up canvas size
   useEffect(() => {

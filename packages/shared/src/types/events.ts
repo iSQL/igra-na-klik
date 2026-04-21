@@ -27,6 +27,7 @@ export interface ClientToServerEvents {
   'host:start-game': (data: {
     gameId: string;
     customQuestions?: QuizImportQuestion[];
+    slepiRounds?: number;
   }) => void;
   'host:stop-game': () => void;
   'game:player-action': (data: {

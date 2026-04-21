@@ -2,18 +2,25 @@ import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
 import { useQuizImportStore } from '../store/quizImportStore';
+import { useSlepiConfigStore } from '../store/slepiConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
+
+const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
 export function GameSelectScreen() {
   const setStatus = useRoomStore((s) => s.setStatus);
   const games = Object.values(GAME_DEFINITIONS);
+  const selectedRounds = useSlepiConfigStore((s) => s.selectedRounds);
+  const setSelectedRounds = useSlepiConfigStore((s) => s.setSelectedRounds);
 
   const handleSelect = (gameId: string) => {
     const customQuestions =
       gameId === 'quiz'
         ? useQuizImportStore.getState().customQuestions ?? undefined
         : undefined;
-    socket.emit('host:start-game', { gameId, customQuestions });
+    const slepiRounds =
+      gameId === 'slepi-telefoni' ? selectedRounds : undefined;
+    socket.emit('host:start-game', { gameId, customQuestions, slepiRounds });
   };
 
   return (
@@ -84,6 +91,43 @@ export function GameSelectScreen() {
               {game.minPlayers}-{game.maxPlayers} players
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
+            {game.id === 'slepi-telefoni' && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  marginTop: '0.75rem',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {SLEPI_ROUND_OPTIONS.map((n) => {
+                  const active = n === selectedRounds;
+                  return (
+                    <button
+                      key={n}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRounds(n);
+                      }}
+                      style={{
+                        padding: '0.3rem 0.65rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        background: active
+                          ? 'var(--accent)'
+                          : 'var(--bg-secondary)',
+                        color: active ? '#fff' : 'var(--text-primary)',
+                        minWidth: '36px',
+                      }}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>

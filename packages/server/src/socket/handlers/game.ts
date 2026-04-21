@@ -35,7 +35,7 @@ export function registerGameHandlers(
     const result = gameManager.startGame(
       roomCode,
       data.gameId,
-      data.customQuestions
+      { customQuestions: data.customQuestions, slepiRounds: data.slepiRounds }
     );
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });

@@ -9,6 +9,7 @@ interface DrawingCanvasProps {
 
 export function DrawingCanvas({ strokes, width = 600, height = 450 }: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastStrokesRef = useRef<Stroke[] | null>(null);
   const lastStrokeCountRef = useRef(0);
 
   useEffect(() => {
@@ -17,13 +18,15 @@ export function DrawingCanvas({ strokes, width = 600, height = 450 }: DrawingCan
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // If strokes were cleared, redraw from scratch
-    if (strokes.length < lastStrokeCountRef.current) {
+    const sameArray = lastStrokesRef.current === strokes;
+    const grewInPlace =
+      sameArray && strokes.length > lastStrokeCountRef.current;
+
+    if (!grewInPlace) {
       ctx.clearRect(0, 0, width, height);
       lastStrokeCountRef.current = 0;
     }
 
-    // Draw only new strokes
     for (let i = lastStrokeCountRef.current; i < strokes.length; i++) {
       const stroke = strokes[i];
       if (stroke.points.length < 2) continue;
@@ -41,20 +44,9 @@ export function DrawingCanvas({ strokes, width = 600, height = 450 }: DrawingCan
       ctx.stroke();
     }
 
+    lastStrokesRef.current = strokes;
     lastStrokeCountRef.current = strokes.length;
   }, [strokes, width, height]);
-
-  // Full clear when strokes is empty
-  useEffect(() => {
-    if (strokes.length === 0) {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.clearRect(0, 0, width, height);
-      lastStrokeCountRef.current = 0;
-    }
-  }, [strokes.length, width, height]);
 
   return (
     <canvas

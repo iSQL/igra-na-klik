@@ -7,4 +7,5 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   quiz: () => import('./quiz/QuizGameHost'),
   'draw-guess': () => import('./draw-guess/DrawGuessHost'),
   fibbage: () => import('./fibbage/FibbageHost'),
+  'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniHost'),
 };

@@ -14,6 +14,7 @@ import { TestGameModule } from '../game/games/test-game/TestGameModule.js';
 import { QuizGameModule } from '../game/games/quiz/QuizGameModule.js';
 import { DrawGuessModule } from '../game/games/draw-guess/DrawGuessModule.js';
 import { FibbageModule } from '../game/games/fibbage/FibbageModule.js';
+import { SlepiTelefoniModule } from '../game/games/slepi-telefoni/SlepiTelefoniModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -40,6 +41,7 @@ export function setupSocket(
   gameRegistry.register(new QuizGameModule());
   gameRegistry.register(new DrawGuessModule());
   gameRegistry.register(new FibbageModule());
+  gameRegistry.register(new SlepiTelefoniModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

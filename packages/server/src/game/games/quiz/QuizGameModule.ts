@@ -15,8 +15,12 @@ export class QuizGameModule extends BaseGameModule {
 
   onStart(room: Room, customContent?: unknown): GameState {
     let sourceBank: QuizQuestionFull[] = QUIZ_QUESTION_BANK;
-    if (customContent !== undefined) {
-      const parsed = parseQuizImport(customContent);
+    const customQuestions =
+      customContent && typeof customContent === 'object'
+        ? (customContent as { customQuestions?: unknown }).customQuestions
+        : undefined;
+    if (customQuestions !== undefined) {
+      const parsed = parseQuizImport(customQuestions);
       if (parsed.ok) {
         sourceBank = parsed.questions;
       }
