@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Koliko iznosi zbir uglova u trouglu?",
+    "options": ["90°", "180°", "270°", "360°"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najveća planeta u Sunčevom sistemu?",
+    "options": ["Zemlja", "Saturn", "Jupiter", "Neptun"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je glavni grad Srbije?",
+    "options": ["Novi Sad", "Niš", "Beograd", "Kragujevac"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko je 7 × 8?",
+    "options": ["54", "56", "64", "48"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je napisao 'Gorski vijenac'?",
+    "options": ["Vuk Karadžić", "Petar II Petrović Njegoš", "Branko Radičević", "Jovan Jovanović Zmaj"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najduža reka u Srbiji?",
+    "options": ["Sava", "Drina", "Dunav", "Morava"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji hemijski simbol ima zlato?",
+    "options": ["Zl", "Au", "Ag", "Go"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko kontinenata ima na Zemlji?",
+    "options": ["5", "6", "7", "8"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Na kojoj temperaturi se voda smrzava (u Celzijusima)?",
+    "options": ["0°C", "10°C", "-10°C", "32°C"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko nogu ima pauk?",
+    "options": ["6", "8", "10", "4"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je kvadratni koren broja 144?",
+    "options": ["11", "12", "13", "14"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je otkrio Ameriku 1492. godine?",
+    "options": ["Vasko da Gama", "Kristifor Kolumbo", "Ferdinand Magelan", "Marko Polo"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najviša planina u Srbiji?",
+    "options": ["Kopaonik", "Tara", "Midžor", "Zlatibor"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta proučava biologija?",
+    "options": ["Zvezde", "Živa bića", "Stene", "Brojeve"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko ima slova u srpskoj azbuci?",
+    "options": ["28", "30", "31", "32"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je najveći okean?",
+    "options": ["Atlantski", "Indijski", "Tihi", "Severni ledeni"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je izbio Prvi svetski rat?",
+    "options": ["1912.", "1914.", "1918.", "1939."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji gas biljke koriste u procesu fotosinteze?",
+    "options": ["Kiseonik", "Azot", "Ugljen-dioksid", "Vodonik"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je napisao 'Hamleta'?",
+    "options": ["Šekspir", "Molijer", "Gete", "Dante"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko je 15% od 200?",
+    "options": ["20", "25", "30", "35"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je glavni grad Francuske?",
+    "options": ["Lion", "Marselj", "Pariz", "Nica"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja krvna grupa se smatra univerzalnim davaocem?",
+    "options": ["A", "B", "AB", "O"],
+    "correctIndex": 3,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je glavni sastojak vazduha?",
+    "options": ["Kiseonik", "Azot", "Ugljen-dioksid", "Argon"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji padež odgovara na pitanje 'kome, čemu'?",
+    "options": ["Genitiv", "Dativ", "Akuzativ", "Lokativ"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koliko minuta ima u jednom danu?",
+    "options": ["1440", "1200", "1800", "2400"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je životinja simbol Australije?",
+    "options": ["Lav", "Kengur", "Panda", "Orao"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je najmanji prirodni broj?",
+    "options": ["0", "1", "-1", "Ne postoji"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je izmislio sijalicu?",
+    "options": ["Nikola Tesla", "Tomas Edison", "Albert Ajnštajn", "Aleksandar Bel"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je najveći organ u ljudskom telu?",
+    "options": ["Srce", "Mozak", "Jetra", "Koža"],
+    "correctIndex": 3,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta označava skraćenica 'km'?",
+    "options": ["Kilogram", "Kilometar", "Kilovat", "Kubni metar"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]

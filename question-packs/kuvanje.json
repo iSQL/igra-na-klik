@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Koji je glavni sastojak tradicionalnog srpskog ajvara?",
+    "options": ["Paradajz", "Paprika", "Plavi patlidžan", "Tikvice"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Od čega se pravi tradicionalna srpska kajmak?",
+    "options": ["Od jaja", "Od mleka", "Od brašna", "Od putera"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja začinska biljka je ključni sastojak pesto sosa?",
+    "options": ["Peršun", "Bosiljak", "Mirođija", "Ruzmarin"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Na kojoj temperaturi voda ključa na nivou mora?",
+    "options": ["90°C", "95°C", "100°C", "110°C"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje je glavno jelo u italijanskoj kuhinji poznato po tankom testu?",
+    "options": ["Rizoto", "Pica", "Lazanje", "Njoki"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji sastojak daje crvenu boju jelima sa paprikom?",
+    "options": ["Kurkuma", "Aleva paprika", "Šafran", "Cimet"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Od čega se pravi sir mozarela?",
+    "options": ["Od kravljeg mleka", "Od bivoljeg mleka", "Od ovčjeg mleka", "Od kozijeg mleka"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je osnovni sastojak humusa?",
+    "options": ["Sočivo", "Leblebija", "Pasulj", "Soja"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji napitak se tradicionalno pravi od grožđa?",
+    "options": ["Pivo", "Vino", "Viski", "Rum"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je sarma?",
+    "options": ["Jelo od mesa", "Kupus sa mesom i pirinčem", "Salata od paradajza", "Slatki kolač"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji deo jajeta sadrži više proteina?",
+    "options": ["Žumance", "Belance", "Ljuska", "Isti su"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji sastojak čini testo kiselim?",
+    "options": ["So", "Kvasac", "Šećer", "Mleko"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove japansko jelo sa sirovom ribom i pirinčem?",
+    "options": ["Ramen", "Suši", "Tempura", "Udon"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Iz koje zemlje potiče jelo 'paela'?",
+    "options": ["Italija", "Španija", "Portugal", "Meksiko"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je glavni sastojak gvakamolea?",
+    "options": ["Paradajz", "Avokado", "Tikvica", "Brokoli"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji začin se dobija iz tučka cveta šafranike?",
+    "options": ["Vanila", "Šafran", "Kardamom", "Muskatni oraščić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je tradicionalni srpski specijalitet 'gibanica'?",
+    "options": ["Supa", "Pita sa sirom", "Salata", "Meso na ražnju"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji orašasti plod je osnova za marcipan?",
+    "options": ["Lešnik", "Badem", "Orah", "Indijski orah"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Od čega se pravi francusko jelo 'ratatouille'?",
+    "options": ["Od mesa", "Od povrća", "Od ribe", "Od sira"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta znači kulinarski izraz 'blanširati'?",
+    "options": ["Pržiti na ulju", "Kratko prokuvati i ohladiti", "Peći u rerni", "Dimiti"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je osnova klasičnog beshamel sosa?",
+    "options": ["Jaje i ulje", "Brašno, mleko i puter", "Paradajz i bosiljak", "Vino i pavlaka"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje voće je glavni sastojak jela 'tiramisu'?",
+    "options": ["Jagoda", "Nijedno", "Limun", "Maline"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se naziva meso koje se peče na ražnju celo?",
+    "options": ["Pljeskavica", "Pečenje", "Ćevap", "Karađorđeva šnicla"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji sastojak se najčešće koristi za zgušnjavanje sosova?",
+    "options": ["Šećer", "Brašno", "Kvasac", "So"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Iz koje zemlje potiče 'curry' (kari)?",
+    "options": ["Kina", "Indija", "Tajland", "Japan"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je 'al dente' u kuvanju?",
+    "options": ["Jako kuvana testenina", "Testenina kuvana da bude čvrsta na zub", "Prepržena testenina", "Hladna testenina"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji napitak je osnova za koktel 'Mojito'?",
+    "options": ["Votka", "Rum", "Džin", "Tekila"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Od čega se pravi tradicionalni srpski rakija 'šljivovica'?",
+    "options": ["Od jabuke", "Od šljive", "Od kruške", "Od grožđa"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji sir se tradicionalno koristi u grčkoj salati?",
+    "options": ["Parmezan", "Feta", "Mocarela", "Gauda"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji začin se dobija iz kore drveta?",
+    "options": ["Biber", "Cimet", "Đumbir", "Karanfilić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]

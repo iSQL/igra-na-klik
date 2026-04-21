@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Ko je režirao film 'Titanik' iz 1997. godine?",
+    "options": ["Stiven Spilberg", "Džejms Kameron", "Martin Skorseze", "Kventin Tarantino"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja grupa je pevala pesmu 'Bohemian Rhapsody'?",
+    "options": ["The Beatles", "Queen", "Led Zeppelin", "The Rolling Stones"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko glumi Harija Potera u filmovima?",
+    "options": ["Rupert Grint", "Danijel Redklif", "Tom Felton", "Ilajdža Vud"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove glavni lik serije 'Breaking Bad'?",
+    "options": ["Džesi Pinkman", "Sol Gudman", "Volter Vajt", "Gus Fring"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji pevač je poznat kao 'Kralj popa'?",
+    "options": ["Elvis Prisli", "Majkl Džekson", "Princ", "Stivi Vonder"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja Marvelova grupa heroja se bori u filmu 'Endgame'?",
+    "options": ["Justice League", "X-Men", "Avengers", "Fantastic Four"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je napisao seriju knjiga 'Igra prestola'?",
+    "options": ["Dž. K. Rouling", "Džordž R. R. Martin", "Stiven King", "Dž. R. R. Tolkin"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kom gradu se odvija serija 'Friends'?",
+    "options": ["Los Anđeles", "Čikago", "Njujork", "Boston"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja pevačica je poznata po pesmi 'Bad Guy'?",
+    "options": ["Ariana Grande", "Bili Ajliš", "Dua Lipa", "Tejlor Svift"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji glumac igra Tonija Starka u MCU?",
+    "options": ["Kris Evans", "Robert Dauni Junior", "Mark Rafalo", "Kris Hemsvort"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji film je osvojio Oskara za najbolji film 2020. godine?",
+    "options": ["1917", "Jokera", "Parazit", "Jednom u Holivudu"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove glavni lik iz serije 'Stranger Things' koja ima natprirodne moći?",
+    "options": ["Majk", "Vil", "Jedanaest", "Daster"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najgledanija serija na Netflix-u po izlasku 2021. godine?",
+    "options": ["Bridžertoni", "Igra lignje", "Mrak", "Kruna"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je pevao pesmu 'Shape of You'?",
+    "options": ["Džastin Biber", "Ed Širan", "Bruno Mars", "Čarli Pat"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je prvi film iz franšize 'Star Wars'?",
+    "options": ["A New Hope", "The Phantom Menace", "Rogue One", "The Empire Strikes Back"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je tvorac animirane serije 'Simpsonovi'?",
+    "options": ["Set MekFarlejn", "Met Grejning", "Trej Parker", "Mat Stoun"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja K-pop grupa je izvela pesmu 'Dynamite'?",
+    "options": ["Blackpink", "BTS", "Twice", "EXO"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove izmišljena država u filmu 'Black Panther'?",
+    "options": ["Zamunda", "Vakanda", "Sokovia", "Genosha"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji reper je poznat po albumu 'The Marshall Mathers LP'?",
+    "options": ["Dr. Dre", "Eminem", "50 Cent", "Snoop Dogg"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je najveći bioskop/platforma po broju pretplatnika 2023?",
+    "options": ["Disney+", "HBO Max", "Netflix", "Amazon Prime"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko glumi Džeka Sperou u filmovima 'Pirati sa Kariba'?",
+    "options": ["Orlando Blum", "Džoni Dep", "Brad Pit", "Nikolas Kejdž"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja animirana studija je napravila film 'Priča o igračkama'?",
+    "options": ["DreamWorks", "Pixar", "Disney", "Illumination"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je glumio Neo-a u filmu 'Matriks'?",
+    "options": ["Tom Kruz", "Kijanu Rivs", "Vil Smit", "Nikolas Kejdž"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja društvena mreža je poznata po video klipovima do 60 sekundi?",
+    "options": ["Instagram", "TikTok", "Snapchat", "Twitter"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je omiljeni napitak Dželika u Harry Potteru?",
+    "options": ["Čaj", "Sok od bundeve", "Puter-pivo", "Kafa"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji glumac je poznat po ulozi Džokera 2019. i osvojio Oskara?",
+    "options": ["Hit Ledžer", "Hoakin Finiks", "Džared Leto", "Džek Nikolson"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najuspešnija filmska franšiza svih vremena po zaradi?",
+    "options": ["Star Wars", "Harry Potter", "Marvel Cinematic Universe", "James Bond"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je pevao pesmu 'Rolling in the Deep'?",
+    "options": ["Bijonse", "Adele", "Rijana", "Keti Peri"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove glavni junak filma 'Džon Vik'?",
+    "options": ["Itan Hant", "Džon Vik", "Džejms Bond", "Džejson Born"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja bajka je inspiracija za Diznijev film 'Zaleđeno kraljevstvo'?",
+    "options": ["Pepeljuga", "Snežna kraljica", "Mala sirena", "Uspavana lepotica"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]

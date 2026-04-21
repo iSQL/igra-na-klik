@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Koja kompanija je napravila konzolu PlayStation?",
+    "options": ["Nintendo", "Microsoft", "Sony", "Sega"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je glavni lik serijala 'Super Mario'?",
+    "options": ["Luiđi", "Mario", "Bauzer", "Joši"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je izašla igra 'Minecraft'?",
+    "options": ["2007.", "2009.", "2011.", "2013."],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji studio je napravio igru 'The Witcher 3'?",
+    "options": ["Bethesda", "CD Projekt Red", "Bioware", "Ubisoft"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove glavni junak igre 'The Legend of Zelda'?",
+    "options": ["Zelda", "Link", "Ganon", "Sheik"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja igra je popularizovala žanr 'battle royale'?",
+    "options": ["Fortnite", "PUBG", "Apex Legends", "Call of Duty"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je tvorac igre 'Minecraft'?",
+    "options": ["Gejb Njuel", "Markus Person", "Hideo Kođima", "Šigeru Mijamoto"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja kompanija je vlasnik platforme Steam?",
+    "options": ["Epic Games", "EA", "Valve", "Activision"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji lik je maskota kompanije Sega?",
+    "options": ["Mario", "Pikachu", "Sonic", "Crash Bandicoot"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kojoj igri se pojavljuje Master Chief?",
+    "options": ["Halo", "Destiny", "Gears of War", "Call of Duty"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najprodavanija video igra svih vremena?",
+    "options": ["Tetris", "GTA V", "Minecraft", "Wii Sports"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove protagonista serijala 'Uncharted'?",
+    "options": ["Nathan Drake", "Lara Croft", "Aloy", "Kratos"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja igra je poznata po frazi 'It's dangerous to go alone!'?",
+    "options": ["Final Fantasy", "The Legend of Zelda", "Dragon Quest", "Chrono Trigger"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji studio je napravio seriju 'Dark Souls'?",
+    "options": ["Square Enix", "FromSoftware", "Capcom", "Konami"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove valuta u igri 'Fortnite'?",
+    "options": ["V-Bucks", "Robux", "Gold", "Credits"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je izašla prva PlayStation konzola?",
+    "options": ["1992.", "1994.", "1996.", "1998."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji lik je glavni neprijatelj u igri 'Portal'?",
+    "options": ["GLaDOS", "HAL 9000", "SHODAN", "Wheatley"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kojoj igri se igra 'Gwent'?",
+    "options": ["Skyrim", "The Witcher 3", "Dragon Age", "Mass Effect"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja je najpopularnija MOBA igra?",
+    "options": ["Dota 2", "League of Legends", "Heroes of the Storm", "Smite"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je tvorac serijala 'Metal Gear Solid'?",
+    "options": ["Hideo Kođima", "Šigeru Mijamoto", "Hironobu Sakaguči", "Jodži Šinkava"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja konzola je koristila kertridže umesto diskova?",
+    "options": ["PlayStation", "Nintendo 64", "Dreamcast", "Xbox"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove glavni lik u igri 'God of War'?",
+    "options": ["Ahil", "Kratos", "Zeus", "Perseus"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kojoj igri se javlja mapa 'Dust II'?",
+    "options": ["Call of Duty", "Valorant", "Counter-Strike", "Rainbow Six Siege"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja igra je poznata po liku Geralt od Rivije?",
+    "options": ["Elden Ring", "The Witcher", "Skyrim", "Dragon Age"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove Nintendo-va hibridna konzola iz 2017. godine?",
+    "options": ["Wii U", "Switch", "3DS", "DS Lite"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja igra je započela seriju 'Grand Theft Auto'?",
+    "options": ["GTA III", "GTA Vice City", "GTA (1997)", "GTA San Andreas"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji Pokemon je maskota franšize?",
+    "options": ["Charizard", "Pikachu", "Mewtwo", "Bulbasaur"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja igra je osvojila 'Game of the Year' 2023. na The Game Awards?",
+    "options": ["Baldur's Gate 3", "Starfield", "Zelda: Tears of the Kingdom", "Alan Wake 2"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta znači skraćenica 'FPS' u gejmingu?",
+    "options": ["Fast Play System", "First Person Shooter", "Frame Per Sprite", "Full Player Squad"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji je najveći gejming sajt za striming?",
+    "options": ["YouTube Gaming", "Twitch", "Facebook Gaming", "Kick"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]

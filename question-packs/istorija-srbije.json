@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Ko je bio prvi srpski vladar iz dinastije Nemanjića?",
+    "options": ["Stefan Prvovenčani", "Stefan Nemanja", "Sveti Sava", "Vukan Nemanjić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je održana Kosovska bitka?",
+    "options": ["1371.", "1389.", "1402.", "1456."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je predvodio srpsku vojsku u Kosovskoj bici?",
+    "options": ["Car Dušan", "Knez Lazar", "Kralj Milutin", "Despot Stefan"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je Stefan Dušan krunisan za cara?",
+    "options": ["1331.", "1346.", "1355.", "1321."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kako se zove zakonik koji je doneo car Dušan?",
+    "options": ["Nomokanon", "Dušanov zakonik", "Sintagma", "Zakon gradski"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio vođa Prvog srpskog ustanka?",
+    "options": ["Miloš Obrenović", "Karađorđe Petrović", "Hajduk Veljko", "Stevan Sinđelić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je počeo Prvi srpski ustanak?",
+    "options": ["1789.", "1804.", "1815.", "1830."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je predvodio Drugi srpski ustanak?",
+    "options": ["Karađorđe", "Miloš Obrenović", "Hajduk Veljko", "Matija Nenadović"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kojoj bici je poginuo Stevan Sinđelić?",
+    "options": ["Bitka na Mišaru", "Boj na Čegru", "Bitka na Ivankovcu", "Bitka na Deligradu"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Šta je Ćele kula?",
+    "options": ["Srednjovekovna tvrđava", "Spomenik od lobanja srpskih ustanika", "Kula kneza Lazara", "Osmatračnica u Beogradu"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio prvi srpski arhiepiskop?",
+    "options": ["Sveti Sava", "Sveti Simeon", "Arsenije I", "Danilo II"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je Srbija stekla potpunu nezavisnost na Berlinskom kongresu?",
+    "options": ["1867.", "1878.", "1882.", "1903."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je Srbija proglašena kraljevinom?",
+    "options": ["1878.", "1882.", "1889.", "1903."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio prvi kralj Srbije iz dinastije Obrenović?",
+    "options": ["Mihailo Obrenović", "Milan Obrenović", "Aleksandar Obrenović", "Miloš Obrenović"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kom događaju je 1903. godine svrgnuta dinastija Obrenović?",
+    "options": ["Topolski ustanak", "Majski prevrat", "Timočka buna", "Ivanjdanski atentat"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je izvršio atentat na Franca Ferdinanda u Sarajevu 1914. godine?",
+    "options": ["Nedeljko Čabrinović", "Gavrilo Princip", "Danilo Ilić", "Trifko Grabež"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koja bitka u Prvom svetskom ratu se smatra prvom pobedom Saveznika?",
+    "options": ["Kolubarska bitka", "Cerska bitka", "Bitka na Drini", "Mojkovačka bitka"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Preko koje teritorije se odvijalo povlačenje srpske vojske 1915. godine?",
+    "options": ["Preko Grčke", "Preko Albanije", "Preko Bugarske", "Preko Rumunije"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je stvorena Kraljevina Srba, Hrvata i Slovenaca?",
+    "options": ["1914.", "1918.", "1921.", "1929."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio prvi kralj Kraljevine SHS?",
+    "options": ["Petar I Karađorđević", "Aleksandar I Karađorđević", "Pavle Karađorđević", "Petar II Karađorđević"],
+    "correctIndex": 0,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je Kraljevina SHS preimenovana u Kraljevinu Jugoslaviju?",
+    "options": ["1921.", "1929.", "1934.", "1941."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "U kom gradu je 1934. godine izvršen atentat na kralja Aleksandra I?",
+    "options": ["Beograd", "Pariz", "Marselj", "Sofija"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Kog datuma je nemačka vojska bombardovala Beograd u Drugom svetskom ratu?",
+    "options": ["1. septembar 1939.", "6. april 1941.", "22. jun 1941.", "27. mart 1941."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je predvodio četnički pokret u Drugom svetskom ratu?",
+    "options": ["Josip Broz Tito", "Draža Mihailović", "Milan Nedić", "Dimitrije Ljotić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je oslobođen Beograd u Drugom svetskom ratu?",
+    "options": ["1943.", "1944.", "1945.", "1946."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio doživotni predsednik SFRJ?",
+    "options": ["Edvard Kardelj", "Aleksandar Ranković", "Josip Broz Tito", "Milovan Đilas"],
+    "correctIndex": 2,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je umro Josip Broz Tito?",
+    "options": ["1974.", "1980.", "1985.", "1989."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koji srpski naučnik je poznat po otkrićima u oblasti elektriciteta?",
+    "options": ["Mihajlo Pupin", "Nikola Tesla", "Milutin Milanković", "Jovan Cvijić"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Ko je reformisao srpski jezik i pismo u 19. veku?",
+    "options": ["Dositej Obradović", "Vuk Stefanović Karadžić", "Đura Daničić", "Branko Radičević"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+    "text": "Koje godine je NATO bombardovao Saveznu Republiku Jugoslaviju?",
+    "options": ["1995.", "1999.", "2000.", "2001."],
+    "correctIndex": 1,
+    "timeLimit": 15
+  }
+]
