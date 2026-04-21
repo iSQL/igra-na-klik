@@ -37,7 +37,7 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
           color: 'var(--text-secondary)',
         }}
       >
-        {controllerBase}
+        {joinUrl}
       </p>
       <p
         style={{
