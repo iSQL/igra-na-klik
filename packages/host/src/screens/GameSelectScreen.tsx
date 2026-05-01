@@ -3,24 +3,52 @@ import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
 import { useQuizImportStore } from '../store/quizImportStore';
 import { useSlepiConfigStore } from '../store/slepiConfigStore';
+import { useGeoConfigStore } from '../store/geoConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
+import { GeoPackButton } from '../components/GeoPackButton';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
 export function GameSelectScreen() {
   const setStatus = useRoomStore((s) => s.setStatus);
+  const players = useRoomStore((s) => s.players);
   const games = Object.values(GAME_DEFINITIONS);
   const selectedRounds = useSlepiConfigStore((s) => s.selectedRounds);
   const setSelectedRounds = useSlepiConfigStore((s) => s.setSelectedRounds);
+  const connectedCount = players.filter((p) => p.isConnected).length;
 
   const handleSelect = (gameId: string) => {
+    const def = GAME_DEFINITIONS[gameId];
+    if (def && connectedCount < def.minPlayers) return;
+
     const customQuestions =
       gameId === 'quiz'
         ? useQuizImportStore.getState().customQuestions ?? undefined
         : undefined;
     const slepiRounds =
       gameId === 'slepi-telefoni' ? selectedRounds : undefined;
-    socket.emit('host:start-game', { gameId, customQuestions, slepiRounds });
+
+    let geoPackId: string | undefined;
+    let geoMode: 'predefined' | 'custom' | undefined;
+    let customPhotosPerPlayer: number | undefined;
+    if (gameId === 'geo-pogodi') {
+      const geo = useGeoConfigStore.getState();
+      geoMode = geo.mode;
+      if (geo.mode === 'predefined') {
+        geoPackId = geo.selectedPackId ?? undefined;
+      } else {
+        customPhotosPerPlayer = geo.customPhotosPerPlayer;
+      }
+    }
+
+    socket.emit('host:start-game', {
+      gameId,
+      customQuestions,
+      slepiRounds,
+      geoPackId,
+      geoMode,
+      customPhotosPerPlayer,
+    });
   };
 
   return (
@@ -45,11 +73,14 @@ export function GameSelectScreen() {
           width: '100%',
         }}
       >
-        {games.map((game) => (
+        {games.map((game) => {
+          const lacking = connectedCount < game.minPlayers;
+          return (
           <div
             key={game.id}
             role="button"
-            tabIndex={0}
+            tabIndex={lacking ? -1 : 0}
+            aria-disabled={lacking}
             onClick={() => handleSelect(game.id)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -64,13 +95,16 @@ export function GameSelectScreen() {
               textAlign: 'center',
               transition: 'transform 0.15s, background 0.15s',
               color: 'var(--text-primary)',
-              cursor: 'pointer',
+              cursor: lacking ? 'not-allowed' : 'pointer',
+              opacity: lacking ? 0.45 : 1,
             }}
             onMouseEnter={(e) => {
+              if (lacking) return;
               e.currentTarget.style.background = 'var(--accent)';
               e.currentTarget.style.transform = 'scale(1.03)';
             }}
             onMouseLeave={(e) => {
+              if (lacking) return;
               e.currentTarget.style.background = 'var(--bg-card)';
               e.currentTarget.style.transform = 'scale(1)';
             }}
@@ -85,12 +119,17 @@ export function GameSelectScreen() {
               style={{
                 fontSize: '0.8rem',
                 marginTop: '0.5rem',
-                color: 'var(--text-secondary)',
+                color: lacking ? '#e07070' : 'var(--text-secondary)',
               }}
             >
-              {game.minPlayers}-{game.maxPlayers} players
+              {lacking
+                ? `Treba još ${game.minPlayers - connectedCount} ${
+                    game.minPlayers - connectedCount === 1 ? 'igrač' : 'igrača'
+                  }`
+                : `${game.minPlayers}-${game.maxPlayers} players`}
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
+            {game.id === 'geo-pogodi' && <GeoPackButton />}
             {game.id === 'slepi-telefoni' && (
               <div
                 style={{
@@ -129,7 +168,8 @@ export function GameSelectScreen() {
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <button

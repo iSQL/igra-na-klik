@@ -1,13 +1,20 @@
+import { GAME_DEFINITIONS } from '@igra/shared';
 import { useRoomStore } from '../store/roomStore';
 import { PlayerList } from '../components/PlayerList';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
+
+// Lowest minPlayers across all registered games — gate the lobby on this so
+// solo-friendly games (test-game, geo-pogodi) aren't blocked by a hard 2.
+const MIN_PLAYERS_OVERALL = Math.min(
+  ...Object.values(GAME_DEFINITIONS).map((g) => g.minPlayers)
+);
 
 export function LobbyScreen() {
   const { room, players, setStatus } = useRoomStore();
 
   if (!room) return null;
 
-  const canStart = players.length >= 2;
+  const canStart = players.length >= MIN_PLAYERS_OVERALL;
 
   return (
     <div
@@ -57,7 +64,9 @@ export function LobbyScreen() {
           transition: 'background 0.2s',
         }}
       >
-        {canStart ? 'Choose Game' : 'Need at least 2 players'}
+        {canStart
+          ? 'Choose Game'
+          : `Need at least ${MIN_PLAYERS_OVERALL} player${MIN_PLAYERS_OVERALL === 1 ? '' : 's'}`}
       </button>
     </div>
   );

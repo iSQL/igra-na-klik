@@ -3,6 +3,14 @@ import type { Room, GameState } from '@igra/shared';
 export interface IGameModule {
   readonly gameId: string;
 
+  /**
+   * Optional hook called by GameManager before onStart, after the platform's
+   * generic minPlayers check. Return a string to refuse the start with that
+   * message (which is forwarded to the host as a START_ERROR), or null to
+   * proceed.
+   */
+  validateStart?(room: Room, customContent?: unknown): string | null;
+
   onStart(room: Room, customContent?: unknown): GameState;
 
   onPlayerAction(

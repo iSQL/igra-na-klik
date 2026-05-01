@@ -15,13 +15,15 @@ import { QuizGameModule } from '../game/games/quiz/QuizGameModule.js';
 import { DrawGuessModule } from '../game/games/draw-guess/DrawGuessModule.js';
 import { FibbageModule } from '../game/games/fibbage/FibbageModule.js';
 import { SlepiTelefoniModule } from '../game/games/slepi-telefoni/SlepiTelefoniModule.js';
+import { GeoGuessModule } from '../game/games/geo-pogodi/GeoGuessModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
 
 export function setupSocket(
   httpServer: HttpServer,
-  corsOrigins: string | string[]
+  corsOrigins: string | string[],
+  options?: { geoPacksDir?: string }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
@@ -42,6 +44,7 @@ export function setupSocket(
   gameRegistry.register(new DrawGuessModule());
   gameRegistry.register(new FibbageModule());
   gameRegistry.register(new SlepiTelefoniModule());
+  gameRegistry.register(new GeoGuessModule(options?.geoPacksDir ?? ''));
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

@@ -51,6 +51,11 @@ export class GameManager {
       }
     }
 
+    if (module.validateStart) {
+      const err = module.validateStart(room, customContent);
+      if (err) return { error: err };
+    }
+
     room.status = 'in-game';
     room.currentGameId = gameId;
 

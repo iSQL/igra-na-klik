@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { parseQuizImport } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
+import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:5173';
@@ -23,6 +24,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
   ? path.resolve(process.env.QUESTION_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'question-packs');
+const GEO_PACKS_DIR = process.env.GEO_PACKS_DIR
+  ? path.resolve(process.env.GEO_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'geo-packs');
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -94,9 +98,31 @@ app.get('/api/question-packs', async (_req, res) => {
   }
 });
 
+app.get('/api/geo-packs', async (_req, res) => {
+  try {
+    const packs = await listGeoPacks(GEO_PACKS_DIR);
+    res.json({ packs });
+  } catch (err) {
+    console.error('Failed to read geo packs directory:', err);
+    res.status(500).json({ error: 'Failed to read geo packs' });
+  }
+});
+
+// Serve pack image folders so the host (and any browser) can render them.
+// We mount the entire packs dir under /geo-images; manifests are public anyway.
+if (existsSync(GEO_PACKS_DIR)) {
+  app.use(
+    '/geo-images',
+    cors({ origin: corsOrigins }),
+    express.static(GEO_PACKS_DIR, { maxAge: '7d', etag: true })
+  );
+}
+
 const httpServer = createServer(app);
 const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
-const { roomManager } = setupSocket(httpServer, socketOrigins);
+const { roomManager } = setupSocket(httpServer, socketOrigins, {
+  geoPacksDir: GEO_PACKS_DIR,
+});
 
 if (SINGLE_ROOM_MODE) {
   app.get('/room-code', (_req, res) => {
@@ -131,6 +157,7 @@ if (existsSync(HOST_DIST_DIR)) {
       req.path.startsWith('/api') ||
       req.path.startsWith('/socket.io') ||
       req.path.startsWith('/play') ||
+      req.path.startsWith('/geo-images') ||
       req.path === '/health' ||
       req.path === '/room-code'
     ) {
@@ -144,6 +171,7 @@ if (existsSync(HOST_DIST_DIR)) {
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
+  console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }

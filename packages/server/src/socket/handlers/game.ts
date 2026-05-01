@@ -32,11 +32,13 @@ export function registerGameHandlers(
       return;
     }
 
-    const result = gameManager.startGame(
-      roomCode,
-      data.gameId,
-      { customQuestions: data.customQuestions, slepiRounds: data.slepiRounds }
-    );
+    const result = gameManager.startGame(roomCode, data.gameId, {
+      customQuestions: data.customQuestions,
+      slepiRounds: data.slepiRounds,
+      geoPackId: data.geoPackId,
+      geoMode: data.geoMode,
+      customPhotosPerPlayer: data.customPhotosPerPlayer,
+    });
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });
     }

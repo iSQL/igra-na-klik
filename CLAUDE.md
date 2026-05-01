@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with four games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), and Slepi telefoni (Telestrations / Gartic Phone-style drawing chain). Lažov and Slepi telefoni are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with five games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), and Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia). Lažov, Slepi telefoni, and Pogodi gde je are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
 
 ## Commands
 
@@ -65,6 +65,12 @@ Controller collects touch points in **normalized 0–1 coordinates**, batches ev
 
 The host's game-select screen accepts a JSON file of `{text, options, correctIndex, timeLimit?}` entries. Imported packs **replace** the built-in bank for the session and persist in the host's `localStorage`. Sample packs live in [question-packs/](question-packs/). Validation rules (options length 2–4, `timeLimit` 5–60s) are in the import path — mirror them if you add other custom-content importers.
 
+### Geo packs (Pogodi gde je)
+
+Pogodi gde je serves location packs from a server-side directory (default `geo-packs/` at the repo root, override via `GEO_PACKS_DIR`). Each pack is `<id>.json` plus a sibling `<id>/` folder with images. Server endpoint `GET /api/geo-packs` lists summaries (without lat/lng — clients must not be able to peek). Static images are served at `/geo-images/<id>/<file>`. Validation rules (1–100 locations, lat ∈ [41.5, 46.5], lng ∈ [18.5, 23.5], optional district from `SerbianDistrict` enum, caption ≤ 200 chars) live in [packages/shared/src/games/geo-import.ts](packages/shared/src/games/geo-import.ts). The game also has a custom mode where players upload photos from the controller — those are downscaled (~1280px JPEG q=0.7) and held in the server module's in-memory state for the session only.
+
+The map is a static SVG of Serbia at [packages/host/src/games/geo-pogodi/assets/serbia.svg](packages/host/src/games/geo-pogodi/assets/serbia.svg) (and a parallel copy in the controller package). The placeholder shipped is a rough outline; replace with a real SVG generated from a public-domain GeoJSON (see the assets/README.md). Pin coordinates flow as normalized SVG `{x, y}` ∈ [0, 1] and are reprojected to lat/lng on the server via [packages/shared/src/games/serbia-projection.ts](packages/shared/src/games/serbia-projection.ts) before haversine-distance scoring. If you swap the SVG, recalibrate the affine projection constants in that file.
+
 ### Serbian-only content
 
 The Lažov game is Serbian-only (Latin script) by design — strings are hardcoded in the host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching Lažov.
@@ -72,6 +78,14 @@ The Lažov game is Serbian-only (Latin script) by design — strings are hardcod
 ## LAN / single-room modes
 
 For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5173` and `CONTROLLER_ORIGIN=http://<LAN-IP>:5174` so CORS accepts LAN origins. Vite dev servers already bind `0.0.0.0`. Set `SINGLE_ROOM_MODE=true` (root `.env`) plus `VITE_SINGLE_ROOM=true` (`packages/controller/.env`) to let controllers auto-fetch the active room code so players only type a name. See [README.md](README.md) for full instructions.
+
+## Environment variables
+
+- `QUESTION_PACKS_DIR` — directory of `.json` quiz packs (default `question-packs/`).
+- `GEO_PACKS_DIR` — directory of geo-pack manifests + image folders (default `geo-packs/`).
+- `HOST_ORIGIN` / `CONTROLLER_ORIGIN` — CORS origins for LAN play.
+- `SAME_ORIGIN_DEPLOY=true` — single-container deploy (host + controller served from server).
+- `SINGLE_ROOM_MODE=true` (+ `VITE_SINGLE_ROOM=true` for controller) — auto-fill the active room code.
 
 ## Gotchas
 

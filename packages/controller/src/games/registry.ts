@@ -8,4 +8,5 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'draw-guess': () => import('./draw-guess/DrawGuessController'),
   fibbage: () => import('./fibbage/FibbageController'),
   'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniController'),
+  'geo-pogodi': () => import('./geo-pogodi/GeoGuessController'),
 };

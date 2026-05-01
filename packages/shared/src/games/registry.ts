@@ -37,4 +37,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
   },
+  'geo-pogodi': {
+    id: 'geo-pogodi',
+    name: 'Pogodi gde je',
+    minPlayers: 1,
+    maxPlayers: 8,
+    description:
+      'Pogodi gde je u Srbiji slikana fotografija — bliža igla, više poena!',
+  },
 };

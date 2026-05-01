@@ -3,9 +3,9 @@ import { QUIZ_QUESTION_BANK, parseQuizImport } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { QuizInternalState, QuizPhase, QuizPlayerAnswer } from './QuizState.js';
 
-const SHOWING_QUESTION_DURATION = 3;
-const SHOWING_RESULTS_DURATION = 3;
-const LEADERBOARD_DURATION = 2;
+const SHOWING_QUESTION_DURATION = 5;
+const SHOWING_RESULTS_DURATION = 4;
+const LEADERBOARD_DURATION = 4;
 const NUM_QUESTIONS = 10;
 
 export class QuizGameModule extends BaseGameModule {

@@ -28,6 +28,9 @@ export interface ClientToServerEvents {
     gameId: string;
     customQuestions?: QuizImportQuestion[];
     slepiRounds?: number;
+    geoPackId?: string;
+    geoMode?: 'predefined' | 'custom';
+    customPhotosPerPlayer?: number;
   }) => void;
   'host:stop-game': () => void;
   'game:player-action': (data: {
