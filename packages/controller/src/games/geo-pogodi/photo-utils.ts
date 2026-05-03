@@ -1,3 +1,53 @@
+import exifr from 'exifr';
+import { latLngToSvg } from '@igra/shared';
+import type { GeoPin } from '@igra/shared';
+
+export type GpsExtractionResult =
+  | { kind: 'found'; pin: GeoPin; lat: number; lng: number }
+  | { kind: 'no-gps' }
+  | { kind: 'outside-serbia'; lat: number; lng: number }
+  | { kind: 'error' };
+
+/**
+ * Reads the photo's EXIF GPS tags. Returns a structured result so the UI
+ * can give the player explicit feedback about *why* a pin wasn't auto-placed.
+ *
+ *  - `found`: GPS within the Serbia bbox → pin pre-filled on the map.
+ *  - `no-gps`: file has no GPS metadata (screenshot, edited photo, location
+ *    services were off when the photo was taken).
+ *  - `outside-serbia`: GPS exists but isn't in Serbia — player must place
+ *    the pin manually.
+ *  - `error`: parser failed unexpectedly.
+ *
+ * Bbox mirrors `parseGeoPackImport` so EXIF-derived pins and manually-placed
+ * pins live in the same coordinate space.
+ */
+export async function extractGpsPin(file: File): Promise<GpsExtractionResult> {
+  try {
+    const gps = await exifr.gps(file);
+    if (!gps || typeof gps.latitude !== 'number' || typeof gps.longitude !== 'number') {
+      return { kind: 'no-gps' };
+    }
+    const { latitude, longitude } = gps;
+    if (
+      latitude < 41.5 ||
+      latitude > 46.5 ||
+      longitude < 18.5 ||
+      longitude > 23.5
+    ) {
+      return { kind: 'outside-serbia', lat: latitude, lng: longitude };
+    }
+    const { x, y } = latLngToSvg(latitude, longitude);
+    if (x < 0 || x > 1 || y < 0 || y > 1) {
+      return { kind: 'outside-serbia', lat: latitude, lng: longitude };
+    }
+    return { kind: 'found', pin: { x, y }, lat: latitude, lng: longitude };
+  } catch (err) {
+    console.warn('GPS extraction failed:', err);
+    return { kind: 'error' };
+  }
+}
+
 /**
  * Downscales an image and re-encodes as JPEG so it fits comfortably within
  * the server's per-submission base64 cap (700 KB). A typical 4032×3024 phone

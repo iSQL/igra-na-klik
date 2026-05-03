@@ -169,11 +169,12 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 | `SAME_ORIGIN_DEPLOY` | `true` in Docker | Relaxes CORS; host and controller share one origin |
 | `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so the controller auto-fills the active room |
 | `QUESTION_PACKS_DIR` | `./question-packs` | Override location of JSON question packs |
+| `GEO_PACKS_DIR` | `./geo-packs` | Override location of geo-pack manifests + image folders |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, and Slepi telefoni (all Serbian), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, and Pogodi gde je (all Serbian content), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -182,6 +183,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
 - [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
 - [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
+- [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
 
 ### What's Implemented
 
@@ -246,6 +248,19 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Players cannot vote for their own fake (visually grayed out)
 - All in-game UI strings hardcoded in Serbian (Latin); other games and platform UI remain English pending a future i18n retrofit
 
+**Pogodi gde je (GeoGuessr-style)** — *Serbian-only content*
+- 1–8 players; can be played solo against a predefined pack
+- **Two modes:**
+  - **Predefinisano**: server-served location packs from `geo-packs/` (configurable via `GEO_PACKS_DIR`). Each pack is a `<id>.json` manifest plus a sibling `<id>/` folder with images. Up to 8 random rounds per game.
+  - **Slike igrača (custom)**: pre-game submission phase where each player uploads N (1–4) photos from their phone and tags each with a pin on the map. Photos are then shuffled and dealt out — players never get their own to guess.
+- **EXIF GPS auto-fill** in custom mode: when a player picks a photo, the controller reads GPS metadata in parallel with downscaling (`exifr`). If coordinates fall within Serbia, the pin is pre-placed on the map. The player gets explicit colored feedback: ✓ green ("Lokacija učitana iz fotografije"), ⚠ yellow if no GPS or out-of-Serbia, red if parsing fails. Works as a fallback to manual placement.
+- **Static SVG map of Serbia** with okrug borders ([Serbia_adm_location_map.svg](https://commons.wikimedia.org/wiki/File:Serbia_adm_location_map.svg) from Wikimedia Commons, CC BY-SA 3.0 DE). Affine projection in `packages/shared/src/games/serbia-projection.ts` matches the Wikipedia `Module:Location_map/data/Serbia` bbox (top=46.3, bottom=41.7, left=18.7, right=23.2).
+- **Pinch-zoom + pan** on the controller's map (1×–5×), so players can place pins precisely. Tap-to-place, drag-to-pan when zoomed, double-tap or ↻ button to reset.
+- **Scoring**: `points = round(5000 × exp(−distanceKm / 220))` — 0 km → 5000, 50 km → ~3990, 200 km → ~2030, 600 km → ~339. Distance computed via haversine on the truth's lat/lng vs. the controller's pin reprojected from SVG coords.
+- **Privacy**: server hides the truth's lat/lng from clients during placing (only the image URL leaks); pins from other guessers stay private until reveal.
+- Custom-mode photos are downscaled client-side (~1280px JPEG q=0.7), kept in-memory on the server for the session only.
+- Host display: photo full-screen during placing, big map with all pins + truth + connecting lines during reveal, podium animation only on the final leaderboard.
+
 ## Architecture
 
 ### Room System
@@ -253,6 +268,49 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Host creates a room → gets a 4-letter code (excludes ambiguous chars like O, I, L)
 - Players join by code → server assigns UUID + avatar color + reconnect token
 - Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within 30s, they're restored
+
+### Geo Packs (Pogodi gde je)
+
+Predefined location packs live in `geo-packs/` at the repo root (override via `GEO_PACKS_DIR`). Each pack has the shape:
+
+```
+geo-packs/
+├── branicevski.json           # manifest
+└── branicevski/
+    ├── viminacium.jpg
+    └── lepenski-vir.jpg
+```
+
+Manifest format:
+
+```json
+{
+  "name": "Braničevski okrug",
+  "description": "Lokacije iz Braničevskog okruga",
+  "locations": [
+    {
+      "imageFile": "viminacium.jpg",
+      "lat": 44.7414,
+      "lng": 21.2287,
+      "district": "branicevski",
+      "caption": "Viminacium, antički grad"
+    }
+  ]
+}
+```
+
+Validation (in `packages/shared/src/games/geo-import.ts`):
+- 1–100 locations per pack
+- `lat` ∈ [41.5, 46.5], `lng` ∈ [18.5, 23.5]
+- `district` is optional, must match one of the 25 Serbian okruzi (or `beograd`)
+- `caption` ≤ 200 characters
+- `imageFile` is a path relative to the pack folder; no `..` allowed
+
+Server endpoints:
+- `GET /api/geo-packs` — list of pack summaries (id, name, count) without lat/lng so clients can't peek at the answers
+- `GET /geo-images/<id>/<file>` — static image serving with 7d cache + ETag
+
+See [geo-packs/README.md](geo-packs/README.md) for the full list of valid `district` values and instructions for adding a new pack.
 
 ### Custom Quiz Questions
 

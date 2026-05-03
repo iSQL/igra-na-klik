@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import type { GeoPin } from '@igra/shared';
 import { socket } from '../../socket';
 import { SerbiaMap } from './components/SerbiaMap';
-import { downscaleImage } from './photo-utils';
+import { downscaleImage, extractGpsPin } from './photo-utils';
+import type { GpsExtractionResult } from './photo-utils';
 
 const MAX_CAPTION_LENGTH = 80;
 
@@ -22,6 +23,9 @@ export function PhotoSubmitter({
   const [step, setStep] = useState<StepKind>('pick');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [pin, setPin] = useState<GeoPin | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<GpsExtractionResult['kind'] | null>(
+    null
+  );
   const [caption, setCaption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,7 +59,12 @@ export function PhotoSubmitter({
     setBusy(true);
     setError(null);
     try {
-      const result = await downscaleImage(file);
+      // Run downscale and EXIF GPS extraction in parallel — both read the
+      // original File so there's no contention.
+      const [result, gps] = await Promise.all([
+        downscaleImage(file),
+        extractGpsPin(file),
+      ]);
       if (!result) {
         setError('Ne mogu da pročitam sliku.');
         return;
@@ -65,6 +74,8 @@ export function PhotoSubmitter({
         return;
       }
       setImageBase64(result.base64);
+      setGpsStatus(gps.kind);
+      setPin(gps.kind === 'found' ? gps.pin : null);
       setStep('pin');
     } catch (err) {
       setError('Greška pri obradi slike.');
@@ -93,6 +104,7 @@ export function PhotoSubmitter({
     // Reset for next photo. The server will bump photosSubmitted via state.
     setImageBase64(null);
     setPin(null);
+    setGpsStatus(null);
     setCaption('');
     setStep('pick');
     setBusy(false);
@@ -101,10 +113,19 @@ export function PhotoSubmitter({
   const handleBack = () => {
     if (step === 'pin') {
       setImageBase64(null);
+      setPin(null);
+      setGpsStatus(null);
       setStep('pick');
     } else if (step === 'caption') {
       setStep('pin');
     }
+  };
+
+  // Manual placement clears the EXIF-found status so the green confirmation
+  // doesn't keep claiming the pin came from the photo after the player moves it.
+  const handlePinChange = (next: GeoPin) => {
+    setPin(next);
+    if (gpsStatus === 'found') setGpsStatus(null);
   };
 
   return (
@@ -200,12 +221,10 @@ export function PhotoSubmitter({
               background: '#000',
             }}
           />
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Tapni mapu gde je slikana ova fotografija.
-          </p>
+          <GpsFeedback status={gpsStatus} pinPlaced={pin !== null} />
           <SerbiaMap
             pin={pin ?? undefined}
-            onPinChange={setPin}
+            onPinChange={handlePinChange}
             pinColor={ownColor ?? '#ff3b3b'}
             maxHeightCss="38dvh"
           />
@@ -280,6 +299,68 @@ export function PhotoSubmitter({
           {error}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Renders a status pill above the map describing what happened with the
+ * EXIF-based GPS lookup. Always shown so the player has explicit confirmation
+ * the lookup ran (even when there's nothing to report).
+ */
+function GpsFeedback({
+  status,
+  pinPlaced,
+}: {
+  status: GpsExtractionResult['kind'] | null;
+  pinPlaced: boolean;
+}) {
+  let bg = 'var(--bg-card)';
+  let color = 'var(--text-secondary)';
+  let icon = '';
+  let text = 'Tapni mapu gde je slikana ova fotografija.';
+
+  if (status === 'found') {
+    bg = 'rgba(46, 204, 113, 0.18)';
+    color = '#7be37b';
+    icon = '✓';
+    text = pinPlaced
+      ? 'Lokacija učitana iz fotografije. Možeš je prepraviti tapom.'
+      : 'Lokacija pročitana, ali nije postavljena. Tapni mapu.';
+  } else if (status === 'no-gps') {
+    bg = 'rgba(241, 196, 15, 0.18)';
+    color = '#f1c40f';
+    icon = '⚠';
+    text = 'Slika nema GPS podatke — postavi pin ručno.';
+  } else if (status === 'outside-serbia') {
+    bg = 'rgba(241, 196, 15, 0.18)';
+    color = '#f1c40f';
+    icon = '⚠';
+    text = 'GPS van Srbije — postavi pin ručno na mapi.';
+  } else if (status === 'error') {
+    bg = 'rgba(231, 76, 60, 0.18)';
+    color = '#ff8585';
+    icon = '⚠';
+    text = 'Nisam mogao da pročitam GPS — postavi pin ručno.';
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        padding: '0.6rem 0.8rem',
+        background: bg,
+        color,
+        fontSize: '0.9rem',
+        borderRadius: '8px',
+        fontWeight: 600,
+        margin: 0,
+      }}
+    >
+      {icon && <span style={{ fontSize: '1.1rem' }}>{icon}</span>}
+      <span>{text}</span>
     </div>
   );
 }
