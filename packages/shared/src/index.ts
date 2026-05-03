@@ -8,6 +8,7 @@ export * from './types/draw-guess.js';
 export * from './types/fibbage.js';
 export * from './types/slepi-telefoni.js';
 export * from './types/geo-guess.js';
+export * from './types/foto-kviz.js';
 export * from './games/index.js';
 export * from './games/draw-words.js';
 export * from './games/fibbage-questions.js';

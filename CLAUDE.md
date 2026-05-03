@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with five games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), and Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia). Lažov, Slepi telefoni, and Pogodi gde je are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with six games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), and Foto kviz (multiple-choice photo quiz that reuses the same geo-packs). Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
 
 ## Commands
 
@@ -71,9 +71,13 @@ Pogodi gde je serves location packs from a server-side directory (default `geo-p
 
 The map is a static SVG of Serbia at [packages/host/src/games/geo-pogodi/assets/serbia.svg](packages/host/src/games/geo-pogodi/assets/serbia.svg) (and a parallel copy in the controller package). The placeholder shipped is a rough outline; replace with a real SVG generated from a public-domain GeoJSON (see the assets/README.md). Pin coordinates flow as normalized SVG `{x, y}` ∈ [0, 1] and are reprojected to lat/lng on the server via [packages/shared/src/games/serbia-projection.ts](packages/shared/src/games/serbia-projection.ts) before haversine-distance scoring. If you swap the SVG, recalibrate the affine projection constants in that file.
 
+### Foto kviz (multiple-choice variant)
+
+Foto kviz reuses the entire `geo-packs/` infrastructure — same `GET /api/geo-packs`, same `/geo-images/...` static mount, same `useGeoConfigStore` and `GeoPackButton` on the host, same `downscaleImage` helper on the controller. Per-round questions are built in [packages/server/src/game/games/foto-kviz/FotoKvizModule.ts](packages/server/src/game/games/foto-kviz/FotoKvizModule.ts): the location's `caption` is the correct answer; 3 distractors are sampled from other locations' captions. Speed-scoring formula and phase pattern (`showing-photo → answering → showing-results`) mirror Quiz. Predefined packs need ≥4 captioned locations; custom mode requires ≥2 players AND ≥4 photos total.
+
 ### Serbian-only content
 
-The Lažov game is Serbian-only (Latin script) by design — strings are hardcoded in the host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching Lažov.
+Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz are Serbian-only (Latin script) by design — strings are hardcoded in their host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching these games.
 
 ## LAN / single-room modes
 

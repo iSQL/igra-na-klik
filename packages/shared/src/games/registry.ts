@@ -45,4 +45,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Pogodi gde je u Srbiji slikana fotografija — bliža igla, više poena!',
   },
+  'foto-kviz': {
+    id: 'foto-kviz',
+    name: 'Foto kviz',
+    minPlayers: 1,
+    maxPlayers: 8,
+    description:
+      'Pogledaj fotografiju i izaberi pravu lokaciju od 4 ponuđena odgovora!',
+  },
 };

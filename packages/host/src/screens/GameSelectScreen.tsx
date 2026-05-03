@@ -31,7 +31,7 @@ export function GameSelectScreen() {
     let geoPackId: string | undefined;
     let geoMode: 'predefined' | 'custom' | undefined;
     let customPhotosPerPlayer: number | undefined;
-    if (gameId === 'geo-pogodi') {
+    if (gameId === 'geo-pogodi' || gameId === 'foto-kviz') {
       const geo = useGeoConfigStore.getState();
       geoMode = geo.mode;
       if (geo.mode === 'predefined') {
@@ -129,7 +129,7 @@ export function GameSelectScreen() {
                 : `${game.minPlayers}-${game.maxPlayers} players`}
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
-            {game.id === 'geo-pogodi' && <GeoPackButton />}
+            {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && <GeoPackButton />}
             {game.id === 'slepi-telefoni' && (
               <div
                 style={{

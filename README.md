@@ -174,7 +174,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, and Pogodi gde je (all Serbian content), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz (all Serbian content), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -184,6 +184,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
 - [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
 - [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
+- [x] **Phase 9** — Foto kviz (multiple-choice variant of Pogodi gde je — 4 captioned answers, speed scoring)
 
 ### What's Implemented
 
@@ -260,6 +261,20 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - **Privacy**: server hides the truth's lat/lng from clients during placing (only the image URL leaks); pins from other guessers stay private until reveal.
 - Custom-mode photos are downscaled client-side (~1280px JPEG q=0.7), kept in-memory on the server for the session only.
 - Host display: photo full-screen during placing, big map with all pins + truth + connecting lines during reveal, podium animation only on the final leaderboard.
+
+**Foto kviz (multiple-choice variant of Pogodi gde je)** — *Serbian-only content*
+- 1–8 players; same geo-pack infrastructure as Pogodi gde je (shared `geo-packs/` directory + `/api/geo-packs` endpoint).
+- **Mechanic**: photo + 4 captioned answer options; players tap the one that names where the photo is from. Tap-one-of-four instead of pin-on-map.
+- **Same two modes:**
+  - **Predefinisano**: random rounds drawn from the selected pack. Correct answer is the location's `caption` field; the other 3 options are auto-picked from other captions in the same pack — no schema changes to the manifest.
+  - **Slike igrača (custom)**: each player uploads N (1–4) photos and types a short caption that becomes the correct answer. Distractors come from other players' captions. Players sit out rounds that show their own photo (auto-detected via `contributedBy`).
+- **Speed scoring** (mirrors Quiz): `points = round(1000 × timeRemaining / timeLimit)` — only awarded for correct answers, default `timeLimit = 15s`.
+- **Phase flow**: `intro (3s) → [showing-photo (3s) → answering (15s) → showing-results (5s)] × N → final-leaderboard (8s)`. No leaderboard between rounds — final scores only at the end (same convention as Pogodi gde je).
+- **Validation**:
+  - Predefined: pack must have ≥4 locations with captions (locations missing a caption fall back to "Lokacija {i}").
+  - Custom: requires ≥2 players AND `connected × customPhotosPerPlayer ≥ 4` (e.g. 2 players × 2 photos works; 1 player × any count refuses).
+- **Reuses** the same `GeoPackButton`, `useGeoConfigStore`, and `downscaleImage` helpers as Pogodi gde je — picking the same pack in either game is consistent.
+- Host display: photo with 4 colored options below during answering, options re-rendered with green outline on correct + per-player avatar chips on showing-results, podium animation only on the final leaderboard.
 
 ## Architecture
 
