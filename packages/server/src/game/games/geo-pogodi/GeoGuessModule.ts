@@ -556,7 +556,10 @@ export class GeoGuessModule extends BaseGameModule {
       }
     }
 
-    if (this.state.phase === 'final-leaderboard') {
+    if (
+      this.state.phase === 'final-leaderboard' ||
+      this.state.phase === 'ended'
+    ) {
       hostData.finalLeaderboard = this.buildFinalLeaderboard(room);
     }
 

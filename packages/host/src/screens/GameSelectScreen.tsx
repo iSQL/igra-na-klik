@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
@@ -16,6 +17,23 @@ export function GameSelectScreen() {
   const selectedRounds = useSlepiConfigStore((s) => s.selectedRounds);
   const setSelectedRounds = useSlepiConfigStore((s) => s.setSelectedRounds);
   const connectedCount = players.filter((p) => p.isConnected).length;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onError = ({ message }: { message: string }) => {
+      setErrorMessage(message);
+    };
+    socket.on('error', onError);
+    return () => {
+      socket.off('error', onError);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!errorMessage) return;
+    const handle = setTimeout(() => setErrorMessage(null), 6000);
+    return () => clearTimeout(handle);
+  }, [errorMessage]);
 
   const handleSelect = (gameId: string) => {
     const def = GAME_DEFINITIONS[gameId];
@@ -61,9 +79,29 @@ export function GameSelectScreen() {
         padding: '2rem',
         width: '100%',
         maxWidth: '800px',
+        height: '100%',
+        overflowY: 'auto',
       }}
     >
       <h1 style={{ fontSize: '2rem' }}>Choose a Game</h1>
+
+      {errorMessage && (
+        <div
+          role="alert"
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            background: 'rgba(231, 76, 60, 0.15)',
+            border: '1px solid #e74c3c',
+            borderRadius: '0.5rem',
+            color: '#ffb1ab',
+            fontSize: '0.95rem',
+            textAlign: 'center',
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
 
       <div
         style={{

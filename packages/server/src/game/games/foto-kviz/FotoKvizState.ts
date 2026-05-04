@@ -16,7 +16,8 @@ export const FINAL_LEADERBOARD_DURATION = 8;
 export const SUBMISSION_DURATION = 60 * 30;
 
 export const MAX_ROUNDS = 8;
-export const MIN_LOCATIONS = 4;
+export const MIN_LOCATIONS = 2;
+export const MAX_OPTIONS = 4;
 
 // Custom-mode photos per player.
 export const MIN_PHOTOS_PER_PLAYER = 1;

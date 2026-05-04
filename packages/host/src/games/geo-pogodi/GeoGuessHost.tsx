@@ -88,12 +88,8 @@ export default function GeoGuessHost() {
     );
   }
 
-  if (phase === 'final-leaderboard') {
+  if (phase === 'final-leaderboard' || phase === 'ended') {
     return <FinalLeaderboard entries={host.finalLeaderboard ?? []} />;
-  }
-
-  if (phase === 'ended') {
-    return <Centered>Hvala na igri!</Centered>;
   }
 
   return <Centered>Učitavanje...</Centered>;

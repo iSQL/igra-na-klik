@@ -24,6 +24,7 @@ import {
   INTRO_DURATION,
   MAX_BASE64_BYTES,
   MAX_CAPTION_LENGTH,
+  MAX_OPTIONS,
   MAX_PHOTOS_PER_PLAYER,
   MAX_ROUNDS,
   MIN_CAPTION_LENGTH,
@@ -98,7 +99,7 @@ export class FotoKvizModule extends BaseGameModule {
       }
       const photosPer = clampPhotosPerPlayer(cc.customPhotosPerPlayer);
       if (connected * photosPer < MIN_LOCATIONS) {
-        return `Treba najmanje ${MIN_LOCATIONS} fotografije ukupno za Foto kviz (npr. 2 igrača × 2 slike).`;
+        return `Treba najmanje ${MIN_LOCATIONS} fotografije ukupno za Foto kviz.`;
       }
     }
     return null;
@@ -312,27 +313,27 @@ export class FotoKvizModule extends BaseGameModule {
     shuffleInPlace(order);
     const roundIndexes = order.slice(0, Math.min(MAX_ROUNDS, labeled.length));
 
+    // With N captions available we render min(N, 4) options per round —
+    // 4 is the visual ceiling, but a 2-photo custom game still gets a
+    // legitimate 2-option round.
+    const numOptions = Math.min(MAX_OPTIONS, labeled.length);
+
     return roundIndexes.map<FotoKvizFullQuestion>((locIdx, roundIdx) => {
       const loc = labeled[locIdx];
-      // Distractors: 3 random captions from other locations.
       const exclude = new Set<number>([locIdx]);
       // Also exclude any other locations sharing the exact same caption to
-      // avoid duplicate options (e.g., two test locations both labeled
+      // avoid duplicate options (e.g., two locations both labeled
       // "Beograd" would otherwise leak the answer).
       for (let i = 0; i < labeled.length; i++) {
         if (i !== locIdx && labeled[i].caption === loc.caption) {
           exclude.add(i);
         }
       }
-      const distractors = sampleDistractors(labeled, exclude, 3).map(
-        (d) => d.caption!
-      );
-
-      // Pad to 4 options if pool is too small (extreme edge — e.g., custom
-      // mode where many captions collide). Use generic placeholders.
-      while (distractors.length < 3) {
-        distractors.push(`Lokacija ${roundIdx + 1}.${distractors.length + 1}`);
-      }
+      const distractors = sampleDistractors(
+        labeled,
+        exclude,
+        numOptions - 1
+      ).map((d) => d.caption!);
 
       const optionsTexts = [loc.caption!, ...distractors];
       shuffleInPlace(optionsTexts);
