@@ -28,6 +28,14 @@ export default defineConfig(({ command }) => ({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/geo-images': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 }));

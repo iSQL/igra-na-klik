@@ -9,6 +9,9 @@ export interface ServerToClientEvents {
   'room:player-left': (data: { playerId: string }) => void;
   'room:player-reconnected': (data: { playerId: string }) => void;
   'room:state-update': (data: { room: PublicRoom }) => void;
+  'room:remote-host-changed': (data: {
+    remoteHostPlayerId: string | null;
+  }) => void;
   'game:started': (data: { gameId: string; gameState: GameState }) => void;
   'game:state-update': (data: { gameState: GameState }) => void;
   'game:player-state': (data: { gameState: GameState }) => void;
@@ -33,6 +36,8 @@ export interface ClientToServerEvents {
     customPhotosPerPlayer?: number;
   }) => void;
   'host:stop-game': () => void;
+  'player:claim-remote-host': () => void;
+  'player:release-remote-host': () => void;
   'game:player-action': (data: {
     action: string;
     data: Record<string, unknown>;

@@ -7,8 +7,14 @@ import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 
 export function App() {
-  const { status, setRoom, addPlayer, setPlayerConnected, setStatus } =
-    useRoomStore();
+  const {
+    status,
+    setRoom,
+    addPlayer,
+    setPlayerConnected,
+    setStatus,
+    setRemoteHostPlayerId,
+  } = useRoomStore();
   const { setGameState, resetGame } = useGameStore();
 
   useEffect(() => {
@@ -30,6 +36,10 @@ export function App() {
 
     socket.on('room:player-reconnected', ({ playerId }) => {
       setPlayerConnected(playerId, true);
+    });
+
+    socket.on('room:remote-host-changed', ({ remoteHostPlayerId }) => {
+      setRemoteHostPlayerId(remoteHostPlayerId);
     });
 
     socket.on('game:started', ({ gameState }) => {
@@ -64,6 +74,7 @@ export function App() {
       socket.off('room:player-joined');
       socket.off('room:player-left');
       socket.off('room:player-reconnected');
+      socket.off('room:remote-host-changed');
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:ended');

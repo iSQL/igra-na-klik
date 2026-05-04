@@ -19,6 +19,7 @@ export interface RoomSettings {
 export interface Room {
   code: string;
   hostSocketId: string;
+  remoteHostPlayerId: string | null;
   players: Player[];
   status: RoomStatus;
   currentGameId: string | null;

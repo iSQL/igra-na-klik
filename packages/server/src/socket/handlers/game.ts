@@ -6,6 +6,7 @@ import type {
   SocketData,
 } from '@igra/shared';
 import { GameManager } from '../../game/GameManager.js';
+import { RoomManager } from '../../room/RoomManager.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -23,12 +24,24 @@ type IoSocket = Socket<
 export function registerGameHandlers(
   _io: IoServer,
   socket: IoSocket,
-  gameManager: GameManager
+  gameManager: GameManager,
+  roomManager: RoomManager
 ) {
+  const canControl = (): boolean => {
+    const { roomCode, isHost, playerId } = socket.data;
+    if (!roomCode) return false;
+    if (isHost) return true;
+    const room = roomManager.getRoom(roomCode);
+    return !!room && !!playerId && room.remoteHostPlayerId === playerId;
+  };
+
   socket.on('host:start-game', (data) => {
-    const { roomCode, isHost } = socket.data;
-    if (!roomCode || !isHost) {
-      socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can start a game' });
+    const { roomCode } = socket.data;
+    if (!roomCode || !canControl()) {
+      socket.emit('error', {
+        code: 'NOT_HOST',
+        message: 'Only the host or remote host can start a game',
+      });
       return;
     }
 
@@ -45,9 +58,12 @@ export function registerGameHandlers(
   });
 
   socket.on('host:stop-game', () => {
-    const { roomCode, isHost } = socket.data;
-    if (!roomCode || !isHost) {
-      socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can stop a game' });
+    const { roomCode } = socket.data;
+    if (!roomCode || !canControl()) {
+      socket.emit('error', {
+        code: 'NOT_HOST',
+        message: 'Only the host or remote host can stop a game',
+      });
       return;
     }
 

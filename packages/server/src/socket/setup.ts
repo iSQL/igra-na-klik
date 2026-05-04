@@ -92,7 +92,7 @@ export function setupSocket(
     }
 
     registerRoomHandlers(io, socket, roomManager);
-    registerGameHandlers(io, socket, gameManager);
+    registerGameHandlers(io, socket, gameManager, roomManager);
 
     socket.on('disconnect', () => {
       const { roomCode, playerId, isHost } = socket.data;
@@ -108,6 +108,11 @@ export function setupSocket(
         // Start grace period timer
         const timer = setTimeout(() => {
           disconnectTimers.delete(playerId);
+          if (roomManager.clearRemoteHostIfHolder(roomCode, playerId)) {
+            io.to(roomCode).emit('room:remote-host-changed', {
+              remoteHostPlayerId: null,
+            });
+          }
           roomManager.removePlayer(roomCode, playerId);
           console.log(`Player ${playerId} removed after grace period`);
         }, RECONNECT_GRACE_MS);

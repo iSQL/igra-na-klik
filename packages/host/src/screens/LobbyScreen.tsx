@@ -10,11 +10,14 @@ const MIN_PLAYERS_OVERALL = Math.min(
 );
 
 export function LobbyScreen() {
-  const { room, players, setStatus } = useRoomStore();
+  const { room, players, setStatus, remoteHostPlayerId } = useRoomStore();
 
   if (!room) return null;
 
   const canStart = players.length >= MIN_PLAYERS_OVERALL;
+  const remoteHostName = remoteHostPlayerId
+    ? players.find((p) => p.id === remoteHostPlayerId)?.name
+    : null;
 
   return (
     <div
@@ -50,6 +53,21 @@ export function LobbyScreen() {
         </h2>
         <PlayerList players={players} />
       </div>
+
+      {remoteHostName && (
+        <div
+          style={{
+            padding: '0.5rem 1rem',
+            background: 'var(--bg-card)',
+            borderRadius: '0.5rem',
+            fontSize: '1rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          🎮 <strong style={{ color: 'var(--accent)' }}>{remoteHostName}</strong>{' '}
+          drži kontrolu sa telefona
+        </div>
+      )}
 
       <button
         disabled={!canStart}

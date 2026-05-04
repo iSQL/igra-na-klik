@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
 import { useGameStore } from './store/gameStore';
+import { useNavStore } from './store/navStore';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
+import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 
 function ReconnectingOverlay() {
@@ -62,6 +64,14 @@ export function App() {
       });
     });
 
+    socket.on('room:remote-host-changed', ({ remoteHostPlayerId }) => {
+      usePlayerStore.getState().setRemoteHostPlayerId(remoteHostPlayerId);
+      const me = usePlayerStore.getState().player;
+      if (me && remoteHostPlayerId !== me.id) {
+        useNavStore.getState().setScreen('lobby');
+      }
+    });
+
     socket.on('room:player-left', ({ playerId }) => {
       usePlayerStore.setState((state) => {
         if (!state.room) return state;
@@ -78,6 +88,7 @@ export function App() {
 
     socket.on('game:started', ({ gameState }) => {
       setGameState(gameState);
+      useNavStore.getState().setScreen('lobby');
     });
 
     socket.on('game:state-update', ({ gameState }) => {
@@ -109,6 +120,7 @@ export function App() {
       socket.off('player:joined');
       socket.off('room:player-joined');
       socket.off('room:player-left');
+      socket.off('room:remote-host-changed');
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:player-state');
@@ -119,11 +131,23 @@ export function App() {
 
   // Show reconnecting overlay when disconnected but player exists
   const showReconnecting = player && !isConnected;
+  const screen = useNavStore((s) => s.screen);
+
+  let body: React.ReactNode;
+  if (!player) {
+    body = <JoinScreen />;
+  } else if (gameId) {
+    body = <GameScreen />;
+  } else if (screen === 'game-select') {
+    body = <GameSelectScreen />;
+  } else {
+    body = <LobbyScreen />;
+  }
 
   return (
     <>
       {showReconnecting && <ReconnectingOverlay />}
-      {!player ? <JoinScreen /> : gameId ? <GameScreen /> : <LobbyScreen />}
+      {body}
     </>
   );
 }

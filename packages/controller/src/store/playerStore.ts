@@ -13,6 +13,7 @@ interface PlayerStore {
   setRoom: (room: PublicRoom) => void;
   setReconnectToken: (token: string) => void;
   setConnected: (connected: boolean) => void;
+  setRemoteHostPlayerId: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -33,6 +34,12 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
     set({ reconnectToken: token });
   },
   setConnected: (connected) => set({ isConnected: connected }),
+  setRemoteHostPlayerId: (id) =>
+    set((state) =>
+      state.room
+        ? { room: { ...state.room, remoteHostPlayerId: id } }
+        : state
+    ),
   reset: () => {
     localStorage.removeItem(RECONNECT_TOKEN_KEY);
     updateSocketAuth(undefined);

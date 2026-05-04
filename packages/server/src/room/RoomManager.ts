@@ -18,6 +18,7 @@ export class RoomManager {
     const room: Room = {
       code,
       hostSocketId,
+      remoteHostPlayerId: null,
       players: [],
       status: 'lobby',
       currentGameId: null,
@@ -78,6 +79,39 @@ export class RoomManager {
 
   getRoom(roomCode: string): Room | undefined {
     return this.rooms.get(roomCode);
+  }
+
+  claimRemoteHost(
+    roomCode: string,
+    playerId: string
+  ): { ok: true } | { error: string } {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Room not found' };
+    if (room.remoteHostPlayerId && room.remoteHostPlayerId !== playerId) {
+      return { error: 'Neko drugi već drži kontrolu.' };
+    }
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player || !player.isConnected) {
+      return { error: 'Igrač nije u sobi.' };
+    }
+    room.remoteHostPlayerId = playerId;
+    return { ok: true };
+  }
+
+  releaseRemoteHost(roomCode: string, playerId: string): boolean {
+    const room = this.rooms.get(roomCode);
+    if (!room) return false;
+    if (room.remoteHostPlayerId !== playerId) return false;
+    room.remoteHostPlayerId = null;
+    return true;
+  }
+
+  clearRemoteHostIfHolder(roomCode: string, playerId: string): boolean {
+    const room = this.rooms.get(roomCode);
+    if (!room) return false;
+    if (room.remoteHostPlayerId !== playerId) return false;
+    room.remoteHostPlayerId = null;
+    return true;
   }
 
   findPlayerByReconnectToken(

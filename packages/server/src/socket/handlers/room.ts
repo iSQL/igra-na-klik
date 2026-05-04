@@ -76,6 +76,29 @@ export function registerRoomHandlers(
     });
   });
 
+  socket.on('player:claim-remote-host', () => {
+    const { roomCode, playerId } = socket.data;
+    if (!roomCode || !playerId) return;
+    const result = roomManager.claimRemoteHost(roomCode, playerId);
+    if ('error' in result) {
+      socket.emit('error', { code: 'CLAIM_ERROR', message: result.error });
+      return;
+    }
+    io.to(roomCode).emit('room:remote-host-changed', {
+      remoteHostPlayerId: playerId,
+    });
+  });
+
+  socket.on('player:release-remote-host', () => {
+    const { roomCode, playerId } = socket.data;
+    if (!roomCode || !playerId) return;
+    if (roomManager.releaseRemoteHost(roomCode, playerId)) {
+      io.to(roomCode).emit('room:remote-host-changed', {
+        remoteHostPlayerId: null,
+      });
+    }
+  });
+
   socket.on('disconnect', () => {
     const { roomCode, playerId, isHost } = socket.data;
     if (!roomCode) return;

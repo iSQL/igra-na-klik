@@ -13,11 +13,13 @@ interface RoomStore {
   room: PublicRoom | null;
   players: PublicPlayer[];
   status: HostStatus;
+  remoteHostPlayerId: string | null;
   setRoom: (room: PublicRoom) => void;
   addPlayer: (player: PublicPlayer) => void;
   removePlayer: (playerId: string) => void;
   setPlayerConnected: (playerId: string, connected: boolean) => void;
   setStatus: (status: HostStatus) => void;
+  setRemoteHostPlayerId: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -25,8 +27,13 @@ export const useRoomStore = create<RoomStore>((set) => ({
   room: null,
   players: [],
   status: 'disconnected',
+  remoteHostPlayerId: null,
   setRoom: (room) =>
-    set({ room, players: room.players as PublicPlayer[] }),
+    set({
+      room,
+      players: room.players as PublicPlayer[],
+      remoteHostPlayerId: room.remoteHostPlayerId ?? null,
+    }),
   addPlayer: (player) =>
     set((state) => ({ players: [...state.players, player] })),
   removePlayer: (playerId) =>
@@ -40,5 +47,12 @@ export const useRoomStore = create<RoomStore>((set) => ({
       ),
     })),
   setStatus: (status) => set({ status }),
-  reset: () => set({ room: null, players: [], status: 'disconnected' }),
+  setRemoteHostPlayerId: (id) => set({ remoteHostPlayerId: id }),
+  reset: () =>
+    set({
+      room: null,
+      players: [],
+      status: 'disconnected',
+      remoteHostPlayerId: null,
+    }),
 }));
