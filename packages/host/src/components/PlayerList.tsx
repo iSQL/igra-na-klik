@@ -4,9 +4,10 @@ import { useSound } from '../hooks/useSound';
 
 interface PlayerListProps {
   players: PublicPlayer[];
+  onKick?: (playerId: string) => void;
 }
 
-export function PlayerList({ players }: PlayerListProps) {
+export function PlayerList({ players, onKick }: PlayerListProps) {
   const { play } = useSound();
   const prevCountRef = useRef(players.length);
 
@@ -50,6 +51,35 @@ export function PlayerList({ players }: PlayerListProps) {
           <span style={{ fontSize: '1.3rem', fontWeight: 600 }}>
             {player.name}
           </span>
+          {onKick && (
+            <button
+              onClick={() => {
+                if (window.confirm(`Kick ${player.name}?`)) {
+                  onKick(player.id);
+                }
+              }}
+              title={`Kick ${player.name}`}
+              aria-label={`Kick ${player.name}`}
+              style={{
+                marginLeft: '0.25rem',
+                width: '1.75rem',
+                height: '1.75rem',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(231, 76, 60, 0.15)',
+                color: '#e74c3c',
+                fontSize: '1rem',
+                fontWeight: 700,
+                lineHeight: 1,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ×
+            </button>
+          )}
         </div>
       ))}
     </div>

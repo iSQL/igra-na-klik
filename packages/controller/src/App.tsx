@@ -3,6 +3,7 @@ import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
 import { useGameStore } from './store/gameStore';
 import { useNavStore } from './store/navStore';
+import { useWakeLock } from './hooks/useWakeLock';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
@@ -35,6 +36,10 @@ export function App() {
   const { player, isConnected, setPlayer, setRoom, setConnected, reset } =
     usePlayerStore();
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
+
+  // Hold a screen wake lock once the player is in a room — prevents the
+  // phone from sleeping mid-round and dropping the WebSocket.
+  useWakeLock(!!player);
 
   useEffect(() => {
     socket.connect();
@@ -86,6 +91,18 @@ export function App() {
       });
     });
 
+    socket.on('room:player-removed', ({ playerId }) => {
+      usePlayerStore.setState((state) => {
+        if (!state.room) return state;
+        return {
+          room: {
+            ...state.room,
+            players: state.room.players.filter((p) => p.id !== playerId),
+          },
+        };
+      });
+    });
+
     socket.on('game:started', ({ gameState }) => {
       setGameState(gameState);
       useNavStore.getState().setScreen('lobby');
@@ -109,6 +126,16 @@ export function App() {
       }, 3000);
     });
 
+    socket.on('room:kicked', ({ reason }) => {
+      // Host removed us from the room — clear the reconnect token so we
+      // don't try to silently rejoin, drop game state, and bounce back
+      // to the join screen.
+      resetGame();
+      reset();
+      useNavStore.getState().setScreen('lobby');
+      if (reason) alert(reason);
+    });
+
     socket.on('error', ({ message }) => {
       console.error('Server error:', message);
       if (!player) reset();
@@ -120,11 +147,13 @@ export function App() {
       socket.off('player:joined');
       socket.off('room:player-joined');
       socket.off('room:player-left');
+      socket.off('room:player-removed');
       socket.off('room:remote-host-changed');
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:player-state');
       socket.off('game:ended');
+      socket.off('room:kicked');
       socket.off('error');
     };
   }, []);

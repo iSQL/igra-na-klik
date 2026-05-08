@@ -26,6 +26,29 @@ export function JoinScreen() {
       .finally(() => setFetchingCode(false));
   }, []);
 
+  useEffect(() => {
+    // Reset the "Spajanje..." button state on any server response. On
+    // success the App.tsx player:joined handler unmounts this screen so
+    // we never see the false→true→false flicker; on error the message
+    // surfaces here and the button becomes clickable again.
+    const onJoined = () => setJoining(false);
+    const onError = ({ message }: { message: string }) => {
+      setJoining(false);
+      setError(message);
+      // The most common cause of failure for a returning player is a
+      // stale reconnect token (their previous slot was removed after
+      // grace expiry). Clear it so the next attempt is a clean fresh
+      // join, not another doomed reconnect.
+      usePlayerStore.getState().reset();
+    };
+    socket.on('player:joined', onJoined);
+    socket.on('error', onError);
+    return () => {
+      socket.off('player:joined', onJoined);
+      socket.off('error', onError);
+    };
+  }, []);
+
   const handleJoin = () => {
     const codeLength = roomCode.length;
     if (codeLength === 0) {

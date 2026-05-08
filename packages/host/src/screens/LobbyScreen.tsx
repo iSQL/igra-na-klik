@@ -1,5 +1,6 @@
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { useRoomStore } from '../store/roomStore';
+import { socket } from '../socket';
 import { PlayerList } from '../components/PlayerList';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 
@@ -51,7 +52,12 @@ export function LobbyScreen() {
         <h2 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>
           Players ({players.length}/{room.settings.maxPlayers})
         </h2>
-        <PlayerList players={players} />
+        <PlayerList
+          players={players}
+          onKick={(playerId) =>
+            socket.emit('host:kick-player', { playerId })
+          }
+        />
       </div>
 
       {remoteHostName && (
