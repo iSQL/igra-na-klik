@@ -213,4 +213,36 @@ export class GameManager {
   isGameActive(roomCode: string): boolean {
     return this.activeGames.has(roomCode);
   }
+
+  /**
+   * Replays the current game state to a single reconnecting player so
+   * their UI rehydrates to the active phase instead of staying on the
+   * lobby. Sends the per-player filtered state (only that player's
+   * private data) plus a `game:started` so the controller's GameRouter
+   * mounts the right component.
+   */
+  replayStateToPlayer(
+    roomCode: string,
+    playerId: string,
+    socketId: string
+  ): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active) return;
+
+    const sock = this.io.sockets.sockets.get(socketId);
+    if (!sock) return;
+
+    const playerState: GameState = {
+      ...active.gameState,
+      playerData: {
+        [playerId]: active.gameState.playerData[playerId] || {},
+      },
+    };
+
+    sock.emit('game:started', {
+      gameId: active.gameState.gameId,
+      gameState: playerState,
+    });
+    sock.emit('game:player-state', { gameState: playerState });
+  }
 }

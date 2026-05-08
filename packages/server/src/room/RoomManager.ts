@@ -32,14 +32,26 @@ export class RoomManager {
   joinRoom(
     roomCode: string,
     playerName: string
-  ): { player: Player; room: Room } | { error: string } {
+  ): { player: Player; room: Room; reclaimed?: boolean } | { error: string } {
     const room = this.rooms.get(roomCode.toUpperCase());
     if (!room) return { error: 'Room not found' };
     if (room.status !== 'lobby') return { error: 'Game already in progress' };
+
+    // If a disconnected player with this name still exists, treat the
+    // fresh join as them reclaiming their slot — common for phones that
+    // lost their reconnect token (cleared cache, incognito, kicked-then-
+    // rejoined). The slot keeps its score and avatar; we mint a new
+    // reconnect token so the returning browser owns the session again.
+    const existing = room.players.find((p) => p.name === playerName);
+    if (existing) {
+      if (existing.isConnected) return { error: 'Name already taken' };
+      existing.reconnectToken = generateReconnectToken();
+      existing.isConnected = true;
+      return { player: existing, room, reclaimed: true };
+    }
+
     if (room.players.length >= room.settings.maxPlayers)
       return { error: 'Room is full' };
-    if (room.players.some((p) => p.name === playerName))
-      return { error: 'Name already taken' };
 
     const player: Player = {
       id: generateId(),
@@ -58,10 +70,29 @@ export class RoomManager {
     const room = this.rooms.get(roomCode);
     if (!room) return false;
     room.players = room.players.filter((p) => p.id !== playerId);
-    if (room.players.length === 0 && room.status === 'lobby') {
-      this.rooms.delete(roomCode);
-    }
     return true;
+  }
+
+  /**
+   * Remove a player and invalidate their reconnect token so they can't
+   * rejoin via cached localStorage. Also clears the remote-host claim if
+   * they held it. Returns whether the player existed.
+   */
+  kickPlayer(
+    roomCode: string,
+    playerId: string
+  ): { remoteHostCleared: boolean } | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    const existed = room.players.some((p) => p.id === playerId);
+    if (!existed) return null;
+    let remoteHostCleared = false;
+    if (room.remoteHostPlayerId === playerId) {
+      room.remoteHostPlayerId = null;
+      remoteHostCleared = true;
+    }
+    room.players = room.players.filter((p) => p.id !== playerId);
+    return { remoteHostCleared };
   }
 
   setPlayerConnected(

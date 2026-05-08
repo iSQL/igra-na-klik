@@ -7,6 +7,7 @@ export interface ServerToClientEvents {
   'player:joined': (data: { player: Player; room: PublicRoom }) => void;
   'room:player-joined': (data: { player: PublicPlayer }) => void;
   'room:player-left': (data: { playerId: string }) => void;
+  'room:player-removed': (data: { playerId: string }) => void;
   'room:player-reconnected': (data: { playerId: string }) => void;
   'room:state-update': (data: { room: PublicRoom }) => void;
   'room:remote-host-changed': (data: {
@@ -17,6 +18,7 @@ export interface ServerToClientEvents {
   'game:player-state': (data: { gameState: GameState }) => void;
   'game:ended': (data: { finalScores: { playerId: string; score: number }[] }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
+  'room:kicked': (data: { reason?: string }) => void;
   error: (data: { code: string; message: string }) => void;
 }
 
@@ -36,6 +38,7 @@ export interface ClientToServerEvents {
     customPhotosPerPlayer?: number;
   }) => void;
   'host:stop-game': () => void;
+  'host:kick-player': (data: { playerId: string }) => void;
   'player:claim-remote-host': () => void;
   'player:release-remote-host': () => void;
   'game:player-action': (data: {

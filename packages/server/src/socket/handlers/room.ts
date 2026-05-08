@@ -23,7 +23,8 @@ type IoSocket = Socket<
 export function registerRoomHandlers(
   io: IoServer,
   socket: IoSocket,
-  roomManager: RoomManager
+  roomManager: RoomManager,
+  cancelGraceTimer: (playerId: string) => void
 ) {
   socket.on('host:create-room', (data) => {
     const room = roomManager.createRoom(socket.id, data.settings);
@@ -43,6 +44,7 @@ export function registerRoomHandlers(
     if (reconnectToken) {
       const found = roomManager.findPlayerByReconnectToken(reconnectToken);
       if (found) {
+        cancelGraceTimer(found.playerId);
         roomManager.setPlayerConnected(found.roomCode, found.playerId, true);
         const room = roomManager.getRoom(found.roomCode)!;
         const player = room.players.find((p) => p.id === found.playerId)!;
@@ -65,15 +67,23 @@ export function registerRoomHandlers(
       return;
     }
 
-    const { player, room } = result;
+    const { player, room, reclaimed } = result;
+    if (reclaimed) cancelGraceTimer(player.id);
     socket.data.roomCode = room.code;
     socket.data.playerId = player.id;
     socket.join(room.code);
 
     socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
-    socket.to(room.code).emit('room:player-joined', {
-      player: roomManager.toPublicPlayer(player),
-    });
+    if (reclaimed) {
+      // The slot already exists on the host's roster — just un-grey it.
+      socket.to(room.code).emit('room:player-reconnected', {
+        playerId: player.id,
+      });
+    } else {
+      socket.to(room.code).emit('room:player-joined', {
+        player: roomManager.toPublicPlayer(player),
+      });
+    }
   });
 
   socket.on('player:claim-remote-host', () => {
