@@ -79,4 +79,10 @@ export function registerGameHandlers(
 
     gameManager.handlePlayerAction(roomCode, playerId, data.action, data.data);
   });
+
+  socket.on('host:game-action', (data) => {
+    const { roomCode } = socket.data;
+    if (!roomCode || !canControl()) return;
+    gameManager.handleHostAction(roomCode, data.action, data.data ?? {});
+  });
 }

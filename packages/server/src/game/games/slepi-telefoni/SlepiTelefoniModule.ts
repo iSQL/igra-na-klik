@@ -2,25 +2,16 @@ import type {
   Room,
   GameState,
   Stroke,
-  Chain,
   ChainItem,
   SlepiTelefoniHostData,
   SlepiTelefoniControllerData,
-  SlepiTelefoniChainSummary,
-  SlepiTelefoniLeaderboardEntry,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
-import type { SlepiTelefoniInternalState, SubmissionDraft } from './SlepiTelefoniState.js';
+import type { SlepiTelefoniInternalState } from './SlepiTelefoniState.js';
 import {
   ENTERING_PROMPTS_DURATION,
   DRAWING_ROUND_DURATION,
   GUESS_ROUND_DURATION,
-  REVEAL_CHAIN_BASE,
-  REVEAL_CHAIN_PER_ITEM,
-  REVEAL_CHAIN_GAP,
-  VOTING_DURATION,
-  WINNER_DURATION,
-  FINAL_LEADERBOARD_DURATION,
   MAX_PROMPT_LENGTH,
   MAX_GUESS_LENGTH,
   MIN_ROUNDS,
@@ -57,10 +48,6 @@ export class SlepiTelefoniModule extends BaseGameModule {
       stepIndex: 0,
       submissions: new Map(),
       revealChain: 0,
-      revealGapRemaining: 0,
-      votes: new Map(),
-      voteCounts: new Map(),
-      winnerChainIndex: null,
     };
 
     this.enterPromptPhase(room);
@@ -145,27 +132,6 @@ export class SlepiTelefoniModule extends BaseGameModule {
         return this.buildGameState(room);
       }
 
-      case 'slepi:vote-favorite': {
-        if (this.state.phase !== 'voting') return null;
-        if (this.state.votes.has(playerId)) return null;
-
-        const chainIndex = data.chainIndex as number | undefined;
-        if (typeof chainIndex !== 'number') return null;
-        if (chainIndex < 0 || chainIndex >= this.state.chains.length) return null;
-        if (this.state.chains[chainIndex].originId === playerId) return null;
-
-        this.state.votes.set(playerId, chainIndex);
-
-        const eligibleVoters = this.state.playerOrder.filter((id) => {
-          const player = room.players.find((p) => p.id === id);
-          return player?.isConnected;
-        });
-        if (this.state.votes.size >= eligibleVoters.length) {
-          this.transitionToWinner(room);
-        }
-        return this.buildGameState(room);
-      }
-
       default:
         return null;
     }
@@ -174,15 +140,35 @@ export class SlepiTelefoniModule extends BaseGameModule {
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
     const delta = deltaMs / 1000;
 
+    // Reveal advances on host action only — no auto timer.
     if (this.state.phase === 'reveal') {
-      this.tickReveal(room, delta);
-    } else {
-      this.state.phaseTimeRemaining -= delta;
-      if (this.state.phaseTimeRemaining <= 0) {
-        this.advancePhase(room);
-      }
+      return this.buildGameState(room);
     }
 
+    this.state.phaseTimeRemaining -= delta;
+    if (this.state.phaseTimeRemaining <= 0) {
+      this.advancePhase(room);
+    }
+
+    return this.buildGameState(room);
+  }
+
+  onHostAction(
+    room: Room,
+    _gameState: GameState,
+    action: string,
+    _data: Record<string, unknown>
+  ): GameState | null {
+    if (action !== 'slepi:next-chain') return null;
+    if (this.state.phase !== 'reveal') return null;
+
+    const next = this.state.revealChain + 1;
+    if (next >= this.state.chains.length) {
+      this.state.phase = 'ended';
+      this.state.phaseTimeRemaining = 0;
+    } else {
+      this.state.revealChain = next;
+    }
     return this.buildGameState(room);
   }
 
@@ -235,7 +221,13 @@ export class SlepiTelefoniModule extends BaseGameModule {
 
   private totalSteps(): number {
     const n = this.state.playerOrder.length;
-    return Math.max(n - 1, 0) * this.state.totalRounds;
+    const raw = Math.max(n - 1, 0) * this.state.totalRounds;
+    if (raw === 0) return 0;
+    // Round up to even so every chain ends on a guess (not a dangling
+    // drawing). The rotation math still avoids own-chain hits because
+    // offsets stay non-zero mod N — players just revisit a previously
+    // touched chain when this fixup adds a step.
+    return raw % 2 === 0 ? raw : raw + 1;
   }
 
   private maybeAdvanceOnAllSubmitted(room: Room): void {
@@ -274,30 +266,9 @@ export class SlepiTelefoniModule extends BaseGameModule {
         break;
 
       case 'drawing-step':
-        this.finalizeStep(room);
-        this.enterDrawingOrGuessStep();
-        break;
-
       case 'guess-step':
         this.finalizeStep(room);
         this.enterDrawingOrGuessStep();
-        break;
-
-      case 'reveal':
-        this.transitionToVoting();
-        break;
-
-      case 'voting':
-        this.transitionToWinner(room);
-        break;
-
-      case 'winner':
-        this.transitionToFinalLeaderboard(room);
-        break;
-
-      case 'final-leaderboard':
-        this.state.phase = 'ended';
-        this.state.phaseTimeRemaining = 0;
         break;
     }
   }
@@ -359,8 +330,8 @@ export class SlepiTelefoniModule extends BaseGameModule {
     if (this.state.stepIndex > this.totalSteps()) {
       this.state.phase = 'reveal';
       this.state.revealChain = 0;
-      this.state.revealGapRemaining = 0;
-      this.state.phaseTimeRemaining = this.revealChainDuration(0);
+      // Reveal is host-driven — no countdown for the controller bar.
+      this.state.phaseTimeRemaining = 0;
       return;
     }
 
@@ -370,79 +341,6 @@ export class SlepiTelefoniModule extends BaseGameModule {
     this.state.phaseTimeRemaining = isDrawing
       ? DRAWING_ROUND_DURATION
       : GUESS_ROUND_DURATION;
-  }
-
-  private revealChainDuration(chainIndex: number): number {
-    const chain = this.state.chains[chainIndex];
-    const items = chain?.items.length ?? 0;
-    return REVEAL_CHAIN_BASE + REVEAL_CHAIN_PER_ITEM * items;
-  }
-
-  private tickReveal(_room: Room, delta: number): void {
-    if (this.state.revealGapRemaining > 0) {
-      this.state.revealGapRemaining -= delta;
-      if (this.state.revealGapRemaining <= 0) {
-        this.state.revealGapRemaining = 0;
-        this.state.revealChain += 1;
-        if (this.state.revealChain >= this.state.chains.length) {
-          this.transitionToVoting();
-          return;
-        }
-        this.state.phaseTimeRemaining = this.revealChainDuration(
-          this.state.revealChain
-        );
-      }
-      return;
-    }
-
-    this.state.phaseTimeRemaining -= delta;
-    if (this.state.phaseTimeRemaining <= 0) {
-      this.state.revealGapRemaining = REVEAL_CHAIN_GAP;
-    }
-  }
-
-  private transitionToVoting(): void {
-    this.state.phase = 'voting';
-    this.state.phaseTimeRemaining = VOTING_DURATION;
-    this.state.votes = new Map();
-    this.state.voteCounts = new Map();
-  }
-
-  private transitionToWinner(room: Room): void {
-    // Tally
-    const counts = new Map<number, number>();
-    for (const chainIndex of this.state.votes.values()) {
-      counts.set(chainIndex, (counts.get(chainIndex) ?? 0) + 1);
-    }
-    this.state.voteCounts = counts;
-
-    let winnerIndex = 0;
-    let winnerVotes = -1;
-    for (let i = 0; i < this.state.chains.length; i++) {
-      const v = counts.get(i) ?? 0;
-      if (v > winnerVotes) {
-        winnerVotes = v;
-        winnerIndex = i;
-      }
-    }
-    this.state.winnerChainIndex = winnerIndex;
-
-    // Per-chain votes go to the chain's origin player (single vote round).
-    for (let i = 0; i < this.state.chains.length; i++) {
-      const chain = this.state.chains[i];
-      const got = counts.get(i) ?? 0;
-      if (got === 0) continue;
-      const player = room.players.find((p) => p.id === chain.originId);
-      if (player) player.score += got;
-    }
-
-    this.state.phase = 'winner';
-    this.state.phaseTimeRemaining = WINNER_DURATION;
-  }
-
-  private transitionToFinalLeaderboard(_room: Room): void {
-    this.state.phase = 'final-leaderboard';
-    this.state.phaseTimeRemaining = FINAL_LEADERBOARD_DURATION;
   }
 
   // --- buildGameState ---
@@ -472,56 +370,9 @@ export class SlepiTelefoniModule extends BaseGameModule {
 
     if (this.state.phase === 'reveal') {
       hostData.currentRevealChain = this.state.revealChain;
+      hostData.totalChains = this.state.chains.length;
       const chain = this.state.chains[this.state.revealChain];
       if (chain) hostData.chainBeingRevealed = chain;
-    }
-
-    if (
-      this.state.phase === 'voting' ||
-      this.state.phase === 'winner'
-    ) {
-      hostData.chainsForVoting = this.state.chains;
-      const voteCountsObj: Record<number, number> = {};
-      for (const [idx, count] of this.state.voteCounts.entries()) {
-        voteCountsObj[idx] = count;
-      }
-      hostData.voteCounts = voteCountsObj;
-      hostData.votedCount = this.state.votes.size;
-      hostData.totalVoters = connectedCount;
-    }
-
-    if (
-      this.state.phase === 'winner' &&
-      this.state.winnerChainIndex != null
-    ) {
-      const winnerChain = this.state.chains[this.state.winnerChainIndex];
-      if (winnerChain) {
-        hostData.winnerChain = winnerChain;
-        hostData.winnerVotes =
-          this.state.voteCounts.get(this.state.winnerChainIndex) ?? 0;
-      }
-    }
-
-    if (this.state.phase === 'final-leaderboard') {
-      const scoreByOrigin = new Map<string, number>();
-      for (const chain of this.state.chains) {
-        const got = this.state.voteCounts.get(chain.chainIndex) ?? 0;
-        scoreByOrigin.set(
-          chain.originId,
-          (scoreByOrigin.get(chain.originId) ?? 0) + got
-        );
-      }
-      const entries: SlepiTelefoniLeaderboardEntry[] = room.players
-        .map((p) => ({
-          playerId: p.id,
-          name: p.name,
-          avatarColor: p.avatarColor,
-          score: scoreByOrigin.get(p.id) ?? 0,
-          rank: 0,
-        }))
-        .sort((a, b) => b.score - a.score)
-        .map((entry, i) => ({ ...entry, rank: i + 1 }));
-      hostData.finalLeaderboard = entries;
     }
 
     const data: Record<string, unknown> = {
@@ -559,8 +410,6 @@ export class SlepiTelefoniModule extends BaseGameModule {
     const base: SlepiTelefoniControllerData = {
       role: 'spectator',
       hasSubmitted,
-      hasVoted: this.state.votes.has(playerId),
-      votedChainIndex: this.state.votes.get(playerId),
     };
 
     if (!isActive) return base;
@@ -591,29 +440,6 @@ export class SlepiTelefoniModule extends BaseGameModule {
         if (prev && prev.kind === 'drawing') {
           base.drawingToGuess = prev.strokes ?? [];
         }
-        break;
-      }
-
-      case 'voting': {
-        base.role = 'voter';
-        base.ownChainIndex = this.state.chains.findIndex(
-          (c) => c.originId === playerId
-        );
-        const summaries: SlepiTelefoniChainSummary[] = this.state.chains.map(
-          (c) => ({
-            chainIndex: c.chainIndex,
-            originName: c.originName,
-            originColor: c.originColor,
-            lastItem: c.items[c.items.length - 1] ?? {
-              kind: 'prompt',
-              authorId: c.originId,
-              authorName: c.originName,
-              authorColor: c.originColor,
-              text: '(?)',
-            },
-          })
-        );
-        base.chainsForVoting = summaries;
         break;
       }
 

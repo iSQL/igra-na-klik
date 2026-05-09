@@ -105,6 +105,37 @@ export class GameManager {
     }
   }
 
+  handleHostAction(
+    roomCode: string,
+    action: string,
+    data: Record<string, unknown>
+  ): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active) return;
+
+    const room = this.roomManager.getRoom(roomCode);
+    if (!room) return;
+
+    const module = this.registry.get(room.currentGameId!);
+    if (!module || !module.onHostAction) return;
+
+    const newState = module.onHostAction(
+      room,
+      active.gameState,
+      action,
+      data
+    );
+
+    if (newState) {
+      active.gameState = newState;
+      this.emitGameState(roomCode, newState);
+
+      if (newState.phase === 'ended') {
+        this.endGame(roomCode);
+      }
+    }
+  }
+
   handlePlayerDisconnect(roomCode: string, playerId: string): void {
     const active = this.activeGames.get(roomCode);
     if (!active) return;

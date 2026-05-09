@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
@@ -15,6 +15,9 @@ const MAX_GUESS_LENGTH = 80;
 export default function SlepiTelefoniController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
+  const remoteHostPlayerId = usePlayerStore(
+    (s) => s.room?.remoteHostPlayerId ?? null
+  );
 
   if (!gameState || !playerId) return null;
 
@@ -56,64 +59,22 @@ export default function SlepiTelefoniController() {
   }
 
   if (phase === 'reveal') {
+    if (remoteHostPlayerId === playerId) {
+      const chainNumber = (host?.currentRevealChain ?? 0) + 1;
+      const totalChains = host?.totalChains ?? 0;
+      return (
+        <RevealRemoteHostControl
+          chainNumber={chainNumber}
+          totalChains={totalChains}
+          isLast={totalChains > 0 && chainNumber >= totalChains}
+        />
+      );
+    }
     return <WaitingScreen message="Otkriva se na velikom ekranu!" />;
   }
 
-  if (phase === 'voting') {
-    if (myData.hasVoted)
-      return <WaitingScreen message="Glas poslat — čekamo ostale..." />;
-    if (!myData.chainsForVoting)
-      return <WaitingScreen message="Učitavanje..." />;
-    return (
-      <FavoriteVote
-        chains={myData.chainsForVoting}
-        ownChainIndex={myData.ownChainIndex ?? -1}
-        timeRemaining={timeRemaining}
-      />
-    );
-  }
-
-  if (phase === 'winner') {
-    return <WaitingScreen message="Pobednički lanac se prikazuje..." />;
-  }
-
-  if (phase === 'final-leaderboard' || phase === 'ended') {
-    const entry = host?.finalLeaderboard?.find((e) => e.playerId === playerId);
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: '1rem',
-          textAlign: 'center',
-        }}
-      >
-        {entry ? (
-          <>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-              Konačno mesto
-            </p>
-            <p
-              style={{
-                fontSize: '3rem',
-                fontWeight: 800,
-                color: 'var(--accent)',
-              }}
-            >
-              #{entry.rank}
-            </p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>
-              {entry.score} {entry.score === 1 ? 'glas' : 'glasova'}
-            </p>
-          </>
-        ) : (
-          <p style={{ fontSize: '1.2rem' }}>Konačni poredak na velikom ekranu</p>
-        )}
-      </div>
-    );
+  if (phase === 'ended') {
+    return <EndedScreen />;
   }
 
   return <WaitingScreen message="Učitavanje..." />;
@@ -134,6 +95,124 @@ function WaitingScreen({ message }: { message: string }) {
       }}
     >
       <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{message}</p>
+    </div>
+  );
+}
+
+function EndedScreen() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: '1.25rem',
+        padding: '1.5rem',
+        textAlign: 'center',
+      }}
+    >
+      <p style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
+        Kraj igre
+      </p>
+      <p
+        style={{
+          fontSize: '1rem',
+          color: 'var(--text-secondary)',
+          margin: 0,
+        }}
+      >
+        Pogledaj veliki ekran za rezultate
+      </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          marginTop: '0.5rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span
+          style={{
+            width: '22px',
+            height: '22px',
+            border: '3px solid rgba(255, 255, 255, 0.15)',
+            borderTopColor: 'var(--accent)',
+            borderRadius: '50%',
+            animation: 'igra-spin 0.9s linear infinite',
+          }}
+        />
+        <span style={{ fontSize: '0.9rem' }}>Vraćanje na izbor igre…</span>
+      </div>
+    </div>
+  );
+}
+
+function RevealRemoteHostControl({
+  chainNumber,
+  totalChains,
+  isLast,
+}: {
+  chainNumber: number;
+  totalChains: number;
+  isLast: boolean;
+}) {
+  // Reset the click guard whenever the chain advances so each chain
+  // gets a fresh tap.
+  const lockedRef = useRef(false);
+  useEffect(() => {
+    lockedRef.current = false;
+  }, [chainNumber]);
+
+  const advance = () => {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+    socket.emit('host:game-action', { action: 'slepi:next-chain' });
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: '1.25rem',
+        padding: '1.5rem',
+        textAlign: 'center',
+      }}
+    >
+      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+        🎮 Tvoja kontrola
+      </p>
+      <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+        Otkrivanje na velikom ekranu
+      </p>
+      {totalChains > 0 && (
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Lanac {chainNumber}/{totalChains}
+        </p>
+      )}
+      <button
+        onClick={advance}
+        style={{
+          padding: '0.9rem 1.75rem',
+          background: 'var(--accent)',
+          color: '#fff',
+          borderRadius: '999px',
+          fontSize: '1.1rem',
+          fontWeight: 700,
+          minHeight: '52px',
+          minWidth: '220px',
+          border: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        {isLast ? 'Završi igru →' : 'Sledeći lanac →'}
+      </button>
     </div>
   );
 }
@@ -413,109 +492,6 @@ function SmallStrokePreview({ strokes }: { strokes: Stroke[] }) {
         height={300}
         style={{ width: '100%', height: '100%', display: 'block' }}
       />
-    </div>
-  );
-}
-
-function FavoriteVote({
-  chains,
-  ownChainIndex,
-  timeRemaining,
-}: {
-  chains: {
-    chainIndex: number;
-    originName: string;
-    originColor: string;
-    lastItem: {
-      kind: 'prompt' | 'drawing' | 'guess';
-      text?: string;
-      strokes?: Stroke[];
-    };
-  }[];
-  ownChainIndex: number;
-  timeRemaining: number;
-}) {
-  const vote = (chainIndex: number) => {
-    if (chainIndex === ownChainIndex) return;
-    socket.emit('game:player-action', {
-      action: 'slepi:vote-favorite',
-      data: { chainIndex },
-    });
-  };
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '0.75rem',
-        gap: '0.6rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <p style={{ fontSize: '1rem', fontWeight: 700 }}>Omiljeni lanac?</p>
-        <span
-          style={{
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--text-primary)',
-          }}
-        >
-          {timeRemaining}s
-        </span>
-      </div>
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.6rem',
-        }}
-      >
-        {chains.map((c) => {
-          const isOwn = c.chainIndex === ownChainIndex;
-          return (
-            <button
-              key={c.chainIndex}
-              onClick={() => vote(c.chainIndex)}
-              disabled={isOwn}
-              style={{
-                padding: '0.75rem',
-                background: isOwn ? 'var(--bg-card)' : 'var(--bg-secondary)',
-                border: `2px solid ${c.originColor}`,
-                borderRadius: '10px',
-                textAlign: 'left',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem',
-                opacity: isOwn ? 0.45 : 1,
-                color: 'var(--text-primary)',
-                cursor: isOwn ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <span style={{ color: c.originColor, fontWeight: 700 }}>
-                {c.originName}
-                {isOwn && ' (tvoj lanac)'}
-              </span>
-              {c.lastItem.kind === 'drawing' ? (
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  [crtež]
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.95rem' }}>„{c.lastItem.text}”</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

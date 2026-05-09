@@ -21,6 +21,19 @@ export interface IGameModule {
     data: Record<string, unknown>
   ): GameState | null;
 
+  /**
+   * Optional host-driven action. Routed through `host:game-action` and
+   * gated by the same host/remote-host check as `host:start-game`. Use
+   * for flow-control the host owns (e.g. advancing a reveal manually
+   * instead of on a timer).
+   */
+  onHostAction?(
+    room: Room,
+    gameState: GameState,
+    action: string,
+    data: Record<string, unknown>
+  ): GameState | null;
+
   onTick(room: Room, gameState: GameState, deltaMs: number): GameState | null;
 
   onPlayerDisconnect(

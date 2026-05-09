@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type {
   Chain,
   ChainItem,
@@ -8,6 +8,7 @@ import type {
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { useRoomStore } from '../../store/roomStore';
+import { socket } from '../../socket';
 import { DrawingCanvas } from '../draw-guess/components/DrawingCanvas';
 
 export default function SlepiTelefoniHost() {
@@ -23,16 +24,13 @@ export default function SlepiTelefoniHost() {
 
     if (phase !== prevPhaseRef.current) {
       if (phase === 'reveal') play('reveal');
-      if (phase === 'winner') play('victory');
-      if (phase === 'final-leaderboard') play('victory');
       prevPhaseRef.current = phase;
     }
 
     if (
       phase === 'entering-prompts' ||
       phase === 'drawing-step' ||
-      phase === 'guess-step' ||
-      phase === 'voting'
+      phase === 'guess-step'
     ) {
       const currSec = Math.ceil(timeRemaining);
       const prevSec = Math.ceil(prevTimeRef.current);
@@ -72,41 +70,71 @@ export default function SlepiTelefoniHost() {
   }
 
   if (phase === 'reveal' && host.chainBeingRevealed) {
+    const chainNumber = (host.currentRevealChain ?? 0) + 1;
+    const totalChains = host.totalChains ?? players.length;
     return (
       <ChainReveal
         chain={host.chainBeingRevealed}
-        chainNumber={(host.currentRevealChain ?? 0) + 1}
-        totalChains={host.chainsForVoting?.length ?? players.length}
+        chainNumber={chainNumber}
+        totalChains={totalChains}
+        isLast={chainNumber >= totalChains}
       />
     );
   }
 
-  if (phase === 'voting' && host.chainsForVoting) {
-    return (
-      <FavoriteVotingHost
-        chains={host.chainsForVoting}
-        voteCounts={host.voteCounts ?? {}}
-        voted={host.votedCount ?? 0}
-        total={host.totalVoters ?? 0}
-        timeRemaining={timeRemaining}
-      />
-    );
-  }
-
-  if (phase === 'winner' && host.winnerChain) {
-    return (
-      <WinnerScreen
-        chain={host.winnerChain}
-        votes={host.winnerVotes ?? 0}
-      />
-    );
-  }
-
-  if (phase === 'final-leaderboard' && host.finalLeaderboard) {
-    return <FinalLeaderboardHost entries={host.finalLeaderboard} />;
+  if (phase === 'ended') {
+    return <EndedScreen />;
   }
 
   return null;
+}
+
+function EndedScreen() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: '1.75rem',
+        padding: '2rem',
+        textAlign: 'center',
+      }}
+    >
+      <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: 0 }}>
+        Kraj igre
+      </h1>
+      <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', margin: 0 }}>
+        Hvala što ste igrali Slepe telefone!
+      </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.85rem',
+          marginTop: '1rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span
+          style={{
+            width: '32px',
+            height: '32px',
+            border: '4px solid rgba(255, 255, 255, 0.15)',
+            borderTopColor: 'var(--accent)',
+            borderRadius: '50%',
+            animation: 'igra-spin 0.9s linear infinite',
+          }}
+        />
+        <span style={{ fontSize: '1rem' }}>Vraćanje na izbor igre…</span>
+      </div>
+    </motion.div>
+  );
 }
 
 function PromptEntryHost({
@@ -216,13 +244,27 @@ function ChainReveal({
   chain,
   chainNumber,
   totalChains,
+  isLast,
 }: {
   chain: Chain;
   chainNumber: number;
   totalChains: number;
+  isLast: boolean;
 }) {
   const pairs = buildDrawingGuessPairs(chain);
   const firstPrompt = chain.items[0];
+
+  // Reset the guard whenever the chain changes so each chain gets a fresh click.
+  const advanceLockedRef = useRef(false);
+  useEffect(() => {
+    advanceLockedRef.current = false;
+  }, [chain.chainIndex]);
+
+  const handleAdvance = () => {
+    if (advanceLockedRef.current) return;
+    advanceLockedRef.current = true;
+    socket.emit('host:game-action', { action: 'slepi:next-chain' });
+  };
 
   return (
     <motion.div
@@ -234,11 +276,11 @@ function ChainReveal({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: 'stretch',
         height: '100%',
         width: '100%',
-        padding: '1rem 1.5rem',
-        gap: '0.75rem',
+        padding: '0.5rem 1rem',
+        gap: '0.5rem',
         overflow: 'hidden',
       }}
     >
@@ -247,14 +289,15 @@ function ChainReveal({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '0.25rem',
+          gap: '0.15rem',
+          flexShrink: 0,
         }}
       >
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
           Lanac {chainNumber}/{totalChains}
         </p>
         {firstPrompt?.kind === 'prompt' && (
-          <p style={{ fontSize: '1.3rem', fontWeight: 700 }}>
+          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
             <span style={{ color: firstPrompt.authorColor }}>
               {firstPrompt.authorName}
             </span>
@@ -268,17 +311,37 @@ function ChainReveal({
           flex: 1,
           minHeight: 0,
           width: '100%',
-          display: 'grid',
-          gridTemplateColumns: `repeat(${Math.max(pairs.length, 1)}, minmax(0, 1fr))`,
-          gap: '1rem',
-          alignItems: 'stretch',
-          justifyItems: 'center',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.25rem',
+          padding: '0.5rem 0',
         }}
       >
         {pairs.map((pair, i) => (
           <DrawingGuessPair key={i} pair={pair} />
         ))}
       </div>
+
+      <button
+        onClick={handleAdvance}
+        style={{
+          alignSelf: 'center',
+          padding: '0.6rem 1.5rem',
+          background: 'var(--accent)',
+          color: '#fff',
+          borderRadius: '999px',
+          fontSize: '1rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          border: 'none',
+          minHeight: '44px',
+          flexShrink: 0,
+        }}
+      >
+        {isLast ? 'Završi igru →' : 'Sledeći lanac →'}
+      </button>
     </motion.div>
   );
 }
@@ -309,38 +372,35 @@ function DrawingGuessPair({ pair }: { pair: DrawingGuessPair }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.5rem',
+        gap: '0.6rem',
         width: '100%',
-        maxWidth: '360px',
+        maxWidth: '720px',
       }}
     >
       <AuthorBadge item={pair.drawing} labelOverride="nacrtao" />
       <DrawingCanvas
         strokes={pair.drawing.strokes ?? []}
-        width={320}
-        height={240}
+        width={640}
+        height={480}
       />
-      {pair.guess ? (
+      {pair.guess && (
         <>
           <AuthorBadge item={pair.guess} labelOverride="napisao" />
           <p
             style={{
-              fontSize: '1.1rem',
+              fontSize: '1.4rem',
               fontWeight: 700,
               textAlign: 'center',
-              padding: '0.5rem 0.75rem',
+              padding: '0.6rem 1rem',
               background: 'var(--bg-card)',
               borderRadius: '10px',
               maxWidth: '100%',
+              margin: 0,
             }}
           >
             „{pair.guess.text}”
           </p>
         </>
-      ) : (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          (niko nije pogodio)
-        </p>
       )}
     </div>
   );
@@ -384,258 +444,3 @@ function AuthorBadge({
   );
 }
 
-function FavoriteVotingHost({
-  chains,
-  voteCounts,
-  voted,
-  total,
-  timeRemaining,
-}: {
-  chains: Chain[];
-  voteCounts: Record<number, number>;
-  voted: number;
-  total: number;
-  timeRemaining: number;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '1rem',
-        padding: '1.25rem',
-        width: '100%',
-        height: '100%',
-      }}
-    >
-      <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>
-        Glasajte za najbolji lanac
-      </h1>
-      <div
-        style={{
-          display: 'flex',
-          gap: '1.5rem',
-          fontSize: '1rem',
-          color: 'var(--text-secondary)',
-        }}
-      >
-        <span>{voted}/{total} glasalo</span>
-        <CountdownBadge timeRemaining={timeRemaining} />
-      </div>
-
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-          gap: '1rem',
-          width: '100%',
-        }}
-      >
-        {chains.map((chain) => {
-          const count = voteCounts[chain.chainIndex] ?? 0;
-          const first = chain.items[0];
-          const last = chain.items[chain.items.length - 1];
-          return (
-            <div
-              key={chain.chainIndex}
-              style={{
-                padding: '0.85rem',
-                background: 'var(--bg-card)',
-                borderRadius: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span style={{ color: chain.originColor, fontWeight: 700 }}>
-                  {chain.originName}
-                </span>
-                <motion.span
-                  key={count}
-                  initial={{ scale: 1.4 }}
-                  animate={{ scale: 1 }}
-                  style={{
-                    padding: '0.15rem 0.55rem',
-                    background: 'var(--accent)',
-                    color: '#fff',
-                    borderRadius: '999px',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  {count}
-                </motion.span>
-              </div>
-              {first?.kind === 'prompt' && first.text && (
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  „{first.text}”
-                </p>
-              )}
-              {last?.kind === 'guess' && last.text && (
-                <p style={{ fontSize: '1rem', fontWeight: 600 }}>→ „{last.text}”</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WinnerScreen({
-  chain,
-  votes,
-}: {
-  chain: Chain;
-  votes: number;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '1.5rem',
-        height: '100%',
-        padding: '2rem',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ fontSize: '2.6rem', fontWeight: 800 }}>
-        🏆 Pobednički lanac
-      </h1>
-      <p style={{ fontSize: '1.3rem' }}>
-        Počeo: <span style={{ color: chain.originColor, fontWeight: 700 }}>{chain.originName}</span>
-      </p>
-      <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-        {votes} {votes === 1 ? 'glas' : 'glasova'}
-      </p>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '0.65rem',
-          maxWidth: '720px',
-        }}
-      >
-        {chain.items.map((item, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-            }}
-          >
-            <span
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: item.authorColor,
-              }}
-            />
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {item.authorName}:
-            </span>
-            {item.kind === 'drawing' ? (
-              <span style={{ fontSize: '0.9rem' }}>[crtež]</span>
-            ) : (
-              <span style={{ fontSize: '1rem', fontWeight: 600 }}>
-                „{item.text}”
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function FinalLeaderboardHost({
-  entries,
-}: {
-  entries: {
-    playerId: string;
-    name: string;
-    avatarColor: string;
-    score: number;
-    rank: number;
-  }[];
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '1.5rem',
-        padding: '2rem',
-      }}
-    >
-      <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Konačni poredak</h1>
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '480px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-        }}
-      >
-        {entries.map((entry) => (
-          <div
-            key={entry.playerId}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: 'var(--bg-secondary)',
-              borderRadius: '10px',
-              padding: '0.75rem 1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span
-                style={{
-                  fontWeight: 800,
-                  fontSize: '1.2rem',
-                  color: 'var(--accent)',
-                  minWidth: '2ch',
-                }}
-              >
-                #{entry.rank}
-              </span>
-              <div
-                style={{
-                  width: '14px',
-                  height: '14px',
-                  borderRadius: '50%',
-                  background: entry.avatarColor,
-                }}
-              />
-              <span style={{ fontWeight: 600 }}>{entry.name}</span>
-            </div>
-            <span style={{ fontWeight: 700 }}>
-              {entry.score} {entry.score === 1 ? 'glas' : 'glasova'}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

@@ -5,9 +5,6 @@ export type SlepiTelefoniPhase =
   | 'drawing-step'
   | 'guess-step'
   | 'reveal'
-  | 'voting'
-  | 'winner'
-  | 'final-leaderboard'
   | 'ended';
 
 export type ChainItemKind = 'prompt' | 'drawing' | 'guess';
@@ -29,21 +26,6 @@ export interface Chain {
   items: ChainItem[];
 }
 
-export interface SlepiTelefoniChainSummary {
-  chainIndex: number;
-  originName: string;
-  originColor: string;
-  lastItem: ChainItem;
-}
-
-export interface SlepiTelefoniLeaderboardEntry {
-  playerId: string;
-  name: string;
-  avatarColor: string;
-  score: number;
-  rank: number;
-}
-
 export interface SlepiTelefoniHostData {
   totalRounds: number;
   stepIndex: number;
@@ -52,23 +34,13 @@ export interface SlepiTelefoniHostData {
   submittedCount: number;
   totalSubmitters: number;
   currentRevealChain?: number;
+  totalChains?: number;
   chainBeingRevealed?: Chain;
-  chainsForVoting?: Chain[];
-  voteCounts?: Record<number, number>;
-  votedCount?: number;
-  totalVoters?: number;
-  winnerChain?: Chain;
-  winnerVotes?: number;
-  finalLeaderboard?: SlepiTelefoniLeaderboardEntry[];
 }
 
 export interface SlepiTelefoniControllerData {
-  role: 'prompter' | 'drawer' | 'guesser' | 'voter' | 'spectator';
+  role: 'prompter' | 'drawer' | 'guesser' | 'spectator';
   promptToDraw?: string;
   drawingToGuess?: Stroke[];
   hasSubmitted: boolean;
-  ownChainIndex?: number;
-  hasVoted: boolean;
-  votedChainIndex?: number;
-  chainsForVoting?: SlepiTelefoniChainSummary[];
 }

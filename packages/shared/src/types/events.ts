@@ -45,6 +45,10 @@ export interface ClientToServerEvents {
     action: string;
     data: Record<string, unknown>;
   }) => void;
+  'host:game-action': (data: {
+    action: string;
+    data?: Record<string, unknown>;
+  }) => void;
 }
 
 export interface InterServerEvents {

@@ -74,3 +74,9 @@ input[type="number"] {
   user-select: none;
   -webkit-user-select: none;
 }
+
+@keyframes igra-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
