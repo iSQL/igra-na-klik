@@ -185,7 +185,6 @@ export function PhotoSubmitter({
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleFile}
             style={{ display: 'none' }}
           />

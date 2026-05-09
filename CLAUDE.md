@@ -55,7 +55,15 @@ A game is wired up in five places — missing any of them breaks the game end-to
 ### Room / reconnection
 
 - Room codes: 4 uppercase chars excluding `O/I/L` (ambiguous). See [packages/shared/src/utils/room-code.ts](packages/shared/src/utils/room-code.ts).
-- Reconnect tokens (UUIDs) are stored in the controller's `localStorage` and passed via `socket.handshake.auth`. On disconnect, the server starts a 30s grace timer (`RECONNECT_GRACE_MS` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts)); reconnecting within the window restores the player's seat, score, and game state. After grace expires, the player is fully removed and `room:player-left` fires.
+- Reconnect tokens (UUIDs) are stored in the controller's `localStorage` and passed via `socket.handshake.auth`. On disconnect, the server starts a **5-minute** grace timer (`RECONNECT_GRACE_MS` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts)) — long enough that a phone screen going dark mid-round doesn't lose the seat. Reconnecting within the window restores the player's seat, score, and active game state (the current phase is replayed so the controller jumps straight back into the round).
+- Two distinct disconnect events: `room:player-left` is the **transient** "grey out" signal that fires immediately on disconnect, while `room:player-removed` is **permanent** — fires only after grace expires or the host kicks. Game modules' destructive `onPlayerDisconnect` work (skipping a drawer's turn etc.) is deferred until the grace window expires, so brief blips don't burn turns.
+- Controller acquires a screen Wake Lock (`useWakeLock`) while in a room to keep the screen alive on most browsers; ignore failures — older browsers/iOS Safari may not grant it.
+- **Kick / reclaim**: host has an × on each player chip → emits `host:kick-player`, server invalidates the reconnect token and emits `room:kicked` to that controller (which leaves the room). Conversely, if a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh `player:join-room` with the same name will **reclaim** a disconnected slot — score and avatar are preserved and a new reconnect token is minted.
+- Rooms are **not** auto-deleted when the last player leaves — the room belongs to the host. Only the host disconnecting (or explicit cleanup) removes the room.
+
+### Mobile admin / remote host
+
+Any one player can claim the host's controls from their phone via `player:claim-remote-host`; the server stores `remoteHostPlayerId` on the room and broadcasts `room:remote-host-changed`. While held, that controller renders [packages/controller/src/screens/GameSelectScreen.tsx](packages/controller/src/screens/GameSelectScreen.tsx) — a phone-friendly mirror of the host's game-select screen — and can start/stop games, import question packs, choose geo-packs, etc. Releasing (`player:release-remote-host`) or disconnecting clears the claim. Useful when nobody is near the TV; it is **not** a separate role — the holder is still a normal player in whatever game they start.
 
 ### Drawing data flow (Crtaj i pogodi)
 

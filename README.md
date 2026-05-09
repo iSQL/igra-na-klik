@@ -207,9 +207,25 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Controller vibrates on answer tap, correct/wrong feedback
 
 **Reconnection**
-- Token-based reconnection with 30s grace period
+- Token-based reconnection with **5-minute** grace period — long enough that a phone screen going dark mid-round doesn't drop the player
 - Token stored in `localStorage` — survives page refresh
-- Players restored with score intact if they reconnect in time
+- Players restored with score intact if they reconnect in time; the current phase is **replayed** to the returning controller so it jumps straight back into the round
+- Controller acquires a screen Wake Lock while in a room to fight phone auto-suspend (best-effort; iOS Safari may decline)
+- Destructive game-side disconnect handling (skipping a drawer's turn, etc.) is deferred until the grace window expires, so brief blips don't burn turns
+- `room:player-left` is a transient "grey out" signal; `room:player-removed` is the permanent removal that fires only after grace expires or the host kicks
+
+**Mobile admin (remote host)**
+- Any one player can claim the host's controls from their phone — useful when nobody's near the TV
+- Holder gets a phone-friendly game-select screen on the controller: start/stop games, pick mode, import question packs, choose geo-packs
+- One claim at a time; releasing (or disconnecting) hands control back to the TV
+- The holder is still a normal player — not a separate spectator role
+
+**Kick / reclaim**
+- Host can remove a player with the × button on their chip in the lobby — kick invalidates the reconnect token so they can't slip back in via cached `localStorage`
+- If a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh join with the same name **reclaims** the disconnected slot — score and avatar are preserved, a new token is minted
+
+**Photo upload (Foto kviz / Pogodi gde je custom modes)**
+- Tapping the photo button opens the device's default picker (gallery on most phones, with "take photo" as a secondary option) rather than forcing the rear camera
 
 **PWA (Controller)**
 - Installable as a standalone app on Android
@@ -282,7 +298,8 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 
 - Host creates a room → gets a 4-letter code (excludes ambiguous chars like O, I, L)
 - Players join by code → server assigns UUID + avatar color + reconnect token
-- Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within 30s, they're restored
+- Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within the 5-minute grace window, they're restored (score + active phase replayed)
+- Returning with a fresh token but the same name **reclaims** a disconnected slot; host can kick a player with the × on their chip in the lobby
 
 ### Geo Packs (Pogodi gde je)
 
@@ -375,11 +392,17 @@ Host and controller each have a `GameRouter` that lazy-loads the appropriate Rea
 |---|---|---|
 | `host:create-room` | host → server | Create a new room |
 | `host:room-created` | server → host | Room created with code |
-| `player:join-room` | controller → server | Join room by code |
+| `host:kick-player` | host → server | Remove a player and invalidate their reconnect token |
+| `player:join-room` | controller → server | Join room by code (also reclaims a disconnected slot if name matches) |
 | `player:joined` | server → controller | Join confirmed |
+| `player:claim-remote-host` | controller → server | Claim mobile-admin control of game selection |
+| `player:release-remote-host` | controller → server | Release mobile-admin control |
 | `room:player-joined` | server → all | Broadcast: new player |
-| `room:player-left` | server → all | Broadcast: player disconnected |
+| `room:player-left` | server → all | Broadcast: player disconnected (transient — grey out) |
+| `room:player-removed` | server → all | Broadcast: player permanently gone (kicked or grace expired) |
 | `room:player-reconnected` | server → all | Broadcast: player restored |
+| `room:kicked` | server → controller | This controller was kicked by the host |
+| `room:remote-host-changed` | server → all | Mobile-admin claim changed (or released) |
 
 **Game events:**
 
