@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { useRoomStore } from '../../store/roomStore';
@@ -10,6 +10,7 @@ import { TurnResults } from './components/TurnResults';
 import type {
   DrawGuessHostData,
   DrawGuessLeaderboardEntry,
+  Stroke,
 } from '@igra/shared';
 
 export default function DrawGuessHost() {
@@ -82,8 +83,8 @@ export default function DrawGuessHost() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '1rem',
-          padding: '1rem',
+          gap: '0.6rem',
+          padding: '0.6rem 0.75rem',
           width: '100%',
           height: '100%',
         }}
@@ -97,8 +98,17 @@ export default function DrawGuessHost() {
           totalGuessers={totalGuessers}
         />
         <WordHint hint={host.wordHint} wordLength={host.wordLength} />
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-          <DrawingCanvas strokes={host.strokes} />
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            width: '100%',
+            display: 'flex',
+            gap: '0.75rem',
+            alignItems: 'stretch',
+          }}
+        >
+          <ResponsiveDrawingArea strokes={host.strokes} />
           <GuessList guesses={host.guesses} />
         </div>
       </div>
@@ -178,4 +188,56 @@ export default function DrawGuessHost() {
   }
 
   return null;
+}
+
+function ResponsiveDrawingArea({ strokes }: { strokes: Stroke[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ width: number; height: number }>({
+    width: 600,
+    height: 450,
+  });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Maintain a 4:3 canvas inside the available space — phones send
+    // strokes in normalized 0–1 coords so any aspect we render is fine,
+    // but a fixed ratio keeps drawings looking proportional on the TV.
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const targetRatio = 4 / 3;
+      let w: number;
+      let h: number;
+      if (rect.width / rect.height > targetRatio) {
+        h = rect.height;
+        w = h * targetRatio;
+      } else {
+        w = rect.width;
+        h = w / targetRatio;
+      }
+      setSize({ width: Math.max(1, Math.floor(w)), height: Math.max(1, Math.floor(h)) });
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <DrawingCanvas strokes={strokes} width={size.width} height={size.height} />
+    </div>
+  );
 }

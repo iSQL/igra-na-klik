@@ -18,8 +18,9 @@ export function GuessList({ guesses }: GuessListProps) {
     <div
       ref={listRef}
       style={{
-        width: '220px',
-        maxHeight: '350px',
+        width: '240px',
+        flexShrink: 0,
+        alignSelf: 'stretch',
         overflowY: 'auto',
         background: 'var(--bg-secondary)',
         borderRadius: '12px',
