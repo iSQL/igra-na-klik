@@ -21,10 +21,27 @@ export default function FibbageController() {
 
   if (phase === 'showing-question') {
     return (
-      <WaitingScreen
-        message="Spremi se..."
-        subMessage={`Pitanje ${(data.questionIndex as number) + 1}/${data.totalQuestions as number}`}
-      />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '1.25rem',
+          padding: '1.5rem',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
+        </p>
+        {question?.text && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1.3, margin: 0 }}>
+            {question.text}
+          </p>
+        )}
+      </div>
     );
   }
 
