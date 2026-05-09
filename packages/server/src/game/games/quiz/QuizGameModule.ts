@@ -146,6 +146,7 @@ export class QuizGameModule extends BaseGameModule {
     switch (this.state.phase) {
       case 'showing-question':
         data.questionText = question.text;
+        data.previewDuration = SHOWING_QUESTION_DURATION;
         break;
 
       case 'answering':

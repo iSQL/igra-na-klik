@@ -44,6 +44,7 @@ export default function QuizGameHost() {
   const questionText = data.questionText as string | undefined;
   const options = data.options as QuizOption[] | undefined;
   const timeLimit = (data.timeLimit as number) || 15;
+  const previewDuration = (data.previewDuration as number) || 5;
 
   return (
     <div
@@ -64,7 +65,7 @@ export default function QuizGameHost() {
             questionIndex={questionIndex}
             totalQuestions={totalQuestions}
             timeRemaining={timeRemaining}
-            timeLimit={3}
+            timeLimit={previewDuration}
           />
           <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
             Spremi se...
