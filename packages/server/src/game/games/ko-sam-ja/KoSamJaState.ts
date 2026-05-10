@@ -16,6 +16,10 @@ export interface KoSamJaQuestion {
   text: string;
   options?: string[];
   maxLength?: number;
+  /** pickN only — per-peer template, defaults to bare peer name. */
+  optionTemplate?: string;
+  /** pickN only — cap on co-players shown as buttons. */
+  maxPeers?: number;
 }
 
 export interface KoSamJaSelectedRound {
@@ -42,7 +46,7 @@ export interface KoSamJaInternalState {
 
   roundQuestionStartTime: number;
   roundOptions: { id: string; text: string }[];
-  roundPeerOptionPlayerIds: [string, string] | null;
+  roundPeerOptionPlayerIds: string[] | null;
   roundCorrectOptionId: string | null;
   roundGuesses: Map<string, { optionId: string; timeMs: number }>;
   roundSubjectSkipped: boolean;

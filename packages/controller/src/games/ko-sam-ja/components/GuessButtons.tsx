@@ -30,10 +30,12 @@ export function GuessButtons({
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
+        gridAutoRows: options.length > 4 ? 'minmax(64px, 1fr)' : '1fr',
         gap: '0.75rem',
         width: '100%',
         height: '100%',
         padding: '0.5rem',
+        overflowY: options.length > 4 ? 'auto' : 'visible',
       }}
     >
       {options.map((option, i) => {

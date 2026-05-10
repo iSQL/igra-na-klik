@@ -296,6 +296,46 @@
     "category": "nsfw",
     "text": "Koga {subject} pre zove kad mu je loše u 3 ujutru, {peer1} ili {peer2}?"
   },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "{subject} bi pre…",
+    "options": ["javno priznao laž", "ćutao zauvek", "optužio {peer1}", "smestio {peer2}"]
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Da bira između večere i kaznene partije, {subject} bira…",
+    "options": ["večeru sa {peer1}", "večeru sa {peer2}", "kaznenu partiju sa {peer1}", "kaznenu partiju sa {peer2}"]
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "{subject} bi za vikend pre…",
+    "options": ["spavao do podne", "išao na izlet sa {peer1}", "gledao filmove sa {peer2}", "radio nešto sasvim treće"]
+  },
+  {
+    "shape": "pickN",
+    "category": "family",
+    "text": "Koga bi {subject} pre pozvao da planira mu rođendan?"
+  },
+  {
+    "shape": "pickN",
+    "category": "family",
+    "text": "Sa kim bi {subject} otvorio kafić?",
+    "optionTemplate": "sa {peer}"
+  },
+  {
+    "shape": "pickN",
+    "category": "nsfw",
+    "text": "Ko bi prvi otkrio tajnu igrača {subject}?",
+    "optionTemplate": "{peer} bi prvi otkrio"
+  },
+  {
+    "shape": "pickN",
+    "category": "nsfw",
+    "text": "Kome bi {subject} pre pozajmio kola na vikend?"
+  },
 
   {
     "shape": "free",

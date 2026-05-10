@@ -54,9 +54,11 @@ export function SubjectPicker({
       <div
         style={{
           display: 'grid',
-          gridTemplateRows: '1fr 1fr',
-          gap: '0.8rem',
+          gridTemplateColumns: options.length <= 2 ? '1fr' : '1fr 1fr',
+          gridAutoRows: options.length > 4 ? 'minmax(64px, 1fr)' : '1fr',
+          gap: '0.7rem',
           flex: 1,
+          overflowY: options.length > 4 ? 'auto' : 'visible',
         }}
       >
         {options.map((opt) => {

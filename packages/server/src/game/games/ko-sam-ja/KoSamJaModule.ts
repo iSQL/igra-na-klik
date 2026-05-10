@@ -67,8 +67,15 @@ export class KoSamJaModule extends BaseGameModule {
       shape: q.shape,
       category: q.category,
       text: q.text,
-      options: q.shape === 'fixed' ? q.options : undefined,
+      options:
+        q.shape === 'fixed'
+          ? q.options
+          : q.shape === 'peer'
+            ? q.options
+            : undefined,
       maxLength: q.shape === 'free' ? q.maxLength ?? 60 : undefined,
+      optionTemplate: q.shape === 'pickN' ? q.optionTemplate : undefined,
+      maxPeers: q.shape === 'pickN' ? q.maxPeers : undefined,
     }));
 
     const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
@@ -92,7 +99,8 @@ export class KoSamJaModule extends BaseGameModule {
     }
     for (const round of selectedRounds) {
       const q = selectedQuestions.find((x) => x.id === round.questionId)!;
-      if (q.shape !== 'peer') {
+      // peer + pickN are answered just-in-time at round start, not upfront.
+      if (q.shape === 'fixed' || q.shape === 'free') {
         const list = upfrontAssignments.get(round.subjectPlayerId) ?? [];
         list.push(round.questionId);
         upfrontAssignments.set(round.subjectPlayerId, list);
@@ -360,7 +368,7 @@ export class KoSamJaModule extends BaseGameModule {
       if (!subjectStillHere) return false;
       const q = this.getQuestion(round.questionId);
       if (!q) return false;
-      if (q.shape === 'peer') return true;
+      if (q.shape === 'peer' || q.shape === 'pickN') return true;
       const answered = this.state.upfrontAnswers
         .get(round.subjectPlayerId)
         ?.has(round.questionId);
@@ -399,7 +407,20 @@ export class KoSamJaModule extends BaseGameModule {
     }
 
     if (question.shape === 'peer') {
-      const ok = this.setupPeerOptions(room, round);
+      const ok = this.setupPeerOptions(room, round, question);
+      if (!ok) {
+        this.markRoundSkipped();
+        this.state.phase = 'showing-results';
+        this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+        return;
+      }
+      this.state.phase = 'subject-picking';
+      this.state.phaseTimeRemaining = SUBJECT_PICKING_DURATION;
+      return;
+    }
+
+    if (question.shape === 'pickN') {
+      const ok = this.setupPickNOptions(room, round, question);
       if (!ok) {
         this.markRoundSkipped();
         this.state.phase = 'showing-results';
@@ -484,7 +505,8 @@ export class KoSamJaModule extends BaseGameModule {
 
   private setupPeerOptions(
     room: Room,
-    round: KoSamJaSelectedRound
+    round: KoSamJaSelectedRound,
+    question: KoSamJaQuestion
   ): boolean {
     const peerCandidates = room.players.filter(
       (p) => p.isConnected && p.id !== round.subjectPlayerId
@@ -500,10 +522,74 @@ export class KoSamJaModule extends BaseGameModule {
     const peer1 = peerCandidates[0];
     const peer2 = peerCandidates[1];
     this.state.roundPeerOptionPlayerIds = [peer1.id, peer2.id];
-    this.state.roundOptions = [
-      { id: `peer-${peer1.id}`, text: peer1.name },
-      { id: `peer-${peer2.id}`, text: peer2.name },
-    ];
+
+    if (question.options && question.options.length > 0) {
+      // Author-provided options — interpolate {subject}/{peer1}/{peer2}
+      // once at round start (peer pair is now locked).
+      const subject = room.players.find(
+        (p) => p.id === round.subjectPlayerId
+      );
+      const subjectName = subject?.name ?? '?';
+      this.state.roundOptions = question.options.map((rawText, i) => ({
+        id: `opt-${i}`,
+        text: this.interpolateText(
+          rawText,
+          subjectName,
+          peer1.name,
+          peer2.name
+        ),
+      }));
+    } else {
+      this.state.roundOptions = [
+        { id: `peer-${peer1.id}`, text: peer1.name },
+        { id: `peer-${peer2.id}`, text: peer2.name },
+      ];
+    }
+
+    this.state.roundCorrectOptionId = null;
+    this.state.roundGuesses = new Map();
+    return true;
+  }
+
+  private setupPickNOptions(
+    room: Room,
+    round: KoSamJaSelectedRound,
+    question: KoSamJaQuestion
+  ): boolean {
+    const peerCandidates = room.players.filter(
+      (p) => p.isConnected && p.id !== round.subjectPlayerId
+    );
+    if (peerCandidates.length < 2) return false;
+
+    for (let i = peerCandidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [peerCandidates[i], peerCandidates[j]] = [
+        peerCandidates[j],
+        peerCandidates[i],
+      ];
+    }
+
+    const cap = question.maxPeers ?? 4;
+    const N = Math.min(peerCandidates.length, cap);
+    const chosen = peerCandidates.slice(0, N);
+
+    this.state.roundPeerOptionPlayerIds = chosen.map((p) => p.id);
+
+    const subject = room.players.find((p) => p.id === round.subjectPlayerId);
+    const subjectName = subject?.name ?? '?';
+    const template = question.optionTemplate;
+
+    this.state.roundOptions = chosen.map((peer) => ({
+      id: `pickn-${peer.id}`,
+      text: template
+        ? template
+            .split('{subject}')
+            .join(subjectName)
+            .split('{peer}')
+            .join(peer.name)
+        : peer.name,
+    }));
+
     this.state.roundCorrectOptionId = null;
     this.state.roundGuesses = new Map();
     return true;

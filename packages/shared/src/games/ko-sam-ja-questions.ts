@@ -97,4 +97,9 @@ export const KO_SAM_JA_DEFAULT_BANK: KoSamJaImportQuestion[] = [
     text: 'U jednoj reči — kakav je {subject}?',
     maxLength: 25,
   },
+  {
+    shape: 'pickN',
+    category: 'family',
+    text: 'Koga bi {subject} pre pozvao da planira mu rođendan?',
+  },
 ];

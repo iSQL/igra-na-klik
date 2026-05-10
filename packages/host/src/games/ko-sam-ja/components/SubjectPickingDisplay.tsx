@@ -36,6 +36,8 @@ export function SubjectPickingDisplay({
           gridTemplateColumns: '1fr 1fr',
           gap: '1.5rem',
           width: '100%',
+          maxHeight: options.length > 4 ? '60vh' : 'none',
+          overflowY: options.length > 4 ? 'auto' : 'visible',
         }}
       >
         {options.map((opt) => (

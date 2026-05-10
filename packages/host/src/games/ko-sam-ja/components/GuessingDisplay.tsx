@@ -30,6 +30,8 @@ export function GuessingDisplay({
           gridTemplateColumns: '1fr 1fr',
           gap: '1rem',
           width: '100%',
+          maxHeight: options.length > 4 ? '60vh' : 'none',
+          overflowY: options.length > 4 ? 'auto' : 'visible',
         }}
       >
         {options.map((option, i) => {

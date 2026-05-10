@@ -11,6 +11,14 @@ export interface KoSamJaImportPeerQuestion {
   shape: 'peer';
   category: KoSamJaCategory;
   text: string;
+  /**
+   * Optional author-provided options. When present, the subject picks
+   * one at round time and `{peer1}`/`{peer2}`/`{subject}` placeholders
+   * inside option strings are interpolated against the chosen peer pair.
+   * When omitted, the server auto-generates two peer-name buttons (the
+   * original peer-shape behavior).
+   */
+  options?: string[];
 }
 
 export interface KoSamJaImportFreeQuestion {
@@ -20,10 +28,28 @@ export interface KoSamJaImportFreeQuestion {
   maxLength?: number;
 }
 
+/**
+ * "Most Likely To"-style: the subject picks one of N connected
+ * co-players at round time. The author writes the question text only;
+ * the server expands one button per peer (capped at `maxPeers`, default
+ * 4). When `optionTemplate` is provided, each option becomes that
+ * template with `{peer}` (and optionally `{subject}`) interpolated —
+ * useful for adding context around the bare name (e.g. "odmah uzima
+ * {peer}").
+ */
+export interface KoSamJaImportPickNQuestion {
+  shape: 'pickN';
+  category: KoSamJaCategory;
+  text: string;
+  optionTemplate?: string;
+  maxPeers?: number;
+}
+
 export type KoSamJaImportQuestion =
   | KoSamJaImportFixedQuestion
   | KoSamJaImportPeerQuestion
-  | KoSamJaImportFreeQuestion;
+  | KoSamJaImportFreeQuestion
+  | KoSamJaImportPickNQuestion;
 
 export type KoSamJaImportResult =
   | { ok: true; questions: KoSamJaImportQuestion[] }
@@ -34,6 +60,9 @@ export const KO_SAM_JA_MIN_FREE_MAX_LENGTH = 10;
 export const KO_SAM_JA_MAX_FREE_MAX_LENGTH = 120;
 export const KO_SAM_JA_MIN_FIXED_OPTIONS = 2;
 export const KO_SAM_JA_MAX_FIXED_OPTIONS = 4;
+export const KO_SAM_JA_DEFAULT_MAX_PEERS = 4;
+export const KO_SAM_JA_MIN_MAX_PEERS = 2;
+export const KO_SAM_JA_MAX_MAX_PEERS = 8;
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
@@ -80,11 +109,12 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
     if (
       raw.shape !== 'fixed' &&
       raw.shape !== 'peer' &&
-      raw.shape !== 'free'
+      raw.shape !== 'free' &&
+      raw.shape !== 'pickN'
     ) {
       return {
         ok: false,
-        error: `${label}: shape mora biti "fixed", "peer" ili "free".`,
+        error: `${label}: shape mora biti "fixed", "peer", "free" ili "pickN".`,
       };
     }
     const shape = raw.shape as KoSamJaShape;
@@ -140,25 +170,123 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
     }
 
     if (shape === 'peer') {
+      // Optional author-provided options. If present, the subject picks
+      // one of them just-in-time (after peer interpolation) and the text
+      // no longer needs to enumerate {peer1}/{peer2} itself. If absent,
+      // the server auto-generates two peer-name buttons and the text
+      // must spell out both placeholders.
       if ('options' in raw && raw.options !== undefined) {
-        return {
-          ok: false,
-          error: `${label}: peer pitanja ne smeju imati "options".`,
-        };
+        if (!Array.isArray(raw.options)) {
+          return { ok: false, error: `${label}: "options" mora biti niz.` };
+        }
+        if (
+          raw.options.length < KO_SAM_JA_MIN_FIXED_OPTIONS ||
+          raw.options.length > KO_SAM_JA_MAX_FIXED_OPTIONS
+        ) {
+          return {
+            ok: false,
+            error: `${label}: mora imati između ${KO_SAM_JA_MIN_FIXED_OPTIONS} i ${KO_SAM_JA_MAX_FIXED_OPTIONS} opcija.`,
+          };
+        }
+        const trimmed: string[] = [];
+        for (let j = 0; j < raw.options.length; j++) {
+          if (!isNonEmptyString(raw.options[j])) {
+            return {
+              ok: false,
+              error: `${label}: opcija ${j + 1} je prazna.`,
+            };
+          }
+          trimmed.push((raw.options[j] as string).trim());
+        }
+        const seen = new Set<string>();
+        for (const opt of trimmed) {
+          const key = opt.toLowerCase();
+          if (seen.has(key)) {
+            return { ok: false, error: `${label}: opcije moraju biti različite.` };
+          }
+          seen.add(key);
+        }
+        questions.push({ shape: 'peer', category, text, options: trimmed });
+        continue;
       }
       if (countOccurrences(text, '{peer1}') !== 1) {
         return {
           ok: false,
-          error: `${label}: peer pitanje mora sadržati {peer1} tačno jednom.`,
+          error: `${label}: peer pitanje mora sadržati {peer1} tačno jednom (ili dodaj "options" niz).`,
         };
       }
       if (countOccurrences(text, '{peer2}') !== 1) {
         return {
           ok: false,
-          error: `${label}: peer pitanje mora sadržati {peer2} tačno jednom.`,
+          error: `${label}: peer pitanje mora sadržati {peer2} tačno jednom (ili dodaj "options" niz).`,
         };
       }
       questions.push({ shape: 'peer', category, text });
+      continue;
+    }
+
+    if (shape === 'pickN') {
+      if ('options' in raw && raw.options !== undefined) {
+        return {
+          ok: false,
+          error: `${label}: pickN pitanja koriste "optionTemplate", ne "options".`,
+        };
+      }
+      if (text.includes('{peer1}') || text.includes('{peer2}') || text.includes('{peer}')) {
+        return {
+          ok: false,
+          error: `${label}: pickN tekst ne sme sadržati {peer}/{peer1}/{peer2} (peer-ovi su dugmad).`,
+        };
+      }
+      let optionTemplate: string | undefined;
+      if (raw.optionTemplate !== undefined) {
+        if (!isNonEmptyString(raw.optionTemplate)) {
+          return {
+            ok: false,
+            error: `${label}: optionTemplate mora biti tekst.`,
+          };
+        }
+        const tpl = (raw.optionTemplate as string).trim();
+        if (countOccurrences(tpl, '{peer}') !== 1) {
+          return {
+            ok: false,
+            error: `${label}: optionTemplate mora sadržati {peer} tačno jednom.`,
+          };
+        }
+        if (tpl.includes('{peer1}') || tpl.includes('{peer2}')) {
+          return {
+            ok: false,
+            error: `${label}: optionTemplate ne sme sadržati {peer1} ili {peer2} (koristi {peer}).`,
+          };
+        }
+        optionTemplate = tpl;
+      }
+      let maxPeers = KO_SAM_JA_DEFAULT_MAX_PEERS;
+      if (raw.maxPeers !== undefined) {
+        if (
+          typeof raw.maxPeers !== 'number' ||
+          !Number.isInteger(raw.maxPeers)
+        ) {
+          return { ok: false, error: `${label}: maxPeers mora biti ceo broj.` };
+        }
+        if (
+          raw.maxPeers < KO_SAM_JA_MIN_MAX_PEERS ||
+          raw.maxPeers > KO_SAM_JA_MAX_MAX_PEERS
+        ) {
+          return {
+            ok: false,
+            error: `${label}: maxPeers mora biti između ${KO_SAM_JA_MIN_MAX_PEERS} i ${KO_SAM_JA_MAX_MAX_PEERS}.`,
+          };
+        }
+        maxPeers = raw.maxPeers;
+      }
+      questions.push({
+        shape: 'pickN',
+        category,
+        text,
+        optionTemplate,
+        maxPeers,
+      });
       continue;
     }
 

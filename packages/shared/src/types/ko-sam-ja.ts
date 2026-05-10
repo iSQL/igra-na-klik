@@ -1,5 +1,5 @@
 export type KoSamJaCategory = 'family' | 'nsfw';
-export type KoSamJaShape = 'fixed' | 'peer' | 'free';
+export type KoSamJaShape = 'fixed' | 'peer' | 'free' | 'pickN';
 
 export interface KoSamJaUpfrontFixedQuestion {
   id: string;
