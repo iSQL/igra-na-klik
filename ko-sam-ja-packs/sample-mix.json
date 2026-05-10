@@ -24,6 +24,67 @@
     "options": ["kafu", "čaj", "sok", "vodu"]
   },
   {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} radije sluša…",
+    "options": ["pop", "rok", "narodnjake", "klasiku"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Omiljeni žanr filmova igrača {subject}?",
+    "options": ["akcija", "komedija", "drama", "horor"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} radije jede…",
+    "options": ["pizzu", "burger", "sushi", "domaću kuhinju"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Koju životinju bi {subject} pre imao za ljubimca?",
+    "options": ["psa", "mačku", "papagaja", "hrčka"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} se prvo seti kada čuje reč 'odmor':",
+    "options": ["plaža", "planina", "pasoš", "spavanje"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Najveća strast igrača {subject}?",
+    "options": ["putovanja", "hrana", "muzika", "sport"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} radije provodi vreme…",
+    "options": ["napolju", "kod kuće", "u kafiću", "u prirodi"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Šta {subject} prvo uradi ujutru?",
+    "options": ["proveri telefon", "popije kafu", "tušira se", "vrati se u krevet"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Omiljeno godišnje doba igrača {subject}?",
+    "options": ["proleće", "leto", "jesen", "zima"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} radije gleda…",
+    "options": ["filmove", "serije", "sport", "dokumentarce"]
+  },
+
+  {
     "shape": "peer",
     "category": "family",
     "text": "Sa kim bi {subject} radije išao na skijanje, sa {peer1} ili {peer2}?"
@@ -38,6 +99,47 @@
     "category": "family",
     "text": "Sa kim bi {subject} pre osnovao firmu, sa {peer1} ili {peer2}?"
   },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Ko se prvi smeje šali igrača {subject}, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Kome bi {subject} pre poverio veliku tajnu, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} pre delio kuću kao cimer, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Koga bi {subject} pre pozvao na karaoke, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Ko je više sličan igraču {subject} po karakteru, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} pre obišao svet, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Ko bolje kuva po mišljenju igrača {subject}, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} pre išao u bioskop, sa {peer1} ili {peer2}?"
+  },
+
   {
     "shape": "free",
     "category": "family",
@@ -57,6 +159,49 @@
     "maxLength": 40
   },
   {
+    "shape": "free",
+    "category": "family",
+    "text": "Koju super moć bi {subject} izabrao?",
+    "maxLength": 40
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Šta bi {subject} poneo na pusto ostrvo?",
+    "maxLength": 40
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Najomiljenije mesto u svetu za {subject}?",
+    "maxLength": 50
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "U jednoj reči — kakav je {subject}?",
+    "maxLength": 25
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Šta je {subject} oduvek hteo da nauči?",
+    "maxLength": 50
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Najsmešniji nadimak igrača {subject}?",
+    "maxLength": 30
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Šta bi {subject} radio kada bi dobio milion evra?",
+    "maxLength": 60
+  },
+
+  {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} bi pre…",
@@ -75,6 +220,43 @@
     "options": ["lenjost", "sebičnost", "nestrpljivost", "drama"]
   },
   {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} češće laže kada…",
+    "options": ["pita ga partner", "pita ga šef", "pita ga roditelj", "pita ga prijatelj"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} bi radije ostao bez…",
+    "options": ["telefona", "interneta", "novca", "prijatelja"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} se najviše stidi…",
+    "options": ["fotografija iz srednje", "starih izjava", "starih frizura", "tinejdžerske faze"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "Posle žurke, {subject} obično…",
+    "options": ["spava do podne", "ide odmah na posao", "pravi doručak za sve", "ne ustaje iz kreveta"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "Šta {subject} radije bira u dilemi?",
+    "options": ["lakši put", "teži put", "kratak put", "neki treći put"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} je u srednjoj školi bio…",
+    "options": ["štreber", "buntovnik", "klovn", "nevidljiv"]
+  },
+
+  {
     "shape": "peer",
     "category": "nsfw",
     "text": "Sa kim bi {subject} pre delio sobu na putovanju, sa {peer1} ili {peer2}?"
@@ -85,6 +267,37 @@
     "text": "Koga bi {subject} pre pozajmio za novac, {peer1} ili {peer2}?"
   },
   {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Sa kim bi {subject} pre upao u nevolju, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Sa kim bi {subject} pre imao haos u noći izlaska, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Koga bi {subject} pre lagao da spasi kožu, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Ko bi pre saznao tajnu igrača {subject}, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Sa kim bi {subject} pre delio bocu na žurci, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Koga {subject} pre zove kad mu je loše u 3 ujutru, {peer1} ili {peer2}?"
+  },
+
+  {
     "shape": "free",
     "category": "nsfw",
     "text": "Najgora navika igrača {subject}?",
@@ -94,6 +307,42 @@
     "shape": "free",
     "category": "nsfw",
     "text": "Najveća tajna koju {subject} (verovatno) krije?",
+    "maxLength": 60
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najsmešnija laž koju je {subject} ikada izgovorio?",
+    "maxLength": 60
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Šta {subject} apsolutno ne podnosi kod ljudi?",
+    "maxLength": 50
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najgori savet koji je {subject} primio?",
+    "maxLength": 60
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najveće žaljenje igrača {subject} u jednoj reči?",
+    "maxLength": 30
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najgluplja stvar koju je {subject} kupio?",
+    "maxLength": 50
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najgora ideja koju je {subject} ikada imao?",
     "maxLength": 60
   }
 ]
