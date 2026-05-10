@@ -59,4 +59,13 @@ export interface FotoKvizInternalState {
 
   /** Custom-mode roster — players eligible to submit at submission start. */
   submissionRoster: string[];
+
+  /**
+   * Snapshot of player IDs who were connected (and not the photo
+   * uploader) at the start of the current `answering` phase. Used for
+   * early-exit so a brief mid-round phone-sleep blip doesn't shrink the
+   * "everyone answered" denominator and lock out a reconnecting player.
+   * Pruned via onPlayerDisconnect when grace expires.
+   */
+  expectedAnswererIds: Set<string>;
 }

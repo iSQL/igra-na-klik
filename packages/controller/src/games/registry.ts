@@ -10,4 +10,5 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniController'),
   'geo-pogodi': () => import('./geo-pogodi/GeoGuessController'),
   'foto-kviz': () => import('./foto-kviz/FotoKvizController'),
+  'ko-sam-ja': () => import('./ko-sam-ja/KoSamJaController'),
 };

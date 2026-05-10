@@ -123,6 +123,7 @@ export class FotoKvizModule extends BaseGameModule {
       customSubmissions: new Map(),
       customPhotosPerPlayer: clampPhotosPerPlayer(cc.customPhotosPerPlayer),
       submissionRoster: [],
+      expectedAnswererIds: new Set(),
     };
 
     // Reset persistent player scores so a previous game doesn't bleed in.
@@ -182,6 +183,12 @@ export class FotoKvizModule extends BaseGameModule {
         this.state.customSubmissions.delete(playerId);
         this.maybeAdvanceFromSubmission(room);
       }
+    }
+    // Past-grace removal — release the player from the answerer snapshot
+    // so the round can early-exit once the rest are done.
+    this.state.expectedAnswererIds.delete(playerId);
+    if (this.state.phase === 'answering' && this.allExpectedAnswered(room)) {
+      this.transitionToResults();
     }
     return this.buildGameState(room);
   }
@@ -407,13 +414,23 @@ export class FotoKvizModule extends BaseGameModule {
       player.score = prev + pointsAwarded;
     }
 
-    // Early advance: did everyone eligible answer?
-    const eligible = this.eligibleAnswerers(room).length;
-    if (eligible > 0 && this.state.answers.size >= eligible) {
+    if (this.allExpectedAnswered(room)) {
       this.transitionToResults();
     }
 
     return this.buildGameState(room);
+  }
+
+  private allExpectedAnswered(room: Room): boolean {
+    if (this.state.phase !== 'answering') return false;
+    if (this.state.expectedAnswererIds.size === 0) return false;
+    for (const id of this.state.expectedAnswererIds) {
+      if (this.state.answers.has(id)) continue;
+      const stillInRoom = room.players.some((p) => p.id === id);
+      if (!stillInRoom) continue; // gone past grace — release slot
+      return false; // mid-grace or actively connected — wait for them
+    }
+    return true;
   }
 
   private eligibleAnswerers(room: Room): string[] {
@@ -452,6 +469,7 @@ export class FotoKvizModule extends BaseGameModule {
         this.state.phaseTimeRemaining = ANSWERING_DURATION;
         this.state.questionStartTime = Date.now();
         this.state.answers = new Map();
+        this.state.expectedAnswererIds = new Set(this.eligibleAnswerers(room));
         return;
 
       case 'answering':

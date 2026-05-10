@@ -6,7 +6,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
-import { parseQuizImport } from '@igra/shared';
+import { parseQuizImport, parseKoSamJaImport } from '@igra/shared';
+import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
 
@@ -27,6 +28,9 @@ const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
 const GEO_PACKS_DIR = process.env.GEO_PACKS_DIR
   ? path.resolve(process.env.GEO_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'geo-packs');
+const KO_SAM_JA_PACKS_DIR = process.env.KO_SAM_JA_PACKS_DIR
+  ? path.resolve(process.env.KO_SAM_JA_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'ko-sam-ja-packs');
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -95,6 +99,51 @@ app.get('/api/question-packs', async (_req, res) => {
     }
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
+  }
+});
+
+app.get('/api/ko-sam-ja-packs', async (_req, res) => {
+  try {
+    const entries = await readdir(KO_SAM_JA_PACKS_DIR, { withFileTypes: true });
+    const jsonFiles = entries.filter(
+      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
+    );
+
+    const packs: Array<{
+      id: string;
+      fileName: string;
+      count: number;
+      questions: KoSamJaImportQuestion[];
+    }> = [];
+
+    for (const entry of jsonFiles) {
+      try {
+        const raw = await readFile(
+          path.join(KO_SAM_JA_PACKS_DIR, entry.name),
+          'utf-8'
+        );
+        const parsed = parseKoSamJaImport(JSON.parse(raw));
+        if (!parsed.ok) continue;
+        packs.push({
+          id: entry.name.replace(/\.json$/i, ''),
+          fileName: entry.name,
+          count: parsed.questions.length,
+          questions: parsed.questions,
+        });
+      } catch {
+        // Skip unreadable or malformed files; the rest of the list still loads.
+      }
+    }
+
+    packs.sort((a, b) => a.id.localeCompare(b.id));
+    res.json({ packs });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      res.json({ packs: [] });
+      return;
+    }
+    console.error('Failed to read ko-sam-ja packs directory:', err);
+    res.status(500).json({ error: 'Failed to read ko-sam-ja packs' });
   }
 });
 
@@ -172,6 +221,7 @@ httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
   console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
+  console.log(`Ko sam ja packs dir: ${KO_SAM_JA_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }

@@ -38,6 +38,7 @@ export class QuizGameModule extends BaseGameModule {
       phaseTimeRemaining: SHOWING_QUESTION_DURATION,
       answers: new Map(),
       questionStartTime: Date.now(),
+      expectedAnswererIds: new Set(),
     };
 
     return this.buildGameState(room);
@@ -67,13 +68,38 @@ export class QuizGameModule extends BaseGameModule {
       if (player) player.score += score;
     }
 
-    // Check if all connected players have answered
-    const connectedPlayers = room.players.filter((p) => p.isConnected);
-    if (this.state.answers.size >= connectedPlayers.length) {
+    if (this.allExpectedAnswered(room)) {
       this.transitionToResults(room);
     }
 
     return this.buildGameState(room);
+  }
+
+  onPlayerDisconnect(
+    room: Room,
+    _gameState: GameState,
+    playerId: string
+  ): GameState | null {
+    // A disconnect callback only fires after the 5-min grace period, so
+    // by the time we get here the player is genuinely gone — release
+    // their slot from the answerer snapshot so the round can early-exit
+    // once the rest answer.
+    this.state.expectedAnswererIds.delete(playerId);
+    if (this.state.phase === 'answering' && this.allExpectedAnswered(room)) {
+      this.transitionToResults(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  private allExpectedAnswered(room: Room): boolean {
+    if (this.state.phase !== 'answering') return false;
+    for (const id of this.state.expectedAnswererIds) {
+      if (this.state.answers.has(id)) continue;
+      const stillInRoom = room.players.some((p) => p.id === id);
+      if (!stillInRoom) continue; // gone past grace — release their slot
+      return false; // mid-grace or actively connected — wait for them
+    }
+    return true;
   }
 
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
@@ -97,6 +123,9 @@ export class QuizGameModule extends BaseGameModule {
         this.state.phaseTimeRemaining = this.currentQuestion().timeLimit;
         this.state.questionStartTime = Date.now();
         this.state.answers = new Map();
+        this.state.expectedAnswererIds = new Set(
+          room.players.filter((p) => p.isConnected).map((p) => p.id)
+        );
         break;
 
       case 'answering':

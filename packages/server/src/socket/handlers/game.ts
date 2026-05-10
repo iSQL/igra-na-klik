@@ -51,6 +51,8 @@ export function registerGameHandlers(
       geoPackId: data.geoPackId,
       geoMode: data.geoMode,
       customPhotosPerPlayer: data.customPhotosPerPlayer,
+      koSamJaCategory: data.koSamJaCategory,
+      customKoSamJaQuestions: data.customKoSamJaQuestions,
     });
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });

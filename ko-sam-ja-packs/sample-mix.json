@@ -1,0 +1,99 @@
+[
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Omiljena boja igrača {subject}?",
+    "options": ["crvena", "plava", "zelena", "žuta"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} bi pre na odmor išao u…",
+    "options": ["planinu", "more", "grad", "selo"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Omiljeno doba dana igrača {subject}?",
+    "options": ["jutro", "podne", "veče", "noć"]
+  },
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "{subject} radije pije…",
+    "options": ["kafu", "čaj", "sok", "vodu"]
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} radije išao na skijanje, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Ko zna bolje {subject}-a, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} pre osnovao firmu, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Posao iz snova igrača {subject}?",
+    "maxLength": 50
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Najveći talenat igrača {subject} u jednoj reči?",
+    "maxLength": 30
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Šta {subject} jede svaki dan?",
+    "maxLength": 40
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} bi pre…",
+    "options": ["javno priznao laž", "ćutao zauvek"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "{subject} ima više iskustva sa…",
+    "options": ["zabavom", "obavezama", "ljubavlju", "haosom"]
+  },
+  {
+    "shape": "fixed",
+    "category": "nsfw",
+    "text": "Najgori porok igrača {subject}?",
+    "options": ["lenjost", "sebičnost", "nestrpljivost", "drama"]
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Sa kim bi {subject} pre delio sobu na putovanju, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "Koga bi {subject} pre pozajmio za novac, {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najgora navika igrača {subject}?",
+    "maxLength": 40
+  },
+  {
+    "shape": "free",
+    "category": "nsfw",
+    "text": "Najveća tajna koju {subject} (verovatno) krije?",
+    "maxLength": 60
+  }
+]

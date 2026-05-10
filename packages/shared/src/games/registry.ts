@@ -46,4 +46,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Pogledaj fotografiju i izaberi pravu lokaciju od 4 ponuđena odgovora!',
   },
+  'ko-sam-ja': {
+    id: 'ko-sam-ja',
+    name: 'Ko sam ja?',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Lična pitanja o igračima — koliko dobro poznajete jedni druge?',
+  },
 };

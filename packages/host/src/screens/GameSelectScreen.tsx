@@ -5,8 +5,11 @@ import { useRoomStore } from '../store/roomStore';
 import { useQuizImportStore } from '../store/quizImportStore';
 import { useSlepiConfigStore } from '../store/slepiConfigStore';
 import { useGeoConfigStore } from '../store/geoConfigStore';
+import { useKoSamJaImportStore } from '../store/koSamJaImportStore';
+import { useKoSamJaConfigStore } from '../store/koSamJaConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
+import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
@@ -16,6 +19,10 @@ export function GameSelectScreen() {
   const games = Object.values(GAME_DEFINITIONS);
   const selectedRounds = useSlepiConfigStore((s) => s.selectedRounds);
   const setSelectedRounds = useSlepiConfigStore((s) => s.setSelectedRounds);
+  const koSamJaCategory = useKoSamJaConfigStore((s) => s.selectedCategory);
+  const setKoSamJaCategory = useKoSamJaConfigStore(
+    (s) => s.setSelectedCategory
+  );
   const connectedCount = players.filter((p) => p.isConnected).length;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,6 +66,13 @@ export function GameSelectScreen() {
       }
     }
 
+    const customKoSamJaQuestions =
+      gameId === 'ko-sam-ja'
+        ? useKoSamJaImportStore.getState().customQuestions ?? undefined
+        : undefined;
+    const koSamJaCategoryToSend =
+      gameId === 'ko-sam-ja' ? koSamJaCategory : undefined;
+
     socket.emit('host:start-game', {
       gameId,
       customQuestions,
@@ -66,6 +80,8 @@ export function GameSelectScreen() {
       geoPackId,
       geoMode,
       customPhotosPerPlayer,
+      koSamJaCategory: koSamJaCategoryToSend,
+      customKoSamJaQuestions,
     });
   };
 
@@ -168,6 +184,46 @@ export function GameSelectScreen() {
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
             {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && <GeoPackButton />}
+            {game.id === 'ko-sam-ja' && (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                    marginTop: '0.75rem',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {(['family', 'nsfw'] as const).map((cat) => {
+                    const active = cat === koSamJaCategory;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setKoSamJaCategory(cat);
+                        }}
+                        style={{
+                          padding: '0.3rem 0.75rem',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          background: active
+                            ? 'var(--accent)'
+                            : 'var(--bg-secondary)',
+                          color: active ? '#fff' : 'var(--text-primary)',
+                          minWidth: '64px',
+                        }}
+                      >
+                        {cat === 'family' ? 'Family' : 'NSFW'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <KoSamJaImportButton />
+              </>
+            )}
             {game.id === 'slepi-telefoni' && (
               <div
                 style={{

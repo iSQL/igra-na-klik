@@ -36,6 +36,17 @@ export interface FibbageInternalState {
   roundScores: Map<string, number>;
   /** Per-player "fooled count" (how many voters picked their fake) for current round */
   roundFooledCounts: Map<string, number>;
+
+  /**
+   * Snapshot of player IDs connected when the current `writing-answers`
+   * phase began. Drives early-exit so a brief mid-round disconnect (phone
+   * sleep / network blip) doesn't fool the "everyone submitted" check
+   * into firing without that player's submission. Pruned via
+   * onPlayerDisconnect when grace expires.
+   */
+  expectedSubmitterIds: Set<string>;
+  /** Same idea, snapshotted at the start of the `voting` phase. */
+  expectedVoterIds: Set<string>;
 }
 
 export const SHOWING_QUESTION_DURATION = 5;

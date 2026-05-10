@@ -59,6 +59,12 @@ export class GameManager {
     room.status = 'in-game';
     room.currentGameId = gameId;
 
+    // Each game is its own match — start everyone at zero so the
+    // previous game's totals don't bleed into the new leaderboard.
+    for (const player of room.players) {
+      player.score = 0;
+    }
+
     const gameState = module.onStart(room, customContent);
     this.emitGameState(roomCode, gameState);
     this.io.to(roomCode).emit('game:started', { gameId, gameState });

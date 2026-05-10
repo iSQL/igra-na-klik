@@ -1,6 +1,8 @@
 import type { PublicPlayer, Player, PublicRoom, RoomSettings } from './room.js';
 import type { GameState } from './game.js';
 import type { QuizImportQuestion } from '../games/quiz-import.js';
+import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
+import type { KoSamJaCategory } from './ko-sam-ja.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -36,6 +38,8 @@ export interface ClientToServerEvents {
     geoPackId?: string;
     geoMode?: 'predefined' | 'custom';
     customPhotosPerPlayer?: number;
+    koSamJaCategory?: KoSamJaCategory;
+    customKoSamJaQuestions?: KoSamJaImportQuestion[];
   }) => void;
   'host:stop-game': () => void;
   'host:kick-player': (data: { playerId: string }) => void;

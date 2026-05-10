@@ -49,6 +49,8 @@ export class FibbageModule extends BaseGameModule {
       votes: new Map(),
       roundScores: new Map(),
       roundFooledCounts: new Map(),
+      expectedSubmitterIds: new Set(),
+      expectedVoterIds: new Set(),
     };
 
     return this.buildGameState(room);
@@ -80,13 +82,7 @@ export class FibbageModule extends BaseGameModule {
           this.state.submissions.set(playerId, text);
         }
 
-        // Transition if all connected non-drawer players accounted for
-        const connectedPlayers = room.players.filter((p) => p.isConnected);
-        const accountedFor = connectedPlayers.filter(
-          (p) =>
-            this.state.submissions.has(p.id) || this.state.autoFinders.has(p.id)
-        );
-        if (accountedFor.length >= connectedPlayers.length) {
+        if (this.allExpectedSubmitted(room)) {
           this.transitionToVoting(room);
         }
 
@@ -111,9 +107,7 @@ export class FibbageModule extends BaseGameModule {
 
         this.state.votes.set(playerId, optionId);
 
-        // Transition if all connected players have voted
-        const connectedPlayers = room.players.filter((p) => p.isConnected);
-        if (this.state.votes.size >= connectedPlayers.length) {
+        if (this.allExpectedVoted(room)) {
           this.transitionToResults(room);
         }
 
@@ -135,11 +129,64 @@ export class FibbageModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  onPlayerDisconnect(
+    room: Room,
+    _gameState: GameState,
+    playerId: string
+  ): GameState | null {
+    // Past-grace removal — release the player's slot from the active
+    // snapshot so the round can early-exit once the rest are done.
+    this.state.expectedSubmitterIds.delete(playerId);
+    this.state.expectedVoterIds.delete(playerId);
+    if (
+      this.state.phase === 'writing-answers' &&
+      this.allExpectedSubmitted(room)
+    ) {
+      this.transitionToVoting(room);
+    } else if (
+      this.state.phase === 'voting' &&
+      this.allExpectedVoted(room)
+    ) {
+      this.transitionToResults(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  private allExpectedSubmitted(room: Room): boolean {
+    if (this.state.phase !== 'writing-answers') return false;
+    for (const id of this.state.expectedSubmitterIds) {
+      if (
+        this.state.submissions.has(id) ||
+        this.state.autoFinders.has(id)
+      ) {
+        continue;
+      }
+      const stillInRoom = room.players.some((p) => p.id === id);
+      if (!stillInRoom) continue;
+      return false;
+    }
+    return true;
+  }
+
+  private allExpectedVoted(room: Room): boolean {
+    if (this.state.phase !== 'voting') return false;
+    for (const id of this.state.expectedVoterIds) {
+      if (this.state.votes.has(id)) continue;
+      const stillInRoom = room.players.some((p) => p.id === id);
+      if (!stillInRoom) continue;
+      return false;
+    }
+    return true;
+  }
+
   private advancePhase(room: Room): void {
     switch (this.state.phase) {
       case 'showing-question':
         this.state.phase = 'writing-answers';
         this.state.phaseTimeRemaining = WRITING_ANSWERS_DURATION;
+        this.state.expectedSubmitterIds = new Set(
+          room.players.filter((p) => p.isConnected).map((p) => p.id)
+        );
         break;
 
       case 'writing-answers':
@@ -169,7 +216,7 @@ export class FibbageModule extends BaseGameModule {
     }
   }
 
-  private transitionToVoting(_room: Room): void {
+  private transitionToVoting(room: Room): void {
     const question = this.currentQuestion();
 
     // Build options: the real answer + unique fakes (merged by normalized text)
@@ -217,6 +264,9 @@ export class FibbageModule extends BaseGameModule {
     this.state.votes = new Map();
     this.state.phase = 'voting';
     this.state.phaseTimeRemaining = VOTING_DURATION;
+    this.state.expectedVoterIds = new Set(
+      room.players.filter((p) => p.isConnected).map((p) => p.id)
+    );
   }
 
   private transitionToResults(room: Room): void {
