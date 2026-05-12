@@ -76,6 +76,7 @@ export class KoSamJaModule extends BaseGameModule {
       maxLength: q.shape === 'free' ? q.maxLength ?? 60 : undefined,
       optionTemplate: q.shape === 'pickN' ? q.optionTemplate : undefined,
       maxPeers: q.shape === 'pickN' ? q.maxPeers : undefined,
+      extraOptions: q.shape === 'pickN' ? q.extraOptions : undefined,
     }));
 
     const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
@@ -579,7 +580,7 @@ export class KoSamJaModule extends BaseGameModule {
     const subjectName = subject?.name ?? '?';
     const template = question.optionTemplate;
 
-    this.state.roundOptions = chosen.map((peer) => ({
+    const opts: { id: string; text: string }[] = chosen.map((peer) => ({
       id: `pickn-${peer.id}`,
       text: template
         ? template
@@ -590,6 +591,22 @@ export class KoSamJaModule extends BaseGameModule {
         : peer.name,
     }));
 
+    if (question.extraOptions && question.extraOptions.length > 0) {
+      question.extraOptions.forEach((rawText, i) => {
+        opts.push({
+          id: `pickn-extra-${i}`,
+          text: rawText.split('{subject}').join(subjectName),
+        });
+      });
+      // Shuffle merged list so literal extras don't always trail peers
+      // and become a pattern guessers exploit.
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+    }
+
+    this.state.roundOptions = opts;
     this.state.roundCorrectOptionId = null;
     this.state.roundGuesses = new Map();
     return true;

@@ -323,7 +323,8 @@
     "shape": "pickN",
     "category": "family",
     "text": "Sa kim bi {subject} otvorio kafić?",
-    "optionTemplate": "sa {peer}"
+    "optionTemplate": "sa {peer}",
+    "extraOptions": ["radije bi sam", "ne bi otvarao kafić"]
   },
   {
     "shape": "pickN",
@@ -334,7 +335,16 @@
   {
     "shape": "pickN",
     "category": "nsfw",
-    "text": "Kome bi {subject} pre pozajmio kola na vikend?"
+    "text": "Kome bi {subject} pre pozajmio kola na vikend?",
+    "extraOptions": ["nikome", "samo svojima"]
+  },
+  {
+    "shape": "pickN",
+    "category": "nsfw",
+    "text": "{subject} bi pre delio poslednji deo torte sa…",
+    "optionTemplate": "sa {peer}",
+    "maxPeers": 3,
+    "extraOptions": ["niko, sam pojede"]
   },
 
   {

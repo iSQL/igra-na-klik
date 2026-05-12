@@ -170,11 +170,12 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 | `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so the controller auto-fills the active room |
 | `QUESTION_PACKS_DIR` | `./question-packs` | Override location of JSON question packs |
 | `GEO_PACKS_DIR` | `./geo-packs` | Override location of geo-pack manifests + image folders |
+| `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Override location of Ko sam ja JSON question packs |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz (all Serbian content), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja (Serbian content throughout), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -185,6 +186,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
 - [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
 - [x] **Phase 9** — Foto kviz (multiple-choice variant of Pogodi gde je — 4 captioned answers, speed scoring)
+- [x] **Phase 10** — Ko sam ja (personal-question party game — players guess each other's answers, four question shapes including peer-name picks)
 
 ### What's Implemented
 
@@ -292,6 +294,21 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - **Reuses** the same `GeoPackButton`, `useGeoConfigStore`, and `downscaleImage` helpers as Pogodi gde je — picking the same pack in either game is consistent.
 - Host display: photo with 4 colored options below during answering, options re-rendered with green outline on correct + per-player avatar chips on showing-results, podium animation only on the final leaderboard.
 
+**Ko sam ja (personal questions about players)** — *Serbian-only content*
+- 3–8 players; hybrid of Kviz (multiple-choice + speed scoring) and Lažov (subject-supplied answers).
+- **Premise**: each round is a personal question about a *subject* player ("Omiljena boja igrača Mare?", "Sa kim bi Mare otvorio kafić?"). Subject answers; everyone else guesses what subject picked.
+- **Two categories**: `family` (default) and `nsfw` (more personal/awkward). Host toggles per game on the game-select card. Single category per game; pack questions tagged so the host's choice filters the pool.
+- **Phase flow**: `collecting-upfront (≤120s) → [showing-question (4s) → (subject-picking 15s for peer/pickN) → guessing (15s) → showing-results (6s) → leaderboard (4s)] × N → ended`. Up to 8 rounds per game, round-robin subject assignment so every player is the subject at least once.
+- **Four question shapes**:
+  - **fixed** — author-supplied 2–4 options ("crvena/plava/zelena/žuta"). Subject answers privately during the upfront collection phase.
+  - **peer** — `{peer1}`/`{peer2}` placeholders bound at round time to two random co-players. Without `options`, server auto-generates two peer-name buttons. With `options`, author writes 2–4 buttons that can mix literal text with `{peer1}`/`{peer2}` references ("optužio {peer1}", "smestio {peer2}"). Subject picks at round time.
+  - **free** — subject types a free-text answer upfront (default 60 char limit, configurable 10–120). Server samples 3 distractors from other players' free-text answers across the game (falls back to a built-in bank if the pool is thin).
+  - **pickN** — "Most Likely To" style: server expands one button per connected co-player (capped at `maxPeers`, default 4). Optional `optionTemplate` like `"sa {peer}"` wraps each button; optional `extraOptions` mixes in literal non-peer buttons ("radije bi sam"). Merged list shuffled at round start.
+- **Scoring**: guessers earn the standard Quiz speed-based score (up to 1000 pts scaled by `timeRemaining / timeLimit`). The subject earns a flat **+200 per wrong guess** on their own question — rewards being unpredictable.
+- **Custom pack import**: same JSON pipeline as Quiz, but pointed at `ko-sam-ja-packs/` (override via `KO_SAM_JA_PACKS_DIR`). Host can drop a `.json` file or pick from server-discovered packs in a dropdown — persisted in `localStorage`. See "Ko sam ja Packs" below for the full schema.
+- **Disconnect tolerance**: subject disconnects mid-`subject-picking` skip the round to leaderboard; rounds whose subject never answered an upfront question are pruned on collection exit; everything else honours the standard 5-minute grace.
+- Host display: question text with subject name highlighted, faded option cards during `subject-picking`, full color grid during `guessing`, per-guesser breakdown + subject-bonus panel on `showing-results`, reused Quiz leaderboard between rounds.
+
 ## Architecture
 
 ### Room System
@@ -366,6 +383,61 @@ Rules:
 - `timeLimit` — optional, 5–60 seconds (defaults to 15)
 
 The imported pack replaces the built-in bank for that session. It is saved in `localStorage` on the host device and persists across page refreshes until explicitly removed.
+
+### Ko sam ja Packs
+
+Ko sam ja serves question packs from `ko-sam-ja-packs/` (override via `KO_SAM_JA_PACKS_DIR`). Each pack is a single `.json` file containing an array of questions tagged with one of four shapes:
+
+```json
+[
+  {
+    "shape": "fixed",
+    "category": "family",
+    "text": "Omiljena boja igrača {subject}?",
+    "options": ["crvena", "plava", "zelena", "žuta"]
+  },
+  {
+    "shape": "peer",
+    "category": "family",
+    "text": "Sa kim bi {subject} radije išao na put, sa {peer1} ili {peer2}?"
+  },
+  {
+    "shape": "peer",
+    "category": "nsfw",
+    "text": "{subject} bi pre…",
+    "options": ["javno priznao laž", "ćutao zauvek", "optužio {peer1}", "smestio {peer2}"]
+  },
+  {
+    "shape": "free",
+    "category": "family",
+    "text": "Posao iz snova igrača {subject}?",
+    "maxLength": 50
+  },
+  {
+    "shape": "pickN",
+    "category": "family",
+    "text": "Sa kim bi {subject} otvorio kafić?",
+    "optionTemplate": "sa {peer}",
+    "extraOptions": ["radije bi sam", "ne bi otvarao kafić"],
+    "maxPeers": 4
+  }
+]
+```
+
+**Common fields** (all shapes):
+- `shape` — one of `fixed`, `peer`, `free`, `pickN`
+- `category` — `family` or `nsfw` (host picks one per game)
+- `text` — must contain `{subject}` exactly once (interpolated to the subject's name at runtime)
+
+**Shape-specific rules**:
+- `fixed` — 2–4 unique `options`. No `{peer*}` allowed in text. Subject answers privately upfront.
+- `peer` — without `options`: text must contain `{peer1}` and `{peer2}` exactly once each. With `options`: 2–4 unique entries that may contain `{peer1}`/`{peer2}`/`{subject}` placeholders. Subject picks at round time after two random co-players are bound.
+- `free` — optional `maxLength` (10–120 chars, default 60). No `options`, no `{peer*}`. Subject types upfront; server samples 3 distractors from other players' free-text answers.
+- `pickN` — optional `optionTemplate` (must contain `{peer}` exactly once, e.g. `"sa {peer}"`), optional `maxPeers` (2–8, default 4), optional `extraOptions` (1–4 unique literal buttons that may reference `{subject}` but not `{peer*}`). Server expands one button per peer up to the cap; extras are appended and the merged list is shuffled.
+
+Validation lives in [packages/shared/src/games/ko-sam-ja-import.ts](packages/shared/src/games/ko-sam-ja-import.ts). The same validator runs both on the host (file picker) and the server (`/api/ko-sam-ja-packs` endpoint and `host:start-game` re-check), with Serbian error messages on failure.
+
+Sample pack: [ko-sam-ja-packs/sample-mix.json](ko-sam-ja-packs/sample-mix.json) — ~70 mixed-shape questions across both categories.
 
 ### Game Module System
 

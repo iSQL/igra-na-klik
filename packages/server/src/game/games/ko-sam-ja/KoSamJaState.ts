@@ -20,6 +20,8 @@ export interface KoSamJaQuestion {
   optionTemplate?: string;
   /** pickN only — cap on co-players shown as buttons. */
   maxPeers?: number;
+  /** pickN only — literal non-peer buttons mixed in. */
+  extraOptions?: string[];
 }
 
 export interface KoSamJaSelectedRound {

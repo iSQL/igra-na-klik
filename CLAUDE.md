@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with six games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), and Foto kviz (multiple-choice photo quiz that reuses the same geo-packs). Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz are Serbian-only content. Phases 1–7 of `PLAN.md` are all complete.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with seven games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), Foto kviz (multiple-choice photo quiz that reuses the same geo-packs), and Ko sam ja (personal-question party game where players guess each other's answers). Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja are Serbian-only content.
 
 ## Commands
 
@@ -83,9 +83,28 @@ The map is a static SVG of Serbia at [packages/host/src/games/geo-pogodi/assets/
 
 Foto kviz reuses the entire `geo-packs/` infrastructure — same `GET /api/geo-packs`, same `/geo-images/...` static mount, same `useGeoConfigStore` and `GeoPackButton` on the host, same `downscaleImage` helper on the controller. Per-round questions are built in [packages/server/src/game/games/foto-kviz/FotoKvizModule.ts](packages/server/src/game/games/foto-kviz/FotoKvizModule.ts): the location's `caption` is the correct answer; 3 distractors are sampled from other locations' captions. Speed-scoring formula and phase pattern (`showing-photo → answering → showing-results`) mirror Quiz. Predefined packs need ≥4 captioned locations; custom mode requires ≥2 players AND ≥4 photos total.
 
+### Ko sam ja (personal-question game)
+
+Ko sam ja is a Kviz/Lažov hybrid where each round is about a *subject* player (round-robin assigned at game start) and others guess what the subject answered. Lives in [packages/server/src/game/games/ko-sam-ja/](packages/server/src/game/games/ko-sam-ja/). Phase machine: `collecting-upfront → [showing-question → (subject-picking for peer/pickN only) → guessing → showing-results → leaderboard] × N → ended`. Scoring: Quiz time-based formula for guessers + `+200 per wrong guess` flat bonus to the subject.
+
+Four question shapes (discriminated by the `shape` field; validator at [packages/shared/src/games/ko-sam-ja-import.ts](packages/shared/src/games/ko-sam-ja-import.ts)):
+- `fixed` — 2–4 author-supplied options, answered privately during the one-time upfront collection phase.
+- `peer` — without `options`: text must contain `{peer1}`/`{peer2}` and server auto-generates two peer-name buttons. With `options`: 2–4 author-written buttons that may contain `{peer1}`/`{peer2}`/`{subject}` placeholders. Answered just-in-time during `subject-picking` after two random co-players are bound.
+- `free` — subject types a free-text answer upfront; server samples 3 distractors from other players' free-text answers (falls back to `KO_SAM_JA_FREE_FALLBACK` bank when the pool is thin).
+- `pickN` — server expands one button per connected co-player up to `maxPeers` (default 4). Optional `optionTemplate` like `"sa {peer}"` wraps each button; optional `extraOptions` (1–4 literal non-peer buttons that may reference `{subject}`) gets appended and the merged list is shuffled.
+
+Custom packs live in `ko-sam-ja-packs/` at the repo root (override via `KO_SAM_JA_PACKS_DIR`). Server endpoint `GET /api/ko-sam-ja-packs` lists summaries; host UI in [packages/host/src/components/KoSamJaImportButton.tsx](packages/host/src/components/KoSamJaImportButton.tsx) mirrors the Quiz import flow (file picker + server-pack dropdown, persists in `localStorage` under `igra-ko-sam-ja-custom`). Host's game-select card carries an additional `family`/`nsfw` toggle (persisted via [packages/host/src/store/koSamJaConfigStore.ts](packages/host/src/store/koSamJaConfigStore.ts)) — both fields are sent via `host:start-game`'s `koSamJaCategory` / `customKoSamJaQuestions` payload extensions and re-validated server-side. Built-in default bank (family-only) lives in [packages/shared/src/games/ko-sam-ja-questions.ts](packages/shared/src/games/ko-sam-ja-questions.ts).
+
+### Cross-game reliability patterns
+
+Two recurring server-side patterns worth knowing about when touching any game module:
+
+- **Snapshot-based early-exit** — in submission/answer collection phases (Quiz `answering`, Fibbage `writing-answers`/`voting`, Foto Kviz `answering`, Ko sam ja `collecting-upfront`/`guessing`), each module snapshots the set of expected player IDs at phase entry and uses that set for "did everyone answer?" checks. Disconnected mid-grace players stay in the snapshot — round runs until they reconnect-and-answer or the timer expires. Past-grace removal (via `onPlayerDisconnect`, which `setup.ts` fires only after the 5-minute grace timer) prunes the snapshot so the round can early-exit again. Without this, a phone screen sleep mid-round used to "shrink the denominator" and steal an answering slot from a player about to reconnect.
+- **Per-game score reset** — [packages/server/src/game/GameManager.ts](packages/server/src/game/GameManager.ts) `startGame` zeroes every `player.score` before calling `module.onStart`. Each game is its own match; don't re-implement a score-reset inside the module.
+
 ### Serbian-only content
 
-Lažov, Slepi telefoni, Pogodi gde je, and Foto kviz are Serbian-only (Latin script) by design — strings are hardcoded in their host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching these games.
+Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja are Serbian-only (Latin script) by design — strings are hardcoded in their host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching these games.
 
 ## LAN / single-room modes
 
@@ -95,6 +114,7 @@ For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5
 
 - `QUESTION_PACKS_DIR` — directory of `.json` quiz packs (default `question-packs/`).
 - `GEO_PACKS_DIR` — directory of geo-pack manifests + image folders (default `geo-packs/`).
+- `KO_SAM_JA_PACKS_DIR` — directory of `.json` Ko sam ja packs (default `ko-sam-ja-packs/`).
 - `HOST_ORIGIN` / `CONTROLLER_ORIGIN` — CORS origins for LAN play.
 - `SAME_ORIGIN_DEPLOY=true` — single-container deploy (host + controller served from server).
 - `SINGLE_ROOM_MODE=true` (+ `VITE_SINGLE_ROOM=true` for controller) — auto-fill the active room code.

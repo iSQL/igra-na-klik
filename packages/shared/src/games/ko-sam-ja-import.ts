@@ -43,6 +43,14 @@ export interface KoSamJaImportPickNQuestion {
   text: string;
   optionTemplate?: string;
   maxPeers?: number;
+  /**
+   * Extra literal buttons to mix in alongside the peer-expanded ones.
+   * Each entry may contain `{subject}` (interpolated at round time) but
+   * not `{peer}`/`{peer1}`/`{peer2}` — extras are not peer-bound. After
+   * the peer buttons are built, extras are appended and the full list
+   * is shuffled so literals don't always land at the same position.
+   */
+  extraOptions?: string[];
 }
 
 export type KoSamJaImportQuestion =
@@ -280,12 +288,62 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
         }
         maxPeers = raw.maxPeers;
       }
+      let extraOptions: string[] | undefined;
+      if (raw.extraOptions !== undefined) {
+        if (!Array.isArray(raw.extraOptions)) {
+          return {
+            ok: false,
+            error: `${label}: extraOptions mora biti niz.`,
+          };
+        }
+        if (raw.extraOptions.length < 1 || raw.extraOptions.length > 4) {
+          return {
+            ok: false,
+            error: `${label}: extraOptions mora imati između 1 i 4 unosa.`,
+          };
+        }
+        const trimmedExtras: string[] = [];
+        for (let j = 0; j < raw.extraOptions.length; j++) {
+          const v = raw.extraOptions[j];
+          if (!isNonEmptyString(v)) {
+            return {
+              ok: false,
+              error: `${label}: extraOptions[${j + 1}] je prazan.`,
+            };
+          }
+          const t = (v as string).trim();
+          if (
+            t.includes('{peer}') ||
+            t.includes('{peer1}') ||
+            t.includes('{peer2}')
+          ) {
+            return {
+              ok: false,
+              error: `${label}: extraOptions ne smeju sadržati {peer}/{peer1}/{peer2} (nisu vezani za igrača).`,
+            };
+          }
+          trimmedExtras.push(t);
+        }
+        const seenExtras = new Set<string>();
+        for (const t of trimmedExtras) {
+          const key = t.toLowerCase();
+          if (seenExtras.has(key)) {
+            return {
+              ok: false,
+              error: `${label}: extraOptions moraju biti različiti.`,
+            };
+          }
+          seenExtras.add(key);
+        }
+        extraOptions = trimmedExtras;
+      }
       questions.push({
         shape: 'pickN',
         category,
         text,
         optionTemplate,
         maxPeers,
+        extraOptions,
       });
       continue;
     }
