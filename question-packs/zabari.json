@@ -178,5 +178,17 @@
     "options": ["Preko Donje Livadice", "Preko Simićeva", "Preko Vlaškog Dola", "Preko Kočetina"],
     "correctIndex": 0,
     "timeLimit": 15
+  },
+  {
+    "text": "Ko je bio Miša Stanić?",
+    "options": ["Vojskovođa u prvom svetskom ratu", "Stevin deda", "Predsednik opštine", "Poznati pekar iz Žabara"],
+    "correctIndex": 1,
+    "timeLimit": 15
+  },
+  {
+  "text": "Koje je misteriozno mesto u Žabarima čiju lokaciju niko ne zna?",
+  "options": ["Vrbovac", "Kosjak", "Stevin šljivar", "Ničin breg"],
+  "correctIndex": 1,
+  "timeLimit": 15
   }
 ]
