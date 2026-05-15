@@ -17,3 +17,4 @@ export * from './games/quiz-import.js';
 export * from './games/geo-import.js';
 export * from './games/serbia-projection.js';
 export * from './games/ko-sam-ja-import.js';
+export * from './games/spot-it-deck.js';

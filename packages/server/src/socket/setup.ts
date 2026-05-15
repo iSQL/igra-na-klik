@@ -18,6 +18,7 @@ import { SlepiTelefoniModule } from '../game/games/slepi-telefoni/SlepiTelefoniM
 import { GeoGuessModule } from '../game/games/geo-pogodi/GeoGuessModule.js';
 import { FotoKvizModule } from '../game/games/foto-kviz/FotoKvizModule.js';
 import { KoSamJaModule } from '../game/games/ko-sam-ja/KoSamJaModule.js';
+import { SpotItModule } from '../game/games/spot-it/SpotItModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -57,6 +58,7 @@ export function setupSocket(
   gameRegistry.register(new GeoGuessModule(options?.geoPacksDir ?? ''));
   gameRegistry.register(new FotoKvizModule(options?.geoPacksDir ?? ''));
   gameRegistry.register(new KoSamJaModule());
+  gameRegistry.register(new SpotItModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

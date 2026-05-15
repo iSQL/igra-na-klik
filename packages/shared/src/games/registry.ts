@@ -54,4 +54,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Lična pitanja o igračima — koliko dobro poznajete jedni druge?',
   },
+  'spot-it': {
+    id: 'spot-it',
+    name: 'Pronađi par',
+    minPlayers: 2,
+    maxPlayers: 12,
+    description:
+      'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
+  },
 };
