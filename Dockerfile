@@ -40,6 +40,8 @@ COPY --from=builder /app/packages/server/dist packages/server/dist
 COPY --from=builder /app/packages/host/dist packages/host/dist
 COPY --from=builder /app/packages/controller/dist packages/controller/dist
 COPY question-packs ./question-packs
+COPY geo-packs ./geo-packs
+COPY ko-sam-ja-packs ./ko-sam-ja-packs
 
 ENV PORT=3001
 ENV SAME_ORIGIN_DEPLOY=true
