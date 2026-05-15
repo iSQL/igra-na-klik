@@ -126,13 +126,7 @@
     "timeLimit": 15
   },
   {
-    "text": "U kom ratu je vojvoda Paulj Matejić pokazao najveće junaštvo?",
-    "options": ["Balkanskim ratovima", "Prvom svetskom ratu", "Prvom srpskom ustanku", "Srpsko-turskom ratu"],
-    "correctIndex": 2,
-    "timeLimit": 15
-  },
-  {
-    "text": "Šta predstavlja manifestacija 'Četereško leto'?",
+    "text": "Šta predstavlja manifestacija 'Četereško prelo'?",
     "options": ["Sportsko takmičenje", "Sajam poljoprivrede", "Kulturno-umetnički program", "Gastronomski festival"],
     "correctIndex": 2,
     "timeLimit": 15
@@ -147,12 +141,6 @@
     "text": "Koje selo u opštini se pominje kao 'Miri-Evos' u starim mapama?",
     "options": ["Mirijevo", "Sibnica", "Polatna", "Brzohode"],
     "correctIndex": 0,
-    "timeLimit": 15
-  },
-  {
-    "text": "Gde se nalazi bista vojvode Paulja Matejića u opštini?",
-    "options": ["U Aleksandrovcu", "U Žabarima", "U Simićevu", "U Oreovici"],
-    "correctIndex": 1,
     "timeLimit": 15
   },
   {
