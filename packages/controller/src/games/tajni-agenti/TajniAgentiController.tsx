@@ -34,13 +34,13 @@ interface MyData {
   isSpymaster: boolean;
   isCurrentSpymaster: boolean;
   isCurrentGuesser: boolean;
-  hasVolunteered: boolean;
   secretCards?: TajniAgentiSecretCard[];
 }
 
 export default function TajniAgentiController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
+  const roomPlayers = usePlayerStore((s) => s.room?.players ?? []);
 
   if (!gameState || !playerId) return null;
   const { phase, data, playerData } = gameState;
@@ -49,15 +49,16 @@ export default function TajniAgentiController() {
     isSpymaster: false,
     isCurrentSpymaster: false,
     isCurrentGuesser: false,
-    hasVolunteered: false,
   };
 
   if (phase === 'team-selection') {
     return (
       <TeamSelectionController
+        playerId={playerId}
         myTeam={my.team}
-        hasVolunteered={my.hasVolunteered}
+        isSpymaster={my.isSpymaster}
         rosters={data.rosters as TajniAgentiPublicRosters | undefined}
+        roomPlayers={roomPlayers}
       />
     );
   }
@@ -145,14 +146,24 @@ export default function TajniAgentiController() {
 
 // ============================================================ team-selection
 
+interface RosterPlayer {
+  id: string;
+  name: string;
+  avatarColor: string;
+}
+
 function TeamSelectionController({
+  playerId,
   myTeam,
-  hasVolunteered,
+  isSpymaster,
   rosters,
+  roomPlayers,
 }: {
+  playerId: string;
   myTeam: TajniAgentiTeam | null;
-  hasVolunteered: boolean;
+  isSpymaster: boolean;
   rosters: TajniAgentiPublicRosters | undefined;
+  roomPlayers: RosterPlayer[];
 }) {
   const haptics = useHaptics();
   const pickTeam = (team: TajniAgentiTeam | null) => {
@@ -162,16 +173,30 @@ function TeamSelectionController({
       data: { team },
     });
   };
-  const toggleVolunteer = () => {
+  const toggleSpymaster = () => {
     haptics.tap();
     socket.emit('game:player-action', {
-      action: 'tajni-agenti:toggle-volunteer',
+      action: 'tajni-agenti:toggle-spymaster',
       data: {},
     });
   };
 
-  const redCount = rosters?.red.playerIds.length ?? 0;
-  const blueCount = rosters?.blue.playerIds.length ?? 0;
+  const mySpymasterId =
+    myTeam === 'red'
+      ? rosters?.red.spymasterId ?? null
+      : myTeam === 'blue'
+        ? rosters?.blue.spymasterId ?? null
+        : null;
+  // Disabled when on no team, OR when someone else has already claimed
+  // the spymaster slot on my team (toggle is still allowed for me to
+  // release my own claim).
+  const canClaim =
+    myTeam !== null && (mySpymasterId === null || mySpymasterId === playerId);
+
+  const claimTakenByOther =
+    myTeam !== null &&
+    mySpymasterId !== null &&
+    mySpymasterId !== playerId;
 
   return (
     <div
@@ -200,40 +225,60 @@ function TeamSelectionController({
           flex: '1 1 auto',
         }}
       >
-        <TeamButton
+        <TeamCard
           color={TEAM_RED}
           label="Crveni"
-          count={redCount}
+          playerIds={rosters?.red.playerIds ?? []}
+          spymasterId={rosters?.red.spymasterId ?? null}
           selected={myTeam === 'red'}
           onPick={() => pickTeam('red')}
+          roomPlayers={roomPlayers}
+          myPlayerId={playerId}
         />
-        <TeamButton
+        <TeamCard
           color={TEAM_BLUE}
           label="Plavi"
-          count={blueCount}
+          playerIds={rosters?.blue.playerIds ?? []}
+          spymasterId={rosters?.blue.spymasterId ?? null}
           selected={myTeam === 'blue'}
           onPick={() => pickTeam('blue')}
+          roomPlayers={roomPlayers}
+          myPlayerId={playerId}
         />
       </div>
 
       <button
-        onClick={toggleVolunteer}
+        onClick={toggleSpymaster}
+        disabled={!canClaim}
         style={{
           padding: '0.85rem',
           fontSize: '1rem',
           fontWeight: 700,
           borderRadius: '0.6rem',
-          background: hasVolunteered ? 'var(--accent)' : 'var(--bg-secondary)',
-          color: hasVolunteered ? '#fff' : 'var(--text-primary)',
+          background: isSpymaster ? 'var(--accent)' : 'var(--bg-secondary)',
+          color: isSpymaster ? '#fff' : 'var(--text-primary)',
           border: `2px solid ${
-            hasVolunteered ? 'var(--accent)' : 'var(--text-secondary)'
+            isSpymaster ? 'var(--accent)' : 'var(--text-secondary)'
           }`,
+          opacity: canClaim ? 1 : 0.4,
+          cursor: canClaim ? 'pointer' : 'not-allowed',
         }}
       >
-        {hasVolunteered
-          ? '✓ Volim biti špijun'
-          : 'Volim biti špijun'}
+        {isSpymaster ? '✓ Špijun' : 'Špijun'}
       </button>
+
+      {claimTakenByOther && (
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+          }}
+        >
+          Tvoj tim već ima špijuna.
+        </p>
+      )}
 
       {rosters?.rosterIssue && (
         <p
@@ -251,42 +296,122 @@ function TeamSelectionController({
   );
 }
 
-function TeamButton({
+function TeamCard({
   color,
   label,
-  count,
+  playerIds,
+  spymasterId,
   selected,
   onPick,
+  roomPlayers,
+  myPlayerId,
 }: {
   color: string;
   label: string;
-  count: number;
+  playerIds: string[];
+  spymasterId: string | null;
   selected: boolean;
   onPick: () => void;
+  roomPlayers: RosterPlayer[];
+  myPlayerId: string;
 }) {
+  const nameOf = (id: string) =>
+    roomPlayers.find((p) => p.id === id)?.name ?? '?';
+  const colorOf = (id: string) =>
+    roomPlayers.find((p) => p.id === id)?.avatarColor ?? '#888';
   return (
     <button
       onClick={onPick}
       style={{
         background: color,
-        opacity: selected ? 1 : 0.45,
+        opacity: selected ? 1 : 0.55,
         borderRadius: '1rem',
         border: selected ? '4px solid #fff' : '4px solid transparent',
         color: '#fff',
         fontWeight: 800,
-        fontSize: '1.4rem',
-        padding: '1rem',
+        padding: '0.7rem 0.5rem',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        gap: '0.4rem',
-        transition: 'opacity 0.15s, transform 0.1s',
+        alignItems: 'stretch',
+        gap: '0.45rem',
+        transition: 'opacity 0.15s',
+        textAlign: 'left',
       }}
     >
-      <span>{label}</span>
-      <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>
-        {count} {count === 1 ? 'igrač' : 'igrača'}
-      </span>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          fontSize: '1.05rem',
+        }}
+      >
+        <span>{label}</span>
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, opacity: 0.85 }}>
+          {playerIds.length} {playerIds.length === 1 ? 'igrač' : 'igrača'}
+        </span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+        }}
+      >
+        {playerIds.length === 0 && (
+          <span
+            style={{
+              fontSize: '0.75rem',
+              opacity: 0.7,
+              fontWeight: 500,
+            }}
+          >
+            (prazno)
+          </span>
+        )}
+        {playerIds.map((id) => {
+          const isMe = id === myPlayerId;
+          const isSpy = spymasterId === id;
+          return (
+            <div
+              key={id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                padding: '0.15rem 0.35rem',
+                background: 'rgba(0,0,0,0.18)',
+                borderLeft: `3px solid ${colorOf(id)}`,
+                borderRadius: '0.25rem',
+              }}
+            >
+              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {nameOf(id)}
+                {isMe && (
+                  <span style={{ opacity: 0.7, fontWeight: 500 }}> (ja)</span>
+                )}
+              </span>
+              {isSpy && (
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    background: '#fff',
+                    color,
+                    padding: '0.05rem 0.3rem',
+                    borderRadius: '0.2rem',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  ŠPIJUN
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </button>
   );
 }

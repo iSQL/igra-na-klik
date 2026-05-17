@@ -84,7 +84,6 @@ export class TajniAgentiModule extends BaseGameModule {
       cards,
       teams: { red: [], blue: [] },
       spymasters: { red: null, blue: null },
-      volunteers: new Set(),
       currentTeam: startingTeam,
       startingTeam,
       currentClue: null,
@@ -110,8 +109,8 @@ export class TajniAgentiModule extends BaseGameModule {
     switch (action) {
       case 'tajni-agenti:pick-team':
         return this.handlePickTeam(room, playerId, data);
-      case 'tajni-agenti:toggle-volunteer':
-        return this.handleToggleVolunteer(room, playerId);
+      case 'tajni-agenti:toggle-spymaster':
+        return this.handleToggleSpymaster(room, playerId);
       case 'tajni-agenti:submit-clue':
         return this.handleSubmitClue(room, playerId, data);
       case 'tajni-agenti:guess-card':
@@ -161,7 +160,6 @@ export class TajniAgentiModule extends BaseGameModule {
   ): GameState | null {
     // Past-grace removal — clean up team rosters and snapshots.
     this.removePlayerFromRosters(playerId);
-    this.state.volunteers.delete(playerId);
     this.state.expectedGuesserIds.delete(playerId);
 
     if (this.state.phase === 'team-selection') {
@@ -266,6 +264,23 @@ export class TajniAgentiModule extends BaseGameModule {
       this.state.teams[team] = this.state.teams[team].filter(
         (id) => id !== playerId
       );
+      if (this.state.spymasters[team] === playerId) {
+        this.state.spymasters[team] = null;
+      }
+    }
+  }
+
+  /**
+   * After any team membership shuffle, drop spymaster claims that no
+   * longer point at a player on the same team — e.g. the auto-balance
+   * shuffle moves a claimant to the other side.
+   */
+  private auditSpymasters(): void {
+    for (const team of ['red', 'blue'] as const) {
+      const sid = this.state.spymasters[team];
+      if (sid && !this.state.teams[team].includes(sid)) {
+        this.state.spymasters[team] = null;
+      }
     }
   }
 
@@ -287,14 +302,24 @@ export class TajniAgentiModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
-  private handleToggleVolunteer(room: Room, playerId: string): GameState | null {
+  private handleToggleSpymaster(room: Room, playerId: string): GameState | null {
     if (this.state.phase !== 'team-selection') return null;
     if (!room.players.some((p) => p.id === playerId)) return null;
 
-    if (this.state.volunteers.has(playerId)) {
-      this.state.volunteers.delete(playerId);
+    const team = this.playerTeam(playerId);
+    if (team === null) return null;
+
+    const current = this.state.spymasters[team];
+    if (current === playerId) {
+      // Player is releasing their own claim.
+      this.state.spymasters[team] = null;
+    } else if (current === null) {
+      // Slot is open — claim it.
+      this.state.spymasters[team] = playerId;
     } else {
-      this.state.volunteers.add(playerId);
+      // Someone else already claimed — silently reject so the
+      // controller's local state doesn't drift on a fast double-tap.
+      return null;
     }
     return this.buildGameState(room);
   }
@@ -331,13 +356,19 @@ export class TajniAgentiModule extends BaseGameModule {
           ? 'red'
           : 'blue';
       const toTeam: TajniAgentiTeam = OTHER_TEAM[fromTeam];
-      // Prefer to move a non-volunteer if possible.
+      // Prefer to move someone who didn't claim spymaster — keeps the
+      // existing role assignments stable when possible.
       const candidates = this.state.teams[fromTeam];
-      const idx = candidates.findIndex((id) => !this.state.volunteers.has(id));
+      const idx = candidates.findIndex(
+        (id) => this.state.spymasters[fromTeam] !== id
+      );
       const moveIdx = idx >= 0 ? idx : candidates.length - 1;
       const moved = candidates.splice(moveIdx, 1)[0];
       this.state.teams[toTeam].push(moved);
     }
+
+    // Drop spymaster claims that no longer match team membership.
+    this.auditSpymasters();
   }
 
   private evaluateRosters(room: Room): TajniAgentiPublicRosters {
@@ -363,9 +394,6 @@ export class TajniAgentiModule extends BaseGameModule {
       rosterIssue = 'Svi igrači moraju izabrati tim.';
     }
 
-    const volunteers: Record<string, boolean> = {};
-    for (const id of this.state.volunteers) volunteers[id] = true;
-
     return {
       red: {
         playerIds: [...this.state.teams.red],
@@ -376,23 +404,29 @@ export class TajniAgentiModule extends BaseGameModule {
         spymasterId: this.state.spymasters.blue,
       },
       unassignedPlayerIds: unassigned,
-      volunteers,
       readyToStart: rosterIssue === null,
       rosterIssue,
     };
   }
 
-  private pickSpymaster(team: TajniAgentiTeam): string | null {
+  /**
+   * Resolve each team's spymaster: respect an existing claim if there is
+   * one, otherwise fall back to a random teammate so the game can still
+   * start when nobody volunteered.
+   */
+  private resolveSpymaster(team: TajniAgentiTeam): string | null {
+    const claimed = this.state.spymasters[team];
+    if (claimed && this.state.teams[team].includes(claimed)) {
+      return claimed;
+    }
     const roster = this.state.teams[team];
     if (roster.length === 0) return null;
-    const vols = roster.filter((id) => this.state.volunteers.has(id));
-    const pool = vols.length > 0 ? vols : roster;
-    return pool[Math.floor(Math.random() * pool.length)];
+    return roster[Math.floor(Math.random() * roster.length)];
   }
 
   private beginPlay(_room: Room): void {
-    this.state.spymasters.red = this.pickSpymaster('red');
-    this.state.spymasters.blue = this.pickSpymaster('blue');
+    this.state.spymasters.red = this.resolveSpymaster('red');
+    this.state.spymasters.blue = this.resolveSpymaster('blue');
     this.beginClueGiving();
   }
 
@@ -662,13 +696,11 @@ export class TajniAgentiModule extends BaseGameModule {
         team !== null &&
         this.state.currentTeam === team &&
         !isSpymaster;
-      const hasVolunteered = this.state.volunteers.has(player.id);
       const myData: Record<string, unknown> = {
         team,
         isSpymaster,
         isCurrentSpymaster,
         isCurrentGuesser,
-        hasVolunteered,
       };
       if (isSpymaster) {
         // Send the secret board view so they can see all colours.

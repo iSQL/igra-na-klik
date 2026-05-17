@@ -15,9 +15,14 @@ export interface TajniAgentiInternalState {
 
   // Team-selection phase
   teams: Record<TajniAgentiTeam, string[]>;
+  /**
+   * Single spymaster slot per team, claimed via the controller's "Špijun"
+   * toggle during team-selection. Each team holds at most one claimant;
+   * subsequent toggles by others are rejected. Cleared when the claimant
+   * switches teams or unassigns. Remains in use during play to identify
+   * the spymaster for clue-giving / secret-board rendering.
+   */
   spymasters: Record<TajniAgentiTeam, string | null>;
-  /** Players who toggled the "rado bih bio špijun" volunteer flag. */
-  volunteers: Set<string>;
 
   // Active play state
   currentTeam: TajniAgentiTeam;

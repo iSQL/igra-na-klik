@@ -52,7 +52,6 @@ export interface TajniAgentiPublicRosters {
   red: TajniAgentiTeamRoster;
   blue: TajniAgentiTeamRoster;
   unassignedPlayerIds: string[];
-  volunteers: Record<string, boolean>;
   readyToStart: boolean;
   rosterIssue: string | null;
 }

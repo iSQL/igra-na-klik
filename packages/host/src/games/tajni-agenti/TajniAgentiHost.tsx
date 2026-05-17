@@ -355,7 +355,7 @@ function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
           color={TEAM_RED}
           label="Crveni"
           playerIds={rosters.red.playerIds}
-          volunteers={rosters.volunteers}
+          spymasterId={rosters.red.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
         />
@@ -363,7 +363,7 @@ function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
           color={TEAM_BLUE}
           label="Plavi"
           playerIds={rosters.blue.playerIds}
-          volunteers={rosters.volunteers}
+          spymasterId={rosters.blue.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
         />
@@ -442,14 +442,14 @@ function TeamRoster({
   color,
   label,
   playerIds,
-  volunteers,
+  spymasterId,
   playerName,
   playerColor,
 }: {
   color: string;
   label: string;
   playerIds: string[];
-  volunteers: Record<string, boolean>;
+  spymasterId: string | null;
   playerName: (id: string) => string;
   playerColor: (id: string) => string;
 }) {
@@ -493,7 +493,7 @@ function TeamRoster({
           }}
         >
           <span style={{ flex: 1, fontSize: '0.95rem' }}>{playerName(id)}</span>
-          {volunteers[id] && (
+          {spymasterId === id && (
             <span
               style={{
                 fontSize: '0.7rem',

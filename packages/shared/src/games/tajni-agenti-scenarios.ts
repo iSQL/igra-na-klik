@@ -30,7 +30,7 @@ export interface TajniAgentiResolvedScenario {
  */
 export const TAJNI_AGENTI_SCENARIOS: readonly TajniAgentiScenario[] = [
   {
-    code: 'sns',
+    code: 'SNS',
     name: 'Probni (test)',
     cards: [
       // row 1
