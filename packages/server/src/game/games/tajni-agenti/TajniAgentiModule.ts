@@ -16,6 +16,7 @@ import {
   TAJNI_AGENTI_NEUTRAL_CARDS,
   TAJNI_AGENTI_ASSASSIN_CARDS,
   findTajniAgentiScenarioByCode,
+  parseTajniAgentiScenarioImport,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import {
@@ -32,6 +33,7 @@ import type { TajniAgentiInternalState } from './TajniAgentiState.js';
 interface TajniAgentiCustomContent {
   customTajniAgentiPack?: unknown;
   tajniAgentiScenarioCode?: unknown;
+  customTajniAgentiScenario?: unknown;
 }
 
 const OTHER_TEAM: Record<TajniAgentiTeam, TajniAgentiTeam> = {
@@ -44,10 +46,18 @@ export class TajniAgentiModule extends BaseGameModule {
 
   private state!: TajniAgentiInternalState;
 
-  validateStart(room: Room): string | null {
+  validateStart(room: Room, customContent?: unknown): string | null {
+    const cc = customContent as TajniAgentiCustomContent | undefined;
+    const hasScenario =
+      cc?.customTajniAgentiScenario !== undefined ||
+      (typeof cc?.tajniAgentiScenarioCode === 'string' &&
+        cc.tajniAgentiScenarioCode.trim().length > 0);
     const connected = room.players.filter((p) => p.isConnected);
-    if (connected.length < 4) {
-      return 'Tajni agenti zahteva najmanje 4 igrača.';
+    const minPlayers = hasScenario ? 2 : 4;
+    if (connected.length < minPlayers) {
+      return `Tajni agenti zahteva najmanje ${minPlayers} igrača${
+        hasScenario ? '' : ' (sa scenariom dovoljno je 2)'
+      }.`;
     }
     return null;
   }
@@ -55,15 +65,21 @@ export class TajniAgentiModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     const cc = customContent as TajniAgentiCustomContent | undefined;
 
-    // Hidden scenario code takes precedence over the word-pack flow — it
-    // pins a specific board (words + colour assignments) so a host can
-    // replay or share a known layout.
+    // Hidden scenario code OR an imported scenario object takes
+    // precedence over the word-pack flow — it pins a specific board
+    // (words + colour assignments) so a host can replay or share a
+    // known layout. We always re-validate server-side: the host might
+    // have a stale dist, an out-of-spec file, or a malicious payload.
     let cards: TajniAgentiSecretCard[];
     let startingTeam: TajniAgentiTeam;
-    const scenario =
-      typeof cc?.tajniAgentiScenarioCode === 'string'
-        ? findTajniAgentiScenarioByCode(cc.tajniAgentiScenarioCode)
-        : null;
+    let scenario = null as ReturnType<typeof findTajniAgentiScenarioByCode>;
+    if (cc?.customTajniAgentiScenario !== undefined) {
+      const parsed = parseTajniAgentiScenarioImport(cc.customTajniAgentiScenario);
+      if (parsed.ok) scenario = parsed.scenario;
+    }
+    if (!scenario && typeof cc?.tajniAgentiScenarioCode === 'string') {
+      scenario = findTajniAgentiScenarioByCode(cc.tajniAgentiScenarioCode);
+    }
     if (scenario) {
       startingTeam = scenario.startingTeam;
       cards = scenario.cards.map((c, idx) => ({
@@ -81,6 +97,7 @@ export class TajniAgentiModule extends BaseGameModule {
     this.state = {
       phase: 'team-selection',
       phaseTimeRemaining: TEAM_SELECTION_DURATION,
+      isScenarioMode: scenario !== null,
       cards,
       teams: { red: [], blue: [] },
       spymasters: { red: null, blue: null },
@@ -304,6 +321,9 @@ export class TajniAgentiModule extends BaseGameModule {
 
   private handleToggleSpymaster(room: Room, playerId: string): GameState | null {
     if (this.state.phase !== 'team-selection') return null;
+    // Scenario mode runs without spymasters — silently ignore so a
+    // stale controller tapping the button doesn't desync anything.
+    if (this.state.isScenarioMode) return null;
     if (!room.players.some((p) => p.id === playerId)) return null;
 
     const team = this.playerTeam(playerId);
@@ -381,11 +401,15 @@ export class TajniAgentiModule extends BaseGameModule {
     ]);
     const unassigned = [...connectedIds].filter((id) => !assigned.has(id));
 
+    // Scenario mode runs without spymasters, so a team of 1 is fine —
+    // the theme is the implicit clue. Normal mode needs ≥2 per team so
+    // there's a spymaster AND at least one guesser.
+    const minPerTeam = this.state.isScenarioMode ? 1 : 2;
     let rosterIssue: string | null = null;
-    if (this.state.teams.red.length < 2) {
-      rosterIssue = 'Crveni tim mora imati najmanje 2 igrača.';
-    } else if (this.state.teams.blue.length < 2) {
-      rosterIssue = 'Plavi tim mora imati najmanje 2 igrača.';
+    if (this.state.teams.red.length < minPerTeam) {
+      rosterIssue = `Crveni tim mora imati najmanje ${minPerTeam} igrača.`;
+    } else if (this.state.teams.blue.length < minPerTeam) {
+      rosterIssue = `Plavi tim mora imati najmanje ${minPerTeam} igrača.`;
     } else if (
       Math.abs(this.state.teams.red.length - this.state.teams.blue.length) > 1
     ) {
@@ -424,7 +448,16 @@ export class TajniAgentiModule extends BaseGameModule {
     return roster[Math.floor(Math.random() * roster.length)];
   }
 
-  private beginPlay(_room: Room): void {
+  private beginPlay(room: Room): void {
+    if (this.state.isScenarioMode) {
+      // No spymasters in scenario mode — the theme is the implicit
+      // clue, so we drop the role entirely and jump straight into
+      // turn-based guessing on the public board.
+      this.state.spymasters.red = null;
+      this.state.spymasters.blue = null;
+      this.beginGuessing(room);
+      return;
+    }
     this.state.spymasters.red = this.resolveSpymaster('red');
     this.state.spymasters.blue = this.resolveSpymaster('blue');
     this.beginClueGiving();
@@ -467,11 +500,18 @@ export class TajniAgentiModule extends BaseGameModule {
   private beginGuessing(room: Room): void {
     const team = this.state.currentTeam;
     const spymasterId = this.state.spymasters[team];
+    // Scenario mode has no spymaster — every team member is a guesser.
     this.state.expectedGuesserIds = new Set(
-      this.state.teams[team].filter((id) => id !== spymasterId)
+      this.state.isScenarioMode
+        ? this.state.teams[team]
+        : this.state.teams[team].filter((id) => id !== spymasterId)
     );
     // Classic Codenames: guessers can make count + 1 guesses.
-    this.state.guessesRemaining = (this.state.currentClue?.count ?? 0) + 1;
+    // Scenario mode has no clue / count — keep tapping until a wrong
+    // colour or the "Završi potez" button.
+    this.state.guessesRemaining = this.state.isScenarioMode
+      ? Number.MAX_SAFE_INTEGER
+      : (this.state.currentClue?.count ?? 0) + 1;
     this.state.turnLog = [];
     this.state.phase = 'guessing';
     this.state.phaseTimeRemaining = GUESSING_DURATION;
@@ -486,9 +526,16 @@ export class TajniAgentiModule extends BaseGameModule {
   ): GameState | null {
     if (this.state.phase !== 'guessing') return null;
     const team = this.state.currentTeam;
-    // Only active-team non-spymaster players can guess.
+    // Only active-team players can guess. In normal mode the spymaster
+    // is excluded (they already see the colours); scenario mode has no
+    // spymaster so everyone on the active team can tap.
     if (!this.state.teams[team].includes(playerId)) return null;
-    if (this.state.spymasters[team] === playerId) return null;
+    if (
+      !this.state.isScenarioMode &&
+      this.state.spymasters[team] === playerId
+    ) {
+      return null;
+    }
 
     const rawId = data.cardId;
     if (typeof rawId !== 'number' || !Number.isInteger(rawId)) return null;
@@ -520,10 +567,14 @@ export class TajniAgentiModule extends BaseGameModule {
         this.endGameWithWinner(team, 'all-found');
         return this.buildGameState(room);
       }
-      this.state.guessesRemaining--;
-      if (this.state.guessesRemaining <= 0) {
-        this.endTurnWith('count-reached', room);
-        return this.buildGameState(room);
+      // Scenario mode runs without a count limit — keep guessing until
+      // a wrong colour, the assassin, or the "Završi potez" button.
+      if (!this.state.isScenarioMode) {
+        this.state.guessesRemaining--;
+        if (this.state.guessesRemaining <= 0) {
+          this.endTurnWith('count-reached', room);
+          return this.buildGameState(room);
+        }
       }
       return this.buildGameState(room);
     }
@@ -617,6 +668,10 @@ export class TajniAgentiModule extends BaseGameModule {
         if (this.state.winner) {
           this.state.phase = 'ended';
           this.state.phaseTimeRemaining = 0;
+        } else if (this.state.isScenarioMode) {
+          // No clue-giving phase in scenario mode — flip straight back
+          // into guessing for the next team.
+          this.beginGuessing(room);
         } else {
           this.beginClueGiving();
         }
@@ -652,6 +707,7 @@ export class TajniAgentiModule extends BaseGameModule {
       cards: publicCards,
       currentTeam: this.state.currentTeam,
       startingTeam: this.state.startingTeam,
+      isScenarioMode: this.state.isScenarioMode,
       redRemaining,
       blueRemaining,
       redTeam: {

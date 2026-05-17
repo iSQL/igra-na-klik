@@ -4,6 +4,7 @@ import type { QuizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
+import type { TajniAgentiScenario } from '../games/tajni-agenti-scenarios.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -43,6 +44,7 @@ export interface ClientToServerEvents {
     customKoSamJaQuestions?: KoSamJaImportQuestion[];
     customTajniAgentiPack?: TajniAgentiImportPack;
     tajniAgentiScenarioCode?: string;
+    customTajniAgentiScenario?: TajniAgentiScenario;
   }) => void;
   'host:stop-game': () => void;
   'host:kick-player': (data: { playerId: string }) => void;

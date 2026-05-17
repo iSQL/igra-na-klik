@@ -55,6 +55,7 @@ export function registerGameHandlers(
       customKoSamJaQuestions: data.customKoSamJaQuestions,
       customTajniAgentiPack: data.customTajniAgentiPack,
       tajniAgentiScenarioCode: data.tajniAgentiScenarioCode,
+      customTajniAgentiScenario: data.customTajniAgentiScenario,
     });
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });

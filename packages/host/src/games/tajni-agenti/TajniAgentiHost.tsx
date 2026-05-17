@@ -85,6 +85,7 @@ export default function TajniAgentiHost() {
         <TeamSelectionView
           rosters={data.rosters as TajniAgentiPublicRosters}
           players={players}
+          isScenarioMode={Boolean(data.isScenarioMode)}
         />
       )}
 
@@ -303,9 +304,14 @@ function BoardCard({ card }: { card: TajniAgentiPublicCard }) {
 interface TeamSelectionViewProps {
   rosters: TajniAgentiPublicRosters;
   players: { id: string; name: string; avatarColor: string }[];
+  isScenarioMode: boolean;
 }
 
-function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
+function TeamSelectionView({
+  rosters,
+  players,
+  isScenarioMode,
+}: TeamSelectionViewProps) {
   const playerName = (id: string) =>
     players.find((p) => p.id === id)?.name ?? '?';
   const playerColor = (id: string) =>
@@ -341,7 +347,9 @@ function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
           margin: 0,
         }}
       >
-        Igrači biraju tim na svojim telefonima. Po jedan špijun po timu.
+        {isScenarioMode
+          ? 'Igrači biraju tim na svojim telefonima. Tema scenarija je vaša šifra — nema špijuna.'
+          : 'Igrači biraju tim na svojim telefonima. Po jedan špijun po timu.'}
       </p>
 
       <div
@@ -355,7 +363,7 @@ function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
           color={TEAM_RED}
           label="Crveni"
           playerIds={rosters.red.playerIds}
-          spymasterId={rosters.red.spymasterId}
+          spymasterId={isScenarioMode ? null : rosters.red.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
         />
@@ -363,7 +371,7 @@ function TeamSelectionView({ rosters, players }: TeamSelectionViewProps) {
           color={TEAM_BLUE}
           label="Plavi"
           playerIds={rosters.blue.playerIds}
-          spymasterId={rosters.blue.spymasterId}
+          spymasterId={isScenarioMode ? null : rosters.blue.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
         />

@@ -78,9 +78,17 @@ export function GameSelectScreen() {
       gameId === 'tajni-agenti'
         ? useTajniAgentiImportStore.getState().customPack ?? undefined
         : undefined;
+    const tajniAgentiStore = useTajniAgentiImportStore.getState();
+    // Imported / server-pack scenario object takes precedence; built-in
+    // code is only sent if no object scenario is selected. Server
+    // re-validates the object regardless.
+    const customTajniAgentiScenario =
+      gameId === 'tajni-agenti' && tajniAgentiStore.customScenario
+        ? tajniAgentiStore.customScenario.scenario
+        : undefined;
     const tajniAgentiScenarioCode =
-      gameId === 'tajni-agenti'
-        ? useTajniAgentiImportStore.getState().scenarioCode ?? undefined
+      gameId === 'tajni-agenti' && !customTajniAgentiScenario
+        ? tajniAgentiStore.scenarioCode ?? undefined
         : undefined;
 
     socket.emit('host:start-game', {
@@ -94,6 +102,7 @@ export function GameSelectScreen() {
       customKoSamJaQuestions,
       customTajniAgentiPack,
       tajniAgentiScenarioCode,
+      customTajniAgentiScenario,
     });
   };
 

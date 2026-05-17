@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   parseTajniAgentiImport,
+  parseTajniAgentiScenarioImport,
   lookupTajniAgentiScenario,
 } from '@igra/shared';
+import type { TajniAgentiScenario } from '@igra/shared';
 import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
 
 interface BuiltinPack {
@@ -13,14 +15,35 @@ interface BuiltinPack {
   words: string[];
 }
 
+interface ServerScenario {
+  id: string;
+  fileName: string;
+  code: string;
+  name: string;
+  startingTeam: 'red' | 'blue';
+  cardCount: number;
+  scenario: TajniAgentiScenario;
+}
+
 export function TajniAgentiImportButton() {
-  const { customPack, fileName, setCustom, clear, scenarioCode, setScenarioCode } =
-    useTajniAgentiImportStore();
+  const {
+    customPack,
+    fileName,
+    setCustom,
+    clear,
+    scenarioCode,
+    setScenarioCode,
+    customScenario,
+    setCustomScenario,
+  } = useTajniAgentiImportStore();
   const inputRef = useRef<HTMLInputElement>(null);
+  const scenarioFileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
   const [builtinPacks, setBuiltinPacks] = useState<BuiltinPack[]>([]);
+  const [serverScenarios, setServerScenarios] = useState<ServerScenario[]>([]);
   const [scenarioOpen, setScenarioOpen] = useState<boolean>(
-    Boolean(scenarioCode)
+    Boolean(scenarioCode || customScenario)
   );
   const [scenarioDraft, setScenarioDraft] = useState<string>(
     scenarioCode ?? ''
@@ -47,6 +70,76 @@ export function TajniAgentiImportButton() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/tajni-agenti-scenarios')
+      .then((r) => (r.ok ? r.json() : { scenarios: [] }))
+      .then((data: { scenarios?: ServerScenario[] }) => {
+        if (!cancelled) setServerScenarios(data.scenarios ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setServerScenarios([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleScenarioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => setScenarioError('Greška pri čitanju fajla.');
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string);
+        const result = parseTajniAgentiScenarioImport(json);
+        if (!result.ok) {
+          setScenarioError(result.error);
+          return;
+        }
+        setCustomScenario({
+          source: 'file',
+          label: file.name,
+          scenario: {
+            code: result.scenario.code,
+            name: result.scenario.name,
+            cards: result.scenario.cards,
+          },
+        });
+        setScenarioError(null);
+        setScenarioDraft('');
+      } catch {
+        setScenarioError('Nevažeći JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleServerScenarioPick = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    e.stopPropagation();
+    const id = e.target.value;
+    if (!id) {
+      setCustomScenario(null);
+      return;
+    }
+    const found = serverScenarios.find((s) => s.id === id);
+    if (!found) return;
+    setCustomScenario({
+      source: 'server',
+      label: found.id,
+      scenario: found.scenario,
+    });
+    setScenarioError(null);
+    setScenarioDraft('');
+  };
+
+  const selectedServerScenarioId =
+    customScenario?.source === 'server' ? customScenario.label : '';
 
   const handlePick = () => {
     setError(null);
@@ -232,9 +325,19 @@ export function TajniAgentiImportButton() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '0.3rem',
+            gap: '0.4rem',
+            maxWidth: '240px',
           }}
         >
+          <input
+            ref={scenarioFileRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleScenarioFile}
+            style={{ display: 'none' }}
+          />
+
+          {/* --- built-in code input ----------------------------------- */}
           <input
             type="text"
             value={scenarioDraft}
@@ -277,7 +380,6 @@ export function TajniAgentiImportButton() {
                 margin: 0,
                 fontSize: '0.7rem',
                 color: matchedScenario ? '#2ecc71' : '#e74c3c',
-                maxWidth: '220px',
                 textAlign: 'center',
               }}
             >
@@ -309,19 +411,109 @@ export function TajniAgentiImportButton() {
                 opacity: matchedScenario ? 1 : 0.4,
               }}
             >
-              Sačuvaj
+              Sačuvaj kod
             </button>
-            {scenarioCode && (
+          </div>
+
+          {/* --- server-side scenarios dropdown ------------------------ */}
+          {serverScenarios.length > 0 && (
+            <select
+              value={selectedServerScenarioId}
+              onChange={handleServerScenarioPick}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                padding: '0.3rem 0.5rem',
+                fontSize: '0.78rem',
+                borderRadius: '0.4rem',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--text-secondary)',
+                width: '220px',
+              }}
+            >
+              <option value="">Scenario sa servera…</option>
+              {serverScenarios.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.code}, {s.cardCount})
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* --- file-pick a scenario JSON ----------------------------- */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setScenarioError(null);
+              scenarioFileRef.current?.click();
+            }}
+            style={{
+              padding: '0.35rem 0.8rem',
+              fontSize: '0.78rem',
+              borderRadius: '0.4rem',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            Uvezi scenario (.json)
+          </button>
+
+          {scenarioError && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.7rem',
+                color: '#e74c3c',
+                textAlign: 'center',
+              }}
+            >
+              {scenarioError}
+            </p>
+          )}
+
+          {/* --- active-scenario summary + clear ----------------------- */}
+          {(scenarioCode || customScenario) && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.25rem',
+                marginTop: '0.2rem',
+                padding: '0.35rem 0.5rem',
+                background: 'var(--bg-secondary)',
+                borderRadius: '0.4rem',
+                width: '220px',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.7rem',
+                  color: 'var(--accent)',
+                  textAlign: 'center',
+                }}
+              >
+                Aktivan:{' '}
+                <strong>
+                  {customScenario
+                    ? `${customScenario.scenario.name} (${customScenario.source === 'file' ? 'fajl' : 'server'})`
+                    : `kod ${scenarioCode}`}
+                </strong>
+              </p>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setScenarioCode(null);
+                  setCustomScenario(null);
                   setScenarioDraft('');
+                  setScenarioError(null);
                 }}
                 style={{
-                  padding: '0.25rem 0.6rem',
-                  fontSize: '0.75rem',
-                  borderRadius: '0.35rem',
+                  padding: '0.2rem 0.55rem',
+                  fontSize: '0.7rem',
+                  borderRadius: '0.3rem',
                   background: 'transparent',
                   color: 'var(--text-secondary)',
                   border: '1px solid var(--text-secondary)',
@@ -329,18 +521,7 @@ export function TajniAgentiImportButton() {
               >
                 Ukloni
               </button>
-            )}
-          </div>
-          {scenarioCode && (
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.7rem',
-                color: 'var(--accent)',
-              }}
-            >
-              Aktivan: {scenarioCode}
-            </p>
+            </div>
           )}
         </div>
       )}

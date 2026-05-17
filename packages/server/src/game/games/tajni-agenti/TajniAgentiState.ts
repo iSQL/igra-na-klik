@@ -11,6 +11,15 @@ export interface TajniAgentiInternalState {
   phase: TajniAgentiPhase;
   phaseTimeRemaining: number;
 
+  /**
+   * When `true`, the game runs the simplified scenario flow: no
+   * spymasters, no clue-giving phase, and the per-turn guess count is
+   * not limited by a `count + 1` from a clue. Players race the public
+   * board using the scenario theme as the implicit clue. Enabled
+   * automatically when `onStart` resolves a scenario.
+   */
+  isScenarioMode: boolean;
+
   cards: TajniAgentiSecretCard[];
 
   // Team-selection phase

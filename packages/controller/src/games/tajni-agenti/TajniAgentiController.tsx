@@ -51,6 +51,8 @@ export default function TajniAgentiController() {
     isCurrentGuesser: false,
   };
 
+  const isScenarioMode = Boolean(data.isScenarioMode);
+
   if (phase === 'team-selection') {
     return (
       <TeamSelectionController
@@ -59,6 +61,7 @@ export default function TajniAgentiController() {
         isSpymaster={my.isSpymaster}
         rosters={data.rosters as TajniAgentiPublicRosters | undefined}
         roomPlayers={roomPlayers}
+        isScenarioMode={isScenarioMode}
       />
     );
   }
@@ -158,12 +161,14 @@ function TeamSelectionController({
   isSpymaster,
   rosters,
   roomPlayers,
+  isScenarioMode,
 }: {
   playerId: string;
   myTeam: TajniAgentiTeam | null;
   isSpymaster: boolean;
   rosters: TajniAgentiPublicRosters | undefined;
   roomPlayers: RosterPlayer[];
+  isScenarioMode: boolean;
 }) {
   const haptics = useHaptics();
   const pickTeam = (team: TajniAgentiTeam | null) => {
@@ -229,7 +234,7 @@ function TeamSelectionController({
           color={TEAM_RED}
           label="Crveni"
           playerIds={rosters?.red.playerIds ?? []}
-          spymasterId={rosters?.red.spymasterId ?? null}
+          spymasterId={isScenarioMode ? null : rosters?.red.spymasterId ?? null}
           selected={myTeam === 'red'}
           onPick={() => pickTeam('red')}
           roomPlayers={roomPlayers}
@@ -239,7 +244,7 @@ function TeamSelectionController({
           color={TEAM_BLUE}
           label="Plavi"
           playerIds={rosters?.blue.playerIds ?? []}
-          spymasterId={rosters?.blue.spymasterId ?? null}
+          spymasterId={isScenarioMode ? null : rosters?.blue.spymasterId ?? null}
           selected={myTeam === 'blue'}
           onPick={() => pickTeam('blue')}
           roomPlayers={roomPlayers}
@@ -247,27 +252,43 @@ function TeamSelectionController({
         />
       </div>
 
-      <button
-        onClick={toggleSpymaster}
-        disabled={!canClaim}
-        style={{
-          padding: '0.85rem',
-          fontSize: '1rem',
-          fontWeight: 700,
-          borderRadius: '0.6rem',
-          background: isSpymaster ? 'var(--accent)' : 'var(--bg-secondary)',
-          color: isSpymaster ? '#fff' : 'var(--text-primary)',
-          border: `2px solid ${
-            isSpymaster ? 'var(--accent)' : 'var(--text-secondary)'
-          }`,
-          opacity: canClaim ? 1 : 0.4,
-          cursor: canClaim ? 'pointer' : 'not-allowed',
-        }}
-      >
-        {isSpymaster ? '✓ Špijun' : 'Špijun'}
-      </button>
+      {!isScenarioMode && (
+        <button
+          onClick={toggleSpymaster}
+          disabled={!canClaim}
+          style={{
+            padding: '0.85rem',
+            fontSize: '1rem',
+            fontWeight: 700,
+            borderRadius: '0.6rem',
+            background: isSpymaster ? 'var(--accent)' : 'var(--bg-secondary)',
+            color: isSpymaster ? '#fff' : 'var(--text-primary)',
+            border: `2px solid ${
+              isSpymaster ? 'var(--accent)' : 'var(--text-secondary)'
+            }`,
+            opacity: canClaim ? 1 : 0.4,
+            cursor: canClaim ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {isSpymaster ? '✓ Špijun' : 'Špijun'}
+        </button>
+      )}
 
-      {claimTakenByOther && (
+      {isScenarioMode && (
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            fontStyle: 'italic',
+          }}
+        >
+          Scenario: nema špijuna — tema reči je vaša šifra.
+        </p>
+      )}
+
+      {!isScenarioMode && claimTakenByOther && (
         <p
           style={{
             margin: 0,
@@ -911,12 +932,15 @@ function EndedScreen({
       <p
         style={{
           margin: 0,
-          fontSize: '2rem',
+          fontSize: won ? '2rem' : '1.6rem',
           fontWeight: 800,
           letterSpacing: '0.05em',
+          lineHeight: 1.1,
         }}
       >
-        {teamLabel(ended.winner).toUpperCase()} TIM
+        {won
+          ? `${teamLabel(ended.winner).toUpperCase()} TIM`
+          : `POBEDIO ${teamLabel(ended.winner).toUpperCase()} TIM`}
       </p>
     </div>
   );

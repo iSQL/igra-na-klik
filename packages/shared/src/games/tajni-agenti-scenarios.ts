@@ -191,6 +191,38 @@ export type TajniAgentiScenarioLookup =
   | { status: 'not-found' };
 
 /**
+ * Parses an arbitrary JSON input (e.g. from a user-supplied file or the
+ * `/api/tajni-agenti-scenarios` endpoint) into a validated scenario.
+ * Same shape as a built-in `TajniAgentiScenario` — `{ code, name, cards }`.
+ * Errors are Serbian so they can be surfaced directly in the host UI.
+ */
+export function parseTajniAgentiScenarioImport(
+  input: unknown
+): TajniAgentiScenarioValidationResult {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return { ok: false, error: 'Fajl mora biti JSON objekat.' };
+  }
+  const raw = input as Record<string, unknown>;
+  if (typeof raw.code !== 'string' || raw.code.trim().length === 0) {
+    return { ok: false, error: 'Polje "code" mora biti tekst.' };
+  }
+  if (raw.code.trim().length > 12) {
+    return { ok: false, error: 'Polje "code" sme imati najviše 12 znakova.' };
+  }
+  if (typeof raw.name !== 'string' || raw.name.trim().length === 0) {
+    return { ok: false, error: 'Polje "name" mora biti tekst.' };
+  }
+  if (!Array.isArray(raw.cards)) {
+    return { ok: false, error: 'Polje "cards" mora biti niz.' };
+  }
+  return validateTajniAgentiScenario({
+    code: raw.code,
+    name: raw.name,
+    cards: raw.cards as TajniAgentiScenarioCard[],
+  });
+}
+
+/**
  * Like `findTajniAgentiScenarioByCode` but distinguishes between an
  * unknown code and a known-code-that-fails-validation. Used by the host
  * UI to surface the specific validation error instead of a generic

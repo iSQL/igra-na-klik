@@ -1,0 +1,35 @@
+{
+  "code": "DEMO",
+  "name": "Demo board",
+  "cards": [
+    { "word": "sunce", "type": "red" },
+    { "word": "mesec", "type": "blue" },
+    { "word": "zvezda", "type": "red" },
+    { "word": "oblak", "type": "neutral" },
+    { "word": "kiša", "type": "blue" },
+
+    { "word": "vatra", "type": "red" },
+    { "word": "voda", "type": "blue" },
+    { "word": "zemlja", "type": "red" },
+    { "word": "vazduh", "type": "neutral" },
+    { "word": "led", "type": "blue" },
+
+    { "word": "pas", "type": "red" },
+    { "word": "mačka", "type": "blue" },
+    { "word": "miš", "type": "red" },
+    { "word": "riba", "type": "neutral" },
+    { "word": "ptica", "type": "blue" },
+
+    { "word": "auto", "type": "red" },
+    { "word": "voz", "type": "blue" },
+    { "word": "avion", "type": "red" },
+    { "word": "brod", "type": "neutral" },
+    { "word": "bicikl", "type": "blue" },
+
+    { "word": "olovka", "type": "red" },
+    { "word": "knjiga", "type": "neutral" },
+    { "word": "mač", "type": "neutral" },
+    { "word": "štit", "type": "neutral" },
+    { "word": "bomba", "type": "assassin" }
+  ]
+}
