@@ -62,4 +62,12 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
   },
+  'tajni-agenti': {
+    id: 'tajni-agenti',
+    name: 'Tajni agenti',
+    minPlayers: 4,
+    maxPlayers: 8,
+    description:
+      'Špijun daje šifru tima — saigrači pogađaju reči, ali pazi na ubicu!',
+  },
 };

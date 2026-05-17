@@ -53,6 +53,8 @@ export function registerGameHandlers(
       customPhotosPerPlayer: data.customPhotosPerPlayer,
       koSamJaCategory: data.koSamJaCategory,
       customKoSamJaQuestions: data.customKoSamJaQuestions,
+      customTajniAgentiPack: data.customTajniAgentiPack,
+      tajniAgentiScenarioCode: data.tajniAgentiScenarioCode,
     });
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });

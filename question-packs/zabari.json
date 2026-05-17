@@ -178,5 +178,11 @@
   "options": ["Vrbovac", "Kosjak", "Stevin šljivar", "Ničin breg"],
   "correctIndex": 1,
   "timeLimit": 15
-  }
+  },
+  {
+  "text": "Žena koja često šeta Žabarima sa zvučnikom u ruci je:",
+  "options": ["Jela", "Nela", "Željana", "Jana"],
+  "correctIndex": 0,
+  "timeLimit": 15
+ }
 ]

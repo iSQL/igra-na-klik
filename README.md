@@ -171,11 +171,12 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 | `QUESTION_PACKS_DIR` | `./question-packs` | Override location of JSON question packs |
 | `GEO_PACKS_DIR` | `./geo-packs` | Override location of geo-pack manifests + image folders |
 | `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Override location of Ko sam ja JSON question packs |
+| `TAJNI_AGENTI_PACKS_DIR` | `./tajni-agenti-packs` | Override location of Tajni agenti JSON word packs |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja (Serbian content throughout), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support.
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -187,6 +188,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
 - [x] **Phase 9** — Foto kviz (multiple-choice variant of Pogodi gde je — 4 captioned answers, speed scoring)
 - [x] **Phase 10** — Ko sam ja (personal-question party game — players guess each other's answers, four question shapes including peer-name picks)
+- [x] **Phase 11** — Tajni agenti (Codenames-style team game — two teams, one spymaster per team, 5×5 word grid, Serbian-only content)
 
 ### What's Implemented
 
@@ -308,6 +310,20 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - **Custom pack import**: same JSON pipeline as Quiz, but pointed at `ko-sam-ja-packs/` (override via `KO_SAM_JA_PACKS_DIR`). Host can drop a `.json` file or pick from server-discovered packs in a dropdown — persisted in `localStorage`. See "Ko sam ja Packs" below for the full schema.
 - **Disconnect tolerance**: subject disconnects mid-`subject-picking` skip the round to leaderboard; rounds whose subject never answered an upfront question are pruned on collection exit; everything else honours the standard 5-minute grace.
 - Host display: question text with subject name highlighted, faded option cards during `subject-picking`, full color grid during `guessing`, per-guesser breakdown + subject-bonus panel on `showing-results`, reused Quiz leaderboard between rounds.
+
+**Tajni agenti (Codenames-style)** — *Serbian-only content*
+- 4–8 players split across two teams (crveni / plavi). First **team mechanic** in the codebase — team rosters and spymaster roles live inside the game module rather than on the global `Player` shape.
+- **Phase flow**: `team-selection → [clue-giving (90s) → guessing (90s) → turn-results (5s)] × … → ended`. Turns alternate between teams; the game ends as soon as a team reveals all of their words or someone hits the assassin.
+- **Self-pick team selection**: each controller offers Crveni / Plavi buttons + a "Volim biti špijun" volunteer toggle. Server validates both teams ≥ 2 players and a max 1-player imbalance before allowing the host's "Počni rundu" button. Host also has a "Pomiri timove" auto-balance button that randomly distributes unassigned players. At phase exit the server picks one spymaster per team — preferring a random volunteer, falling back to a random teammate.
+- **Board**: 25 cards in a 5×5 grid; the starting team gets 9, the other 8, plus 7 neutral and 1 assassin (classic Codenames distribution). Starting team is random per game.
+- **Secret board protection**: the host TV and all controllers receive only the *public* card list (word + revealed state; type only present for revealed cards). The full colour-keyed board is sent **only** inside `playerData[playerId]` to the two spymasters, so walking past the TV cannot leak the answer key.
+- **Clue submission**: active-team spymaster types a single Serbian word + a count (1–9). Guesses are then `count + 1` per turn (classic Codenames "bonus" guess).
+- **Reveal adjudication** on each tap: own team's card → keeps guessing; opposing team's card or neutral → turn flips; **assassin** → other team wins immediately; revealing the opponent's last card hands them the win.
+- **Reconnect safety**: spymaster snapshotted at `clue-giving` entry. Past-grace spymaster disconnect promotes a random teammate (resets the clue-giving timer); if a whole team empties out, the other team wins by `opponent-finished`. Brief mid-round blips (5-minute grace) leave the role intact.
+- **Custom word packs**: host can upload a JSON file or pick from server-discovered packs in `tajni-agenti-packs/` (override via `TAJNI_AGENTI_PACKS_DIR`). Mirrors the Quiz / Ko sam ja flow — `localStorage` key `igra-tajni-agenti-custom` persists the selection between sessions. See "Tajni agenti Packs" below for the schema.
+- **Built-in bank**: ~290-word Serbian Latin-script bank in `packages/shared/src/games/tajni-agenti-words.ts`, used when no custom pack is selected.
+- Host display: red/blue score banners, current-team indicator with prominent shifted-up clue + remaining-guesses counter during `guessing`, animated tile reveals (Framer Motion), per-turn log on `turn-results`, full-screen team-colour winner banner on `ended`.
+- Controller display: phase- and role-aware — team picker + volunteer toggle during `team-selection`, single-word input + number stepper for the active spymaster, secret colour mini-board for any spymaster, tap-to-guess 5×5 grid + "Završi potez" button for the active team's guessers, spectator copy + final winner banner for everyone else.
 
 ## Architecture
 
@@ -438,6 +454,26 @@ Ko sam ja serves question packs from `ko-sam-ja-packs/` (override via `KO_SAM_JA
 Validation lives in [packages/shared/src/games/ko-sam-ja-import.ts](packages/shared/src/games/ko-sam-ja-import.ts). The same validator runs both on the host (file picker) and the server (`/api/ko-sam-ja-packs` endpoint and `host:start-game` re-check), with Serbian error messages on failure.
 
 Sample pack: [ko-sam-ja-packs/sample-mix.json](ko-sam-ja-packs/sample-mix.json) — ~70 mixed-shape questions across both categories.
+
+### Tajni agenti Packs
+
+Tajni agenti serves word packs from `tajni-agenti-packs/` (override via `TAJNI_AGENTI_PACKS_DIR`). Each pack is a single `.json` file — either a flat array of strings or an object with optional `name` plus a `words` array:
+
+```json
+{
+  "name": "Standardni paket",
+  "words": ["sunce", "mesec", "zvezda", "oblak", "kiša", "..."]
+}
+```
+
+Rules:
+- 25–500 unique words per pack (duplicates are deduplicated case-insensitively)
+- Each word ≤ 30 characters, trimmed, non-empty
+- The board needs 25 cards per game — the server randomly samples 25 from whichever pack is active
+
+Validation lives in [packages/shared/src/games/tajni-agenti-import.ts](packages/shared/src/games/tajni-agenti-import.ts). The same validator runs on the host (file picker) and the server (`/api/tajni-agenti-packs` endpoint and `host:start-game` re-check), with Serbian error messages on failure.
+
+Sample pack: [tajni-agenti-packs/standardni.json](tajni-agenti-packs/standardni.json) — 142 family-safe Serbian words to demonstrate the import flow.
 
 ### Game Module System
 

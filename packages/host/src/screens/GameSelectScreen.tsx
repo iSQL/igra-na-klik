@@ -7,9 +7,11 @@ import { useSlepiConfigStore } from '../store/slepiConfigStore';
 import { useGeoConfigStore } from '../store/geoConfigStore';
 import { useKoSamJaImportStore } from '../store/koSamJaImportStore';
 import { useKoSamJaConfigStore } from '../store/koSamJaConfigStore';
+import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
+import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
@@ -72,6 +74,14 @@ export function GameSelectScreen() {
         : undefined;
     const koSamJaCategoryToSend =
       gameId === 'ko-sam-ja' ? koSamJaCategory : undefined;
+    const customTajniAgentiPack =
+      gameId === 'tajni-agenti'
+        ? useTajniAgentiImportStore.getState().customPack ?? undefined
+        : undefined;
+    const tajniAgentiScenarioCode =
+      gameId === 'tajni-agenti'
+        ? useTajniAgentiImportStore.getState().scenarioCode ?? undefined
+        : undefined;
 
     socket.emit('host:start-game', {
       gameId,
@@ -82,6 +92,8 @@ export function GameSelectScreen() {
       customPhotosPerPlayer,
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
+      customTajniAgentiPack,
+      tajniAgentiScenarioCode,
     });
   };
 
@@ -224,6 +236,7 @@ export function GameSelectScreen() {
                 <KoSamJaImportButton />
               </>
             )}
+            {game.id === 'tajni-agenti' && <TajniAgentiImportButton />}
             {game.id === 'slepi-telefoni' && (
               <div
                 style={{

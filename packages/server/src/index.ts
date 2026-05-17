@@ -6,7 +6,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
-import { parseQuizImport, parseKoSamJaImport } from '@igra/shared';
+import {
+  parseQuizImport,
+  parseKoSamJaImport,
+  parseTajniAgentiImport,
+} from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
@@ -31,6 +35,9 @@ const GEO_PACKS_DIR = process.env.GEO_PACKS_DIR
 const KO_SAM_JA_PACKS_DIR = process.env.KO_SAM_JA_PACKS_DIR
   ? path.resolve(process.env.KO_SAM_JA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'ko-sam-ja-packs');
+const TAJNI_AGENTI_PACKS_DIR = process.env.TAJNI_AGENTI_PACKS_DIR
+  ? path.resolve(process.env.TAJNI_AGENTI_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'tajni-agenti-packs');
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -147,6 +154,55 @@ app.get('/api/ko-sam-ja-packs', async (_req, res) => {
   }
 });
 
+app.get('/api/tajni-agenti-packs', async (_req, res) => {
+  try {
+    const entries = await readdir(TAJNI_AGENTI_PACKS_DIR, {
+      withFileTypes: true,
+    });
+    const jsonFiles = entries.filter(
+      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
+    );
+
+    const packs: Array<{
+      id: string;
+      fileName: string;
+      name: string | null;
+      count: number;
+      words: string[];
+    }> = [];
+
+    for (const entry of jsonFiles) {
+      try {
+        const raw = await readFile(
+          path.join(TAJNI_AGENTI_PACKS_DIR, entry.name),
+          'utf-8'
+        );
+        const parsed = parseTajniAgentiImport(JSON.parse(raw));
+        if (!parsed.ok) continue;
+        packs.push({
+          id: entry.name.replace(/\.json$/i, ''),
+          fileName: entry.name,
+          name: parsed.pack.name ?? null,
+          count: parsed.pack.words.length,
+          words: parsed.pack.words,
+        });
+      } catch {
+        // Skip unreadable or malformed files; the rest of the list still loads.
+      }
+    }
+
+    packs.sort((a, b) => a.id.localeCompare(b.id));
+    res.json({ packs });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      res.json({ packs: [] });
+      return;
+    }
+    console.error('Failed to read tajni-agenti packs directory:', err);
+    res.status(500).json({ error: 'Failed to read tajni-agenti packs' });
+  }
+});
+
 app.get('/api/geo-packs', async (_req, res) => {
   try {
     const packs = await listGeoPacks(GEO_PACKS_DIR);
@@ -222,6 +278,7 @@ httpServer.listen(PORT, () => {
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
   console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
   console.log(`Ko sam ja packs dir: ${KO_SAM_JA_PACKS_DIR}`);
+  console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }
