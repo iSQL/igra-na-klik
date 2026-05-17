@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   parseTajniAgentiImport,
-  findTajniAgentiScenarioByCode,
+  lookupTajniAgentiScenario,
 } from '@igra/shared';
 import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
 
@@ -26,10 +26,12 @@ export function TajniAgentiImportButton() {
     scenarioCode ?? ''
   );
 
-  const matchedScenario =
+  const scenarioLookup =
     scenarioDraft.trim().length > 0
-      ? findTajniAgentiScenarioByCode(scenarioDraft)
+      ? lookupTajniAgentiScenario(scenarioDraft)
       : null;
+  const matchedScenario =
+    scenarioLookup?.status === 'found' ? scenarioLookup.scenario : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -269,17 +271,21 @@ export function TajniAgentiImportButton() {
               textAlign: 'center',
             }}
           />
-          {scenarioDraft.length > 0 && (
+          {scenarioLookup && (
             <p
               style={{
                 margin: 0,
                 fontSize: '0.7rem',
                 color: matchedScenario ? '#2ecc71' : '#e74c3c',
+                maxWidth: '220px',
+                textAlign: 'center',
               }}
             >
-              {matchedScenario
-                ? `✓ ${matchedScenario.name}`
-                : 'Nepoznat kod'}
+              {scenarioLookup.status === 'found'
+                ? `✓ ${scenarioLookup.scenario.name}`
+                : scenarioLookup.status === 'invalid'
+                  ? `Neispravan scenario "${scenarioLookup.code}": ${scenarioLookup.error}`
+                  : 'Nepoznat kod'}
             </p>
           )}
           <div style={{ display: 'flex', gap: '0.3rem' }}>

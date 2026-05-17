@@ -37,31 +37,31 @@ export const TAJNI_AGENTI_SCENARIOS: readonly TajniAgentiScenario[] = [
       { word: 'av av', type: 'red' },
       { word: 'simbol otpora', type: 'blue' },
       { word: 'mafija', type: 'red' },
-      { word: 'neutralac', type: 'neutral' },
+      { word: 'neutralac1', type: 'neutral' },
       { word: 'borba protiv zla', type: 'blue' },
       // row 2
       { word: '24 stana', type: 'red' },
       { word: 'nada', type: 'blue' },
       { word: 'BGH2O', type: 'red' },
-      { word: 'neutralac', type: 'neutral' },
+      { word: 'neutralac2', type: 'neutral' },
       { word: 'pobeda', type: 'blue' },
       // row 3
       { word: 'pas', type: 'red' },
       { word: 'slavija', type: 'blue' },
       { word: 'koferče', type: 'red' },
-      { word: 'neutralac', type: 'neutral' },
+      { word: 'neutralac3', type: 'neutral' },
       { word: 'plenum', type: 'blue' },
       // row 4
       { word: 'informer', type: 'red' },
       { word: 'mjau', type: 'blue' },
       { word: 'helikopter', type: 'red' },
-      { word: 'neutralac', type: 'neutral' },
+      { word: 'neutralac4', type: 'neutral' },
       { word: 'bicikl', type: 'blue' },
       // row 5
       { word: 'jovanjica', type: 'red' },
-      { word: 'organizacija', type: 'blue' },
-      { word: 'neutralac', type: 'neutral' },
-      { word: 'neutralac', type: 'neutral' },
+      { word: 'neutralac5', type: 'neutral' },
+      { word: 'neutralac6', type: 'neutral' },
+      { word: 'neutralac7', type: 'neutral' },
       { word: '!', type: 'assassin' },
     ],
   },
@@ -174,20 +174,42 @@ export function validateTajniAgentiScenario(
 /**
  * Look up a built-in scenario by code (case-insensitive). Returns the
  * fully validated scenario or null if the code is empty / unknown /
- * malformed.
+ * malformed. Callers wanting a distinction between "unknown code" and
+ * "code matched but the scenario is invalid" should use
+ * `lookupTajniAgentiScenario`.
  */
 export function findTajniAgentiScenarioByCode(
   rawCode: string | null | undefined
 ): TajniAgentiResolvedScenario | null {
-  if (typeof rawCode !== 'string') return null;
+  const result = lookupTajniAgentiScenario(rawCode);
+  return result.status === 'found' ? result.scenario : null;
+}
+
+export type TajniAgentiScenarioLookup =
+  | { status: 'found'; scenario: TajniAgentiResolvedScenario }
+  | { status: 'invalid'; code: string; error: string }
+  | { status: 'not-found' };
+
+/**
+ * Like `findTajniAgentiScenarioByCode` but distinguishes between an
+ * unknown code and a known-code-that-fails-validation. Used by the host
+ * UI to surface the specific validation error instead of a generic
+ * "unknown code" message.
+ */
+export function lookupTajniAgentiScenario(
+  rawCode: string | null | undefined
+): TajniAgentiScenarioLookup {
+  if (typeof rawCode !== 'string') return { status: 'not-found' };
   const code = rawCode.trim().toUpperCase();
-  if (code.length === 0) return null;
+  if (code.length === 0) return { status: 'not-found' };
   for (const scenario of TAJNI_AGENTI_SCENARIOS) {
     if (scenario.code.trim().toUpperCase() === code) {
       const validated = validateTajniAgentiScenario(scenario);
-      if (validated.ok) return validated.scenario;
-      return null;
+      if (validated.ok) {
+        return { status: 'found', scenario: validated.scenario };
+      }
+      return { status: 'invalid', code, error: validated.error };
     }
   }
-  return null;
+  return { status: 'not-found' };
 }
