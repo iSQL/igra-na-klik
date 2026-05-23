@@ -1,5 +1,5 @@
 export const ROOM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ';
-export const ROOM_CODE_LENGTH = 1;
+export const ROOM_CODE_LENGTH = 3;
 export const MAX_PLAYERS_DEFAULT = 8;
 export const RECONNECT_GRACE_MS = 5 * 60_000;
 
