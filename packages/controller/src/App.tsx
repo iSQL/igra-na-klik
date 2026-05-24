@@ -48,13 +48,26 @@ export function App() {
       setConnected(true);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
       setConnected(false);
+      // socket.io-client does NOT auto-reconnect when the server forcibly
+      // disconnects us (kick, room destroyed, self-leave). Without a
+      // manual reconnect, the next join attempt buffers forever and the
+      // UI sticks on "Spajanje...". Transient drops (transport close,
+      // ping timeout) keep their normal auto-reconnect behavior.
+      if (reason === 'io server disconnect') {
+        socket.connect();
+      }
     });
 
     socket.on('player:joined', ({ player, room }) => {
       setPlayer(player);
       setRoom(room);
+      // Receiving this event means the socket IS connected — sync the flag
+      // in case a late server-side disconnect from a prior session landed
+      // out of order and left isConnected stuck at false, which would
+      // wedge the UI on the "Reconnecting" overlay.
+      setConnected(true);
     });
 
     socket.on('room:player-joined', ({ player: newPlayer }) => {
@@ -129,11 +142,15 @@ export function App() {
     socket.on('room:kicked', ({ reason }) => {
       // Host removed us from the room — clear the reconnect token so we
       // don't try to silently rejoin, drop game state, and bounce back
-      // to the join screen.
+      // to the join screen. The follow-up disconnect from the server
+      // triggers the manual reconnect in the disconnect handler above.
       resetGame();
       reset();
       useNavStore.getState().setScreen('lobby');
-      if (reason) alert(reason);
+      // Defer the alert so it doesn't block the event loop — otherwise
+      // the queued 'disconnect' event sits behind the modal and the
+      // manual reconnect ends up racing whatever the user does next.
+      if (reason) setTimeout(() => alert(reason), 0);
     });
 
     socket.on('error', ({ message }) => {
