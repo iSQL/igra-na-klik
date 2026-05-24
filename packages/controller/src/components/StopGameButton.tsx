@@ -1,26 +1,19 @@
 import { useState } from 'react';
 import { socket } from '../socket';
-import { usePlayerStore } from '../store/playerStore';
 
-interface Props {
-  variant?: 'inline' | 'overlay';
-}
-
-export function LeaveRoomButton({ variant = 'inline' }: Props) {
+export function StopGameButton() {
   const [confirming, setConfirming] = useState(false);
-  const { player, room } = usePlayerStore();
-
-  const iAmRemoteHost =
-    !!player && !!room && room.remoteHostPlayerId === player.id;
 
   const handleConfirm = () => {
-    socket.emit('player:leave-room');
+    socket.emit('host:stop-game');
     setConfirming(false);
   };
 
-  const triggerStyle: React.CSSProperties =
-    variant === 'overlay'
-      ? {
+  return (
+    <>
+      <button
+        onClick={() => setConfirming(true)}
+        style={{
           padding: '0.4rem 0.7rem',
           fontSize: '0.8rem',
           fontWeight: 600,
@@ -29,21 +22,9 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
           color: 'var(--text-secondary)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
           backdropFilter: 'blur(4px)',
-        }
-      : {
-          padding: '0.6rem 1.5rem',
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          borderRadius: '0.75rem',
-          background: 'transparent',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--bg-card)',
-        };
-
-  return (
-    <>
-      <button onClick={() => setConfirming(true)} style={triggerStyle}>
-        Napusti sobu
+        }}
+      >
+        Završi igru
       </button>
 
       {confirming && (
@@ -74,7 +55,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
               textAlign: 'center',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Napustiti sobu?</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Završiti igru?</h2>
             <p
               style={{
                 margin: 0,
@@ -83,9 +64,8 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                 lineHeight: 1.4,
               }}
             >
-              {iAmRemoteHost
-                ? 'Ti držiš kontrolu — ako izađeš, soba će biti zatvorena i svi ostali igrači će biti izbačeni.'
-                : 'Ako izađeš tokom igre, prekinućeš trenutnu rundu za ostale igrače.'}
+              Trenutna runda će biti prekinuta za sve igrače i vratićete se u
+              lobi.
             </p>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <button
@@ -111,12 +91,12 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                   fontSize: '0.95rem',
                   fontWeight: 700,
                   borderRadius: '0.6rem',
-                  background: '#e74c3c',
+                  background: '#f39c12',
                   color: '#fff',
                   border: 'none',
                 }}
               >
-                Izađi
+                Završi
               </button>
             </div>
           </div>
