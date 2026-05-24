@@ -15,6 +15,7 @@ export function App() {
     setPlayerConnected,
     setStatus,
     setRemoteHostPlayerId,
+    reset: resetRoom,
   } = useRoomStore();
   const { setGameState, resetGame } = useGameStore();
 
@@ -63,6 +64,17 @@ export function App() {
       }, 3000);
     });
 
+    socket.on('room:destroyed', () => {
+      // A remote-host player tore the room down; reset everything and
+      // spin up a fresh room so the TV is immediately ready for a new
+      // session instead of stranded on an empty lobby.
+      resetGame();
+      resetRoom();
+      window.history.replaceState(null, '', window.location.pathname);
+      socket.emit('host:create-room', {});
+      setStatus('creating');
+    });
+
     socket.on('error', ({ message }) => {
       console.error('Server error:', message);
     });
@@ -84,6 +96,7 @@ export function App() {
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:ended');
+      socket.off('room:destroyed');
       socket.off('error');
       socket.off('connect');
     };

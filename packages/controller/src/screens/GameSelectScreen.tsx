@@ -4,6 +4,7 @@ import type { GameDefinition, QuizImportQuestion } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
+import { LeaveRoomButton } from '../components/LeaveRoomButton';
 
 interface GeoPackSummary {
   id: string;
@@ -140,7 +141,7 @@ export function GameSelectScreen() {
           ← Nazad
         </button>
         <h1 style={{ fontSize: '1.4rem', margin: 0 }}>Izaberi igru</h1>
-        <span style={{ width: '4rem' }} />
+        <LeaveRoomButton />
       </div>
 
       {errorMessage && (

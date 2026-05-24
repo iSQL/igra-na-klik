@@ -23,6 +23,7 @@ export interface ServerToClientEvents {
   'game:ended': (data: { finalScores: { playerId: string; score: number }[] }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
   'room:kicked': (data: { reason?: string }) => void;
+  'room:destroyed': (data: { reason?: string }) => void;
   error: (data: { code: string; message: string }) => void;
 }
 
@@ -50,6 +51,7 @@ export interface ClientToServerEvents {
   'host:kick-player': (data: { playerId: string }) => void;
   'player:claim-remote-host': () => void;
   'player:release-remote-host': () => void;
+  'player:leave-room': () => void;
   'game:player-action': (data: {
     action: string;
     data: Record<string, unknown>;

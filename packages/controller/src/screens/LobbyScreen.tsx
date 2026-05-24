@@ -1,16 +1,11 @@
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { socket } from '../socket';
+import { LeaveRoomButton } from '../components/LeaveRoomButton';
 
 export function LobbyScreen() {
-  const { player, room, reset } = usePlayerStore();
+  const { player, room } = usePlayerStore();
   const setScreen = useNavStore((s) => s.setScreen);
-
-  const handleLeave = () => {
-    reset();
-    socket.disconnect();
-    socket.connect();
-  };
 
   if (!player || !room) return null;
 
@@ -143,21 +138,9 @@ export function LobbyScreen() {
           ))}
       </div>
 
-      <button
-        onClick={handleLeave}
-        style={{
-          marginTop: '0.5rem',
-          padding: '0.6rem 1.5rem',
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          borderRadius: '0.75rem',
-          background: 'transparent',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--bg-card)',
-        }}
-      >
-        Napusti sobu
-      </button>
+      <div style={{ marginTop: '0.5rem' }}>
+        <LeaveRoomButton />
+      </div>
     </div>
   );
 }

@@ -112,6 +112,10 @@ export class RoomManager {
     return this.rooms.get(roomCode);
   }
 
+  deleteRoom(roomCode: string): boolean {
+    return this.rooms.delete(roomCode);
+  }
+
   claimRemoteHost(
     roomCode: string,
     playerId: string

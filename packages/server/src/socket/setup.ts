@@ -159,6 +159,70 @@ export function setupSocket(
       console.log(`Player ${playerId} kicked from room ${roomCode}`);
     });
 
+    socket.on('player:leave-room', () => {
+      const { roomCode, playerId } = socket.data;
+      if (!roomCode || !playerId) return;
+      const room = roomManager.getRoom(roomCode);
+      if (!room) return;
+
+      const isRemoteHost = room.remoteHostPlayerId === playerId;
+
+      if (isRemoteHost) {
+        // Remote-host drove the show — tear the entire room down so the
+        // remaining players aren't stuck waiting on a phantom controller.
+        if (gameManager.isGameActive(roomCode)) {
+          gameManager.stopGame(roomCode);
+        }
+
+        for (const p of room.players) {
+          cancelGraceTimer(p.id);
+        }
+
+        const reason = 'Igrač koji je držao kontrolu je napustio sobu.';
+        for (const [, sock] of io.sockets.sockets) {
+          if (sock.data.roomCode !== roomCode) continue;
+          if (sock.data.isHost) {
+            sock.emit('room:destroyed', { reason });
+            sock.data.roomCode = undefined;
+            sock.leave(roomCode);
+            continue;
+          }
+          if (sock.data.playerId) {
+            sock.emit('room:kicked', { reason });
+            sock.data.roomCode = undefined;
+            sock.data.playerId = undefined;
+            sock.leave(roomCode);
+            sock.disconnect(true);
+          }
+        }
+
+        roomManager.deleteRoom(roomCode);
+        console.log(`Room ${roomCode} destroyed by remote-host ${playerId}`);
+        return;
+      }
+
+      // Regular player leaving — same effect as a kick: drop their seat,
+      // invalidate their reconnect token, broadcast the removal.
+      cancelGraceTimer(playerId);
+      gameManager.handlePlayerDisconnect(roomCode, playerId);
+      const result = roomManager.kickPlayer(roomCode, playerId);
+      socket.emit('room:kicked', {});
+      socket.data.roomCode = undefined;
+      socket.data.playerId = undefined;
+      socket.leave(roomCode);
+      socket.disconnect(true);
+
+      if (result) {
+        io.to(roomCode).emit('room:player-removed', { playerId });
+        if (result.remoteHostCleared) {
+          io.to(roomCode).emit('room:remote-host-changed', {
+            remoteHostPlayerId: null,
+          });
+        }
+      }
+      console.log(`Player ${playerId} left room ${roomCode}`);
+    });
+
     socket.on('disconnect', () => {
       const { roomCode, playerId, isHost } = socket.data;
       if (!roomCode) return;

@@ -1,4 +1,5 @@
 import { GameRouter } from '../components/GameRouter';
+import { LeaveRoomButton } from './../components/LeaveRoomButton';
 
 export function GameScreen() {
   return (
@@ -12,6 +13,7 @@ export function GameScreen() {
       }}
     >
       <GameRouter />
+      <LeaveRoomButton variant="overlay" />
     </div>
   );
 }
