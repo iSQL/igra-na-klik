@@ -6,38 +6,22 @@ interface QRCodeDisplayProps {
 }
 
 export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
-  const controllerBase = useMemo(() => {
+  const joinUrl = useMemo(() => {
     if (import.meta.env.VITE_CONTROLLER_URL) {
       return import.meta.env.VITE_CONTROLLER_URL as string;
     }
-    const { protocol, hostname, port, origin } = window.location;
+    const { protocol, hostname, origin } = window.location;
 
-    // Vite dev bundle: host + controller are spun up together with
-    // sequential port allocation. By convention the controller is
-    // host_port + 1 — works for the default 5173→5174 pair, or for
-    // 5175→5176 when another project grabbed the defaults first.
-    if (import.meta.env.DEV && port) {
-      const next = parseInt(port, 10);
-      if (Number.isFinite(next)) {
-        return `${protocol}//${hostname}:${next + 1}`;
-      }
-    }
-
-    // Local-dev gotcha: a previous `npm run build` leaves a static host
-    // bundle that the express server keeps serving on :3001 even when
-    // Vite is also running. On a local hostname the Vite dev controller
-    // is overwhelmingly more likely to be the intended target — real
-    // single-container deploys terminate on a domain (not localhost)
-    // and keep using /play below.
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // Vite dev: controller lives on its own port (5174). Use the same
+    // hostname the host was loaded from so LAN phones hitting the host
+    // on 192.168.x.y:5173 are sent to 192.168.x.y:5174, not localhost.
+    if (import.meta.env.DEV) {
       return `${protocol}//${hostname}:5174`;
     }
 
     // Production single-container deploy: controller served at /play.
     return `${origin}/play`;
   }, []);
-
-  const joinUrl = `${controllerBase}?code=${roomCode}`;
 
   return (
     <div style={{ textAlign: 'center' }}>

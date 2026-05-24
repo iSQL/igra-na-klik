@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
 import { useGameStore } from './store/gameStore';
@@ -32,10 +32,41 @@ function ReconnectingOverlay() {
   );
 }
 
+function GameEndedOverlay() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 15, 35, 0.92)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 900,
+        padding: '1.5rem',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '1.6rem', fontWeight: 700 }}>Igra je završena</p>
+        <p
+          style={{
+            color: 'var(--text-secondary)',
+            marginTop: '0.6rem',
+            fontSize: '1rem',
+          }}
+        >
+          Vraćamo se u lobi...
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const { player, isConnected, setPlayer, setRoom, setConnected, reset } =
     usePlayerStore();
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
+  const [gameEndedNotice, setGameEndedNotice] = useState(false);
 
   // Hold a screen wake lock once the player is in a room — prevents the
   // phone from sleeping mid-round and dropping the WebSocket.
@@ -134,7 +165,13 @@ export function App() {
     });
 
     socket.on('game:ended', () => {
+      // Surface a quick "Igra je završena" notice so players (especially
+      // when the remote host triggered "Završi igru") see why the game UI
+      // is about to vanish, instead of being snapped back to the lobby
+      // with no explanation.
+      setGameEndedNotice(true);
       setTimeout(() => {
+        setGameEndedNotice(false);
         resetGame();
       }, 3000);
     });
@@ -194,6 +231,7 @@ export function App() {
     <>
       {showReconnecting && <ReconnectingOverlay />}
       {body}
+      {gameEndedNotice && <GameEndedOverlay />}
     </>
   );
 }
