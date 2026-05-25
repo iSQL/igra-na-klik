@@ -44,7 +44,7 @@
   {
     "text": "Po kome je selo Simićevo dobilo današnje ime?",
     "options": ["Simi Simiću", "Stanoju Simiću", "Pavlu Simiću", "Milanu Simiću"],
-    "correctIndex": 1,
+    "correctIndex": 0,
     "timeLimit": 15
   },
   {
