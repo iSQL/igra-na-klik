@@ -1,12 +1,17 @@
 import { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
 import { QuestionDisplay } from './components/QuestionDisplay';
 import { OptionGrid } from './components/OptionGrid';
 import { AnswerCounter } from './components/AnswerCounter';
-import { ResultsReveal } from './components/ResultsReveal';
 import { Leaderboard } from './components/Leaderboard';
 import type { QuizOption, QuizResultData, QuizLeaderboardEntry } from '@igra/shared';
+
+// Mirrors SHOWING_RESULTS_DURATION in QuizGameModule — used only to drive
+// the countdown ring; if they drift the visual just looks slightly off.
+const SHOWING_RESULTS_DURATION = 4;
 
 export default function QuizGameHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -91,7 +96,12 @@ export default function QuizGameHost() {
       )}
 
       {phase === 'showing-results' && data.results != null && (
-        <ResultsReveal results={data.results as QuizResultData} />
+        <ResultsInPlace
+          results={data.results as QuizResultData}
+          questionIndex={questionIndex}
+          totalQuestions={totalQuestions}
+          timeRemaining={timeRemaining}
+        />
       )}
 
       {phase === 'leaderboard' && data.leaderboard != null && (
@@ -108,5 +118,81 @@ export default function QuizGameHost() {
         />
       )}
     </div>
+  );
+}
+
+// Reveals the answer in-place: same question header + option grid as the
+// answering phase, just with the correct option flagged and per-option vote
+// counts. Replaces the old separate bar-chart screen so the visual context
+// carries over between phases (like Pogodi gde je's reveal step).
+function ResultsInPlace({
+  results,
+  questionIndex,
+  totalQuestions,
+  timeRemaining,
+}: {
+  results: QuizResultData;
+  questionIndex: number;
+  totalQuestions: number;
+  timeRemaining: number;
+}) {
+  const players = useRoomStore((s) => s.players);
+  const { question, answers, scores } = results;
+
+  const counts = question.options.map(
+    (opt) => answers.filter((a) => a.optionIndex === opt.index).length
+  );
+
+  const roundScorers = scores
+    .filter((s) => s.roundScore > 0)
+    .sort((a, b) => b.roundScore - a.roundScore);
+
+  return (
+    <>
+      <QuestionDisplay
+        questionText={question.text}
+        questionIndex={questionIndex}
+        totalQuestions={totalQuestions}
+        timeRemaining={timeRemaining}
+        timeLimit={SHOWING_RESULTS_DURATION}
+      />
+      <OptionGrid
+        options={question.options}
+        showResults={true}
+        correctIndex={question.correctIndex}
+        counts={counts}
+      />
+      {roundScorers.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            maxWidth: '700px',
+          }}
+        >
+          {roundScorers.map((s) => {
+            const player = players.find((p) => p.id === s.playerId);
+            return (
+              <motion.div
+                key={s.playerId}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: '0.5rem',
+                  padding: '0.4rem 0.8rem',
+                  borderLeft: `3px solid ${player?.avatarColor || '#666'}`,
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{player?.name}</span>{' '}
+                <span style={{ color: 'var(--success)' }}>+{s.roundScore}</span>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
