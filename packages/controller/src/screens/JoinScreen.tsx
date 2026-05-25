@@ -88,9 +88,11 @@ export function JoinScreen() {
         <input
           type="text"
           placeholder="Room Code"
-          maxLength={4}
+          maxLength={2}
+          autoFocus={!roomCode}
           value={roomCode}
           onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
+          onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
           style={{
             padding: '0.75rem 1rem',
             fontSize: '2rem',
@@ -132,6 +134,7 @@ export function JoinScreen() {
         type="text"
         placeholder="Tvoje ime"
         maxLength={20}
+        autoFocus={SINGLE_ROOM_MODE || !!roomCode}
         value={playerName}
         onChange={(e) => setPlayerName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleJoin()}

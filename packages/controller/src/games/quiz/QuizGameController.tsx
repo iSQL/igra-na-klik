@@ -50,25 +50,65 @@ export default function QuizGameController() {
 
   if (phase === 'answering') {
     const options = data.options as QuizOption[];
+    const questionText = data.questionText as string | undefined;
     const hasAnswered = myData?.hasAnswered ?? false;
     const selectedIndex = myData?.selectedIndex ?? null;
 
-    if (hasAnswered && selectedIndex !== null) {
-      const selectedOption = options.find((o) => o.index === selectedIndex);
-      return (
+    const body =
+      hasAnswered && selectedIndex !== null ? (
         <WaitingForResults
           selectedIndex={selectedIndex}
-          optionColor={selectedOption?.color ?? 'var(--accent)'}
+          optionColor={
+            options.find((o) => o.index === selectedIndex)?.color ??
+            'var(--accent)'
+          }
+        />
+      ) : (
+        <AnswerButtons
+          options={options}
+          hasAnswered={hasAnswered}
+          selectedIndex={selectedIndex}
         />
       );
-    }
 
     return (
-      <AnswerButtons
-        options={options}
-        hasAnswered={hasAnswered}
-        selectedIndex={selectedIndex}
-      />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          padding: '0.75rem',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+              marginBottom: '0.2rem',
+            }}
+          >
+            Pitanje {(data.questionIndex as number) + 1}/
+            {data.totalQuestions as number}
+          </p>
+          {questionText && (
+            <p
+              style={{
+                fontSize: '1.05rem',
+                fontWeight: 600,
+                lineHeight: 1.25,
+                margin: 0,
+              }}
+            >
+              {questionText}
+            </p>
+          )}
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>{body}</div>
+      </div>
     );
   }
 
