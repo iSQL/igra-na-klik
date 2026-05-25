@@ -120,7 +120,7 @@ export function GameSelectScreen() {
         overflowY: 'auto',
       }}
     >
-      <h1 style={{ fontSize: '2rem' }}>Choose a Game</h1>
+      <h1 style={{ fontSize: '2rem' }}>Izaberi igru</h1>
 
       {errorMessage && (
         <div
@@ -201,7 +201,7 @@ export function GameSelectScreen() {
                 ? `Treba još ${game.minPlayers - connectedCount} ${
                     game.minPlayers - connectedCount === 1 ? 'igrač' : 'igrača'
                   }`
-                : `${game.minPlayers}-${game.maxPlayers} players`}
+                : `${game.minPlayers}-${game.maxPlayers} igrača`}
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
             {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && <GeoPackButton />}
@@ -298,7 +298,7 @@ export function GameSelectScreen() {
           color: 'var(--text-secondary)',
         }}
       >
-        Back to Lobby
+        Nazad u lobi
       </button>
     </div>
   );

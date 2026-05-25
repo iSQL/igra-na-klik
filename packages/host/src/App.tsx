@@ -105,10 +105,10 @@ export function App() {
   return (
     <>
       {status === 'disconnected' && (
-        <p style={{ fontSize: '1.5rem' }}>Connecting...</p>
+        <p style={{ fontSize: '1.5rem' }}>Povezivanje...</p>
       )}
       {status === 'creating' && (
-        <p style={{ fontSize: '1.5rem' }}>Creating room...</p>
+        <p style={{ fontSize: '1.5rem' }}>Pravim sobu...</p>
       )}
       {status === 'lobby' && <LobbyScreen />}
       {status === 'game-select' && <GameSelectScreen />}

@@ -18,15 +18,15 @@ export default function TestGameController() {
       <div style={{ textAlign: 'center', padding: '2rem' }}>
         {winnerName ? (
           <p style={{ fontSize: '1.5rem', color: 'var(--success)' }}>
-            {winnerName} won!
+            {winnerName} je pobedio!
           </p>
         ) : (
           <p style={{ fontSize: '1.5rem', color: 'var(--danger)' }}>
-            Time's up!
+            Vreme je isteklo!
           </p>
         )}
         <p style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>
-          Returning to lobby...
+          Vraćamo se u lobi...
         </p>
       </div>
     );
@@ -45,7 +45,7 @@ export default function TestGameController() {
       }}
     >
       <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-        Be the first to press!
+        Budi prvi koji pritisne!
       </p>
       <button
         onClick={handlePress}
@@ -67,7 +67,7 @@ export default function TestGameController() {
           e.currentTarget.style.transform = 'scale(1)';
         }}
       >
-        PRESS ME!
+PRITISNI ME!
       </button>
     </div>
   );

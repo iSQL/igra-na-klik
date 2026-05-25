@@ -23,9 +23,9 @@ function ReconnectingOverlay() {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Reconnecting...</p>
+        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Ponovno povezivanje...</p>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          Please wait
+          Sačekaj
         </p>
       </div>
     </div>

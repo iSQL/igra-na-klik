@@ -21,12 +21,12 @@ export default function TestGameHost() {
         padding: '2rem',
       }}
     >
-      <h1 style={{ fontSize: '2.5rem' }}>Test Game</h1>
+      <h1 style={{ fontSize: '2.5rem' }}>Test igra</h1>
 
       {!isEnded && (
         <>
           <p style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>
-            First player to press the button wins!
+            Pobeđuje prvi igrač koji pritisne dugme!
           </p>
           <div
             style={{
@@ -61,7 +61,7 @@ export default function TestGameHost() {
           {winnerName ? (
             <>
               <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
-                Winner:
+                Pobednik:
               </p>
               <p
                 style={{
@@ -75,11 +75,11 @@ export default function TestGameHost() {
             </>
           ) : (
             <p style={{ fontSize: '2rem', color: 'var(--danger)' }}>
-              Time's up! Nobody pressed the button.
+              Vreme je isteklo! Niko nije pritisnuo dugme.
             </p>
           )}
           <p style={{ marginTop: '2rem', color: 'var(--text-secondary)' }}>
-            Returning to lobby...
+            Vraćamo se u lobi...
           </p>
         </div>
       )}

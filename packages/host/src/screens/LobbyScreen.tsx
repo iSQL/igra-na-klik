@@ -50,7 +50,7 @@ export function LobbyScreen() {
 
       <div style={{ width: '100%', textAlign: 'center' }}>
         <h2 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>
-          Players ({players.length}/{room.settings.maxPlayers})
+          Igrači ({players.length}/{room.settings.maxPlayers})
         </h2>
         <PlayerList
           players={players}
@@ -89,8 +89,8 @@ export function LobbyScreen() {
         }}
       >
         {canStart
-          ? 'Choose Game'
-          : `Need at least ${MIN_PLAYERS_OVERALL} player${MIN_PLAYERS_OVERALL === 1 ? '' : 's'}`}
+          ? 'Izaberi igru'
+          : `Treba najmanje ${MIN_PLAYERS_OVERALL} ${MIN_PLAYERS_OVERALL === 1 ? 'igrač' : 'igrača'}`}
       </button>
     </div>
   );

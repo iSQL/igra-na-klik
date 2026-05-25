@@ -47,7 +47,7 @@ export function GameScreen() {
           cursor: stopping ? 'not-allowed' : 'pointer',
         }}
       >
-        {stopping ? 'Stopping…' : 'Stop Game'}
+        {stopping ? 'Završavam…' : 'Završi igru'}
       </button>
       <GameRouter />
       {stopping && <StoppingOverlay />}
@@ -82,7 +82,7 @@ function StoppingOverlay() {
         }}
       />
       <p style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 500 }}>
-        Stopping game…
+        Završavam igru…
       </p>
     </div>
   );

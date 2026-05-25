@@ -20,7 +20,7 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
   if (players.length === 0) {
     return (
       <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>
-        Waiting for players to join...
+        Čekamo igrače da se pridruže...
       </p>
     );
   }
@@ -54,12 +54,12 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
           {onKick && (
             <button
               onClick={() => {
-                if (window.confirm(`Kick ${player.name}?`)) {
+                if (window.confirm(`Izbaci ${player.name}?`)) {
                   onKick(player.id);
                 }
               }}
-              title={`Kick ${player.name}`}
-              aria-label={`Kick ${player.name}`}
+              title={`Izbaci ${player.name}`}
+              aria-label={`Izbaci ${player.name}`}
               style={{
                 marginLeft: '0.25rem',
                 width: '1.75rem',

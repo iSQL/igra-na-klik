@@ -87,7 +87,7 @@ export function JoinScreen() {
       {!SINGLE_ROOM_MODE && (
         <input
           type="text"
-          placeholder="Room Code"
+          placeholder="Kod sobe"
           maxLength={2}
           autoFocus={!roomCode}
           value={roomCode}
