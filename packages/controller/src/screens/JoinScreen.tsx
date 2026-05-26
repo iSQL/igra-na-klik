@@ -165,6 +165,20 @@ export function JoinScreen() {
       >
         {joining ? 'Spajanje...' : 'Uđi u igru'}
       </button>
+
+      <a
+        href="/"
+        style={{
+          fontSize: '0.85rem',
+          color: 'var(--text-secondary)',
+          textDecoration: 'none',
+          textAlign: 'center',
+          marginTop: '-0.5rem',
+          opacity: 0.7,
+        }}
+      >
+        ← Početna
+      </a>
     </div>
   );
 }

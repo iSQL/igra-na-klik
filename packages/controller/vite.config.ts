@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [
     react(),
     VitePWA({
@@ -13,8 +13,10 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
-  // Production build is served by the server under /play/; dev stays at root.
-  base: command === 'build' ? '/play/' : '/',
+  // Always mount under /play/ so dev and prod URL structure match.
+  // Direct dev: http://localhost:5174/play/. Through Express proxy:
+  // http://localhost:3001/play/.
+  base: '/play/',
   server: {
     host: true,
     port: 5174,

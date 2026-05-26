@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, `localhost:5173`), players join from phones as "controllers" (`localhost:5174`) via 4-letter room code or QR. Real-time via Socket.io. Ships with seven games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), Foto kviz (multiple-choice photo quiz that reuses the same geo-packs), and Ko sam ja (personal-question party game where players guess each other's answers). Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja are Serbian-only content.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, dev: `localhost:5173/host/` or `localhost:3001/host/` through the proxy), players join from phones as "controllers" (dev: `localhost:5174/play/` or `localhost:3001/play/`) via a 2-letter room code or QR. Real-time via Socket.io. Ships with nine games: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), Foto kviz (multiple-choice photo quiz that reuses the same geo-packs), Ko sam ja (personal-question party game where players guess each other's answers), Pronađi par (Spot It), and Tajni agenti (Codenames-style team game). Most platform UI and games are Serbian (Latin) now; English remains only in Test game and a few generic strings.
 
 ## Commands
 
@@ -54,16 +54,18 @@ A game is wired up in five places — missing any of them breaks the game end-to
 
 ### Room / reconnection
 
-- Room codes: 4 uppercase chars excluding `O/I/L` (ambiguous). See [packages/shared/src/utils/room-code.ts](packages/shared/src/utils/room-code.ts).
+- Room codes: 2 uppercase chars excluding `O/I/L` (ambiguous). Length is `ROOM_CODE_LENGTH` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts) — change there if you need longer codes. See [packages/shared/src/utils/room-code.ts](packages/shared/src/utils/room-code.ts).
 - Reconnect tokens (UUIDs) are stored in the controller's `localStorage` and passed via `socket.handshake.auth`. On disconnect, the server starts a **5-minute** grace timer (`RECONNECT_GRACE_MS` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts)) — long enough that a phone screen going dark mid-round doesn't lose the seat. Reconnecting within the window restores the player's seat, score, and active game state (the current phase is replayed so the controller jumps straight back into the round).
 - Two distinct disconnect events: `room:player-left` is the **transient** "grey out" signal that fires immediately on disconnect, while `room:player-removed` is **permanent** — fires only after grace expires or the host kicks. Game modules' destructive `onPlayerDisconnect` work (skipping a drawer's turn etc.) is deferred until the grace window expires, so brief blips don't burn turns.
 - Controller acquires a screen Wake Lock (`useWakeLock`) while in a room to keep the screen alive on most browsers; ignore failures — older browsers/iOS Safari may not grant it.
 - **Kick / reclaim**: host has an × on each player chip → emits `host:kick-player`, server invalidates the reconnect token and emits `room:kicked` to that controller (which leaves the room). Conversely, if a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh `player:join-room` with the same name will **reclaim** a disconnected slot — score and avatar are preserved and a new reconnect token is minted.
-- Rooms are **not** auto-deleted when the last player leaves — the room belongs to the host. Only the host disconnecting (or explicit cleanup) removes the room.
+- **Voluntary leave** (`player:leave-room`): the controller has a "Napusti sobu" button (with confirmation modal) visible in lobby, game-select, and during games. A regular player leaving is equivalent to being kicked. If the leaver was holding the remote-host control, the server tears the entire room down: stops any active game, emits `room:kicked` to every remaining controller, emits `room:destroyed` to the host (which clears state and immediately re-requests `host:create-room`), and deletes the room from `RoomManager`.
+- **Server-initiated disconnect quirk**: when the server calls `sock.disconnect(true)` (kick, leave, room destroy), socket.io-client does NOT auto-reconnect — the controller's `disconnect` handler in [packages/controller/src/App.tsx](packages/controller/src/App.tsx) manually calls `socket.connect()` when reason is `"io server disconnect"` so the next join attempt isn't buffered forever.
+- Rooms are **not** auto-deleted when the last player leaves — the room belongs to the host. Only the host disconnecting, an explicit cleanup, or a remote-host-leave cascade removes the room.
 
 ### Mobile admin / remote host
 
-Any one player can claim the host's controls from their phone via `player:claim-remote-host`; the server stores `remoteHostPlayerId` on the room and broadcasts `room:remote-host-changed`. While held, that controller renders [packages/controller/src/screens/GameSelectScreen.tsx](packages/controller/src/screens/GameSelectScreen.tsx) — a phone-friendly mirror of the host's game-select screen — and can start/stop games, import question packs, choose geo-packs, etc. Releasing (`player:release-remote-host`) or disconnecting clears the claim. Useful when nobody is near the TV; it is **not** a separate role — the holder is still a normal player in whatever game they start.
+Any one player can claim the host's controls from their phone via `player:claim-remote-host`; the server stores `remoteHostPlayerId` on the room and broadcasts `room:remote-host-changed`. While held, that controller renders [packages/controller/src/screens/GameSelectScreen.tsx](packages/controller/src/screens/GameSelectScreen.tsx) — a phone-friendly mirror of the host's game-select screen — and can start/stop games, import question packs, choose geo-packs, etc. The remote-host also gets a "Završi igru" overlay button during gameplay ([packages/controller/src/components/StopGameButton.tsx](packages/controller/src/components/StopGameButton.tsx)) that emits `host:stop-game` (server already accepts it from either the host or the remote-host — see `canControl` in [packages/server/src/socket/handlers/game.ts](packages/server/src/socket/handlers/game.ts)). Releasing (`player:release-remote-host`) or disconnecting clears the claim. Useful when nobody is near the TV; it is **not** a separate role — the holder is still a normal player in whatever game they start.
 
 ### Drawing data flow (Crtaj i pogodi)
 
@@ -104,11 +106,23 @@ Two recurring server-side patterns worth knowing about when touching any game mo
 
 ### Serbian-only content
 
-Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, and Ko sam ja are Serbian-only (Latin script) by design — strings are hardcoded in their host/controller components. Other games and platform UI are in English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching these games.
+Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, Ko sam ja, and Tajni agenti are Serbian-only (Latin script) by design — strings are hardcoded in their host/controller components. As of the latest pass, most platform UI (landing page, lobby, game-select, GameScreen overlay buttons, reconnecting overlays, kick prompts, etc.) is also Serbian. Only the Test game and a handful of generic strings (`PRESS ME!`, `Test game`, etc.) remain English. A full i18n retrofit (e.g. `react-i18next` with `locales/sr/*.json`) is planned but not done; don't invent a half-finished i18n layer when touching these games.
+
+### URL structure & dev/prod serving
+
+The Express server is the single public entry point — the same binary serves the landing page, proxies to Vite in dev, and serves the static dist bundles in prod.
+
+- `/` → static landing HTML (inline in [packages/server/src/index.ts](packages/server/src/index.ts)) with "Pridruži se igri" CTA → `/play/` and "Kreiraj novu sobu" → `/host/`. No bundle, no room creation — safe for link previews and bots.
+- `/host/` → host bundle (Vite `base: '/host/'`).
+- `/play/` → controller bundle (Vite `base: '/play/'`).
+- `/host` and `/play` (no slash) → 301 redirect to slashed forms, query string preserved. Requires `app.set('strict routing', true)` so the redirect handler doesn't also fire on the already-slashed form and loop.
+- Dev fallback: if `packages/<host|controller>/dist/index.html` doesn't exist, Express mounts `http-proxy-middleware` for `/host/**` and `/play/**` pointing at Vite (`localhost:5173` / `:5174`). The check is `existsSync(dist + '/index.html')`, **not** just `existsSync(dist)` — Vite sometimes leaves an empty `dist/` behind which would make a bare existsSync return true and steer the server into prod-static mode that serves nothing but 404s.
+- The proxy uses `pathFilter: (pathname) => pathname === '/host' || pathname.startsWith('/host/')` (function form) instead of `app.use('/host', proxy)`. Express's mount-stripping would otherwise turn `/host/` into `/` at Vite, and Vite (configured with `base: '/host/'`) would 302-redirect `/` → `/host/` causing an infinite loop.
+- The proxy has `ws: true` for socket.io upgrades AND Vite HMR — both pass through.
 
 ## LAN / single-room modes
 
-For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5173` and `CONTROLLER_ORIGIN=http://<LAN-IP>:5174` so CORS accepts LAN origins. Vite dev servers already bind `0.0.0.0`. Set `SINGLE_ROOM_MODE=true` (root `.env`) plus `VITE_SINGLE_ROOM=true` (`packages/controller/.env`) to let controllers auto-fetch the active room code so players only type a name. See [README.md](README.md) for full instructions.
+For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5173` and `CONTROLLER_ORIGIN=http://<LAN-IP>:5174` so CORS accepts LAN origins. Vite dev servers already bind `0.0.0.0`. Open `http://<LAN-IP>:5173/host/` (or `:3001/host/` through the proxy) on the TV; phones hit `:5174/play/` (or `:3001/play/`). Set `SINGLE_ROOM_MODE=true` (root `.env`) plus `VITE_SINGLE_ROOM=true` (`packages/controller/.env`) to let controllers auto-fetch the active room code so players only type a name. See [README.md](README.md) for full instructions.
 
 ## Environment variables
 
@@ -124,3 +138,6 @@ For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5
 - After editing any file in `@igra/shared`, run `npm run build:shared` (or restart `npm run dev`, which does it first) before the server/host/controller will see the changes — they import from `dist/`, not `src/`.
 - Windows shell: bash is expected, not cmd/PowerShell. Use forward slashes and Unix idioms.
 - `packages/server` is ESM (`"type": "module"`); imports inside compiled output need `.js` extensions. `tsx` handles this in dev; `tsc` needs correctly-written imports.
+- If `/host/` or `/play/` returns 404 in dev through the proxy, check that `packages/<host|controller>/dist/` doesn't contain a stale or empty folder — the server picks dev vs prod mode by looking for `dist/index.html`. `rm -rf packages/host/dist packages/controller/dist` and let `tsx watch` restart (touch a TS file to trigger if needed).
+- Vite's HMR works through the Express dev proxy on `:3001` thanks to `ws: true` in `createProxyMiddleware`, but it's also fine to open Vite directly at `:5173/host/` or `:5174/play/` if HMR ever misbehaves.
+- The host's `window.history.replaceState(null, '', \`?code=${room.code}\`)` uses a relative URL so it preserves whatever path the host is loaded at (`/host?code=AB` in the new structure). Don't switch to an absolute URL — it would land on `/?code=AB` and trip the landing page instead.

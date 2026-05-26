@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import {
   parseQuizImport,
   parseKoSamJaImport,
@@ -51,6 +52,10 @@ const corsOrigins = SAME_ORIGIN_DEPLOY
   : [HOST_ORIGIN, CONTROLLER_ORIGIN];
 
 const app = express();
+// Strict routing: '/host' and '/host/' are distinct. Required so the
+// bare-host → host/ redirect below doesn't also fire on /host/ (which
+// would loop).
+app.set('strict routing', true);
 app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
 
@@ -311,34 +316,103 @@ const CONTROLLER_DIST_DIR = process.env.CONTROLLER_DIST_DIR
   ? path.resolve(process.env.CONTROLLER_DIST_DIR)
   : path.resolve(__dirname, '../../controller/dist');
 
-if (existsSync(CONTROLLER_DIST_DIR)) {
+// Normalize bare /host and /play to their slashed forms so external
+// links and typed URLs land on the right place (Vite's base requires
+// trailing slash; express.static auto-redirects in prod but the dev
+// proxy doesn't).
+app.get('/host', (req, res) => {
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(301, '/host/' + qs);
+});
+app.get('/play', (req, res) => {
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(301, '/play/' + qs);
+});
+
+// Prod check: dist must exist AND have an index.html. Vite sometimes
+// leaves an empty dist folder behind, and a bare existsSync(dir) would
+// then route us into prod-static mode that serves nothing but 404s.
+const hasControllerBuild = existsSync(path.join(CONTROLLER_DIST_DIR, 'index.html'));
+const hasHostBuild = existsSync(path.join(HOST_DIST_DIR, 'index.html'));
+
+if (hasControllerBuild) {
   app.use('/play', express.static(CONTROLLER_DIST_DIR));
-  app.get('/play', (_req, res) => {
-    res.sendFile(path.join(CONTROLLER_DIST_DIR, 'index.html'));
-  });
   app.get('/play/*', (_req, res) => {
     res.sendFile(path.join(CONTROLLER_DIST_DIR, 'index.html'));
   });
   console.log(`Serving controller from ${CONTROLLER_DIST_DIR} at /play`);
+} else {
+  // Dev fallback: proxy /play to the controller's Vite dev server. Vite
+  // is configured with base: '/play/' so asset URLs already carry the
+  // prefix — no pathRewrite needed. WS proxy is required for Vite HMR.
+  // Use pathFilter (not app.use('/play', ...)) so the /play prefix is
+  // preserved when forwarding — otherwise Express strips it and Vite
+  // 302-redirects '/' back to '/play/' causing an infinite loop.
+  app.use(
+    createProxyMiddleware({
+      pathFilter: (pathname) =>
+        pathname === '/play' || pathname.startsWith('/play/'),
+      target: 'http://localhost:5174',
+      changeOrigin: true,
+      ws: true,
+    })
+  );
+  console.log('Dev: proxying /play -> http://localhost:5174');
 }
 
-if (existsSync(HOST_DIST_DIR)) {
+if (hasHostBuild) {
   app.use('/host', express.static(HOST_DIST_DIR));
-  app.get('/host', (_req, res) => {
-    res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
-  });
   app.get('/host/*', (_req, res) => {
     res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
   });
   console.log(`Serving host from ${HOST_DIST_DIR} at /host`);
+} else {
+  app.use(
+    createProxyMiddleware({
+      pathFilter: (pathname) =>
+        pathname === '/host' || pathname.startsWith('/host/'),
+      target: 'http://localhost:5173',
+      changeOrigin: true,
+      ws: true,
+    })
+  );
+  console.log('Dev: proxying /host -> http://localhost:5173');
 }
 
-// Root → /play redirect. The host used to live at /, which meant every
-// random visit (link previews, bots, mistyped URLs) spawned an orphan room.
-// 99% of traffic is players, so default `/` to the controller and require
-// an explicit /host visit for the TV.
+// Root landing: prominent "join" CTA → /play, subtle "new room" link → /host.
+// The host used to live at /, which spawned an orphan room on every random
+// visit (link previews, bots, mistyped URLs). A static landing page costs
+// nothing on the server (no socket, no room) and still gives the TV
+// operator a discoverable path to /host without a hidden URL.
+const LANDING_HTML = `<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Igra Na Klik</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#0f0f23;color:#e0e0e0;-webkit-text-size-adjust:100%}
+body{display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.wrap{text-align:center;max-width:22rem;width:100%;display:flex;flex-direction:column;gap:1.5rem}
+h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
+.cta{display:inline-block;padding:1rem 2rem;font-size:1.25rem;font-weight:700;background:#6c63ff;color:#fff;border-radius:0.85rem;text-decoration:none;transition:background 0.15s;min-height:48px}
+.cta:hover{background:#5a52d5}
+.host-link{font-size:0.85rem;color:#a0a0b0;text-decoration:none;margin-top:0.5rem;opacity:0.7}
+.host-link:hover{opacity:1;color:#e0e0e0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Igra Na Klik</h1>
+<a class="cta" href="/play/">🎮 Pridruži se igri</a>
+<a class="host-link" href="/host/">Kreiraj novu sobu →</a>
+</div>
+</body>
+</html>`;
+
 app.get('/', (_req, res) => {
-  res.redirect(302, '/play');
+  res.type('html').send(LANDING_HTML);
 });
 
 httpServer.listen(PORT, () => {
