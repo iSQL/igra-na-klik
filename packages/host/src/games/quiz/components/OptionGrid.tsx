@@ -1,14 +1,27 @@
 import { motion } from 'framer-motion';
 import type { QuizOption } from '@igra/shared';
 
+export interface OptionPickerSummary {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+}
+
 interface OptionGridProps {
   options: QuizOption[];
   correctIndex?: number | null;
   showResults: boolean;
   counts?: number[];
+  pickersByOption?: OptionPickerSummary[][];
 }
 
-export function OptionGrid({ options, correctIndex, showResults, counts }: OptionGridProps) {
+export function OptionGrid({
+  options,
+  correctIndex,
+  showResults,
+  counts,
+  pickersByOption,
+}: OptionGridProps) {
   return (
     <div
       style={{
@@ -23,6 +36,7 @@ export function OptionGrid({ options, correctIndex, showResults, counts }: Optio
         const isCorrect = showResults && option.index === correctIndex;
         const isWrong = showResults && option.index !== correctIndex;
         const count = counts?.[option.index];
+        const pickers = pickersByOption?.[option.index] ?? [];
 
         return (
           <motion.div
@@ -88,6 +102,34 @@ export function OptionGrid({ options, correctIndex, showResults, counts }: Optio
                 }}
               >
                 {count}
+              </div>
+            )}
+            {showResults && pickers.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '0.4rem',
+                  right: '0.6rem',
+                  display: 'flex',
+                  gap: '4px',
+                  flexWrap: 'wrap',
+                  justifyContent: 'flex-end',
+                  maxWidth: '60%',
+                }}
+              >
+                {pickers.map((p) => (
+                  <span
+                    key={p.playerId}
+                    title={p.name}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: p.avatarColor,
+                      boxShadow: '0 0 0 2px rgba(255,255,255,0.85)',
+                    }}
+                  />
+                ))}
               </div>
             )}
           </motion.div>

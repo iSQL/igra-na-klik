@@ -4,7 +4,7 @@ import { BaseGameModule } from '../../BaseGameModule.js';
 import type { QuizInternalState, QuizPhase, QuizPlayerAnswer } from './QuizState.js';
 
 const SHOWING_QUESTION_DURATION = 5;
-const SHOWING_RESULTS_DURATION = 4;
+const SHOWING_RESULTS_DURATION = 5;
 const LEADERBOARD_DURATION = 4;
 const NUM_QUESTIONS = 10;
 

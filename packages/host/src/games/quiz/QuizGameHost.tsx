@@ -11,7 +11,7 @@ import type { QuizOption, QuizResultData, QuizLeaderboardEntry } from '@igra/sha
 
 // Mirrors SHOWING_RESULTS_DURATION in QuizGameModule — used only to drive
 // the countdown ring; if they drift the visual just looks slightly off.
-const SHOWING_RESULTS_DURATION = 4;
+const SHOWING_RESULTS_DURATION = 5;
 
 export default function QuizGameHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -143,6 +143,19 @@ function ResultsInPlace({
     (opt) => answers.filter((a) => a.optionIndex === opt.index).length
   );
 
+  const pickersByOption = question.options.map((opt) =>
+    answers
+      .filter((a) => a.optionIndex === opt.index)
+      .map((a) => {
+        const p = players.find((pl) => pl.id === a.playerId);
+        return {
+          playerId: a.playerId,
+          name: p?.name ?? '',
+          avatarColor: p?.avatarColor ?? '#666',
+        };
+      })
+  );
+
   const roundScorers = scores
     .filter((s) => s.roundScore > 0)
     .sort((a, b) => b.roundScore - a.roundScore);
@@ -161,6 +174,7 @@ function ResultsInPlace({
         showResults={true}
         correctIndex={question.correctIndex}
         counts={counts}
+        pickersByOption={pickersByOption}
       />
       {roundScorers.length > 0 && (
         <div
