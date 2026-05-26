@@ -323,22 +323,23 @@ if (existsSync(CONTROLLER_DIST_DIR)) {
 }
 
 if (existsSync(HOST_DIST_DIR)) {
-  app.use(express.static(HOST_DIST_DIR));
-  app.get('*', (req, res, next) => {
-    if (
-      req.path.startsWith('/api') ||
-      req.path.startsWith('/socket.io') ||
-      req.path.startsWith('/play') ||
-      req.path.startsWith('/geo-images') ||
-      req.path === '/health' ||
-      req.path === '/room-code'
-    ) {
-      return next();
-    }
+  app.use('/host', express.static(HOST_DIST_DIR));
+  app.get('/host', (_req, res) => {
     res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
   });
-  console.log(`Serving host from ${HOST_DIST_DIR} at /`);
+  app.get('/host/*', (_req, res) => {
+    res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
+  });
+  console.log(`Serving host from ${HOST_DIST_DIR} at /host`);
 }
+
+// Root → /play redirect. The host used to live at /, which meant every
+// random visit (link previews, bots, mistyped URLs) spawned an orphan room.
+// 99% of traffic is players, so default `/` to the controller and require
+// an explicit /host visit for the TV.
+app.get('/', (_req, res) => {
+  res.redirect(302, '/play');
+});
 
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
