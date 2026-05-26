@@ -13,6 +13,7 @@ export function App() {
     addPlayer,
     removePlayer,
     setPlayerConnected,
+    updatePlayer,
     setStatus,
     setRemoteHostPlayerId,
     reset: resetRoom,
@@ -42,6 +43,10 @@ export function App() {
 
     socket.on('room:player-reconnected', ({ playerId }) => {
       setPlayerConnected(playerId, true);
+    });
+
+    socket.on('room:player-updated', ({ player }) => {
+      updatePlayer(player);
     });
 
     socket.on('room:remote-host-changed', ({ remoteHostPlayerId }) => {
@@ -92,6 +97,7 @@ export function App() {
       socket.off('room:player-left');
       socket.off('room:player-removed');
       socket.off('room:player-reconnected');
+      socket.off('room:player-updated');
       socket.off('room:remote-host-changed');
       socket.off('game:started');
       socket.off('game:state-update');

@@ -6,6 +6,7 @@ import type {
   GeoSubmissionProgress,
 } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
+import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
 import { SerbiaMap } from './components/SerbiaMap';
 
@@ -106,6 +107,7 @@ function SubmissionScreen({
   progress: GeoSubmissionProgress[];
   photosPerPlayer: number;
 }) {
+  const players = useRoomStore((s) => s.players);
   const allDone =
     progress.length > 0 && progress.every((p) => p.submitted >= p.total);
   return (
@@ -143,6 +145,8 @@ function SubmissionScreen({
         {progress.map((p) => {
           const pct = p.total === 0 ? 0 : (p.submitted / p.total) * 100;
           const done = p.submitted >= p.total;
+          const emoji = players.find((pl) => pl.id === p.playerId)
+            ?.avatarEmoji;
           return (
             <div
               key={p.playerId}
@@ -161,7 +165,9 @@ function SubmissionScreen({
                   marginBottom: '0.5rem',
                 }}
               >
-                <strong>{p.name}</strong>
+                <strong>
+                  {emoji} {p.name}
+                </strong>
                 <span
                   style={{
                     fontSize: '0.85rem',
@@ -361,6 +367,7 @@ function RevealScreen({
 }
 
 function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
+  const players = useRoomStore((s) => s.players);
   return (
     <div
       style={{
@@ -380,7 +387,10 @@ function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
       </motion.h1>
       <div style={{ width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
         <AnimatePresence>
-          {entries.map((entry, i) => (
+          {entries.map((entry, i) => {
+            const emoji = players.find((p) => p.id === entry.playerId)
+              ?.avatarEmoji;
+            return (
             <motion.div
               key={entry.playerId}
               initial={{ opacity: 0, y: 20 }}
@@ -400,12 +410,15 @@ function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
               <span style={{ width: '2rem', textAlign: 'center', fontWeight: 700, fontSize: '1.4rem' }}>
                 {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
               </span>
-              <span style={{ flex: 1, fontWeight: 600 }}>{entry.name}</span>
+              <span style={{ flex: 1, fontWeight: 600 }}>
+                {emoji} {entry.name}
+              </span>
               <span style={{ fontWeight: 700, color: 'var(--accent)' }}>
                 {entry.score.toLocaleString('sr-Latn-RS')}
               </span>
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
       </div>
     </div>

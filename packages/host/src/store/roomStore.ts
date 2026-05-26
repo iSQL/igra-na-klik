@@ -18,6 +18,7 @@ interface RoomStore {
   addPlayer: (player: PublicPlayer) => void;
   removePlayer: (playerId: string) => void;
   setPlayerConnected: (playerId: string, connected: boolean) => void;
+  updatePlayer: (player: PublicPlayer) => void;
   setStatus: (status: HostStatus) => void;
   setRemoteHostPlayerId: (id: string | null) => void;
   reset: () => void;
@@ -44,6 +45,12 @@ export const useRoomStore = create<RoomStore>((set) => ({
     set((state) => ({
       players: state.players.map((p) =>
         p.id === playerId ? { ...p, isConnected: connected } : p
+      ),
+    })),
+  updatePlayer: (updated) =>
+    set((state) => ({
+      players: state.players.map((p) =>
+        p.id === updated.id ? { ...p, ...updated } : p
       ),
     })),
   setStatus: (status) => set({ status }),

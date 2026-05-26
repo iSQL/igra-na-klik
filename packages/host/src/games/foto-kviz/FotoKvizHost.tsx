@@ -10,6 +10,7 @@ import type {
   QuizOption,
 } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
+import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
 
 export default function FotoKvizHost() {
@@ -123,6 +124,7 @@ function SubmissionScreen({
   progress: GeoSubmissionProgress[];
   photosPerPlayer: number;
 }) {
+  const players = useRoomStore((s) => s.players);
   const allDone =
     progress.length > 0 && progress.every((p) => p.submitted >= p.total);
   return (
@@ -166,6 +168,8 @@ function SubmissionScreen({
         {progress.map((p) => {
           const pct = p.total === 0 ? 0 : (p.submitted / p.total) * 100;
           const done = p.submitted >= p.total;
+          const emoji = players.find((pl) => pl.id === p.playerId)
+            ?.avatarEmoji;
           return (
             <div
               key={p.playerId}
@@ -184,7 +188,9 @@ function SubmissionScreen({
                   marginBottom: '0.5rem',
                 }}
               >
-                <strong>{p.name}</strong>
+                <strong>
+                  {emoji} {p.name}
+                </strong>
                 <span
                   style={{
                     fontSize: '0.85rem',
@@ -504,6 +510,7 @@ function ResultsLayout({
 }
 
 function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
+  const players = useRoomStore((s) => s.players);
   return (
     <div
       style={{
@@ -531,7 +538,10 @@ function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
         }}
       >
         <AnimatePresence>
-          {entries.map((entry, i) => (
+          {entries.map((entry, i) => {
+            const emoji = players.find((p) => p.id === entry.playerId)
+              ?.avatarEmoji;
+            return (
             <motion.div
               key={entry.playerId}
               initial={{ opacity: 0, y: 20 }}
@@ -564,12 +574,15 @@ function FinalLeaderboard({ entries }: { entries: GeoLeaderboardEntry[] }) {
                   ? '🥉'
                   : `#${entry.rank}`}
               </span>
-              <span style={{ flex: 1, fontWeight: 600 }}>{entry.name}</span>
+              <span style={{ flex: 1, fontWeight: 600 }}>
+                {emoji} {entry.name}
+              </span>
               <span style={{ fontWeight: 700, color: 'var(--accent)' }}>
                 {entry.score.toLocaleString('sr-Latn-RS')}
               </span>
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
       </div>
     </div>

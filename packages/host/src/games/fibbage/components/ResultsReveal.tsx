@@ -101,12 +101,18 @@ export function ResultsReveal({ results }: ResultsRevealProps) {
                       key={voterId}
                       title={p?.name ?? ''}
                       style={{
-                        width: '0.85rem',
-                        height: '0.85rem',
+                        width: '1.6rem',
+                        height: '1.6rem',
                         borderRadius: '50%',
                         backgroundColor: p?.avatarColor ?? '#666',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.95rem',
                       }}
-                    />
+                    >
+                      {p?.avatarEmoji}
+                    </div>
                   );
                 })}
                 <span

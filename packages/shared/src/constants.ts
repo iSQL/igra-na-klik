@@ -13,3 +13,33 @@ export const AVATAR_COLORS = [
   '#e67e22',
   '#ec407a',
 ] as const;
+
+// Single-character emoji set used as the avatar symbol. Default seeded by
+// join order (mod length). Players can change to any value from this list
+// in the lobby via `player:set-avatar`. Server validates against this list.
+export const AVATAR_EMOJIS = [
+  '🐶',
+  '🐱',
+  '🦊',
+  '🐼',
+  '🐯',
+  '🦁',
+  '🐸',
+  '🐵',
+  '🦄',
+  '🐙',
+  '🐧',
+  '🦉',
+  '🐝',
+  '🦋',
+  '🐢',
+  '🐳',
+  '🍕',
+  '🍔',
+  '🍩',
+  '🍉',
+  '⚽',
+  '🎸',
+  '🚀',
+  '👾',
+] as const;

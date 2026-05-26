@@ -135,6 +135,12 @@ export function App() {
       });
     });
 
+    socket.on('room:player-updated', ({ player: updated }) => {
+      usePlayerStore
+        .getState()
+        .updatePlayerAvatar(updated.id, updated.avatarColor, updated.avatarEmoji);
+    });
+
     socket.on('room:player-removed', ({ playerId }) => {
       usePlayerStore.setState((state) => {
         if (!state.room) return state;
@@ -202,6 +208,7 @@ export function App() {
       socket.off('room:player-joined');
       socket.off('room:player-left');
       socket.off('room:player-removed');
+      socket.off('room:player-updated');
       socket.off('room:remote-host-changed');
       socket.off('game:started');
       socket.off('game:state-update');

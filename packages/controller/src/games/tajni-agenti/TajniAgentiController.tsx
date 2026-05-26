@@ -153,6 +153,7 @@ interface RosterPlayer {
   id: string;
   name: string;
   avatarColor: string;
+  avatarEmoji: string;
 }
 
 function TeamSelectionController({
@@ -340,6 +341,8 @@ function TeamCard({
     roomPlayers.find((p) => p.id === id)?.name ?? '?';
   const colorOf = (id: string) =>
     roomPlayers.find((p) => p.id === id)?.avatarColor ?? '#888';
+  const emojiOf = (id: string) =>
+    roomPlayers.find((p) => p.id === id)?.avatarEmoji ?? '';
   return (
     <button
       onClick={onPick}
@@ -409,7 +412,7 @@ function TeamCard({
               }}
             >
               <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {nameOf(id)}
+                {emojiOf(id)} {nameOf(id)}
                 {isMe && (
                   <span style={{ opacity: 0.7, fontWeight: 500 }}> (ja)</span>
                 )}

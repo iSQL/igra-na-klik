@@ -13,6 +13,7 @@ export interface ServerToClientEvents {
   'room:player-left': (data: { playerId: string }) => void;
   'room:player-removed': (data: { playerId: string }) => void;
   'room:player-reconnected': (data: { playerId: string }) => void;
+  'room:player-updated': (data: { player: PublicPlayer }) => void;
   'room:state-update': (data: { room: PublicRoom }) => void;
   'room:remote-host-changed': (data: {
     remoteHostPlayerId: string | null;
@@ -52,6 +53,10 @@ export interface ClientToServerEvents {
   'player:claim-remote-host': () => void;
   'player:release-remote-host': () => void;
   'player:leave-room': () => void;
+  'player:set-avatar': (data: {
+    avatarColor?: string;
+    avatarEmoji?: string;
+  }) => void;
   'game:player-action': (data: {
     action: string;
     data: Record<string, unknown>;

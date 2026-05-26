@@ -6,6 +6,7 @@ import {
   RoomSettings,
   DEFAULT_ROOM_SETTINGS,
   AVATAR_COLORS,
+  AVATAR_EMOJIS,
   generateRoomCode,
 } from '@igra/shared';
 import { generateId, generateReconnectToken } from '../utils/id.js';
@@ -57,6 +58,7 @@ export class RoomManager {
       id: generateId(),
       name: playerName,
       avatarColor: AVATAR_COLORS[room.players.length % AVATAR_COLORS.length],
+      avatarEmoji: AVATAR_EMOJIS[room.players.length % AVATAR_EMOJIS.length],
       isConnected: true,
       score: 0,
       reconnectToken: generateReconnectToken(),
@@ -106,6 +108,39 @@ export class RoomManager {
     if (!player) return false;
     player.isConnected = connected;
     return true;
+  }
+
+  /**
+   * Update a player's avatar. Only allowed in lobby — once a game is
+   * running, avatars are frozen for the duration of the match so
+   * leaderboards/score chips don't shift identity mid-round. Returns
+   * the updated player on success.
+   */
+  setPlayerAvatar(
+    roomCode: string,
+    playerId: string,
+    avatar: { avatarColor?: string; avatarEmoji?: string }
+  ): { player: Player } | { error: string } {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Room not found' };
+    if (room.status !== 'lobby')
+      return { error: 'Avatar se može menjati samo u lobiju.' };
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return { error: 'Igrač nije pronađen.' };
+
+    if (avatar.avatarColor !== undefined) {
+      if (!(AVATAR_COLORS as readonly string[]).includes(avatar.avatarColor)) {
+        return { error: 'Nevažeća boja.' };
+      }
+      player.avatarColor = avatar.avatarColor;
+    }
+    if (avatar.avatarEmoji !== undefined) {
+      if (!(AVATAR_EMOJIS as readonly string[]).includes(avatar.avatarEmoji)) {
+        return { error: 'Nevažeći emoji.' };
+      }
+      player.avatarEmoji = avatar.avatarEmoji;
+    }
+    return { player };
   }
 
   getRoom(roomCode: string): Room | undefined {

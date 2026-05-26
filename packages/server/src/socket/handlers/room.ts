@@ -109,6 +109,19 @@ export function registerRoomHandlers(
     }
   });
 
+  socket.on('player:set-avatar', (data) => {
+    const { roomCode, playerId } = socket.data;
+    if (!roomCode || !playerId) return;
+    const result = roomManager.setPlayerAvatar(roomCode, playerId, data);
+    if ('error' in result) {
+      socket.emit('error', { code: 'AVATAR_ERROR', message: result.error });
+      return;
+    }
+    io.to(roomCode).emit('room:player-updated', {
+      player: roomManager.toPublicPlayer(result.player),
+    });
+  });
+
   socket.on('disconnect', () => {
     const { roomCode, playerId, isHost } = socket.data;
     if (!roomCode) return;

@@ -303,7 +303,7 @@ function BoardCard({ card }: { card: TajniAgentiPublicCard }) {
 
 interface TeamSelectionViewProps {
   rosters: TajniAgentiPublicRosters;
-  players: { id: string; name: string; avatarColor: string }[];
+  players: { id: string; name: string; avatarColor: string; avatarEmoji: string }[];
   isScenarioMode: boolean;
 }
 
@@ -316,6 +316,8 @@ function TeamSelectionView({
     players.find((p) => p.id === id)?.name ?? '?';
   const playerColor = (id: string) =>
     players.find((p) => p.id === id)?.avatarColor ?? '#888';
+  const playerEmoji = (id: string) =>
+    players.find((p) => p.id === id)?.avatarEmoji ?? '';
 
   const handleStart = () => {
     if (!rosters.readyToStart) return;
@@ -366,6 +368,7 @@ function TeamSelectionView({
           spymasterId={isScenarioMode ? null : rosters.red.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
+          playerEmoji={playerEmoji}
         />
         <TeamRoster
           color={TEAM_BLUE}
@@ -374,6 +377,7 @@ function TeamSelectionView({
           spymasterId={isScenarioMode ? null : rosters.blue.spymasterId}
           playerName={playerName}
           playerColor={playerColor}
+          playerEmoji={playerEmoji}
         />
       </div>
 
@@ -453,6 +457,7 @@ function TeamRoster({
   spymasterId,
   playerName,
   playerColor,
+  playerEmoji,
 }: {
   color: string;
   label: string;
@@ -460,6 +465,7 @@ function TeamRoster({
   spymasterId: string | null;
   playerName: (id: string) => string;
   playerColor: (id: string) => string;
+  playerEmoji: (id: string) => string;
 }) {
   return (
     <div
@@ -500,7 +506,9 @@ function TeamRoster({
             borderLeft: `3px solid ${playerColor(id)}`,
           }}
         >
-          <span style={{ flex: 1, fontSize: '0.95rem' }}>{playerName(id)}</span>
+          <span style={{ flex: 1, fontSize: '0.95rem' }}>
+            {playerEmoji(id)} {playerName(id)}
+          </span>
           {spymasterId === id && (
             <span
               style={{

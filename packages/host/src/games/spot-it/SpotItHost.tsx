@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
 import { SPOT_IT_SYMBOLS } from '@igra/shared';
 import { SpotItCard } from './components/SpotItCard';
@@ -17,6 +18,7 @@ interface RoundResult {
 
 export default function SpotItHost() {
   const gameState = useGameStore((s) => s.gameState);
+  const players = useRoomStore((s) => s.players);
   const { play } = useSound();
   const prevPhaseRef = useRef<string | null>(null);
 
@@ -174,6 +176,8 @@ export default function SpotItHost() {
                 <span style={{ fontSize: '2rem' }}>🏆</span>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '1.4rem', fontWeight: 700 }}>
+                    {players.find((p) => p.id === roundResult.winnerId)
+                      ?.avatarEmoji}{' '}
                     {roundResult.winnerName}
                   </span>
                   <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>

@@ -42,12 +42,18 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
         >
           <div
             style={{
-              width: '1rem',
-              height: '1rem',
+              width: '2rem',
+              height: '2rem',
               borderRadius: '50%',
               backgroundColor: player.avatarColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.1rem',
             }}
-          />
+          >
+            {player.avatarEmoji}
+          </div>
           <span style={{ fontSize: '1.3rem', fontWeight: 600 }}>
             {player.name}
           </span>

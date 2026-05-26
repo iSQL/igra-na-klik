@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { QuizLeaderboardEntry } from '@igra/shared';
+import { useRoomStore } from '../../../store/roomStore';
 
 interface LeaderboardProps {
   entries: QuizLeaderboardEntry[];
@@ -7,6 +8,7 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
+  const players = useRoomStore((s) => s.players);
   return (
     <div style={{ width: '100%', maxWidth: '600px' }}>
       <h2
@@ -22,7 +24,10 @@ export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <AnimatePresence mode="popLayout">
-          {entries.map((entry) => (
+          {entries.map((entry) => {
+            const emoji = players.find((p) => p.id === entry.playerId)
+              ?.avatarEmoji;
+            return (
             <motion.div
               key={entry.playerId}
               layout
@@ -53,13 +58,19 @@ export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
 
               <div
                 style={{
-                  width: '0.75rem',
-                  height: '0.75rem',
+                  width: '2rem',
+                  height: '2rem',
                   borderRadius: '50%',
                   backgroundColor: entry.avatarColor,
                   flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.1rem',
                 }}
-              />
+              >
+                {emoji}
+              </div>
 
               <span style={{ flex: 1, fontSize: '1.2rem', fontWeight: 600 }}>
                 {entry.name}
@@ -76,7 +87,8 @@ export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
                 {entry.score.toLocaleString()}
               </span>
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
       </div>
     </div>

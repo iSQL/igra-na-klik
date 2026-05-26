@@ -4,6 +4,7 @@ export interface Player {
   id: string;
   name: string;
   avatarColor: string;
+  avatarEmoji: string;
   isConnected: boolean;
   score: number;
   reconnectToken: string;

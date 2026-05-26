@@ -200,7 +200,9 @@ function ResultsInPlace({
                   borderLeft: `3px solid ${player?.avatarColor || '#666'}`,
                 }}
               >
-                <span style={{ fontWeight: 600 }}>{player?.name}</span>{' '}
+                <span style={{ fontWeight: 600 }}>
+                  {player?.avatarEmoji} {player?.name}
+                </span>{' '}
                 <span style={{ color: 'var(--success)' }}>+{s.roundScore}</span>
               </motion.div>
             );

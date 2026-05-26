@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { AVATAR_COLORS, AVATAR_EMOJIS } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { socket } from '../socket';
@@ -6,6 +8,7 @@ import { LeaveRoomButton } from '../components/LeaveRoomButton';
 export function LobbyScreen() {
   const { player, room } = usePlayerStore();
   const setScreen = useNavStore((s) => s.setScreen);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   if (!player || !room) return null;
 
@@ -25,7 +28,9 @@ export function LobbyScreen() {
         textAlign: 'center',
       }}
     >
-      <div
+      <button
+        onClick={() => setPickerOpen(true)}
+        aria-label="Promeni avatar"
         style={{
           width: '5rem',
           height: '5rem',
@@ -34,12 +39,14 @@ export function LobbyScreen() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '2rem',
-          fontWeight: 700,
+          fontSize: '2.4rem',
+          border: '3px solid rgba(255,255,255,0.2)',
+          cursor: 'pointer',
+          padding: 0,
         }}
       >
-        {player.name[0]}
-      </div>
+        {player.avatarEmoji}
+      </button>
 
       <h1 style={{ fontSize: '1.5rem' }}>{player.name}</h1>
 
@@ -130,8 +137,13 @@ export function LobbyScreen() {
                 padding: '0.4rem 0.8rem',
                 borderRadius: '0.5rem',
                 fontSize: '0.9rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                borderLeft: `3px solid ${p.avatarColor}`,
               }}
             >
+              <span style={{ fontSize: '1.1rem' }}>{p.avatarEmoji}</span>
               {p.name}
               {p.id === remoteHostId && ' 🎮'}
             </span>
@@ -140,6 +152,165 @@ export function LobbyScreen() {
 
       <div style={{ marginTop: '0.5rem' }}>
         <LeaveRoomButton />
+      </div>
+
+      {pickerOpen && (
+        <AvatarPickerModal
+          currentColor={player.avatarColor}
+          currentEmoji={player.avatarEmoji}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AvatarPickerModal({
+  currentColor,
+  currentEmoji,
+  onClose,
+}: {
+  currentColor: string;
+  currentEmoji: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '1rem',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-secondary)',
+          borderRadius: '1rem',
+          padding: '1.25rem',
+          width: '100%',
+          maxWidth: '380px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Promeni avatar</h2>
+          <button
+            onClick={onClose}
+            aria-label="Zatvori"
+            style={{
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: 'none',
+              fontSize: '1.4rem',
+              cursor: 'pointer',
+              padding: '0 0.25rem',
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div>
+          <p
+            style={{
+              margin: 0,
+              marginBottom: '0.5rem',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Boja
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '0.5rem',
+            }}
+          >
+            {AVATAR_COLORS.map((color) => {
+              const active = color === currentColor;
+              return (
+                <button
+                  key={color}
+                  onClick={() =>
+                    socket.emit('player:set-avatar', { avatarColor: color })
+                  }
+                  aria-label={`Boja ${color}`}
+                  style={{
+                    aspectRatio: '1',
+                    background: color,
+                    borderRadius: '0.5rem',
+                    border: active
+                      ? '3px solid #fff'
+                      : '3px solid transparent',
+                    cursor: 'pointer',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <p
+            style={{
+              margin: 0,
+              marginBottom: '0.5rem',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Simbol
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, 1fr)',
+              gap: '0.4rem',
+            }}
+          >
+            {AVATAR_EMOJIS.map((emoji) => {
+              const active = emoji === currentEmoji;
+              return (
+                <button
+                  key={emoji}
+                  onClick={() =>
+                    socket.emit('player:set-avatar', { avatarEmoji: emoji })
+                  }
+                  style={{
+                    aspectRatio: '1',
+                    background: active
+                      ? 'var(--accent)'
+                      : 'var(--bg-card)',
+                    borderRadius: '0.4rem',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

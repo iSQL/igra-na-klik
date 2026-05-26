@@ -1,9 +1,12 @@
+import { useRoomStore } from '../../../store/roomStore';
+
 interface TurnResultsProps {
   word: string;
   scores: { playerId: string; playerName: string; avatarColor: string; roundScore: number; totalScore: number }[];
 }
 
 export function TurnResults({ word, scores }: TurnResultsProps) {
+  const players = useRoomStore((s) => s.players);
   const sorted = [...scores].sort((a, b) => b.roundScore - a.roundScore);
 
   return (
@@ -23,7 +26,9 @@ export function TurnResults({ word, scores }: TurnResultsProps) {
       </div>
 
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {sorted.map((s) => (
+        {sorted.map((s) => {
+          const emoji = players.find((p) => p.id === s.playerId)?.avatarEmoji;
+          return (
           <div
             key={s.playerId}
             style={{
@@ -38,12 +43,18 @@ export function TurnResults({ word, scores }: TurnResultsProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div
                 style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '1.5rem',
+                  height: '1.5rem',
                   borderRadius: '50%',
                   background: s.avatarColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
                 }}
-              />
+              >
+                {emoji}
+              </div>
               <span style={{ fontWeight: 600 }}>{s.playerName}</span>
             </div>
             <span
@@ -55,7 +66,8 @@ export function TurnResults({ word, scores }: TurnResultsProps) {
               +{s.roundScore}
             </span>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

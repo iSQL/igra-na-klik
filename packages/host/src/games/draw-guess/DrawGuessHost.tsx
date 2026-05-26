@@ -151,7 +151,10 @@ export default function DrawGuessHost() {
           {phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
         </p>
         <div style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {leaderboard.map((entry) => (
+          {leaderboard.map((entry) => {
+            const emoji = players.find((p) => p.id === entry.playerId)
+              ?.avatarEmoji;
+            return (
             <div
               key={entry.playerId}
               style={{
@@ -169,19 +172,26 @@ export default function DrawGuessHost() {
                 </span>
                 <div
                   style={{
-                    width: '14px',
-                    height: '14px',
+                    width: '1.75rem',
+                    height: '1.75rem',
                     borderRadius: '50%',
                     background: entry.avatarColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1rem',
                   }}
-                />
+                >
+                  {emoji}
+                </div>
                 <span style={{ fontWeight: 600 }}>{entry.name}</span>
               </div>
               <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
                 {entry.score.toLocaleString()} poena
               </span>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

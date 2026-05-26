@@ -94,7 +94,7 @@ export function ResultsReveal({ results }: ResultsRevealProps) {
               }}
             >
               <span style={{ flex: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-                {g.playerName}
+                {p?.avatarEmoji} {g.playerName}
               </span>
               <span
                 style={{
@@ -144,7 +144,7 @@ export function ResultsReveal({ results }: ResultsRevealProps) {
         }}
       >
         <span style={{ flex: 1, fontSize: '1.05rem', fontWeight: 600 }}>
-          {results.subjectName}{' '}
+          {subject?.avatarEmoji} {results.subjectName}{' '}
           <span
             style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}
           >
