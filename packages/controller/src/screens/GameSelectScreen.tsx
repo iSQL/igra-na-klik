@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { GAME_DEFINITIONS } from '@igra/shared';
-import type { GameDefinition, QuizImportQuestion } from '@igra/shared';
+import type {
+  GameDefinition,
+  QuizImportQuestion,
+  KoSamJaImportQuestion,
+  KoSamJaCategory,
+} from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
@@ -18,6 +23,13 @@ interface QuestionPackSummary {
   questions: QuizImportQuestion[];
 }
 
+interface KoSamJaPackSummary {
+  id: string;
+  fileName: string;
+  count: number;
+  questions: KoSamJaImportQuestion[];
+}
+
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 const PHOTO_OPTIONS = [1, 2, 3, 4];
 
@@ -33,6 +45,12 @@ export function GameSelectScreen() {
   const [selectedQuizPackId, setSelectedQuizPackId] = useState<string | null>(
     null
   );
+  const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
+  const [selectedKoSamJaPackId, setSelectedKoSamJaPackId] = useState<
+    string | null
+  >(null);
+  const [koSamJaCategory, setKoSamJaCategory] =
+    useState<KoSamJaCategory>('family');
   const [photosPerPlayer, setPhotosPerPlayer] = useState(2);
   const [slepiRounds, setSlepiRounds] = useState(2);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,6 +75,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setQuizPacks([]);
+      });
+    fetch('/api/ko-sam-ja-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: KoSamJaPackSummary[] }) => {
+        if (!cancelled) setKoSamJaPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setKoSamJaPacks([]);
       });
     return () => {
       cancelled = true;
@@ -103,6 +129,13 @@ export function GameSelectScreen() {
     if (game.id === 'quiz' && selectedQuizPackId) {
       const pack = quizPacks.find((p) => p.id === selectedQuizPackId);
       if (pack) payload.customQuestions = pack.questions;
+    }
+    if (game.id === 'ko-sam-ja') {
+      payload.koSamJaCategory = koSamJaCategory;
+      if (selectedKoSamJaPackId) {
+        const pack = koSamJaPacks.find((p) => p.id === selectedKoSamJaPackId);
+        if (pack) payload.customKoSamJaQuestions = pack.questions;
+      }
     }
     socket.emit('host:start-game', payload);
   };
@@ -252,6 +285,15 @@ export function GameSelectScreen() {
                       setSelectedPackId={setSelectedQuizPackId}
                     />
                   )}
+                  {game.id === 'ko-sam-ja' && (
+                    <KoSamJaConfig
+                      packs={koSamJaPacks}
+                      selectedPackId={selectedKoSamJaPackId}
+                      setSelectedPackId={setSelectedKoSamJaPackId}
+                      category={koSamJaCategory}
+                      setCategory={setKoSamJaCategory}
+                    />
+                  )}
                   <button
                     onClick={() => handleStart(game)}
                     style={{
@@ -367,6 +409,61 @@ function QuizConfig({
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        Paket pitanja
+      </span>
+      <select
+        value={selectedPackId ?? ''}
+        onChange={(e) => setSelectedPackId(e.target.value || null)}
+        style={{
+          padding: '0.5rem 0.6rem',
+          fontSize: '0.9rem',
+          borderRadius: '0.4rem',
+          background: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--bg-card)',
+        }}
+      >
+        <option value="">Ugrađeni paket</option>
+        {packs.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.id} ({p.count})
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function KoSamJaConfig({
+  packs,
+  selectedPackId,
+  setSelectedPackId,
+  category,
+  setCategory,
+}: {
+  packs: KoSamJaPackSummary[];
+  selectedPackId: string | null;
+  setSelectedPackId: (id: string | null) => void;
+  category: KoSamJaCategory;
+  setCategory: (c: KoSamJaCategory) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.4rem' }}>
+        <ModeButton
+          active={category === 'family'}
+          onClick={() => setCategory('family')}
+        >
+          Family
+        </ModeButton>
+        <ModeButton
+          active={category === 'nsfw'}
+          onClick={() => setCategory('nsfw')}
+        >
+          NSFW
+        </ModeButton>
+      </div>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
         Paket pitanja
       </span>
