@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react';
-import { GAME_DEFINITIONS } from '@igra/shared';
+import { useEffect, useRef, useState } from 'react';
+import {
+  GAME_DEFINITIONS,
+  parseKoSamJaImport,
+  parseQuizImport,
+} from '@igra/shared';
 import type {
   GameDefinition,
   QuizImportQuestion,
@@ -19,6 +23,7 @@ interface GeoPackSummary {
 
 interface QuestionPackSummary {
   id: string;
+  fileName: string;
   count: number;
   questions: QuizImportQuestion[];
 }
@@ -42,13 +47,19 @@ export function GameSelectScreen() {
   const [quizPacks, setQuizPacks] = useState<QuestionPackSummary[]>([]);
   const [geoMode, setGeoMode] = useState<'predefined' | 'custom'>('predefined');
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
-  const [selectedQuizPackId, setSelectedQuizPackId] = useState<string | null>(
+  const [quizImport, setQuizImport] = useState<{
+    questions: QuizImportQuestion[];
+    fileName: string;
+  } | null>(null);
+  const [quizImportError, setQuizImportError] = useState<string | null>(null);
+  const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
+  const [koSamJaImport, setKoSamJaImport] = useState<{
+    questions: KoSamJaImportQuestion[];
+    fileName: string;
+  } | null>(null);
+  const [koSamJaImportError, setKoSamJaImportError] = useState<string | null>(
     null
   );
-  const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
-  const [selectedKoSamJaPackId, setSelectedKoSamJaPackId] = useState<
-    string | null
-  >(null);
   const [koSamJaCategory, setKoSamJaCategory] =
     useState<KoSamJaCategory>('family');
   const [photosPerPlayer, setPhotosPerPlayer] = useState(2);
@@ -126,15 +137,13 @@ export function GameSelectScreen() {
     if (game.id === 'slepi-telefoni') {
       payload.slepiRounds = slepiRounds;
     }
-    if (game.id === 'quiz' && selectedQuizPackId) {
-      const pack = quizPacks.find((p) => p.id === selectedQuizPackId);
-      if (pack) payload.customQuestions = pack.questions;
+    if (game.id === 'quiz' && quizImport) {
+      payload.customQuestions = quizImport.questions;
     }
     if (game.id === 'ko-sam-ja') {
       payload.koSamJaCategory = koSamJaCategory;
-      if (selectedKoSamJaPackId) {
-        const pack = koSamJaPacks.find((p) => p.id === selectedKoSamJaPackId);
-        if (pack) payload.customKoSamJaQuestions = pack.questions;
+      if (koSamJaImport) {
+        payload.customKoSamJaQuestions = koSamJaImport.questions;
       }
     }
     socket.emit('host:start-game', payload);
@@ -281,17 +290,21 @@ export function GameSelectScreen() {
                   {game.id === 'quiz' && (
                     <QuizConfig
                       packs={quizPacks}
-                      selectedPackId={selectedQuizPackId}
-                      setSelectedPackId={setSelectedQuizPackId}
+                      imported={quizImport}
+                      setImported={setQuizImport}
+                      error={quizImportError}
+                      setError={setQuizImportError}
                     />
                   )}
                   {game.id === 'ko-sam-ja' && (
                     <KoSamJaConfig
                       packs={koSamJaPacks}
-                      selectedPackId={selectedKoSamJaPackId}
-                      setSelectedPackId={setSelectedKoSamJaPackId}
+                      imported={koSamJaImport}
+                      setImported={setKoSamJaImport}
                       category={koSamJaCategory}
                       setCategory={setKoSamJaCategory}
+                      error={koSamJaImportError}
+                      setError={setKoSamJaImportError}
                     />
                   )}
                   <button
@@ -400,21 +413,76 @@ function GeoConfig({
 
 function QuizConfig({
   packs,
-  selectedPackId,
-  setSelectedPackId,
+  imported,
+  setImported,
+  error,
+  setError,
 }: {
   packs: QuestionPackSummary[];
-  selectedPackId: string | null;
-  setSelectedPackId: (id: string | null) => void;
+  imported: { questions: QuizImportQuestion[]; fileName: string } | null;
+  setImported: (
+    v: { questions: QuizImportQuestion[]; fileName: string } | null
+  ) => void;
+  error: string | null;
+  setError: (e: string | null) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedPackId =
+    packs.find((p) => p.fileName === imported?.fileName)?.id ?? '';
+  const isFileImport = imported !== null && selectedPackId === '';
+
+  const handlePackChange = (id: string) => {
+    setError(null);
+    if (!id) {
+      setImported(null);
+      return;
+    }
+    const pack = packs.find((p) => p.id === id);
+    if (!pack) return;
+    setImported({ questions: pack.questions, fileName: pack.fileName });
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string);
+        const result = parseQuizImport(json);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        setImported({
+          questions: result.questions.map((q) => ({
+            text: q.text,
+            options: q.options.map((o) => o.text),
+            correctIndex: q.correctIndex,
+            timeLimit: q.timeLimit,
+          })),
+          fileName: file.name,
+        });
+        setError(null);
+      } catch {
+        setError('Nevažeći JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
         Paket pitanja
       </span>
       <select
-        value={selectedPackId ?? ''}
-        onChange={(e) => setSelectedPackId(e.target.value || null)}
+        value={selectedPackId}
+        onChange={(e) => handlePackChange(e.target.value)}
+        disabled={isFileImport}
         style={{
           padding: '0.5rem 0.6rem',
           fontSize: '0.9rem',
@@ -422,6 +490,7 @@ function QuizConfig({
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           border: '1px solid var(--bg-card)',
+          opacity: isFileImport ? 0.5 : 1,
         }}
       >
         <option value="">Ugrađeni paket</option>
@@ -431,23 +500,130 @@ function QuizConfig({
           </option>
         ))}
       </select>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={handleFile}
+        style={{ display: 'none' }}
+      />
+      {isFileImport ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+            padding: '0.4rem 0.6rem',
+            background: 'var(--bg-secondary)',
+            borderRadius: '0.4rem',
+            border: '1px solid var(--bg-card)',
+            fontSize: '0.8rem',
+          }}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Iz fajla: <strong>{imported!.fileName}</strong> (
+            {imported!.questions.length})
+          </span>
+          <button
+            onClick={() => {
+              setImported(null);
+              setError(null);
+            }}
+            style={{
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.75rem',
+              borderRadius: '0.35rem',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            Ukloni
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            padding: '0.45rem 0.7rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            borderRadius: '0.4rem',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--bg-card)',
+          }}
+        >
+          Uvezi pitanja iz fajla
+        </button>
+      )}
+      {error && (
+        <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>{error}</span>
+      )}
     </div>
   );
 }
 
 function KoSamJaConfig({
   packs,
-  selectedPackId,
-  setSelectedPackId,
+  imported,
+  setImported,
   category,
   setCategory,
+  error,
+  setError,
 }: {
   packs: KoSamJaPackSummary[];
-  selectedPackId: string | null;
-  setSelectedPackId: (id: string | null) => void;
+  imported: { questions: KoSamJaImportQuestion[]; fileName: string } | null;
+  setImported: (
+    v: { questions: KoSamJaImportQuestion[]; fileName: string } | null
+  ) => void;
   category: KoSamJaCategory;
   setCategory: (c: KoSamJaCategory) => void;
+  error: string | null;
+  setError: (e: string | null) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedPackId =
+    packs.find((p) => p.fileName === imported?.fileName)?.id ?? '';
+  const isFileImport = imported !== null && selectedPackId === '';
+
+  const handlePackChange = (id: string) => {
+    setError(null);
+    if (!id) {
+      setImported(null);
+      return;
+    }
+    const pack = packs.find((p) => p.id === id);
+    if (!pack) return;
+    setImported({ questions: pack.questions, fileName: pack.fileName });
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string);
+        const result = parseKoSamJaImport(json);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        setImported({ questions: result.questions, fileName: file.name });
+        setError(null);
+      } catch {
+        setError('Nevažeći JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -468,8 +644,9 @@ function KoSamJaConfig({
         Paket pitanja
       </span>
       <select
-        value={selectedPackId ?? ''}
-        onChange={(e) => setSelectedPackId(e.target.value || null)}
+        value={selectedPackId}
+        onChange={(e) => handlePackChange(e.target.value)}
+        disabled={isFileImport}
         style={{
           padding: '0.5rem 0.6rem',
           fontSize: '0.9rem',
@@ -477,6 +654,7 @@ function KoSamJaConfig({
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           border: '1px solid var(--bg-card)',
+          opacity: isFileImport ? 0.5 : 1,
         }}
       >
         <option value="">Ugrađeni paket</option>
@@ -486,6 +664,67 @@ function KoSamJaConfig({
           </option>
         ))}
       </select>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={handleFile}
+        style={{ display: 'none' }}
+      />
+      {isFileImport ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+            padding: '0.4rem 0.6rem',
+            background: 'var(--bg-secondary)',
+            borderRadius: '0.4rem',
+            border: '1px solid var(--bg-card)',
+            fontSize: '0.8rem',
+          }}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Iz fajla: <strong>{imported!.fileName}</strong> (
+            {imported!.questions.length})
+          </span>
+          <button
+            onClick={() => {
+              setImported(null);
+              setError(null);
+            }}
+            style={{
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.75rem',
+              borderRadius: '0.35rem',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            Ukloni
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            padding: '0.45rem 0.7rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            borderRadius: '0.4rem',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--bg-card)',
+          }}
+        >
+          Uvezi pitanja iz fajla
+        </button>
+      )}
+      {error && (
+        <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>{error}</span>
+      )}
     </div>
   );
 }
