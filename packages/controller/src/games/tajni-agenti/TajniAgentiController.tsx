@@ -41,6 +41,9 @@ export default function TajniAgentiController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const roomPlayers = usePlayerStore((s) => s.room?.players ?? []);
+  const remoteHostPlayerId = usePlayerStore(
+    (s) => s.room?.remoteHostPlayerId ?? null
+  );
 
   if (!gameState || !playerId) return null;
   const { phase, data, playerData } = gameState;
@@ -52,6 +55,7 @@ export default function TajniAgentiController() {
   };
 
   const isScenarioMode = Boolean(data.isScenarioMode);
+  const isRemoteHost = remoteHostPlayerId === playerId;
 
   if (phase === 'team-selection') {
     return (
@@ -62,6 +66,7 @@ export default function TajniAgentiController() {
         rosters={data.rosters as TajniAgentiPublicRosters | undefined}
         roomPlayers={roomPlayers}
         isScenarioMode={isScenarioMode}
+        isRemoteHost={isRemoteHost}
       />
     );
   }
@@ -163,6 +168,7 @@ function TeamSelectionController({
   rosters,
   roomPlayers,
   isScenarioMode,
+  isRemoteHost,
 }: {
   playerId: string;
   myTeam: TajniAgentiTeam | null;
@@ -170,6 +176,7 @@ function TeamSelectionController({
   rosters: TajniAgentiPublicRosters | undefined;
   roomPlayers: RosterPlayer[];
   isScenarioMode: boolean;
+  isRemoteHost: boolean;
 }) {
   const haptics = useHaptics();
   const pickTeam = (team: TajniAgentiTeam | null) => {
@@ -183,6 +190,20 @@ function TeamSelectionController({
     haptics.tap();
     socket.emit('game:player-action', {
       action: 'tajni-agenti:toggle-spymaster',
+      data: {},
+    });
+  };
+  const startRound = () => {
+    haptics.tap();
+    socket.emit('host:game-action', {
+      action: 'tajni-agenti:start-round',
+      data: {},
+    });
+  };
+  const autoBalance = () => {
+    haptics.tap();
+    socket.emit('host:game-action', {
+      action: 'tajni-agenti:auto-balance',
       data: {},
     });
   };
@@ -313,6 +334,52 @@ function TeamSelectionController({
         >
           {rosters.rosterIssue}
         </p>
+      )}
+
+      {isRemoteHost && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.5rem',
+            marginTop: '0.25rem',
+          }}
+        >
+          <button
+            onClick={autoBalance}
+            style={{
+              flex: 1,
+              padding: '0.7rem',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              borderRadius: '0.6rem',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            Pomiri timove
+          </button>
+          <button
+            onClick={startRound}
+            disabled={!rosters?.readyToStart}
+            style={{
+              flex: 1,
+              padding: '0.7rem',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              borderRadius: '0.6rem',
+              background: rosters?.readyToStart
+                ? 'var(--accent)'
+                : 'var(--bg-secondary)',
+              color: '#fff',
+              border: 'none',
+              opacity: rosters?.readyToStart ? 1 : 0.5,
+              cursor: rosters?.readyToStart ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Počni rundu
+          </button>
+        </div>
       )}
     </div>
   );
