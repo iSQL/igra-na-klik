@@ -4,10 +4,11 @@ import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { DrawingPad } from '../draw-guess/components/DrawingPad';
 import type {
+  DrawOp,
   SlepiTelefoniControllerData,
   SlepiTelefoniHostData,
-  Stroke,
 } from '@igra/shared';
+import { visibleOps } from '@igra/shared';
 
 const MAX_PROMPT_LENGTH = 80;
 const MAX_GUESS_LENGTH = 80;
@@ -42,6 +43,7 @@ export default function SlepiTelefoniController() {
       <DrawingRound
         prompt={myData.promptToDraw}
         timeRemaining={timeRemaining}
+        operations={myData.myDraft ?? []}
       />
     );
   }
@@ -52,7 +54,7 @@ export default function SlepiTelefoniController() {
     if (!myData.drawingToGuess) return <WaitingScreen message="Samo posmatraš..." />;
     return (
       <GuessRound
-        strokes={myData.drawingToGuess}
+        operations={myData.drawingToGuess}
         timeRemaining={timeRemaining}
       />
     );
@@ -310,9 +312,11 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
 function DrawingRound({
   prompt,
   timeRemaining,
+  operations,
 }: {
   prompt: string;
   timeRemaining: number;
+  operations: DrawOp[];
 }) {
   const submit = () => {
     socket.emit('game:player-action', {
@@ -345,8 +349,8 @@ function DrawingRound({
       <div style={{ flex: 1, minHeight: 0 }}>
         <DrawingPad
           timeRemaining={timeRemaining}
-          strokeAction="slepi:stroke"
-          clearAction="slepi:clear"
+          operations={operations}
+          actionPrefix="slepi"
         />
       </div>
       <div style={{ padding: '0.5rem 0.75rem' }}>
@@ -371,10 +375,10 @@ function DrawingRound({
 }
 
 function GuessRound({
-  strokes,
+  operations,
   timeRemaining,
 }: {
-  strokes: Stroke[];
+  operations: DrawOp[];
   timeRemaining: number;
 }) {
   const [text, setText] = useState('');
@@ -416,7 +420,7 @@ function GuessRound({
           {timeRemaining}s
         </span>
       </div>
-      <SmallStrokePreview strokes={strokes} />
+      <SmallOpsPreview operations={operations} />
       <input
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_GUESS_LENGTH))}
@@ -452,7 +456,7 @@ function GuessRound({
   );
 }
 
-function SmallStrokePreview({ strokes }: { strokes: Stroke[] }) {
+function SmallOpsPreview({ operations }: { operations: DrawOp[] }) {
   const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -460,21 +464,24 @@ function SmallStrokePreview({ strokes }: { strokes: Stroke[] }) {
     const ctx = canvasEl.getContext('2d');
     if (!ctx) return;
     const { width, height } = canvasEl;
-    ctx.clearRect(0, 0, width, height);
-    for (const stroke of strokes) {
-      if (stroke.points.length < 2) continue;
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.width;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x * width, stroke.points[0].y * height);
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x * width, stroke.points[i].y * height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    for (const op of visibleOps(operations)) {
+      if (op.kind === 'stroke') {
+        if (op.points.length < 2) continue;
+        ctx.strokeStyle = op.color;
+        ctx.lineWidth = op.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(op.points[0].x * width, op.points[0].y * height);
+        for (let i = 1; i < op.points.length; i++) {
+          ctx.lineTo(op.points[i].x * width, op.points[i].y * height);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
     }
-  }, [canvasEl, strokes]);
+  }, [canvasEl, operations]);
 
   return (
     <div

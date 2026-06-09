@@ -1,4 +1,4 @@
-import type { Stroke, DrawGuessGuess } from '@igra/shared';
+import type { DrawOp, DrawGuessGuess } from '@igra/shared';
 
 export type DrawGuessPhase =
   | 'choosing-word'
@@ -25,8 +25,8 @@ export interface DrawGuessInternalState {
   wordHint: string;
   /** Time limit for drawing phase in seconds */
   drawTimeLimit: number;
-  /** Strokes accumulated this turn */
-  strokes: Stroke[];
+  /** Draw operations (strokes, fills, erases) accumulated this turn */
+  operations: DrawOp[];
   /** Guesses this turn */
   guesses: DrawGuessGuess[];
   /** Player IDs who guessed correctly this turn */

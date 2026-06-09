@@ -1,4 +1,4 @@
-import type { Chain, SlepiTelefoniPhase, Stroke } from '@igra/shared';
+import type { Chain, DrawOp, SlepiTelefoniPhase } from '@igra/shared';
 
 export const ENTERING_PROMPTS_DURATION = 45;
 export const DRAWING_ROUND_DURATION = 120;
@@ -12,7 +12,7 @@ export const MAX_GUESS_LENGTH = 80;
 export interface SubmissionDraft {
   done: boolean;
   text?: string;
-  strokes?: Stroke[];
+  operations?: DrawOp[];
 }
 
 export interface SlepiTelefoniInternalState {

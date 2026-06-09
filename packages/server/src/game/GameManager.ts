@@ -108,6 +108,15 @@ export class GameManager {
       if (newState.phase === 'ended') {
         this.endGame(roomCode);
       }
+      return;
+    }
+
+    // Private-only path: the module mutated state for one player and asked
+    // us not to broadcast (e.g. slepi-telefoni private drawing drafts).
+    const pending = module.getPendingPrivateUpdate?.();
+    if (pending) {
+      active.gameState = pending.gameState;
+      this.emitPlayerState(roomCode, pending.playerId, pending.gameState);
     }
   }
 
@@ -249,6 +258,25 @@ export class GameManager {
 
   isGameActive(roomCode: string): boolean {
     return this.activeGames.has(roomCode);
+  }
+
+  private emitPlayerState(
+    roomCode: string,
+    playerId: string,
+    gameState: GameState
+  ): void {
+    const playerState: GameState = {
+      ...gameState,
+      playerData: {
+        [playerId]: gameState.playerData[playerId] || {},
+      },
+    };
+    for (const [, sock] of this.io.sockets.sockets) {
+      if (sock.data.playerId === playerId && sock.data.roomCode === roomCode) {
+        sock.emit('game:player-state', { gameState: playerState });
+        return;
+      }
+    }
   }
 
   /**

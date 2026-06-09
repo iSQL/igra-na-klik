@@ -4,13 +4,39 @@ export interface Stroke {
   width: number;
 }
 
+export interface StrokeOp {
+  id: string;
+  kind: 'stroke';
+  points: { x: number; y: number }[];
+  color: string;
+  width: number;
+  sessionId?: string;
+}
+
+export interface FillOp {
+  id: string;
+  kind: 'fill';
+  x: number;
+  y: number;
+  color: string;
+  tolerance?: number;
+}
+
+export interface EraseOp {
+  id: string;
+  kind: 'erase';
+  targetId: string;
+}
+
+export type DrawOp = StrokeOp | FillOp | EraseOp;
+
 export interface DrawGuessHostData {
   drawerId: string;
   drawerName: string;
   wordHint: string;
   wordLength: number;
   timeLimit: number;
-  strokes: Stroke[];
+  operations: DrawOp[];
   guesses: DrawGuessGuess[];
   correctGuessers: string[];
   turnScores?: DrawGuessTurnScore[];

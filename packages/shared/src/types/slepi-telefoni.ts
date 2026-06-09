@@ -1,4 +1,4 @@
-import type { Stroke } from './draw-guess.js';
+import type { DrawOp, Stroke } from './draw-guess.js';
 
 export type SlepiTelefoniPhase =
   | 'entering-prompts'
@@ -16,6 +16,7 @@ export interface ChainItem {
   authorColor: string;
   text?: string;
   strokes?: Stroke[];
+  operations?: DrawOp[];
 }
 
 export interface Chain {
@@ -41,6 +42,7 @@ export interface SlepiTelefoniHostData {
 export interface SlepiTelefoniControllerData {
   role: 'prompter' | 'drawer' | 'guesser' | 'spectator';
   promptToDraw?: string;
-  drawingToGuess?: Stroke[];
+  drawingToGuess?: DrawOp[];
+  myDraft?: DrawOp[];
   hasSubmitted: boolean;
 }

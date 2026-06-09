@@ -61,7 +61,12 @@ export default function DrawGuessController() {
   // Drawing phase
   if (phase === 'drawing') {
     if (isDrawer) {
-      return <DrawingPad timeRemaining={timeRemaining} />;
+      return (
+        <DrawingPad
+          timeRemaining={timeRemaining}
+          operations={host.operations}
+        />
+      );
     }
 
     return (

@@ -1,10 +1,16 @@
 import type {
   Room,
   GameState,
-  Stroke,
   ChainItem,
   SlepiTelefoniHostData,
   SlepiTelefoniControllerData,
+} from '@igra/shared';
+import {
+  appendStrokeOp,
+  appendFillOp,
+  appendEraseOp,
+  undoLast,
+  clearOps,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { SlepiTelefoniInternalState } from './SlepiTelefoniState.js';
@@ -31,6 +37,27 @@ export class SlepiTelefoniModule extends BaseGameModule {
   readonly gameId = 'slepi-telefoni';
 
   private state!: SlepiTelefoniInternalState;
+  private pendingPrivate: { playerId: string; gameState: GameState } | null = null;
+
+  getPendingPrivateUpdate(): { playerId: string; gameState: GameState } | null {
+    const pending = this.pendingPrivate;
+    this.pendingPrivate = null;
+    return pending;
+  }
+
+  private queuePrivateEmit(room: Room, playerId: string): void {
+    this.pendingPrivate = {
+      playerId,
+      gameState: this.buildGameState(room),
+    };
+  }
+
+  private ensureDraft(playerId: string) {
+    const draft = this.state.submissions.get(playerId) ?? { done: false };
+    draft.operations = draft.operations ?? [];
+    this.state.submissions.set(playerId, draft);
+    return draft;
+  }
 
   onStart(room: Room, customContent?: unknown): GameState {
     const slepiRounds =
@@ -82,16 +109,54 @@ export class SlepiTelefoniModule extends BaseGameModule {
         const points = data.points as { x: number; y: number }[] | undefined;
         const color = data.color as string | undefined;
         const width = data.width as number | undefined;
-        if (!Array.isArray(points) || !color || typeof width !== 'number') {
+        const sessionId = data.sessionId as string | undefined;
+        if (!Array.isArray(points) || points.length < 2 || !color || typeof width !== 'number') {
           return null;
         }
-        const stroke: Stroke = { points, color, width };
+        const draft = this.ensureDraft(playerId);
+        appendStrokeOp(draft.operations!, { points, color, width, sessionId });
+        this.queuePrivateEmit(room, playerId);
+        return null;
+      }
 
-        const draft = this.state.submissions.get(playerId) ?? { done: false };
-        draft.strokes = draft.strokes ?? [];
-        draft.strokes.push(stroke);
-        this.state.submissions.set(playerId, draft);
-        // No broadcast needed — strokes stay private until reveal.
+      case 'slepi:fill': {
+        if (this.state.phase !== 'drawing-step') return null;
+        if (!this.isActiveSubmitter(room, playerId)) return null;
+        if (this.state.submissions.get(playerId)?.done) return null;
+
+        const x = data.x as number;
+        const y = data.y as number;
+        const color = data.color as string;
+        if (typeof x !== 'number' || typeof y !== 'number' || !color) return null;
+        const draft = this.ensureDraft(playerId);
+        appendFillOp(draft.operations!, { x, y, color });
+        this.queuePrivateEmit(room, playerId);
+        return null;
+      }
+
+      case 'slepi:erase': {
+        if (this.state.phase !== 'drawing-step') return null;
+        if (!this.isActiveSubmitter(room, playerId)) return null;
+        if (this.state.submissions.get(playerId)?.done) return null;
+
+        const targetId = data.targetId as string;
+        if (!targetId) return null;
+        const draft = this.ensureDraft(playerId);
+        const op = appendEraseOp(draft.operations!, targetId);
+        if (!op) return null;
+        this.queuePrivateEmit(room, playerId);
+        return null;
+      }
+
+      case 'slepi:undo': {
+        if (this.state.phase !== 'drawing-step') return null;
+        if (!this.isActiveSubmitter(room, playerId)) return null;
+        if (this.state.submissions.get(playerId)?.done) return null;
+
+        const draft = this.ensureDraft(playerId);
+        const removed = undoLast(draft.operations!);
+        if (removed === 0) return null;
+        this.queuePrivateEmit(room, playerId);
         return null;
       }
 
@@ -100,9 +165,9 @@ export class SlepiTelefoniModule extends BaseGameModule {
         if (!this.isActiveSubmitter(room, playerId)) return null;
         if (this.state.submissions.get(playerId)?.done) return null;
 
-        const draft = this.state.submissions.get(playerId) ?? { done: false };
-        draft.strokes = [];
-        this.state.submissions.set(playerId, draft);
+        const draft = this.ensureDraft(playerId);
+        clearOps(draft.operations!);
+        this.queuePrivateEmit(room, playerId);
         return null;
       }
 
@@ -111,9 +176,8 @@ export class SlepiTelefoniModule extends BaseGameModule {
         if (!this.isActiveSubmitter(room, playerId)) return null;
         if (this.state.submissions.get(playerId)?.done) return null;
 
-        const draft = this.state.submissions.get(playerId) ?? { done: false };
+        const draft = this.ensureDraft(playerId);
         draft.done = true;
-        draft.strokes = draft.strokes ?? [];
         this.state.submissions.set(playerId, draft);
         this.maybeAdvanceOnAllSubmitted(room);
         return this.buildGameState(room);
@@ -313,7 +377,7 @@ export class SlepiTelefoniModule extends BaseGameModule {
         item = {
           ...base,
           kind: 'drawing',
-          strokes: draft?.strokes ?? [],
+          operations: draft?.operations ?? [],
         };
       } else {
         const text = draft?.text && draft.text.length > 0 ? draft.text : '(?)';
@@ -429,6 +493,7 @@ export class SlepiTelefoniModule extends BaseGameModule {
         } else if (prev && prev.kind === 'guess' && prev.text) {
           base.promptToDraw = prev.text;
         }
+        base.myDraft = this.state.submissions.get(playerId)?.operations ?? [];
         break;
       }
 
@@ -438,7 +503,7 @@ export class SlepiTelefoniModule extends BaseGameModule {
         const targetChain = this.state.chains[(i + offset) % n];
         const prev = targetChain?.items[targetChain.items.length - 1];
         if (prev && prev.kind === 'drawing') {
-          base.drawingToGuess = prev.strokes ?? [];
+          base.drawingToGuess = prev.operations ?? [];
         }
         break;
       }

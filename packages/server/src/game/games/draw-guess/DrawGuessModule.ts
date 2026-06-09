@@ -1,12 +1,18 @@
 import type {
   Room,
   GameState,
-  Stroke,
   DrawGuessHostData,
   DrawGuessTurnScore,
   DrawGuessLeaderboardEntry,
 } from '@igra/shared';
-import { DRAW_WORD_BANK } from '@igra/shared';
+import {
+  DRAW_WORD_BANK,
+  appendStrokeOp,
+  appendFillOp,
+  appendEraseOp,
+  undoLast,
+  clearOps,
+} from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { DrawGuessInternalState, DrawGuessPhase } from './DrawGuessState.js';
 import {
@@ -41,7 +47,7 @@ export class DrawGuessModule extends BaseGameModule {
       wordChoices: this.pickWordChoices(),
       wordHint: '',
       drawTimeLimit: DRAW_TIME_LIMIT,
-      strokes: [],
+      operations: [],
       guesses: [],
       correctGuessers: [],
       turnScores: [],
@@ -80,18 +86,44 @@ export class DrawGuessModule extends BaseGameModule {
 
       case 'draw:stroke': {
         if (playerId !== drawerId || this.state.phase !== 'drawing') return null;
-        const stroke: Stroke = {
-          points: data.points as { x: number; y: number }[],
-          color: data.color as string,
-          width: data.width as number,
-        };
-        this.state.strokes.push(stroke);
+        const points = data.points as { x: number; y: number }[];
+        const color = data.color as string;
+        const width = data.width as number;
+        const sessionId = data.sessionId as string | undefined;
+        if (!Array.isArray(points) || points.length < 2) return null;
+        appendStrokeOp(this.state.operations, { points, color, width, sessionId });
+        return this.buildGameState(room);
+      }
+
+      case 'draw:fill': {
+        if (playerId !== drawerId || this.state.phase !== 'drawing') return null;
+        const x = data.x as number;
+        const y = data.y as number;
+        const color = data.color as string;
+        if (typeof x !== 'number' || typeof y !== 'number' || !color) return null;
+        appendFillOp(this.state.operations, { x, y, color });
+        return this.buildGameState(room);
+      }
+
+      case 'draw:erase': {
+        if (playerId !== drawerId || this.state.phase !== 'drawing') return null;
+        const targetId = data.targetId as string;
+        if (!targetId) return null;
+        const op = appendEraseOp(this.state.operations, targetId);
+        if (!op) return null;
+        return this.buildGameState(room);
+      }
+
+      case 'draw:undo': {
+        if (playerId !== drawerId || this.state.phase !== 'drawing') return null;
+        const removed = undoLast(this.state.operations);
+        if (removed === 0) return null;
         return this.buildGameState(room);
       }
 
       case 'draw:clear': {
         if (playerId !== drawerId || this.state.phase !== 'drawing') return null;
-        this.state.strokes = [];
+        clearOps(this.state.operations);
         return this.buildGameState(room);
       }
 
@@ -267,7 +299,7 @@ export class DrawGuessModule extends BaseGameModule {
   private resetTurnState(): void {
     this.state.currentWord = null;
     this.state.wordHint = '';
-    this.state.strokes = [];
+    this.state.operations = [];
     this.state.guesses = [];
     this.state.correctGuessers = [];
     this.state.turnScores = [];
@@ -379,7 +411,7 @@ export class DrawGuessModule extends BaseGameModule {
       wordHint: this.state.wordHint,
       wordLength: this.state.currentWord?.length ?? 0,
       timeLimit: this.state.drawTimeLimit,
-      strokes: this.state.strokes,
+      operations: this.state.operations,
       guesses: this.state.guesses,
       correctGuessers: this.state.correctGuessers,
     };

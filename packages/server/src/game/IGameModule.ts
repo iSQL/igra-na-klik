@@ -43,4 +43,17 @@ export interface IGameModule {
   ): GameState | null;
 
   onEnd(room: Room, gameState: GameState): void;
+
+  /**
+   * Optional hook polled by GameManager after onPlayerAction returns null.
+   * Lets a module mutate authoritative game state for a single player and
+   * emit a targeted `game:player-state` without broadcasting the new state
+   * to the entire room. Used by slepi-telefoni to keep per-player drafts
+   * (undo, eraser, fill of a drawing) private during `drawing-step`.
+   * Implementations must clear the pending update on read so it fires once.
+   */
+  getPendingPrivateUpdate?(): {
+    playerId: string;
+    gameState: GameState;
+  } | null;
 }

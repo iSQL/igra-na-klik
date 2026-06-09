@@ -10,7 +10,7 @@ import { TurnResults } from './components/TurnResults';
 import type {
   DrawGuessHostData,
   DrawGuessLeaderboardEntry,
-  Stroke,
+  DrawOp,
 } from '@igra/shared';
 
 export default function DrawGuessHost() {
@@ -108,7 +108,7 @@ export default function DrawGuessHost() {
             alignItems: 'stretch',
           }}
         >
-          <ResponsiveDrawingArea strokes={host.strokes} />
+          <ResponsiveDrawingArea operations={host.operations} />
           <GuessList guesses={host.guesses} />
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function DrawGuessHost() {
   return null;
 }
 
-function ResponsiveDrawingArea({ strokes }: { strokes: Stroke[] }) {
+function ResponsiveDrawingArea({ operations }: { operations: DrawOp[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number }>({
     width: 600,
@@ -247,7 +247,7 @@ function ResponsiveDrawingArea({ strokes }: { strokes: Stroke[] }) {
         justifyContent: 'center',
       }}
     >
-      <DrawingCanvas strokes={strokes} width={size.width} height={size.height} />
+      <DrawingCanvas operations={operations} width={size.width} height={size.height} />
     </div>
   );
 }

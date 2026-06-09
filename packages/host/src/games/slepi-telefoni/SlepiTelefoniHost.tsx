@@ -5,6 +5,7 @@ import type {
   ChainItem,
   SlepiTelefoniHostData,
 } from '@igra/shared';
+import { legacyStrokesToOps } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { useRoomStore } from '../../store/roomStore';
@@ -379,7 +380,7 @@ function DrawingGuessPair({ pair }: { pair: DrawingGuessPair }) {
     >
       <AuthorBadge item={pair.drawing} labelOverride="nacrtao" />
       <DrawingCanvas
-        strokes={pair.drawing.strokes ?? []}
+        operations={pair.drawing.operations ?? legacyStrokesToOps(pair.drawing.strokes)}
         width={640}
         height={480}
       />
