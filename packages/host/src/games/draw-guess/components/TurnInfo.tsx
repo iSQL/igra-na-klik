@@ -1,3 +1,5 @@
+import { useT } from '../../../i18n/useT';
+
 interface TurnInfoProps {
   drawerName: string;
   turnNumber: number;
@@ -15,6 +17,7 @@ export function TurnInfo({
   correctCount,
   totalGuessers,
 }: TurnInfoProps) {
+  const t = useT();
   const timeColor = timeRemaining <= 10 ? 'var(--danger)' : 'var(--text-primary)';
 
   return (
@@ -30,16 +33,16 @@ export function TurnInfo({
     >
       <div>
         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Potez {turnNumber}/{totalTurns}
+          {t('drawGuess.turn', { n: turnNumber, total: totalTurns })}
         </span>
         <span style={{ margin: '0 0.75rem', color: 'var(--text-secondary)' }}>|</span>
         <span style={{ fontSize: '1rem', fontWeight: 600 }}>
-          {drawerName} crta
+          {t('drawGuess.drawing', { name: drawerName })}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <span style={{ fontSize: '0.9rem', color: 'var(--success)' }}>
-          {correctCount}/{totalGuessers} pogodilo
+          {t('drawGuess.guessedCount', { n: correctCount, total: totalGuessers })}
         </span>
         <span
           style={{

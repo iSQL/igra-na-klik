@@ -5,8 +5,10 @@ import { useGameStore } from './store/gameStore';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
+import { useT } from './i18n/useT';
 
 export function App() {
+  const t = useT();
   const {
     status,
     setRoom,
@@ -111,10 +113,10 @@ export function App() {
   return (
     <>
       {status === 'disconnected' && (
-        <p style={{ fontSize: '1.5rem' }}>Povezivanje...</p>
+        <p style={{ fontSize: '1.5rem' }}>{t('app.connecting')}</p>
       )}
       {status === 'creating' && (
-        <p style={{ fontSize: '1.5rem' }}>Pravim sobu...</p>
+        <p style={{ fontSize: '1.5rem' }}>{t('app.creatingRoom')}</p>
       )}
       {status === 'lobby' && <LobbyScreen />}
       {status === 'game-select' && <GameSelectScreen />}

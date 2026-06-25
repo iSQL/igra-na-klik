@@ -14,12 +14,15 @@ const COLORS = [
   '#ff6fb1',
 ];
 
+import { useT } from '../../../i18n/useT';
+
 interface ColorPickerProps {
   selectedColor: string;
   onSelect: (color: string) => void;
 }
 
 export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
+  const t = useT();
   return (
     <div
       style={{
@@ -34,7 +37,7 @@ export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
         <button
           key={color}
           onClick={() => onSelect(color)}
-          aria-label={`Boja ${color}`}
+          aria-label={t('common.colorAria', { color })}
           style={{
             width: '30px',
             height: '30px',

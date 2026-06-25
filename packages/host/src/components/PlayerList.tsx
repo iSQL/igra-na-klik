@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { PublicPlayer } from '@igra/shared';
 import { useSound } from '../hooks/useSound';
+import { useT } from '../i18n/useT';
 
 interface PlayerListProps {
   players: PublicPlayer[];
@@ -9,6 +10,7 @@ interface PlayerListProps {
 
 export function PlayerList({ players, onKick }: PlayerListProps) {
   const { play } = useSound();
+  const t = useT();
   const prevCountRef = useRef(players.length);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
   if (players.length === 0) {
     return (
       <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>
-        Čekamo igrače da se pridruže...
+        {t('lobby.waitingForPlayers')}
       </p>
     );
   }
@@ -60,12 +62,12 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
           {onKick && (
             <button
               onClick={() => {
-                if (window.confirm(`Izbaci ${player.name}?`)) {
+                if (window.confirm(t('lobby.kickConfirm', { name: player.name }))) {
                   onKick(player.id);
                 }
               }}
-              title={`Izbaci ${player.name}`}
-              aria-label={`Izbaci ${player.name}`}
+              title={t('lobby.kick', { name: player.name })}
+              aria-label={t('lobby.kick', { name: player.name })}
               style={{
                 marginLeft: '0.25rem',
                 width: '1.75rem',

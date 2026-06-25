@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
+import { useT } from '../../i18n/useT';
 import { DrawingPad } from '../draw-guess/components/DrawingPad';
 import type {
   DrawOp,
@@ -19,6 +20,7 @@ export default function SlepiTelefoniController() {
   const remoteHostPlayerId = usePlayerStore(
     (s) => s.room?.remoteHostPlayerId ?? null
   );
+  const t = useT();
 
   if (!gameState || !playerId) return null;
 
@@ -27,18 +29,20 @@ export default function SlepiTelefoniController() {
   const host = data.host as SlepiTelefoniHostData | undefined;
 
   if (!myData) {
-    return <WaitingScreen message="Učitavanje..." />;
+    return <WaitingScreen message={t('common.loading')} />;
   }
 
   if (phase === 'entering-prompts') {
-    if (myData.hasSubmitted) return <WaitingScreen message="Čekamo ostale..." />;
+    if (myData.hasSubmitted)
+      return <WaitingScreen message={t('common.waitingForOthers')} />;
     return <PromptEntry timeRemaining={timeRemaining} />;
   }
 
   if (phase === 'drawing-step') {
     if (myData.hasSubmitted)
-      return <WaitingScreen message="Crtež poslat — čekamo ostale..." />;
-    if (!myData.promptToDraw) return <WaitingScreen message="Samo posmatraš..." />;
+      return <WaitingScreen message={t('slepi.drawingSent')} />;
+    if (!myData.promptToDraw)
+      return <WaitingScreen message={t('slepi.spectating')} />;
     return (
       <DrawingRound
         prompt={myData.promptToDraw}
@@ -50,8 +54,9 @@ export default function SlepiTelefoniController() {
 
   if (phase === 'guess-step') {
     if (myData.hasSubmitted)
-      return <WaitingScreen message="Pogodak poslat — čekamo ostale..." />;
-    if (!myData.drawingToGuess) return <WaitingScreen message="Samo posmatraš..." />;
+      return <WaitingScreen message={t('slepi.guessSent')} />;
+    if (!myData.drawingToGuess)
+      return <WaitingScreen message={t('slepi.spectating')} />;
     return (
       <GuessRound
         operations={myData.drawingToGuess}
@@ -72,14 +77,14 @@ export default function SlepiTelefoniController() {
         />
       );
     }
-    return <WaitingScreen message="Otkriva se na velikom ekranu!" />;
+    return <WaitingScreen message={t('slepi.revealingOnScreen')} />;
   }
 
   if (phase === 'ended') {
     return <EndedScreen />;
   }
 
-  return <WaitingScreen message="Učitavanje..." />;
+  return <WaitingScreen message={t('common.loading')} />;
 }
 
 function WaitingScreen({ message }: { message: string }) {
@@ -102,6 +107,7 @@ function WaitingScreen({ message }: { message: string }) {
 }
 
 function EndedScreen() {
+  const t = useT();
   return (
     <div
       style={{
@@ -116,7 +122,7 @@ function EndedScreen() {
       }}
     >
       <p style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
-        Kraj igre
+        {t('slepi.gameOver')}
       </p>
       <p
         style={{
@@ -125,7 +131,7 @@ function EndedScreen() {
           margin: 0,
         }}
       >
-        Pogledaj veliki ekran za rezultate
+        {t('slepi.seeBigScreen')}
       </p>
       <div
         style={{
@@ -146,7 +152,7 @@ function EndedScreen() {
             animation: 'igra-spin 0.9s linear infinite',
           }}
         />
-        <span style={{ fontSize: '0.9rem' }}>Vraćanje na izbor igre…</span>
+        <span style={{ fontSize: '0.9rem' }}>{t('common.returningToGameSelect')}</span>
       </div>
     </div>
   );
@@ -161,6 +167,7 @@ function RevealRemoteHostControl({
   totalChains: number;
   isLast: boolean;
 }) {
+  const t = useT();
   // Reset the click guard whenever the chain advances so each chain
   // gets a fresh tap.
   const lockedRef = useRef(false);
@@ -188,14 +195,14 @@ function RevealRemoteHostControl({
       }}
     >
       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-        🎮 Tvoja kontrola
+        {t('slepi.yourControl')}
       </p>
       <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
-        Otkrivanje na velikom ekranu
+        {t('slepi.revealOnScreen')}
       </p>
       {totalChains > 0 && (
         <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Lanac {chainNumber}/{totalChains}
+          {t('slepi.chain', { n: chainNumber, total: totalChains })}
         </p>
       )}
       <button
@@ -213,13 +220,14 @@ function RevealRemoteHostControl({
           cursor: 'pointer',
         }}
       >
-        {isLast ? 'Završi igru →' : 'Sledeći lanac →'}
+        {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
       </button>
     </div>
   );
 }
 
 function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
+  const t = useT();
   const [text, setText] = useState('');
 
   const submit = () => {
@@ -248,7 +256,7 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600 }}>Napiši frazu</p>
+        <p style={{ fontSize: '1rem', fontWeight: 600 }}>{t('slepi.writePrompt')}</p>
         <span
           style={{
             fontSize: '1.1rem',
@@ -260,13 +268,13 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
         </span>
       </div>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        Sledeći igrač će pokušati da je nacrta!
+        {t('slepi.nextPlayerDraws')}
       </p>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
         maxLength={MAX_PROMPT_LENGTH}
-        placeholder="npr. Pingvin jede sladoled"
+        placeholder={t('slepi.promptPlaceholder')}
         style={{
           flex: 1,
           padding: '0.75rem',
@@ -303,7 +311,7 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
           opacity: text.trim() ? 1 : 0.6,
         }}
       >
-        Pošalji
+        {t('common.send')}
       </button>
     </div>
   );
@@ -318,6 +326,7 @@ function DrawingRound({
   timeRemaining: number;
   operations: DrawOp[];
 }) {
+  const t = useT();
   const submit = () => {
     socket.emit('game:player-action', {
       action: 'slepi:submit-drawing',
@@ -342,7 +351,7 @@ function DrawingRound({
         }}
       >
         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          Nacrtaj
+          {t('slepi.draw')}
         </p>
         <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>„{prompt}”</p>
       </div>
@@ -367,7 +376,7 @@ function DrawingRound({
             minHeight: '44px',
           }}
         >
-          Gotovo
+          {t('slepi.done')}
         </button>
       </div>
     </div>
@@ -381,6 +390,7 @@ function GuessRound({
   operations: DrawOp[];
   timeRemaining: number;
 }) {
+  const t = useT();
   const [text, setText] = useState('');
 
   const submit = () => {
@@ -409,7 +419,7 @@ function GuessRound({
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600 }}>Šta vidiš?</p>
+        <p style={{ fontSize: '1rem', fontWeight: 600 }}>{t('slepi.whatDoYouSee')}</p>
         <span
           style={{
             fontSize: '1.1rem',
@@ -425,7 +435,7 @@ function GuessRound({
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_GUESS_LENGTH))}
         maxLength={MAX_GUESS_LENGTH}
-        placeholder="Upiši šta misliš da je..."
+        placeholder={t('slepi.guessPlaceholder')}
         style={{
           padding: '0.75rem',
           fontSize: '1rem',
@@ -450,7 +460,7 @@ function GuessRound({
           opacity: text.trim() ? 1 : 0.6,
         }}
       >
-        Pošalji
+        {t('common.send')}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useGeoConfigStore } from '../store/geoConfigStore';
+import { useT } from '../i18n/useT';
 
 interface GeoPackSummary {
   id: string;
@@ -22,6 +23,7 @@ export function GeoPackButton() {
   } = useGeoConfigStore();
   const [packs, setPacks] = useState<GeoPackSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT();
 
   useEffect(() => {
     let cancelled = false;
@@ -67,10 +69,10 @@ export function GeoPackButton() {
           active={mode === 'predefined'}
           onClick={() => setMode('predefined')}
         >
-          Predefinisano
+          {t('config.predefined')}
         </ModeButton>
         <ModeButton active={mode === 'custom'} onClick={() => setMode('custom')}>
-          Slike igrača
+          {t('config.playerPhotos')}
         </ModeButton>
       </div>
 
@@ -79,11 +81,11 @@ export function GeoPackButton() {
         <>
           {loading ? (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Učitavanje paketa…
+              {t('config.loadingPacks')}
             </span>
           ) : packs.length === 0 ? (
             <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>
-              Nema dostupnih paketa
+              {t('config.noPacks')}
             </span>
           ) : (
             <select
@@ -124,7 +126,7 @@ export function GeoPackButton() {
           }}
         >
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Slika po igraču
+            {t('config.photosPerPlayer')}
           </span>
           <div style={{ display: 'flex', gap: '0.3rem' }}>
             {PHOTO_OPTIONS.map((n) => {

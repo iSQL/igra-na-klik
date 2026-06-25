@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react';
 import type { DrawGuessGuess } from '@igra/shared';
+import { useT } from '../../../i18n/useT';
 
 interface GuessListProps {
   guesses: DrawGuessGuess[];
 }
 
 export function GuessList({ guesses }: GuessListProps) {
+  const t = useT();
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,11 +33,11 @@ export function GuessList({ guesses }: GuessListProps) {
       }}
     >
       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '0.25rem' }}>
-        Pokušaji
+        {t('drawGuess.attempts')}
       </p>
       {guesses.length === 0 && (
         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          Još nema pokušaja...
+          {t('drawGuess.noAttempts')}
         </p>
       )}
       {guesses.map((g, i) => (
@@ -48,7 +50,7 @@ export function GuessList({ guesses }: GuessListProps) {
           }}
         >
           <span style={{ fontWeight: 600 }}>{g.playerName}:</span>{' '}
-          {g.correct ? 'Pogodio/la!' : g.text}
+          {g.correct ? t('drawGuess.guessedIt') : g.text}
         </div>
       ))}
     </div>

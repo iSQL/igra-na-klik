@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { parseQuizImport } from '@igra/shared';
 import type { QuizImportQuestion } from '@igra/shared';
 import { useQuizImportStore } from '../store/quizImportStore';
+import { useT } from '../i18n/useT';
 
 interface BuiltinPack {
   id: string;
@@ -12,6 +13,7 @@ interface BuiltinPack {
 
 export function QuizImportButton() {
   const { customQuestions, fileName, setCustom, clear } = useQuizImportStore();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [builtinPacks, setBuiltinPacks] = useState<BuiltinPack[]>([]);
@@ -43,7 +45,7 @@ export function QuizImportButton() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -64,7 +66,7 @@ export function QuizImportButton() {
         );
         setError(null);
       } catch {
-        setError('Nevažeći JSON.');
+        setError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -124,7 +126,7 @@ export function QuizImportButton() {
             maxWidth: '220px',
           }}
         >
-          <option value="">Izaberi paket…</option>
+          <option value="">{t('import.choosePack')}</option>
           {builtinPacks.map((p) => (
             <option key={p.id} value={p.id}>
               {p.id} ({p.count})
@@ -142,7 +144,7 @@ export function QuizImportButton() {
               margin: 0,
             }}
           >
-            Učitano: <strong>{fileName}</strong> ({customQuestions.length} pitanja)
+            {t('import.loaded')}: <strong>{fileName}</strong> ({customQuestions.length} {t('import.questions')})
           </p>
           <button
             onClick={handleClear}
@@ -155,7 +157,7 @@ export function QuizImportButton() {
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Ukloni
+            {t('common.remove')}
           </button>
         </>
       ) : (
@@ -173,7 +175,7 @@ export function QuizImportButton() {
             border: '1px solid var(--text-secondary)',
           }}
         >
-          Uvezi pitanja
+          {t('import.importQuestions')}
         </button>
       )}
 

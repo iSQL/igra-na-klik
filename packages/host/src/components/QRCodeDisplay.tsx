@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useT } from '../i18n/useT';
 
 interface QRCodeDisplayProps {
   roomCode: string;
 }
 
 export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
+  const t = useT();
   const joinUrl = useMemo(() => {
     if (import.meta.env.VITE_CONTROLLER_URL) {
       return import.meta.env.VITE_CONTROLLER_URL as string;
@@ -48,7 +50,7 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
           color: 'var(--text-secondary)',
         }}
       >
-        kod: <strong style={{ color: 'var(--accent)', fontFamily: 'monospace', letterSpacing: '0.15rem' }}>{roomCode}</strong>
+        {t('join.codeLabel')}: <strong style={{ color: 'var(--accent)', fontFamily: 'monospace', letterSpacing: '0.15rem' }}>{roomCode}</strong>
       </p>
     </div>
   );

@@ -5,6 +5,7 @@ import { visibleOps, scanlineFloodFill, parseHexColor } from '@igra/shared';
 import { ColorPicker } from './ColorPicker';
 import { BrushSizePicker } from './BrushSizePicker';
 import { ToolButton, type DrawTool } from './ToolButton';
+import { useT } from '../../../i18n/useT';
 
 interface DrawingPadProps {
   timeRemaining: number;
@@ -28,6 +29,7 @@ export function DrawingPad({
   operations,
   actionPrefix = 'draw',
 }: DrawingPadProps) {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -530,7 +532,7 @@ export function DrawingPad({
               borderRadius: '6px',
             }}
           >
-            Reset zoom
+            {t('drawGuess.resetZoom')}
           </button>
         )}
       </div>
@@ -561,7 +563,7 @@ export function DrawingPad({
             fontSize: '0.8rem',
           }}
         >
-          Korak nazad
+          {t('drawGuess.undo')}
         </button>
         <button
           onClick={handleClear}
@@ -577,7 +579,7 @@ export function DrawingPad({
             fontSize: '0.8rem',
           }}
         >
-          Obriši sve
+          {t('drawGuess.clearAll')}
         </button>
       </div>
 

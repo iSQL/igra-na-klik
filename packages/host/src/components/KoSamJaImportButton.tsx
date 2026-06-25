@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { parseKoSamJaImport } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { useKoSamJaImportStore } from '../store/koSamJaImportStore';
+import { useT } from '../i18n/useT';
 
 interface BuiltinPack {
   id: string;
@@ -13,6 +14,7 @@ interface BuiltinPack {
 export function KoSamJaImportButton() {
   const { customQuestions, fileName, setCustom, clear } =
     useKoSamJaImportStore();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [builtinPacks, setBuiltinPacks] = useState<BuiltinPack[]>([]);
@@ -43,7 +45,7 @@ export function KoSamJaImportButton() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -55,7 +57,7 @@ export function KoSamJaImportButton() {
         setCustom(result.questions, file.name);
         setError(null);
       } catch {
-        setError('Nevažeći JSON.');
+        setError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -114,7 +116,7 @@ export function KoSamJaImportButton() {
             maxWidth: '220px',
           }}
         >
-          <option value="">Izaberi paket…</option>
+          <option value="">{t('import.choosePack')}</option>
           {builtinPacks.map((p) => (
             <option key={p.id} value={p.id}>
               {p.id} ({p.count})
@@ -132,8 +134,8 @@ export function KoSamJaImportButton() {
               margin: 0,
             }}
           >
-            Učitano: <strong>{fileName}</strong> ({customQuestions.length}{' '}
-            pitanja)
+            {t('import.loaded')}: <strong>{fileName}</strong> ({customQuestions.length}{' '}
+            {t('import.questions')})
           </p>
           <button
             onClick={handleClear}
@@ -146,7 +148,7 @@ export function KoSamJaImportButton() {
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Ukloni
+            {t('common.remove')}
           </button>
         </>
       ) : (
@@ -164,7 +166,7 @@ export function KoSamJaImportButton() {
             border: '1px solid var(--text-secondary)',
           }}
         >
-          Uvezi pitanja
+          {t('import.importQuestions')}
         </button>
       )}
 

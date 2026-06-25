@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { GameRouter } from '../components/GameRouter';
 import { socket } from '../socket';
+import { useT } from '../i18n/useT';
 
 export function GameScreen() {
+  const t = useT();
   const [stopping, setStopping] = useState(false);
 
   // If the component ever remounts with leftover state, clear it.
@@ -47,7 +49,7 @@ export function GameScreen() {
           cursor: stopping ? 'not-allowed' : 'pointer',
         }}
       >
-        {stopping ? 'Završavam…' : 'Završi igru'}
+        {stopping ? t('overlay.endingGame') : t('overlay.endGame')}
       </button>
       <GameRouter />
       {stopping && <StoppingOverlay />}
@@ -56,6 +58,7 @@ export function GameScreen() {
 }
 
 function StoppingOverlay() {
+  const t = useT();
   return (
     <div
       style={{
@@ -82,7 +85,7 @@ function StoppingOverlay() {
         }}
       />
       <p style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 500 }}>
-        Završavam igru…
+        {t('overlay.endingGameFull')}
       </p>
     </div>
   );

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { useT } from '../i18n/useT';
 
 const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
 
 export function JoinScreen() {
   const reconnectToken = usePlayerStore((s) => s.reconnectToken);
+  const t = useT();
 
   const params = new URLSearchParams(window.location.search);
   const [roomCode, setRoomCode] = useState(params.get('code') || '');
@@ -52,11 +55,11 @@ export function JoinScreen() {
   const handleJoin = () => {
     const codeLength = roomCode.length;
     if (codeLength === 0) {
-      setError('Soba još nije otvorena. Pričekaj host.');
+      setError(t('join.roomNotOpen'));
       return;
     }
     if (!playerName.trim()) {
-      setError('Upiši svoje ime');
+      setError(t('join.enterName'));
       return;
     }
 
@@ -80,14 +83,18 @@ export function JoinScreen() {
         maxWidth: '400px',
       }}
     >
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <LanguageSwitch />
+      </div>
+
       <h1 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 700 }}>
-        Igra Na Klik
+        {t('common.appName')}
       </h1>
 
       {!SINGLE_ROOM_MODE && (
         <input
           type="text"
-          placeholder="Kod sobe"
+          placeholder={t('join.roomCode')}
           maxLength={2}
           autoFocus={!roomCode}
           value={roomCode}
@@ -132,7 +139,7 @@ export function JoinScreen() {
 
       <input
         type="text"
-        placeholder="Tvoje ime"
+        placeholder={t('join.yourName')}
         maxLength={20}
         autoFocus={SINGLE_ROOM_MODE || !!roomCode}
         value={playerName}
@@ -163,7 +170,7 @@ export function JoinScreen() {
           color: '#fff',
         }}
       >
-        {joining ? 'Spajanje...' : 'Uđi u igru'}
+        {joining ? t('join.joining') : t('join.enterGame')}
       </button>
 
       <a
@@ -177,7 +184,7 @@ export function JoinScreen() {
           opacity: 0.7,
         }}
       >
-        ← Početna
+        {t('join.home')}
       </a>
     </div>
   );

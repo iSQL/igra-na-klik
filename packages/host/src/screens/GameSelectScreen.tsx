@@ -12,6 +12,9 @@ import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { useLanguageStore } from '../store/languageStore';
+import { useT } from '../i18n/useT';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
@@ -27,6 +30,7 @@ export function GameSelectScreen() {
   );
   const connectedCount = players.filter((p) => p.isConnected).length;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     const onError = ({ message }: { message: string }) => {
@@ -103,6 +107,7 @@ export function GameSelectScreen() {
       customTajniAgentiPack,
       tajniAgentiScenarioCode,
       customTajniAgentiScenario,
+      language: useLanguageStore.getState().language,
     });
   };
 
@@ -120,7 +125,10 @@ export function GameSelectScreen() {
         overflowY: 'auto',
       }}
     >
-      <h1 style={{ fontSize: '2rem' }}>Izaberi igru</h1>
+      <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 10 }}>
+        <LanguageSwitch />
+      </div>
+      <h1 style={{ fontSize: '2rem' }}>{t('gameSelect.title')}</h1>
 
       {errorMessage && (
         <div
@@ -185,10 +193,10 @@ export function GameSelectScreen() {
             }}
           >
             <h2 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>
-              {game.name}
+              {t(`game.${game.id}.name`)}
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {game.description}
+              {t(`game.${game.id}.description`)}
             </p>
             <p
               style={{
@@ -198,10 +206,18 @@ export function GameSelectScreen() {
               }}
             >
               {lacking
-                ? `Treba još ${game.minPlayers - connectedCount} ${
-                    game.minPlayers - connectedCount === 1 ? 'igrač' : 'igrača'
-                  }`
-                : `${game.minPlayers}-${game.maxPlayers} igrača`}
+                ? t('gameSelect.needMore', {
+                    n: game.minPlayers - connectedCount,
+                    noun: t(
+                      game.minPlayers - connectedCount === 1
+                        ? 'common.player.one'
+                        : 'common.player.many'
+                    ),
+                  })
+                : t('gameSelect.playerRange', {
+                    min: game.minPlayers,
+                    max: game.maxPlayers,
+                  })}
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
             {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && <GeoPackButton />}
@@ -298,7 +314,7 @@ export function GameSelectScreen() {
           color: 'var(--text-secondary)',
         }}
       >
-        Nazad u lobi
+        {t('gameSelect.backToLobby')}
       </button>
     </div>
   );

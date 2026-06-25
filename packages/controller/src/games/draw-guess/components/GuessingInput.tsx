@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { socket } from '../../../socket';
+import { useT } from '../../../i18n/useT';
 
 interface GuessingInputProps {
   hasGuessedCorrectly: boolean;
@@ -8,6 +9,7 @@ interface GuessingInputProps {
 }
 
 export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: GuessingInputProps) {
+  const t = useT();
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,9 +40,9 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
         }}
       >
         <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
-          Tačno!
+          {t('drawGuess.correct')}
         </p>
-        <p style={{ color: 'var(--text-secondary)' }}>Čekamo ostale...</p>
+        <p style={{ color: 'var(--text-secondary)' }}>{t('common.waitingForOthers')}</p>
       </div>
     );
   }
@@ -93,7 +95,7 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Upiši pokušaj..."
+          placeholder={t('drawGuess.guessPlaceholder')}
           autoComplete="off"
           style={{
             flex: 1,
@@ -117,7 +119,7 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
             fontWeight: 600,
           }}
         >
-          Pogodi
+          {t('drawGuess.guess')}
         </button>
       </form>
     </div>

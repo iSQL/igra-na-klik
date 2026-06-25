@@ -6,6 +6,7 @@ import {
 } from '@igra/shared';
 import type { TajniAgentiScenario } from '@igra/shared';
 import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
+import { useT } from '../i18n/useT';
 
 interface BuiltinPack {
   id: string;
@@ -36,6 +37,7 @@ export function TajniAgentiImportButton() {
     customScenario,
     setCustomScenario,
   } = useTajniAgentiImportStore();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const scenarioFileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function TajniAgentiImportButton() {
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onerror = () => setScenarioError('Greška pri čitanju fajla.');
+    reader.onerror = () => setScenarioError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -112,7 +114,7 @@ export function TajniAgentiImportButton() {
         setScenarioError(null);
         setScenarioDraft('');
       } catch {
-        setScenarioError('Nevažeći JSON.');
+        setScenarioError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -152,7 +154,7 @@ export function TajniAgentiImportButton() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -164,7 +166,7 @@ export function TajniAgentiImportButton() {
         setCustom(result.pack, file.name);
         setError(null);
       } catch {
-        setError('Nevažeći JSON.');
+        setError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -229,7 +231,7 @@ export function TajniAgentiImportButton() {
             maxWidth: '220px',
           }}
         >
-          <option value="">Ugrađene reči</option>
+          <option value="">{t('import.builtinWords')}</option>
           {builtinPacks.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name ?? p.id} ({p.count})
@@ -247,8 +249,8 @@ export function TajniAgentiImportButton() {
               margin: 0,
             }}
           >
-            Učitano: <strong>{fileName}</strong> ({customPack.words.length}{' '}
-            reči)
+            {t('import.loaded')}: <strong>{fileName}</strong> ({customPack.words.length}{' '}
+            {t('import.words')})
           </p>
           <button
             onClick={handleClear}
@@ -261,7 +263,7 @@ export function TajniAgentiImportButton() {
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Ukloni
+            {t('common.remove')}
           </button>
         </>
       ) : (
@@ -279,7 +281,7 @@ export function TajniAgentiImportButton() {
             border: '1px solid var(--text-secondary)',
           }}
         >
-          Uvezi reči
+          {t('import.importWords')}
         </button>
       )}
 
@@ -350,7 +352,7 @@ export function TajniAgentiImportButton() {
                 }
               }
             }}
-            placeholder="kod"
+            placeholder={t('import.codePlaceholder')}
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}
@@ -386,8 +388,11 @@ export function TajniAgentiImportButton() {
               {scenarioLookup.status === 'found'
                 ? `✓ ${scenarioLookup.scenario.name}`
                 : scenarioLookup.status === 'invalid'
-                  ? `Neispravan scenario "${scenarioLookup.code}": ${scenarioLookup.error}`
-                  : 'Nepoznat kod'}
+                  ? t('import.invalidScenario', {
+                      code: scenarioLookup.code,
+                      error: scenarioLookup.error,
+                    })
+                  : t('import.unknownCode')}
             </p>
           )}
           <div style={{ display: 'flex', gap: '0.3rem' }}>
@@ -411,7 +416,7 @@ export function TajniAgentiImportButton() {
                 opacity: matchedScenario ? 1 : 0.4,
               }}
             >
-              Sačuvaj kod
+              {t('import.saveCode')}
             </button>
           </div>
 
@@ -431,7 +436,7 @@ export function TajniAgentiImportButton() {
                 width: '220px',
               }}
             >
-              <option value="">Scenario sa servera…</option>
+              <option value="">{t('import.scenarioFromServer')}</option>
               {serverScenarios.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.code}, {s.cardCount})
@@ -456,7 +461,7 @@ export function TajniAgentiImportButton() {
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Uvezi scenario (.json)
+            {t('import.importScenario')}
           </button>
 
           {scenarioError && (
@@ -495,11 +500,11 @@ export function TajniAgentiImportButton() {
                   textAlign: 'center',
                 }}
               >
-                Aktivan:{' '}
+                {t('import.active')}:{' '}
                 <strong>
                   {customScenario
-                    ? `${customScenario.scenario.name} (${customScenario.source === 'file' ? 'fajl' : 'server'})`
-                    : `kod ${scenarioCode}`}
+                    ? `${customScenario.scenario.name} (${customScenario.source === 'file' ? t('import.sourceFile') : t('import.sourceServer')})`
+                    : `${t('import.codePrefix')} ${scenarioCode}`}
                 </strong>
               </p>
               <button
@@ -519,7 +524,7 @@ export function TajniAgentiImportButton() {
                   border: '1px solid var(--text-secondary)',
                 }}
               >
-                Ukloni
+                {t('common.remove')}
               </button>
             </div>
           )}

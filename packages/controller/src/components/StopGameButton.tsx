@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { socket } from '../socket';
+import { useT } from '../i18n/useT';
 
 export function StopGameButton() {
   const [confirming, setConfirming] = useState(false);
+  const t = useT();
 
   const handleConfirm = () => {
     socket.emit('host:stop-game');
@@ -24,7 +26,7 @@ export function StopGameButton() {
           backdropFilter: 'blur(4px)',
         }}
       >
-        Završi igru
+        {t('overlay.endGame')}
       </button>
 
       {confirming && (
@@ -55,7 +57,7 @@ export function StopGameButton() {
               textAlign: 'center',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Završiti igru?</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('overlay.endGameConfirmTitle')}</h2>
             <p
               style={{
                 margin: 0,
@@ -64,8 +66,7 @@ export function StopGameButton() {
                 lineHeight: 1.4,
               }}
             >
-              Trenutna runda će biti prekinuta za sve igrače i vratićete se u
-              lobi.
+              {t('overlay.endGameConfirmBody')}
             </p>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <button
@@ -81,7 +82,7 @@ export function StopGameButton() {
                   border: '1px solid var(--bg-card)',
                 }}
               >
-                Otkaži
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirm}
@@ -96,7 +97,7 @@ export function StopGameButton() {
                   border: 'none',
                 }}
               >
-                Završi
+                {t('overlay.end')}
               </button>
             </div>
           </div>

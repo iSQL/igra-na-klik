@@ -4,11 +4,14 @@ import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { useT } from '../i18n/useT';
 
 export function LobbyScreen() {
   const { player, room } = usePlayerStore();
   const setScreen = useNavStore((s) => s.setScreen);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const t = useT();
 
   if (!player || !room) return null;
 
@@ -28,9 +31,11 @@ export function LobbyScreen() {
         textAlign: 'center',
       }}
     >
+      <LanguageSwitch />
+
       <button
         onClick={() => setPickerOpen(true)}
-        aria-label="Promeni avatar"
+        aria-label={t('lobby.changeAvatar')}
         style={{
           width: '5rem',
           height: '5rem',
@@ -51,7 +56,7 @@ export function LobbyScreen() {
       <h1 style={{ fontSize: '1.5rem' }}>{player.name}</h1>
 
       <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-        Room <strong style={{ color: 'var(--accent)' }}>{room.code}</strong>
+        {t('lobby.room')} <strong style={{ color: 'var(--accent)' }}>{room.code}</strong>
       </p>
 
       <div
@@ -76,7 +81,7 @@ export function LobbyScreen() {
                 border: 'none',
               }}
             >
-              Izaberi igru →
+              {t('lobby.chooseGameArrow')}
             </button>
             <button
               onClick={() => socket.emit('player:release-remote-host')}
@@ -89,12 +94,12 @@ export function LobbyScreen() {
                 border: '1px solid var(--bg-card)',
               }}
             >
-              Otpusti kontrolu
+              {t('lobby.releaseControl')}
             </button>
           </>
         ) : holder ? (
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-            🎮 <strong>{holder.name}</strong> drži kontrolu
+            🎮 <strong>{holder.name}</strong> {t('lobby.holdsControl')}
           </p>
         ) : (
           <button
@@ -109,13 +114,13 @@ export function LobbyScreen() {
               border: 'none',
             }}
           >
-            Preuzmi kontrolu
+            {t('lobby.claimControl')}
           </button>
         )}
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
           {iAmRemoteHost
-            ? 'Možeš pokrenuti igru sa telefona.'
-            : 'Čekamo da domaćin pokrene igru...'}
+            ? t('lobby.canStartFromPhone')
+            : t('lobby.waitingForHost')}
         </p>
       </div>
 
@@ -174,6 +179,7 @@ function AvatarPickerModal({
   currentEmoji: string;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <div
       onClick={onClose}
@@ -208,10 +214,10 @@ function AvatarPickerModal({
             alignItems: 'center',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Promeni avatar</h2>
+          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{t('lobby.changeAvatar')}</h2>
           <button
             onClick={onClose}
-            aria-label="Zatvori"
+            aria-label={t('common.close')}
             style={{
               background: 'transparent',
               color: 'var(--text-secondary)',
@@ -234,7 +240,7 @@ function AvatarPickerModal({
               color: 'var(--text-secondary)',
             }}
           >
-            Boja
+            {t('avatar.color')}
           </p>
           <div
             style={{
@@ -251,7 +257,7 @@ function AvatarPickerModal({
                   onClick={() =>
                     socket.emit('player:set-avatar', { avatarColor: color })
                   }
-                  aria-label={`Boja ${color}`}
+                  aria-label={t('common.colorAria', { color })}
                   style={{
                     aspectRatio: '1',
                     background: color,
@@ -276,7 +282,7 @@ function AvatarPickerModal({
               color: 'var(--text-secondary)',
             }}
           >
-            Simbol
+            {t('avatar.symbol')}
           </p>
           <div
             style={{

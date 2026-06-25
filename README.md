@@ -10,7 +10,7 @@ A party game platform where one device acts as the host display (TV/big screen) 
 4. When ready, the host picks a mini-game and starts
 5. The host (or any player with the remote-host control) can stop the game at any time to return to game selection; players can also leave a room mid-game from their phone
 
-The root `/` is a static landing page with a "Pridruži se igri" CTA → `/play/` and a subtle "Kreiraj novu sobu" link → `/host/`. The host URL is intentionally separate so random visits, link previews, and bots don't spawn orphan rooms.
+The root `/` is a static landing page with a "Pridruži se igri" CTA → `/play/` and a subtle "Kreiraj novu sobu" link → `/host/`, plus a small **SR/EN toggle** (it shares the apps' `igra-language` preference same-origin). The host URL is intentionally separate so random visits, link previews, and bots don't spawn orphan rooms.
 
 ## Tech Stack
 
@@ -182,7 +182,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support.
+**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support. A per-device **EN/SR language switch** covers the platform chrome and three of the games (Crtaj i pogodi, Slepi telefoni, Pronađi par).
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -204,6 +204,13 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - QR code uses the actual server hostname and points straight at `/play/` (no room code in the URL — controllers fetch the active room code from `/room-code` in single-room mode, otherwise the player types it)
 - Players can leave a room from the controller at any time (lobby, game-select, mid-game) via the "Napusti sobu" button with a confirmation modal
 - If the player holding the remote-host control leaves, the room is destroyed: all other controllers are kicked, the host is reset, and a fresh room is created automatically
+
+**Language switch (EN / SR)**
+- A small **SR | EN** toggle on the host (lobby, game-select), the controller (join, lobby, game-select), and the static landing page
+- **Per-device** preference saved in `localStorage` (`igra-language`, default Serbian) — the TV and each phone keep their own choice; there is no room-wide language sync
+- Strings live in one shared dictionary ([packages/shared/src/i18n/strings.ts](packages/shared/src/i18n/strings.ts)) with a `translate()` helper and a `useT()` hook per app
+- **Translated**: all platform chrome (lobby, join, game-select, overlay/leave/reconnect/kick prompts, import & config panels), all nine game-select cards, and the three games **Crtaj i pogodi, Slepi telefoni, Pronađi par** (host + controller). In English mode, Crtaj i pogodi even draws from an English word bank (the host's language is passed to the server as a content hint)
+- **Still Serbian by design**: the in-game screens of the other six games, the shared import-validator error messages, and the built-in question/scenario content banks
 
 **Kviz (Quiz) — Serbian**
 - 30-question Serbian trivia bank (Latin script), 10 random per game
@@ -251,8 +258,8 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Remote-host player gets the same control on their phone via an in-game overlay button with a confirmation modal
 - A brief "Igra je završena" overlay flashes on every controller before they snap back to the lobby (so players know *why* the screen changed)
 
-**Crtaj i pogodi (Draw & Guess) — Serbian**
-- 105-word Serbian bank (Latin script) across easy/medium/hard difficulties
+**Crtaj i pogodi (Draw & Guess)** — *covered by the EN/SR switch*
+- 105-word Serbian bank (Latin script) across easy/medium/hard difficulties, with a parallel English bank used when the host starts the game in English
 - Turn rotation with shuffled player order, 3 rounds by default
 - Drawer picks from 3 word choices (one per difficulty), 60s to draw
 - Live canvas streaming: normalized stroke points batched every 50ms
@@ -260,7 +267,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Scoring: guessers earn up to 500 pts based on speed, drawer earns 100 per correct guesser
 - Full drawing toolbar on controller: 7 colors, 3 brush widths, clear button
 
-**Slepi telefoni (Telestrations / Gartic Phone-style)** — *Serbian-only content*
+**Slepi telefoni (Telestrations / Gartic Phone-style)** — *UI covered by the EN/SR switch; player-written prompts are whatever players type*
 - 3–8 players; each player writes one starting phrase, then the chain rotates through alternating draw→guess→draw→guess steps
 - Host picks **1–4 rounds** on the game-select screen — each round is one full pass around the circle, so with N players and R rounds every chain ends up `1 + R × (N−1)` items long (one prompt plus R alternations per other player)
 - Rotation math skips multiples of N so no player ever draws or guesses on their own chain, even across pass boundaries
@@ -278,7 +285,7 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 - Auto-finder detection: if a player types the real answer, they get truth credit and their submission is excluded from the voting pool
 - Duplicate fakes (case-insensitive) are merged — both fakers split the fool bonus
 - Players cannot vote for their own fake (visually grayed out)
-- All in-game UI strings hardcoded in Serbian (Latin); other games and platform UI remain English pending a future i18n retrofit
+- All in-game UI strings hardcoded in Serbian (Latin) — Lažov is one of the six games not covered by the EN/SR switch (see **Language switch** below)
 
 **Pogodi gde je (GeoGuessr-style)** — *Serbian-only content*
 - 1–8 players; can be played solo against a predefined pack

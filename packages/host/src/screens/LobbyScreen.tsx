@@ -3,6 +3,8 @@ import { useRoomStore } from '../store/roomStore';
 import { socket } from '../socket';
 import { PlayerList } from '../components/PlayerList';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { useT } from '../i18n/useT';
 
 // Lowest minPlayers across all registered games — gate the lobby on this so
 // solo-friendly games (test-game, geo-pogodi) aren't blocked by a hard 2.
@@ -12,6 +14,7 @@ const MIN_PLAYERS_OVERALL = Math.min(
 
 export function LobbyScreen() {
   const { room, players, setStatus, remoteHostPlayerId } = useRoomStore();
+  const t = useT();
 
   if (!room) return null;
 
@@ -19,6 +22,9 @@ export function LobbyScreen() {
   const remoteHostName = remoteHostPlayerId
     ? players.find((p) => p.id === remoteHostPlayerId)?.name
     : null;
+  const minNoun = t(
+    MIN_PLAYERS_OVERALL === 1 ? 'common.player.one' : 'common.player.many'
+  );
 
   return (
     <div
@@ -32,7 +38,10 @@ export function LobbyScreen() {
         maxWidth: '900px',
       }}
     >
-      <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>Igra Na Klik</h1>
+      <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 10 }}>
+        <LanguageSwitch />
+      </div>
+      <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{t('common.appName')}</h1>
 
       <div
         style={{
@@ -50,7 +59,7 @@ export function LobbyScreen() {
 
       <div style={{ width: '100%', textAlign: 'center' }}>
         <h2 style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>
-          Igrači ({players.length}/{room.settings.maxPlayers})
+          {t('lobby.players')} ({players.length}/{room.settings.maxPlayers})
         </h2>
         <PlayerList
           players={players}
@@ -71,7 +80,7 @@ export function LobbyScreen() {
           }}
         >
           🎮 <strong style={{ color: 'var(--accent)' }}>{remoteHostName}</strong>{' '}
-          drži kontrolu sa telefona
+          {t('lobby.holdsControlFromPhone')}
         </div>
       )}
 
@@ -89,8 +98,8 @@ export function LobbyScreen() {
         }}
       >
         {canStart
-          ? 'Izaberi igru'
-          : `Treba najmanje ${MIN_PLAYERS_OVERALL} ${MIN_PLAYERS_OVERALL === 1 ? 'igrač' : 'igrača'}`}
+          ? t('lobby.chooseGame')
+          : t('lobby.needAtLeast', { n: MIN_PLAYERS_OVERALL, noun: minNoun })}
       </button>
     </div>
   );

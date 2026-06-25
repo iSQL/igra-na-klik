@@ -1,8 +1,10 @@
+import { useT } from '../../../i18n/useT';
+
 export type DrawTool = 'pencil' | 'fill';
 
-const LABELS: Record<DrawTool, { label: string }> = {
-  pencil: { label: 'Olovka' },
-  fill: { label: 'Kanta' },
+const TOOL_KEYS: Record<DrawTool, string> = {
+  pencil: 'drawGuess.pencil',
+  fill: 'drawGuess.fill',
 };
 
 interface ToolButtonProps {
@@ -12,7 +14,8 @@ interface ToolButtonProps {
 }
 
 export function ToolButton({ tool, active, onSelect }: ToolButtonProps) {
-  const { label } = LABELS[tool];
+  const t = useT();
+  const label = t(TOOL_KEYS[tool]);
   return (
     <button
       onClick={() => onSelect(tool)}

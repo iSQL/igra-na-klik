@@ -10,6 +10,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { useRoomStore } from '../../store/roomStore';
 import { socket } from '../../socket';
+import { useT } from '../../i18n/useT';
 import { DrawingCanvas } from '../draw-guess/components/DrawingCanvas';
 
 export default function SlepiTelefoniHost() {
@@ -91,6 +92,7 @@ export default function SlepiTelefoniHost() {
 }
 
 function EndedScreen() {
+  const t = useT();
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -108,10 +110,10 @@ function EndedScreen() {
       }}
     >
       <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: 0 }}>
-        Kraj igre
+        {t('slepi.gameOver')}
       </h1>
       <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', margin: 0 }}>
-        Hvala što ste igrali Slepe telefone!
+        {t('slepi.thanks')}
       </p>
       <div
         style={{
@@ -132,7 +134,7 @@ function EndedScreen() {
             animation: 'igra-spin 0.9s linear infinite',
           }}
         />
-        <span style={{ fontSize: '1rem' }}>Vraćanje na izbor igre…</span>
+        <span style={{ fontSize: '1rem' }}>{t('common.returningToGameSelect')}</span>
       </div>
     </motion.div>
   );
@@ -147,6 +149,7 @@ function PromptEntryHost({
   total: number;
   timeRemaining: number;
 }) {
+  const t = useT();
   return (
     <div
       style={{
@@ -161,14 +164,14 @@ function PromptEntryHost({
       }}
     >
       <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>
-        Napišite početnu frazu
+        {t('slepi.enterPromptTitle')}
       </h1>
       <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-        Svako unosi svoju frazu koju će sledeći igrač pokušati da nacrta.
+        {t('slepi.enterPromptDesc')}
       </p>
       <CountdownBadge timeRemaining={timeRemaining} />
       <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-        {submitted}/{total} napisalo
+        {t('slepi.wroteCount', { n: submitted, total })}
       </p>
     </div>
   );
@@ -189,6 +192,7 @@ function StepInProgressHost({
   total: number;
   timeRemaining: number;
 }) {
+  const t = useT();
   return (
     <div
       style={{
@@ -203,19 +207,17 @@ function StepInProgressHost({
       }}
     >
       <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-        Korak {stepIndex}/{totalSteps}
+        {t('slepi.step', { n: stepIndex, total: totalSteps })}
       </p>
       <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>
-        {kind === 'drawing' ? 'Svi crtaju' : 'Svi pogađaju'}
+        {kind === 'drawing' ? t('slepi.everyoneDraws') : t('slepi.everyoneGuesses')}
       </h1>
       <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)', maxWidth: '520px' }}>
-        {kind === 'drawing'
-          ? 'Svako dobije tuđu frazu i pokušava da je nacrta — bez pogleda u druge lance!'
-          : 'Svako dobije tuđi crtež i piše šta misli da je prikazano.'}
+        {kind === 'drawing' ? t('slepi.drawDesc') : t('slepi.guessDesc')}
       </p>
       <CountdownBadge timeRemaining={timeRemaining} />
       <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-        {submitted}/{total} završilo
+        {t('slepi.finishedCount', { n: submitted, total })}
       </p>
     </div>
   );
@@ -252,6 +254,7 @@ function ChainReveal({
   totalChains: number;
   isLast: boolean;
 }) {
+  const t = useT();
   const pairs = buildDrawingGuessPairs(chain);
   const firstPrompt = chain.items[0];
 
@@ -295,7 +298,7 @@ function ChainReveal({
         }}
       >
         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Lanac {chainNumber}/{totalChains}
+          {t('slepi.chain', { n: chainNumber, total: totalChains })}
         </p>
         {firstPrompt?.kind === 'prompt' && (
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
@@ -341,7 +344,7 @@ function ChainReveal({
           flexShrink: 0,
         }}
       >
-        {isLast ? 'Završi igru →' : 'Sledeći lanac →'}
+        {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
       </button>
     </motion.div>
   );
@@ -367,6 +370,7 @@ function buildDrawingGuessPairs(chain: Chain): DrawingGuessPair[] {
 }
 
 function DrawingGuessPair({ pair }: { pair: DrawingGuessPair }) {
+  const t = useT();
   return (
     <div
       style={{
@@ -378,7 +382,7 @@ function DrawingGuessPair({ pair }: { pair: DrawingGuessPair }) {
         maxWidth: '720px',
       }}
     >
-      <AuthorBadge item={pair.drawing} labelOverride="nacrtao" />
+      <AuthorBadge item={pair.drawing} labelOverride={t('slepi.drew')} />
       <DrawingCanvas
         operations={pair.drawing.operations ?? legacyStrokesToOps(pair.drawing.strokes)}
         width={640}
@@ -386,7 +390,7 @@ function DrawingGuessPair({ pair }: { pair: DrawingGuessPair }) {
       />
       {pair.guess && (
         <>
-          <AuthorBadge item={pair.guess} labelOverride="napisao" />
+          <AuthorBadge item={pair.guess} labelOverride={t('slepi.wrote')} />
           <p
             style={{
               fontSize: '1.4rem',
@@ -414,13 +418,14 @@ function AuthorBadge({
   item: ChainItem;
   labelOverride?: string;
 }) {
+  const t = useT();
   const label =
     labelOverride ??
     (item.kind === 'prompt'
-      ? 'napisao'
+      ? t('slepi.wrote')
       : item.kind === 'drawing'
-        ? 'nacrtao'
-        : 'pogodio');
+        ? t('slepi.drew')
+        : t('slepi.guessed'));
   return (
     <div
       style={{

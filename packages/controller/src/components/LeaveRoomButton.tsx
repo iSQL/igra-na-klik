@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
+import { useT } from '../i18n/useT';
 
 interface Props {
   variant?: 'inline' | 'overlay';
@@ -9,6 +10,7 @@ interface Props {
 export function LeaveRoomButton({ variant = 'inline' }: Props) {
   const [confirming, setConfirming] = useState(false);
   const { player, room } = usePlayerStore();
+  const t = useT();
 
   const iAmRemoteHost =
     !!player && !!room && room.remoteHostPlayerId === player.id;
@@ -43,7 +45,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
   return (
     <>
       <button onClick={() => setConfirming(true)} style={triggerStyle}>
-        Napusti sobu
+        {t('leave.leaveRoom')}
       </button>
 
       {confirming && (
@@ -74,7 +76,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
               textAlign: 'center',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Napustiti sobu?</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('leave.confirmTitle')}</h2>
             <p
               style={{
                 margin: 0,
@@ -84,8 +86,8 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
               }}
             >
               {iAmRemoteHost
-                ? 'Ti držiš kontrolu — ako izađeš, soba će biti zatvorena i svi ostali igrači će biti izbačeni.'
-                : 'Ako izađeš tokom igre, prekinućeš trenutnu rundu za ostale igrače.'}
+                ? t('leave.confirmBodyRemoteHost')
+                : t('leave.confirmBody')}
             </p>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <button
@@ -101,7 +103,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                   border: '1px solid var(--bg-card)',
                 }}
               >
-                Otkaži
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleConfirm}
@@ -116,7 +118,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                   border: 'none',
                 }}
               >
-                Izađi
+                {t('leave.exit')}
               </button>
             </div>
           </div>

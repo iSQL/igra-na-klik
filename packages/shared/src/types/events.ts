@@ -5,6 +5,7 @@ import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
 import type { TajniAgentiScenario } from '../games/tajni-agenti-scenarios.js';
+import type { Language } from '../i18n/types.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -47,6 +48,10 @@ export interface ClientToServerEvents {
     customTajniAgentiPack?: TajniAgentiImportPack;
     tajniAgentiScenarioCode?: string;
     customTajniAgentiScenario?: TajniAgentiScenario;
+    // Host's current UI language — a content hint so the server can pick
+    // the matching draw-words bank. NOT a room-wide language sync; each
+    // device's chrome language is its own per-device preference.
+    language?: Language;
   }) => void;
   'host:stop-game': () => void;
   'host:kick-player': (data: { playerId: string }) => void;

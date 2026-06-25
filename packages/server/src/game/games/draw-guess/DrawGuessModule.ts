@@ -4,9 +4,10 @@ import type {
   DrawGuessHostData,
   DrawGuessTurnScore,
   DrawGuessLeaderboardEntry,
+  Language,
 } from '@igra/shared';
 import {
-  DRAW_WORD_BANK,
+  getDrawWordBank,
   appendStrokeOp,
   appendFillOp,
   appendEraseOp,
@@ -27,8 +28,12 @@ export class DrawGuessModule extends BaseGameModule {
 
   private state!: DrawGuessInternalState;
   private usedWords = new Set<string>();
+  // The host's UI language at start time, used only to pick the word bank.
+  private language: Language = 'sr';
 
-  onStart(room: Room): GameState {
+  onStart(room: Room, customContent?: unknown): GameState {
+    const opts = customContent as { language?: Language } | undefined;
+    this.language = opts?.language ?? 'sr';
     const connectedPlayers = room.players.filter((p) => p.isConnected);
     const turnOrder = connectedPlayers
       .map((p) => p.id)
@@ -356,7 +361,9 @@ export class DrawGuessModule extends BaseGameModule {
   // --- Word selection ---
 
   private pickWordChoices(): string[] {
-    const available = DRAW_WORD_BANK.filter((w) => !this.usedWords.has(w.word));
+    const available = getDrawWordBank(this.language).filter(
+      (w) => !this.usedWords.has(w.word)
+    );
     const shuffled = [...available].sort(() => Math.random() - 0.5);
 
     // Try to pick one from each difficulty

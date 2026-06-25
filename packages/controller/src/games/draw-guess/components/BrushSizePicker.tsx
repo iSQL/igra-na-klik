@@ -1,3 +1,5 @@
+import { useT } from '../../../i18n/useT';
+
 const SIZES = [1, 3, 5, 15];
 
 interface BrushSizePickerProps {
@@ -6,6 +8,7 @@ interface BrushSizePickerProps {
 }
 
 export function BrushSizePicker({ width, onChange }: BrushSizePickerProps) {
+  const t = useT();
   return (
     <div style={{ display: 'flex', gap: '0.3rem' }}>
       {SIZES.map((s) => {
@@ -14,8 +17,8 @@ export function BrushSizePicker({ width, onChange }: BrushSizePickerProps) {
           <button
             key={s}
             onClick={() => onChange(s)}
-            aria-label={`Debljina ${s}`}
-            title={`Debljina ${s}`}
+            aria-label={t('drawGuess.thickness', { n: s })}
+            title={t('drawGuess.thickness', { n: s })}
             style={{
               width: '36px',
               height: '36px',

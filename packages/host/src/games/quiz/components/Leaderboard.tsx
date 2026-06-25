@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { QuizLeaderboardEntry } from '@igra/shared';
 import { useRoomStore } from '../../../store/roomStore';
+import { useT } from '../../../i18n/useT';
 
 interface LeaderboardProps {
   entries: QuizLeaderboardEntry[];
@@ -9,6 +10,7 @@ interface LeaderboardProps {
 
 export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
   const players = useRoomStore((s) => s.players);
+  const t = useT();
   return (
     <div style={{ width: '100%', maxWidth: '600px' }}>
       <h2
@@ -19,7 +21,7 @@ export function Leaderboard({ entries, isFinal }: LeaderboardProps) {
           color: isFinal ? 'var(--success)' : 'var(--text-primary)',
         }}
       >
-        {isFinal ? 'Konačni poredak' : 'Rang lista'}
+        {isFinal ? t('leaderboard.final') : t('leaderboard.standings')}
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

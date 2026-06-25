@@ -1,9 +1,12 @@
+import { useT } from '../../../i18n/useT';
+
 interface WordPickerProps {
   words: string[];
   onPick: (index: number) => void;
 }
 
 export function WordPicker({ words, onPick }: WordPickerProps) {
+  const t = useT();
   return (
     <div
       style={{
@@ -16,7 +19,7 @@ export function WordPicker({ words, onPick }: WordPickerProps) {
         padding: '1rem',
       }}
     >
-      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>Izaberi reč za crtanje</p>
+      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{t('drawGuess.chooseWord')}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
         {words.map((word, i) => (
           <button

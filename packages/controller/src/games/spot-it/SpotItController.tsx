@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { useHaptics } from '../../hooks/useHaptics';
+import { useT } from '../../i18n/useT';
 import { SpotItCard } from './components/SpotItCard';
 
 interface MyData {
@@ -31,6 +32,7 @@ export default function SpotItController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const haptics = useHaptics();
+  const t = useT();
   const [lockMsLeft, setLockMsLeft] = useState(0);
   const cardSizeRef = useRef(320);
 
@@ -88,9 +90,9 @@ export default function SpotItController() {
     return (
       <CenteredScreen>
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Runda {roundNumber}
+          {t('spotIt.roundShort', { n: roundNumber })}
         </p>
-        <p style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>Spremi se…</p>
+        <p style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{t('spotIt.getReady')}</p>
       </CenteredScreen>
     );
   }
@@ -100,9 +102,9 @@ export default function SpotItController() {
       return (
         <CenteredScreen>
           <p style={{ fontSize: '2.5rem', margin: 0 }}>🏆</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Bravo!</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>{t('spotIt.wellDone')}</p>
           <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Čekaj druge…
+            {t('spotIt.waitForOthers')}
           </p>
         </CenteredScreen>
       );
@@ -127,7 +129,7 @@ export default function SpotItController() {
             margin: 0,
           }}
         >
-          {timeRemaining}s • Pronađi par
+          {timeRemaining}s • {t('spotIt.findPair')}
         </p>
         <SpotItCard
           symbolIndices={personalCard}
@@ -191,11 +193,13 @@ export default function SpotItController() {
             margin: 0,
           }}
         >
-          {wonThisRound ? `+${myPoints} poena!` : `0 poena`}
+          {wonThisRound
+            ? t('spotIt.pointsWon', { n: myPoints })
+            : t('spotIt.zeroPoints')}
         </p>
         {!wonThisRound && roundResult?.winnerName && (
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Pobedio: {roundResult.winnerName}
+            {t('spotIt.winner', { name: roundResult.winnerName })}
           </p>
         )}
       </div>
@@ -210,13 +214,13 @@ export default function SpotItController() {
         {myEntry && (
           <>
             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Konačno mesto
+              {t('common.finalPlace')}
             </p>
             <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
               #{myEntry.rank}
             </p>
             <p style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
-              {myEntry.score.toLocaleString()} poena
+              {myEntry.score.toLocaleString()} {t('common.points')}
             </p>
           </>
         )}

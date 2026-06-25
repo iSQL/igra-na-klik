@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
+import { useT } from '../../i18n/useT';
 import { SPOT_IT_SYMBOLS } from '@igra/shared';
 import { SpotItCard } from './components/SpotItCard';
 import { Leaderboard } from '../quiz/components/Leaderboard';
@@ -20,6 +21,7 @@ export default function SpotItHost() {
   const gameState = useGameStore((s) => s.gameState);
   const players = useRoomStore((s) => s.players);
   const { play } = useSound();
+  const t = useT();
   const prevPhaseRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function SpotItHost() {
         }}
       >
         <span>
-          Runda {roundNumber} / {totalRounds}
+          {t('spotIt.round', { n: roundNumber, total: totalRounds })}
         </span>
         {phase === 'racing' && (
           <>
@@ -112,7 +114,7 @@ export default function SpotItHost() {
               margin: 0,
             }}
           >
-            Spremi se…
+            {t('spotIt.getReady')}
           </motion.p>
         )}
 
@@ -136,11 +138,11 @@ export default function SpotItHost() {
                 margin: 0,
               }}
             >
-              Pronađi simbol koji se ponavlja na tvojoj karti!
+              {t('spotIt.findSymbol')}
             </p>
             {totalPlayers > 0 && (
               <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-                {tappedCount} / {totalPlayers} pokušalo
+                {t('spotIt.triedCount', { n: tappedCount, total: totalPlayers })}
               </p>
             )}
           </motion.div>
@@ -181,7 +183,7 @@ export default function SpotItHost() {
                     {roundResult.winnerName}
                   </span>
                   <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-                    +{roundResult.pointsAwarded[roundResult.winnerId] ?? 0} poena
+                    +{roundResult.pointsAwarded[roundResult.winnerId] ?? 0} {t('common.points')}
                   </span>
                 </div>
                 {roundResult.matchSymbolIndex !== null && (
@@ -199,7 +201,7 @@ export default function SpotItHost() {
                   margin: 0,
                 }}
               >
-                Niko nije pronašao! ⏱️
+                {t('spotIt.nobodyFound')}
               </p>
             )}
           </motion.div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { useRoomStore } from '../../store/roomStore';
+import { useT } from '../../i18n/useT';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { WordHint } from './components/WordHint';
 import { GuessList } from './components/GuessList';
@@ -17,6 +18,7 @@ export default function DrawGuessHost() {
   const gameState = useGameStore((s) => s.gameState);
   const players = useRoomStore((s) => s.players);
   const { play } = useSound();
+  const t = useT();
   const prevPhaseRef = useRef<string | null>(null);
   const prevTimeRef = useRef<number>(Infinity);
 
@@ -64,10 +66,10 @@ export default function DrawGuessHost() {
         }}
       >
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Runda {round}/{totalRounds}
+          {t('drawGuess.round', { round, total: totalRounds })}
         </p>
         <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>
-          {host.drawerName} bira reč...
+          {t('drawGuess.choosingWord', { name: host.drawerName })}
         </p>
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
           {timeRemaining}s
@@ -148,7 +150,7 @@ export default function DrawGuessHost() {
         }}
       >
         <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-          {phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
+          {phase === 'ended' ? t('leaderboard.final') : t('leaderboard.standings')}
         </p>
         <div style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {leaderboard.map((entry) => {
@@ -187,7 +189,7 @@ export default function DrawGuessHost() {
                 <span style={{ fontWeight: 600 }}>{entry.name}</span>
               </div>
               <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                {entry.score.toLocaleString()} poena
+                {entry.score.toLocaleString()} {t('common.points')}
               </span>
             </div>
             );

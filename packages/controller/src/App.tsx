@@ -8,8 +8,10 @@ import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
+import { useT } from './i18n/useT';
 
 function ReconnectingOverlay() {
+  const t = useT();
   return (
     <div
       style={{
@@ -23,9 +25,9 @@ function ReconnectingOverlay() {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Ponovno povezivanje...</p>
+        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>{t('reconnect.reconnecting')}</p>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-          Sačekaj
+          {t('reconnect.wait')}
         </p>
       </div>
     </div>
@@ -33,6 +35,7 @@ function ReconnectingOverlay() {
 }
 
 function GameEndedOverlay() {
+  const t = useT();
   return (
     <div
       style={{
@@ -47,7 +50,7 @@ function GameEndedOverlay() {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '1.6rem', fontWeight: 700 }}>Igra je završena</p>
+        <p style={{ fontSize: '1.6rem', fontWeight: 700 }}>{t('reconnect.gameEnded')}</p>
         <p
           style={{
             color: 'var(--text-secondary)',
@@ -55,7 +58,7 @@ function GameEndedOverlay() {
             fontSize: '1rem',
           }}
         >
-          Vraćamo se u lobi...
+          {t('reconnect.returningToLobby')}
         </p>
       </div>
     </div>

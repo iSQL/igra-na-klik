@@ -400,14 +400,66 @@ h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
 .cta:hover{background:#5a52d5}
 .host-link{font-size:0.85rem;color:#a0a0b0;text-decoration:none;margin-top:0.5rem;opacity:0.7}
 .host-link:hover{opacity:1;color:#e0e0e0}
+.lang{position:fixed;top:1rem;right:1rem;display:inline-flex;gap:0.2rem;padding:0.2rem;background:#1a1a2e;border-radius:0.6rem}
+.lang-btn{padding:0.3rem 0.65rem;font:inherit;font-size:0.8rem;font-weight:700;border:none;border-radius:0.45rem;cursor:pointer;background:transparent;color:#a0a0b0}
 </style>
 </head>
 <body>
+<div class="lang" role="group" aria-label="Language">
+<button class="lang-btn" type="button" data-lang="sr">SR</button>
+<button class="lang-btn" type="button" data-lang="en">EN</button>
+</div>
 <div class="wrap">
 <h1>Igra Na Klik</h1>
-<a class="cta" href="/play/">🎮 Pridruži se igri</a>
-<a class="host-link" href="/host/">Kreiraj novu sobu →</a>
+<a class="cta" id="cta" href="/play/">🎮 Pridruži se igri</a>
+<a class="host-link" id="host-link" href="/host/">Kreiraj novu sobu →</a>
 </div>
+<script>
+(function(){
+  var KEY='igra-language';
+  var T={
+    sr:{cta:'🎮 Pridruži se igri',host:'Kreiraj novu sobu →'},
+    en:{cta:'🎮 Join a game',host:'Create a new room →'}
+  };
+  // The apps persist language via Zustand: localStorage holds
+  // {"state":{"language":"en"},"version":0}. Read/write that exact shape so
+  // the landing toggle stays in sync with the host/controller apps.
+  function readLang(){
+    try{
+      var raw=localStorage.getItem(KEY);
+      if(!raw) return 'sr';
+      if(raw==='sr'||raw==='en') return raw;
+      var v=JSON.parse(raw);
+      var l=(v&&v.state)?v.state.language:(v&&v.language);
+      return (l==='sr'||l==='en')?l:'sr';
+    }catch(e){ return 'sr'; }
+  }
+  function writeLang(l){
+    try{ localStorage.setItem(KEY, JSON.stringify({state:{language:l},version:0})); }catch(e){}
+  }
+  function render(l){
+    document.documentElement.lang=l;
+    document.getElementById('cta').textContent=T[l].cta;
+    document.getElementById('host-link').textContent=T[l].host;
+    var btns=document.querySelectorAll('.lang-btn');
+    for(var i=0;i<btns.length;i++){
+      var on=btns[i].getAttribute('data-lang')===l;
+      btns[i].setAttribute('aria-pressed',on?'true':'false');
+      btns[i].style.background=on?'#6c63ff':'transparent';
+      btns[i].style.color=on?'#fff':'#a0a0b0';
+    }
+  }
+  var btns=document.querySelectorAll('.lang-btn');
+  for(var i=0;i<btns.length;i++){
+    btns[i].addEventListener('click',function(){
+      var l=this.getAttribute('data-lang');
+      writeLang(l);
+      render(l);
+    });
+  }
+  render(readLang());
+})();
+</script>
 </body>
 </html>`;
 

@@ -13,7 +13,10 @@ import type {
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
+import { useLanguageStore } from '../store/languageStore';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
+import { LanguageSwitch } from '../components/LanguageSwitch';
+import { useT } from '../i18n/useT';
 
 interface GeoPackSummary {
   id: string;
@@ -41,6 +44,7 @@ const PHOTO_OPTIONS = [1, 2, 3, 4];
 export function GameSelectScreen() {
   const room = usePlayerStore((s) => s.room);
   const setScreen = useNavStore((s) => s.setScreen);
+  const t = useT();
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [geoPacks, setGeoPacks] = useState<GeoPackSummary[]>([]);
@@ -146,6 +150,7 @@ export function GameSelectScreen() {
         payload.customKoSamJaQuestions = koSamJaImport.questions;
       }
     }
+    payload.language = useLanguageStore.getState().language;
     socket.emit('host:start-game', payload);
   };
 
@@ -180,10 +185,14 @@ export function GameSelectScreen() {
             border: '1px solid var(--bg-card)',
           }}
         >
-          ← Nazad
+          {t('gameSelect.backArrow')}
         </button>
-        <h1 style={{ fontSize: '1.4rem', margin: 0 }}>Izaberi igru</h1>
+        <h1 style={{ fontSize: '1.4rem', margin: 0 }}>{t('gameSelect.title')}</h1>
         <LeaveRoomButton />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <LanguageSwitch />
       </div>
 
       {errorMessage && (
@@ -239,7 +248,9 @@ export function GameSelectScreen() {
                   textAlign: 'left',
                 }}
               >
-                <strong style={{ fontSize: '1.05rem' }}>{game.name}</strong>
+                <strong style={{ fontSize: '1.05rem' }}>
+                  {t(`game.${game.id}.name`)}
+                </strong>
                 <span
                   style={{
                     fontSize: '0.8rem',
@@ -247,14 +258,18 @@ export function GameSelectScreen() {
                     fontWeight: 400,
                   }}
                 >
-                  {game.description}
+                  {t(`game.${game.id}.description`)}
                 </span>
                 {lacking && (
                   <span style={{ fontSize: '0.8rem', color: '#e07070' }}>
-                    Treba još {game.minPlayers - connectedCount}{' '}
-                    {game.minPlayers - connectedCount === 1
-                      ? 'igrač'
-                      : 'igrača'}
+                    {t('gameSelect.needMore', {
+                      n: game.minPlayers - connectedCount,
+                      noun: t(
+                        game.minPlayers - connectedCount === 1
+                          ? 'common.player.one'
+                          : 'common.player.many'
+                      ),
+                    })}
                   </span>
                 )}
               </button>
@@ -319,7 +334,7 @@ export function GameSelectScreen() {
                       border: 'none',
                     }}
                   >
-                    Pokreni
+                    {t('gameSelect.start')}
                   </button>
                 </div>
               )}
@@ -348,6 +363,7 @@ function GeoConfig({
   photosPerPlayer: number;
   setPhotosPerPlayer: (n: number) => void;
 }) {
+  const t = useT();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -355,17 +371,17 @@ function GeoConfig({
           active={mode === 'predefined'}
           onClick={() => setMode('predefined')}
         >
-          Predefinisano
+          {t('config.predefined')}
         </ModeButton>
         <ModeButton active={mode === 'custom'} onClick={() => setMode('custom')}>
-          Slike igrača
+          {t('config.playerPhotos')}
         </ModeButton>
       </div>
       {mode === 'predefined' && (
         <>
           {packs.length === 0 ? (
             <span style={{ fontSize: '0.8rem', color: '#e74c3c' }}>
-              Nema dostupnih paketa
+              {t('config.noPacks')}
             </span>
           ) : (
             <select
@@ -392,7 +408,7 @@ function GeoConfig({
       {mode === 'custom' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Slika po igraču
+            {t('config.photosPerPlayer')}
           </span>
           <div style={{ display: 'flex', gap: '0.3rem' }}>
             {PHOTO_OPTIONS.map((n) => (
@@ -426,6 +442,7 @@ function QuizConfig({
   error: string | null;
   setError: (e: string | null) => void;
 }) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedPackId =
@@ -448,7 +465,7 @@ function QuizConfig({
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -468,7 +485,7 @@ function QuizConfig({
         });
         setError(null);
       } catch {
-        setError('Nevažeći JSON.');
+        setError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -477,7 +494,7 @@ function QuizConfig({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        Paket pitanja
+        {t('import.questionPack')}
       </span>
       <select
         value={selectedPackId}
@@ -493,7 +510,7 @@ function QuizConfig({
           opacity: isFileImport ? 0.5 : 1,
         }}
       >
-        <option value="">Ugrađeni paket</option>
+        <option value="">{t('import.builtinPack')}</option>
         {packs.map((p) => (
           <option key={p.id} value={p.id}>
             {p.id} ({p.count})
@@ -522,7 +539,7 @@ function QuizConfig({
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Iz fajla: <strong>{imported!.fileName}</strong> (
+            {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
             {imported!.questions.length})
           </span>
           <button
@@ -539,7 +556,7 @@ function QuizConfig({
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Ukloni
+            {t('common.remove')}
           </button>
         </div>
       ) : (
@@ -555,7 +572,7 @@ function QuizConfig({
             border: '1px solid var(--bg-card)',
           }}
         >
-          Uvezi pitanja iz fajla
+          {t('import.importQuestionsFile')}
         </button>
       )}
       {error && (
@@ -584,6 +601,7 @@ function KoSamJaConfig({
   error: string | null;
   setError: (e: string | null) => void;
 }) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedPackId =
@@ -606,7 +624,7 @@ function KoSamJaConfig({
     e.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onerror = () => setError('Greška pri čitanju fajla.');
+    reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
@@ -618,7 +636,7 @@ function KoSamJaConfig({
         setImported({ questions: result.questions, fileName: file.name });
         setError(null);
       } catch {
-        setError('Nevažeći JSON.');
+        setError(t('import.invalidJson'));
       }
     };
     reader.readAsText(file);
@@ -641,7 +659,7 @@ function KoSamJaConfig({
         </ModeButton>
       </div>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        Paket pitanja
+        {t('import.questionPack')}
       </span>
       <select
         value={selectedPackId}
@@ -657,7 +675,7 @@ function KoSamJaConfig({
           opacity: isFileImport ? 0.5 : 1,
         }}
       >
-        <option value="">Ugrađeni paket</option>
+        <option value="">{t('import.builtinPack')}</option>
         {packs.map((p) => (
           <option key={p.id} value={p.id}>
             {p.id} ({p.count})
@@ -686,7 +704,7 @@ function KoSamJaConfig({
           }}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Iz fajla: <strong>{imported!.fileName}</strong> (
+            {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
             {imported!.questions.length})
           </span>
           <button
@@ -703,7 +721,7 @@ function KoSamJaConfig({
               border: '1px solid var(--text-secondary)',
             }}
           >
-            Ukloni
+            {t('common.remove')}
           </button>
         </div>
       ) : (
@@ -719,7 +737,7 @@ function KoSamJaConfig({
             border: '1px solid var(--bg-card)',
           }}
         >
-          Uvezi pitanja iz fajla
+          {t('import.importQuestionsFile')}
         </button>
       )}
       {error && (
@@ -736,10 +754,11 @@ function SlepiConfig({
   rounds: number;
   setRounds: (n: number) => void;
 }) {
+  const t = useT();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        Broj rundi
+        {t('config.rounds')}
       </span>
       <div style={{ display: 'flex', gap: '0.3rem' }}>
         {SLEPI_ROUND_OPTIONS.map((n) => (

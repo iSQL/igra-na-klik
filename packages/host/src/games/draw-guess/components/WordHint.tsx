@@ -1,3 +1,5 @@
+import { useT } from '../../../i18n/useT';
+
 interface WordHintProps {
   hint: string;
   wordLength: number;
@@ -6,6 +8,7 @@ interface WordHintProps {
 }
 
 export function WordHint({ hint, wordLength, revealed, word }: WordHintProps) {
+  const t = useT();
   return (
     <div style={{ textAlign: 'center' }}>
       <p
@@ -20,7 +23,7 @@ export function WordHint({ hint, wordLength, revealed, word }: WordHintProps) {
         {revealed && word ? word : hint}
       </p>
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-        {wordLength} slova
+        {t('drawGuess.letters', { n: wordLength })}
       </p>
     </div>
   );

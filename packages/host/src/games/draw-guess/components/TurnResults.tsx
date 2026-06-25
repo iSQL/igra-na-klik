@@ -1,4 +1,5 @@
 import { useRoomStore } from '../../../store/roomStore';
+import { useT } from '../../../i18n/useT';
 
 interface TurnResultsProps {
   word: string;
@@ -7,6 +8,7 @@ interface TurnResultsProps {
 
 export function TurnResults({ word, scores }: TurnResultsProps) {
   const players = useRoomStore((s) => s.players);
+  const t = useT();
   const sorted = [...scores].sort((a, b) => b.roundScore - a.roundScore);
 
   return (
@@ -21,7 +23,7 @@ export function TurnResults({ word, scores }: TurnResultsProps) {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Reč je bila</p>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('drawGuess.wordWas')}</p>
         <p style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--success)' }}>{word}</p>
       </div>
 
