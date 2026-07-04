@@ -4,9 +4,12 @@ import {
   PublicPlayer,
   PublicRoom,
   RoomSettings,
+  RoomSummary,
+  ChatMessage,
   DEFAULT_ROOM_SETTINGS,
   AVATAR_COLORS,
   AVATAR_EMOJIS,
+  CHAT_HISTORY_LIMIT,
   generateRoomCode,
 } from '@igra/shared';
 import { generateId, generateReconnectToken } from '../utils/id.js';
@@ -25,6 +28,9 @@ export class RoomManager {
       currentGameId: null,
       settings: { ...DEFAULT_ROOM_SETTINGS, ...settings },
       createdAt: Date.now(),
+      chatMessages: [],
+      hostConnected: true,
+      idleSince: null,
     };
     this.rooms.set(code, room);
     return room;
@@ -200,10 +206,77 @@ export class RoomManager {
   }
 
   toPublicRoom(room: Room): PublicRoom {
+    const { chatMessages: _, ...rest } = room;
     return {
-      ...room,
+      ...rest,
       players: room.players.map((p) => this.toPublicPlayer(p)),
     };
+  }
+
+  /** Safe per-room summaries for the public landing-page list. */
+  listRoomSummaries(): RoomSummary[] {
+    return [...this.rooms.values()].map((room) => ({
+      code: room.code,
+      playerCount: room.players.filter((p) => p.isConnected).length,
+      maxPlayers: room.settings.maxPlayers,
+      status: room.status,
+    }));
+  }
+
+  addChatMessage(
+    roomCode: string,
+    player: Player,
+    text: string
+  ): ChatMessage | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    const message: ChatMessage = {
+      id: generateId(),
+      playerId: player.id,
+      playerName: player.name,
+      avatarEmoji: player.avatarEmoji,
+      avatarColor: player.avatarColor,
+      text,
+      at: Date.now(),
+    };
+    room.chatMessages.push(message);
+    if (room.chatMessages.length > CHAT_HISTORY_LIMIT) {
+      room.chatMessages.splice(0, room.chatMessages.length - CHAT_HISTORY_LIMIT);
+    }
+    return message;
+  }
+
+  clearChat(roomCode: string): void {
+    const room = this.rooms.get(roomCode);
+    if (room) room.chatMessages = [];
+  }
+
+  setHostConnected(roomCode: string, connected: boolean): void {
+    const room = this.rooms.get(roomCode);
+    if (room) room.hostConnected = connected;
+  }
+
+  /**
+   * Maintain each room's idleSince timestamp and return the codes of rooms
+   * that have been abandoned (host disconnected AND zero connected players)
+   * continuously for at least `ttl` ms. Any reconnect resets the clock.
+   */
+  collectIdleRooms(now: number, ttl: number): string[] {
+    const expired: string[] = [];
+    for (const room of this.rooms.values()) {
+      const idle =
+        !room.hostConnected && room.players.every((p) => !p.isConnected);
+      if (!idle) {
+        room.idleSince = null;
+        continue;
+      }
+      if (room.idleSince === null) {
+        room.idleSince = now;
+      } else if (now - room.idleSince >= ttl) {
+        expired.push(room.code);
+      }
+    }
+    return expired;
   }
 
   getActiveRoomCode(): string | null {

@@ -4,6 +4,8 @@ import { socket } from '../socket';
 import { PlayerList } from '../components/PlayerList';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { LobbyChatPanel } from '../components/LobbyChatPanel';
+import { CloseRoomButton } from '../components/CloseRoomButton';
 import { useT } from '../i18n/useT';
 
 // Lowest minPlayers across all registered games — gate the lobby on this so
@@ -101,6 +103,10 @@ export function LobbyScreen() {
           ? t('lobby.chooseGame')
           : t('lobby.needAtLeast', { n: MIN_PLAYERS_OVERALL, noun: minNoun })}
       </button>
+
+      <LobbyChatPanel />
+
+      <CloseRoomButton />
     </div>
   );
 }

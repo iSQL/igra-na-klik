@@ -156,9 +156,18 @@ export function App() {
       });
     });
 
+    socket.on('room:chat-message', ({ message }) => {
+      usePlayerStore.getState().addChatMessage(message);
+    });
+
+    socket.on('room:chat-history', ({ messages }) => {
+      usePlayerStore.getState().setChatMessages(messages);
+    });
+
     socket.on('game:started', ({ gameState }) => {
       setGameState(gameState);
       useNavStore.getState().setScreen('lobby');
+      usePlayerStore.getState().clearChat();
     });
 
     socket.on('game:state-update', ({ gameState }) => {
@@ -213,6 +222,8 @@ export function App() {
       socket.off('room:player-removed');
       socket.off('room:player-updated');
       socket.off('room:remote-host-changed');
+      socket.off('room:chat-message');
+      socket.off('room:chat-history');
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:player-state');

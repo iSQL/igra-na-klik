@@ -5,6 +5,7 @@ import type {
   InterServerEvents,
   SocketData,
 } from '@igra/shared';
+import { CHAT_MAX_LENGTH, CHAT_THROTTLE_MS } from '@igra/shared';
 import { RoomManager } from '../../room/RoomManager.js';
 
 type IoServer = Server<
@@ -26,6 +27,9 @@ export function registerRoomHandlers(
   roomManager: RoomManager,
   cancelGraceTimer: (playerId: string) => void
 ) {
+  // Per-socket chat throttle timestamp.
+  let lastChatAt = 0;
+
   socket.on('host:create-room', (data) => {
     const room = roomManager.createRoom(socket.id, data.settings);
     socket.data.roomCode = room.code;
@@ -57,6 +61,9 @@ export function registerRoomHandlers(
         socket.to(found.roomCode).emit('room:player-reconnected', {
           playerId: found.playerId,
         });
+        if (room.status === 'lobby' && room.chatMessages.length > 0) {
+          socket.emit('room:chat-history', { messages: room.chatMessages });
+        }
         return;
       }
     }
@@ -84,6 +91,32 @@ export function registerRoomHandlers(
         player: roomManager.toPublicPlayer(player),
       });
     }
+
+    if (room.status === 'lobby' && room.chatMessages.length > 0) {
+      socket.emit('room:chat-history', { messages: room.chatMessages });
+    }
+  });
+
+  socket.on('player:send-chat', (data) => {
+    const { roomCode, playerId } = socket.data;
+    if (!roomCode || !playerId) return;
+    const room = roomManager.getRoom(roomCode);
+    if (!room) return;
+    // Chat is a lobby-only feature — reject silently once a game runs.
+    if (room.status !== 'lobby') return;
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    const now = Date.now();
+    if (now - lastChatAt < CHAT_THROTTLE_MS) return;
+
+    const text = (data?.text ?? '').trim().slice(0, CHAT_MAX_LENGTH);
+    if (!text) return;
+
+    lastChatAt = now;
+    const message = roomManager.addChatMessage(roomCode, player, text);
+    if (!message) return;
+    io.to(roomCode).emit('room:chat-message', { message });
   });
 
   socket.on('player:claim-remote-host', () => {

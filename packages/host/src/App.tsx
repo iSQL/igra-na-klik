@@ -18,6 +18,9 @@ export function App() {
     updatePlayer,
     setStatus,
     setRemoteHostPlayerId,
+    addChatMessage,
+    setChatMessages,
+    clearChat,
     reset: resetRoom,
   } = useRoomStore();
   const { setGameState, resetGame } = useGameStore();
@@ -55,9 +58,18 @@ export function App() {
       setRemoteHostPlayerId(remoteHostPlayerId);
     });
 
+    socket.on('room:chat-message', ({ message }) => {
+      addChatMessage(message);
+    });
+
+    socket.on('room:chat-history', ({ messages }) => {
+      setChatMessages(messages);
+    });
+
     socket.on('game:started', ({ gameState }) => {
       setGameState(gameState);
       setStatus('in-game');
+      clearChat();
     });
 
     socket.on('game:state-update', ({ gameState }) => {
@@ -72,12 +84,21 @@ export function App() {
     });
 
     socket.on('room:destroyed', () => {
-      // A remote-host player tore the room down; reset everything and
-      // spin up a fresh room so the TV is immediately ready for a new
-      // session instead of stranded on an empty lobby.
+      const selfClosed = useRoomStore.getState().selfClosed;
       resetGame();
       resetRoom();
       window.history.replaceState(null, '', window.location.pathname);
+
+      if (selfClosed) {
+        // This TV explicitly closed its own room — leave the host app and
+        // land on the public landing page.
+        window.location.href = '/';
+        return;
+      }
+
+      // A remote-host player tore the room down; spin up a fresh room so
+      // the TV is immediately ready for a new session instead of stranded
+      // on an empty lobby.
       socket.emit('host:create-room', {});
       setStatus('creating');
     });
@@ -87,7 +108,9 @@ export function App() {
     });
 
     socket.on('connect', () => {
-      if (status === 'disconnected') {
+      // Read live status (the closure value is stale after mount) so a
+      // reconnect while on the "closed" screen doesn't spawn a new room.
+      if (useRoomStore.getState().status === 'disconnected') {
         socket.emit('host:create-room', {});
         setStatus('creating');
       }
@@ -101,6 +124,8 @@ export function App() {
       socket.off('room:player-reconnected');
       socket.off('room:player-updated');
       socket.off('room:remote-host-changed');
+      socket.off('room:chat-message');
+      socket.off('room:chat-history');
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:ended');

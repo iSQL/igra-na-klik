@@ -89,6 +89,19 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Ako izađeš tokom igre, prekinućeš trenutnu rundu za ostale igrače.',
     'leave.exit': 'Izađi',
 
+    // --- lobby chat ------------------------------------------------------
+    'chat.title': 'Ćaskanje',
+    'chat.placeholder': 'Napiši poruku...',
+    'chat.empty': 'Još nema poruka',
+    'chat.send': 'Pošalji',
+
+    // --- close room ------------------------------------------------------
+    'closeRoom.button': 'Zatvori sobu',
+    'closeRoom.confirmTitle': 'Zatvoriti sobu?',
+    'closeRoom.confirmBody':
+      'Soba će biti obrisana i svi igrači će biti izbačeni.',
+    'closeRoom.confirm': 'Zatvori',
+
     // --- join screen -----------------------------------------------------
     'join.roomCode': 'Kod sobe',
     'join.yourName': 'Tvoje ime',
@@ -312,6 +325,19 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'leave.confirmBody':
       'If you leave during a game, you will cut the current round short for the other players.',
     'leave.exit': 'Leave',
+
+    // --- lobby chat ------------------------------------------------------
+    'chat.title': 'Chat',
+    'chat.placeholder': 'Type a message...',
+    'chat.empty': 'No messages yet',
+    'chat.send': 'Send',
+
+    // --- close room ------------------------------------------------------
+    'closeRoom.button': 'Close room',
+    'closeRoom.confirmTitle': 'Close the room?',
+    'closeRoom.confirmBody':
+      'The room will be deleted and all players will be removed.',
+    'closeRoom.confirm': 'Close',
 
     // --- join screen -----------------------------------------------------
     'join.roomCode': 'Room code',

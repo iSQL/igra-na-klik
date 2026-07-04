@@ -307,6 +307,12 @@ if (SINGLE_ROOM_MODE) {
   });
 }
 
+// Public rooms list for the landing page: safe summaries only (code,
+// connected-player count, capacity, status) — no player names or tokens.
+app.get('/api/rooms', (_req, res) => {
+  res.json({ rooms: roomManager.listRoomSummaries() });
+});
+
 // Static serving for single-container deployments: host at /, controller at /play.
 // Skipped automatically if the dist directories aren't present (e.g. `npm run dev`).
 const HOST_DIST_DIR = process.env.HOST_DIST_DIR
@@ -402,6 +408,16 @@ h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
 .host-link:hover{opacity:1;color:#e0e0e0}
 .lang{position:fixed;top:1rem;right:1rem;display:inline-flex;gap:0.2rem;padding:0.2rem;background:#1a1a2e;border-radius:0.6rem}
 .lang-btn{padding:0.3rem 0.65rem;font:inherit;font-size:0.8rem;font-weight:700;border:none;border-radius:0.45rem;cursor:pointer;background:transparent;color:#a0a0b0}
+.rooms{text-align:left;display:none;flex-direction:column;gap:0.5rem}
+.rooms.visible{display:flex}
+.rooms-title{font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#a0a0b0}
+.room-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.7rem 1rem;background:#1a1a2e;border-radius:0.7rem;text-decoration:none;color:#e0e0e0;transition:background 0.15s}
+a.room-row:hover{background:#24244a}
+.room-row.busy{opacity:0.55}
+.room-code{font-weight:800;font-size:1.1rem;letter-spacing:0.15em;color:#6c63ff}
+.room-row.busy .room-code{color:#a0a0b0}
+.room-meta{font-size:0.8rem;color:#a0a0b0}
+.room-badge{font-size:0.7rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:0.4rem;background:#2d2d52;color:#c9c9e0;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -412,15 +428,21 @@ h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
 <div class="wrap">
 <h1>Igra Na Klik</h1>
 <a class="cta" id="cta" href="/play/">🎮 Pridruži se igri</a>
+<div class="rooms" id="rooms">
+<div class="rooms-title" id="rooms-title">Aktivne sobe</div>
+<div id="rooms-list"></div>
+</div>
 <a class="host-link" id="host-link" href="/host/">Kreiraj novu sobu →</a>
 </div>
 <script>
 (function(){
   var KEY='igra-language';
   var T={
-    sr:{cta:'🎮 Pridruži se igri',host:'Kreiraj novu sobu →'},
-    en:{cta:'🎮 Join a game',host:'Create a new room →'}
+    sr:{cta:'🎮 Pridruži se igri',host:'Kreiraj novu sobu →',roomsTitle:'Aktivne sobe',roomsEmpty:'Nema aktivnih soba',inGame:'Igra u toku',players:'igrača'},
+    en:{cta:'🎮 Join a game',host:'Create a new room →',roomsTitle:'Active rooms',roomsEmpty:'No active rooms',inGame:'Game in progress',players:'players'}
   };
+  var currentLang='sr';
+  var lastRooms=null;
   // The apps persist language via Zustand: localStorage holds
   // {"state":{"language":"en"},"version":0}. Read/write that exact shape so
   // the landing toggle stays in sync with the host/controller apps.
@@ -437,10 +459,59 @@ h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
   function writeLang(l){
     try{ localStorage.setItem(KEY, JSON.stringify({state:{language:l},version:0})); }catch(e){}
   }
+  function renderRooms(){
+    var rooms=lastRooms;
+    var box=document.getElementById('rooms');
+    var list=document.getElementById('rooms-list');
+    if(!rooms){ box.className='rooms'; return; }
+    box.className='rooms visible';
+    document.getElementById('rooms-title').textContent=T[currentLang].roomsTitle;
+    list.textContent='';
+    if(rooms.length===0){
+      var empty=document.createElement('div');
+      empty.className='room-meta';
+      empty.textContent=T[currentLang].roomsEmpty;
+      list.appendChild(empty);
+      return;
+    }
+    for(var i=0;i<rooms.length;i++){
+      var r=rooms[i];
+      var open=r.status==='lobby';
+      var row=document.createElement(open?'a':'div');
+      row.className=open?'room-row':'room-row busy';
+      if(open) row.href='/play/?code='+encodeURIComponent(r.code);
+      var code=document.createElement('span');
+      code.className='room-code';
+      code.textContent=r.code;
+      row.appendChild(code);
+      var meta=document.createElement('span');
+      meta.className='room-meta';
+      meta.textContent=r.playerCount+'/'+r.maxPlayers+' '+T[currentLang].players;
+      row.appendChild(meta);
+      if(!open){
+        var badge=document.createElement('span');
+        badge.className='room-badge';
+        badge.textContent=T[currentLang].inGame;
+        row.appendChild(badge);
+      }
+      list.appendChild(row);
+    }
+  }
+  function fetchRooms(){
+    fetch('/api/rooms').then(function(res){
+      if(!res.ok) throw new Error('bad status');
+      return res.json();
+    }).then(function(data){
+      lastRooms=(data&&data.rooms)||[];
+      renderRooms();
+    }).catch(function(){ /* keep the last rendered list */ });
+  }
   function render(l){
+    currentLang=l;
     document.documentElement.lang=l;
     document.getElementById('cta').textContent=T[l].cta;
     document.getElementById('host-link').textContent=T[l].host;
+    renderRooms();
     var btns=document.querySelectorAll('.lang-btn');
     for(var i=0;i<btns.length;i++){
       var on=btns[i].getAttribute('data-lang')===l;
@@ -458,6 +529,8 @@ h1{font-size:2rem;font-weight:800;letter-spacing:0.02em}
     });
   }
   render(readLang());
+  fetchRooms();
+  setInterval(fetchRooms,5000);
 })();
 </script>
 </body>

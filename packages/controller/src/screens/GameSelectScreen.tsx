@@ -15,6 +15,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useLanguageStore } from '../store/languageStore';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
+import { CloseRoomButton } from '../components/CloseRoomButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 
@@ -191,8 +192,16 @@ export function GameSelectScreen() {
         <LeaveRoomButton />
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '0.6rem',
+        }}
+      >
         <LanguageSwitch />
+        <CloseRoomButton />
       </div>
 
       {errorMessage && (

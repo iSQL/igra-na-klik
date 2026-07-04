@@ -1,4 +1,10 @@
-import type { PublicPlayer, Player, PublicRoom, RoomSettings } from './room.js';
+import type {
+  PublicPlayer,
+  Player,
+  PublicRoom,
+  RoomSettings,
+  ChatMessage,
+} from './room.js';
 import type { GameState } from './game.js';
 import type { QuizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
@@ -24,6 +30,8 @@ export interface ServerToClientEvents {
   'game:player-state': (data: { gameState: GameState }) => void;
   'game:ended': (data: { finalScores: { playerId: string; score: number }[] }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
+  'room:chat-message': (data: { message: ChatMessage }) => void;
+  'room:chat-history': (data: { messages: ChatMessage[] }) => void;
   'room:kicked': (data: { reason?: string }) => void;
   'room:destroyed': (data: { reason?: string }) => void;
   error: (data: { code: string; message: string }) => void;
@@ -54,6 +62,11 @@ export interface ClientToServerEvents {
     language?: Language;
   }) => void;
   'host:stop-game': () => void;
+  // Close/delete the room entirely. Accepted from the host socket or the
+  // remote-host holder; kicks all players, host auto-creates a fresh room.
+  'host:close-room': () => void;
+  // Lobby chat — only accepted while room.status === 'lobby'.
+  'player:send-chat': (data: { text: string }) => void;
   'host:kick-player': (data: { playerId: string }) => void;
   'player:claim-remote-host': () => void;
   'player:release-remote-host': () => void;

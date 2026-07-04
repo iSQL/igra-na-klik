@@ -3,6 +3,16 @@ export const ROOM_CODE_LENGTH = 2;
 export const MAX_PLAYERS_DEFAULT = 8;
 export const RECONNECT_GRACE_MS = 5 * 60_000;
 
+// Lobby chat limits (pre-game chat only).
+export const CHAT_MAX_LENGTH = 200;
+export const CHAT_HISTORY_LIMIT = 50;
+export const CHAT_THROTTLE_MS = 750;
+
+// Abandoned-room sweep: rooms with a disconnected host and zero connected
+// players for this long get deleted automatically.
+export const IDLE_ROOM_TTL_MS = 5 * 60_000;
+export const IDLE_SWEEP_INTERVAL_MS = 30_000;
+
 export const AVATAR_COLORS = [
   '#e74c3c',
   '#3498db',

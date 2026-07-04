@@ -4,6 +4,8 @@ import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
+import { CloseRoomButton } from '../components/CloseRoomButton';
+import { LobbyChat } from '../components/LobbyChat';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 
@@ -155,8 +157,18 @@ export function LobbyScreen() {
           ))}
       </div>
 
-      <div style={{ marginTop: '0.5rem' }}>
+      <LobbyChat />
+
+      <div
+        style={{
+          marginTop: '0.5rem',
+          display: 'flex',
+          gap: '0.6rem',
+          alignItems: 'center',
+        }}
+      >
         <LeaveRoomButton />
+        {iAmRemoteHost && <CloseRoomButton />}
       </div>
 
       {pickerOpen && (

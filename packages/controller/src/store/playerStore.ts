@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Player, PublicRoom } from '@igra/shared';
+import type { ChatMessage, Player, PublicRoom } from '@igra/shared';
+import { CHAT_HISTORY_LIMIT } from '@igra/shared';
 import { updateSocketAuth } from '../socket';
 
 const RECONNECT_TOKEN_KEY = 'igra-reconnect-token';
@@ -9,6 +10,7 @@ interface PlayerStore {
   room: PublicRoom | null;
   reconnectToken: string | null;
   isConnected: boolean;
+  chatMessages: ChatMessage[];
   setPlayer: (player: Player) => void;
   setRoom: (room: PublicRoom) => void;
   setReconnectToken: (token: string) => void;
@@ -19,6 +21,9 @@ interface PlayerStore {
     avatarColor: string,
     avatarEmoji: string
   ) => void;
+  addChatMessage: (message: ChatMessage) => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
+  clearChat: () => void;
   reset: () => void;
 }
 
@@ -27,6 +32,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   room: null,
   reconnectToken: localStorage.getItem(RECONNECT_TOKEN_KEY),
   isConnected: false,
+  chatMessages: [],
   setPlayer: (player) => {
     localStorage.setItem(RECONNECT_TOKEN_KEY, player.reconnectToken);
     updateSocketAuth(player.reconnectToken);
@@ -61,9 +67,21 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
         : state.room;
       return { player, room };
     }),
+  addChatMessage: (message) =>
+    set((state) => ({
+      chatMessages: [...state.chatMessages, message].slice(-CHAT_HISTORY_LIMIT),
+    })),
+  setChatMessages: (messages) => set({ chatMessages: messages }),
+  clearChat: () => set({ chatMessages: [] }),
   reset: () => {
     localStorage.removeItem(RECONNECT_TOKEN_KEY);
     updateSocketAuth(undefined);
-    set({ player: null, room: null, reconnectToken: null, isConnected: false });
+    set({
+      player: null,
+      room: null,
+      reconnectToken: null,
+      isConnected: false,
+      chatMessages: [],
+    });
   },
 }));

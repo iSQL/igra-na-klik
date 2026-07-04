@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { PublicPlayer, PublicRoom } from '@igra/shared';
+import type { ChatMessage, PublicPlayer, PublicRoom } from '@igra/shared';
+import { CHAT_HISTORY_LIMIT } from '@igra/shared';
 
 export type HostStatus =
   | 'disconnected'
@@ -14,6 +15,12 @@ interface RoomStore {
   players: PublicPlayer[];
   status: HostStatus;
   remoteHostPlayerId: string | null;
+  chatMessages: ChatMessage[];
+  // Set right before this TV emits host:close-room, so the room:destroyed
+  // handler can tell an intentional close (redirect to the landing page)
+  // from a remote-host teardown (auto-create a fresh room).
+  selfClosed: boolean;
+  setSelfClosed: (v: boolean) => void;
   setRoom: (room: PublicRoom) => void;
   addPlayer: (player: PublicPlayer) => void;
   removePlayer: (playerId: string) => void;
@@ -21,6 +28,9 @@ interface RoomStore {
   updatePlayer: (player: PublicPlayer) => void;
   setStatus: (status: HostStatus) => void;
   setRemoteHostPlayerId: (id: string | null) => void;
+  addChatMessage: (message: ChatMessage) => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
+  clearChat: () => void;
   reset: () => void;
 }
 
@@ -29,6 +39,9 @@ export const useRoomStore = create<RoomStore>((set) => ({
   players: [],
   status: 'disconnected',
   remoteHostPlayerId: null,
+  chatMessages: [],
+  selfClosed: false,
+  setSelfClosed: (v) => set({ selfClosed: v }),
   setRoom: (room) =>
     set({
       room,
@@ -55,11 +68,18 @@ export const useRoomStore = create<RoomStore>((set) => ({
     })),
   setStatus: (status) => set({ status }),
   setRemoteHostPlayerId: (id) => set({ remoteHostPlayerId: id }),
+  addChatMessage: (message) =>
+    set((state) => ({
+      chatMessages: [...state.chatMessages, message].slice(-CHAT_HISTORY_LIMIT),
+    })),
+  setChatMessages: (messages) => set({ chatMessages: messages }),
+  clearChat: () => set({ chatMessages: [] }),
   reset: () =>
     set({
       room: null,
       players: [],
       status: 'disconnected',
       remoteHostPlayerId: null,
+      chatMessages: [],
     }),
 }));

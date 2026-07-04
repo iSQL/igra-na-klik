@@ -59,6 +59,9 @@ export class GameManager {
     room.status = 'in-game';
     room.currentGameId = gameId;
 
+    // Lobby chat is pre-game only — drop the history when a game starts.
+    this.roomManager.clearChat(room.code);
+
     // Each game is its own match — start everyone at zero so the
     // previous game's totals don't bleed into the new leaderboard.
     for (const player of room.players) {

@@ -6,7 +6,11 @@ import type {
   InterServerEvents,
   SocketData,
 } from '@igra/shared';
-import { RECONNECT_GRACE_MS } from '@igra/shared';
+import {
+  RECONNECT_GRACE_MS,
+  IDLE_ROOM_TTL_MS,
+  IDLE_SWEEP_INTERVAL_MS,
+} from '@igra/shared';
 import { RoomManager } from '../room/RoomManager.js';
 import { GameManager } from '../game/GameManager.js';
 import { GameRegistry } from '../game/GameRegistry.js';
@@ -75,6 +79,55 @@ export function setupSocket(
     }
   };
 
+  // Full room teardown: stop any active game, cancel grace timers, bounce
+  // every socket out (host gets room:destroyed and auto-creates a fresh
+  // room; players get room:kicked + disconnect), then delete the room.
+  const destroyRoom = (roomCode: string, reason: string) => {
+    const room = roomManager.getRoom(roomCode);
+    if (!room) return;
+
+    if (gameManager.isGameActive(roomCode)) {
+      gameManager.stopGame(roomCode);
+    }
+
+    for (const p of room.players) {
+      cancelGraceTimer(p.id);
+    }
+
+    for (const [, sock] of io.sockets.sockets) {
+      if (sock.data.roomCode !== roomCode) continue;
+      if (sock.data.isHost) {
+        sock.emit('room:destroyed', { reason });
+        sock.data.roomCode = undefined;
+        sock.leave(roomCode);
+        continue;
+      }
+      if (sock.data.playerId) {
+        sock.emit('room:kicked', { reason });
+        sock.data.roomCode = undefined;
+        sock.data.playerId = undefined;
+        sock.leave(roomCode);
+        sock.disconnect(true);
+      }
+    }
+
+    roomManager.deleteRoom(roomCode);
+  };
+
+  // Abandoned-room sweep: rooms whose host is disconnected and that have
+  // had zero connected players for IDLE_ROOM_TTL_MS get deleted. Also
+  // reaps orphan rooms left behind when the host page reloads (a reload
+  // creates a brand-new room and abandons the old one).
+  setInterval(() => {
+    for (const code of roomManager.collectIdleRooms(
+      Date.now(),
+      IDLE_ROOM_TTL_MS
+    )) {
+      destroyRoom(code, 'Soba je zatvorena zbog neaktivnosti.');
+      console.log(`Room ${code} deleted after idle timeout`);
+    }
+  }, IDLE_SWEEP_INTERVAL_MS);
+
   io.use(authMiddleware as Parameters<typeof io.use>[0]);
 
   io.on('connection', (socket) => {
@@ -103,6 +156,11 @@ export function setupSocket(
         socket.to(found.roomCode).emit('room:player-reconnected', {
           playerId: found.playerId,
         });
+
+        // Catch the returning player up on lobby chat.
+        if (room.status === 'lobby' && room.chatMessages.length > 0) {
+          socket.emit('room:chat-history', { messages: room.chatMessages });
+        }
 
         // If a game is in progress, replay the current state so the
         // reconnecting controller jumps straight back into the active
@@ -159,6 +217,22 @@ export function setupSocket(
       console.log(`Player ${playerId} kicked from room ${roomCode}`);
     });
 
+    socket.on('host:close-room', () => {
+      const { roomCode, playerId, isHost } = socket.data;
+      if (!roomCode) return;
+      const room = roomManager.getRoom(roomCode);
+      if (!room) return;
+
+      // Same control rule as host:stop-game: the TV host socket or the
+      // player currently holding the remote-host claim.
+      const canControl =
+        isHost || (playerId && room.remoteHostPlayerId === playerId);
+      if (!canControl) return;
+
+      destroyRoom(roomCode, 'Soba je zatvorena.');
+      console.log(`Room ${roomCode} closed by ${isHost ? 'host' : playerId}`);
+    });
+
     socket.on('player:leave-room', () => {
       const { roomCode, playerId } = socket.data;
       if (!roomCode || !playerId) return;
@@ -170,33 +244,7 @@ export function setupSocket(
       if (isRemoteHost) {
         // Remote-host drove the show — tear the entire room down so the
         // remaining players aren't stuck waiting on a phantom controller.
-        if (gameManager.isGameActive(roomCode)) {
-          gameManager.stopGame(roomCode);
-        }
-
-        for (const p of room.players) {
-          cancelGraceTimer(p.id);
-        }
-
-        const reason = 'Igrač koji je držao kontrolu je napustio sobu.';
-        for (const [, sock] of io.sockets.sockets) {
-          if (sock.data.roomCode !== roomCode) continue;
-          if (sock.data.isHost) {
-            sock.emit('room:destroyed', { reason });
-            sock.data.roomCode = undefined;
-            sock.leave(roomCode);
-            continue;
-          }
-          if (sock.data.playerId) {
-            sock.emit('room:kicked', { reason });
-            sock.data.roomCode = undefined;
-            sock.data.playerId = undefined;
-            sock.leave(roomCode);
-            sock.disconnect(true);
-          }
-        }
-
-        roomManager.deleteRoom(roomCode);
+        destroyRoom(roomCode, 'Igrač koji je držao kontrolu je napustio sobu.');
         console.log(`Room ${roomCode} destroyed by remote-host ${playerId}`);
         return;
       }
@@ -227,7 +275,12 @@ export function setupSocket(
       const { roomCode, playerId, isHost } = socket.data;
       if (!roomCode) return;
 
-      if (isHost) return;
+      if (isHost) {
+        // Room stays alive (players see the host greyed out), but mark it
+        // so the idle sweeper can reap it if nobody ever comes back.
+        roomManager.setHostConnected(roomCode, false);
+        return;
+      }
 
       if (playerId) {
         roomManager.setPlayerConnected(roomCode, playerId, false);
