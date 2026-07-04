@@ -55,6 +55,15 @@ export function DrawingPad({
   const lastOpsRef = useRef<DrawOp[] | null>(null);
   const lastViewVersionRef = useRef(-1);
 
+  // Strokes flushed to the server but not yet present in an `operations`
+  // snapshot. The server doesn't echo stroke batches back (slepi), so a
+  // full repaint before the next snapshot (pinch-zoom, resize) would
+  // otherwise briefly drop just-drawn strokes. `seq` is the batch index
+  // within its pencil session — snapshots may contain only a prefix of a
+  // session's batches, so pruning must be per-batch, not per-session.
+  const pendingLocalOpsRef = useRef<{ seq: number; op: StrokeOp }[]>([]);
+  const batchSeqRef = useRef(0);
+
   const activeTouchesRef = useRef<Map<number, Pt>>(new Map());
   const gestureModeRef = useRef<'idle' | 'draw' | 'pan-zoom'>('idle');
   const pinchStartRef = useRef<{
@@ -62,6 +71,10 @@ export function DrawingPad({
     startScale: number;
     centerLogical: Pt;
   } | null>(null);
+
+  // Slepi telefoni has no live spectators of the drawing, so batches can
+  // flush half as often; draw-guess keeps 50ms so the host canvas stays live.
+  const flushIntervalMs = actionPrefix === 'slepi' ? 100 : 50;
 
   const emit = useCallback(
     (action: string, data: Record<string, unknown>) => {
@@ -148,6 +161,12 @@ export function DrawingPad({
           i++;
         }
       }
+
+      // Flushed-but-unacked strokes are always newer than every server op,
+      // so painting them last keeps chronological order.
+      for (const { op } of pendingLocalOpsRef.current) {
+        paintStrokeView(ctx, op, w, h, scale, tx, ty);
+      }
     },
     [operations]
   );
@@ -163,6 +182,38 @@ export function DrawingPad({
     const prev = lastOpsRef.current;
     const prevLen = prev?.length ?? 0;
     const viewChanged = lastViewVersionRef.current !== viewVersionRef.current;
+
+    // Socket delivery is ordered, so the number of a session's ops in the
+    // snapshot equals the number of its batches the server has seen —
+    // drop exactly those from pending and keep the still-in-flight rest.
+    if (prev !== operations && pendingLocalOpsRef.current.length > 0) {
+      const ackedPerSession = new Map<string, number>();
+      for (const op of operations) {
+        if (op.kind === 'stroke' && op.sessionId) {
+          ackedPerSession.set(
+            op.sessionId,
+            (ackedPerSession.get(op.sessionId) ?? 0) + 1
+          );
+        }
+      }
+      pendingLocalOpsRef.current = pendingLocalOpsRef.current.filter(
+        ({ seq, op }) =>
+          !!op.sessionId && seq >= (ackedPerSession.get(op.sessionId) ?? 0)
+      );
+    }
+
+    // Same ops and same view (e.g. a timer-tick re-render): skip repainting.
+    // In-progress segments are already on the canvas via drawSegmentImmediate.
+    if (
+      prev &&
+      !viewChanged &&
+      operations.length === prevLen &&
+      (prevLen === 0 || operations[prevLen - 1]?.id === prev[prevLen - 1].id)
+    ) {
+      lastOpsRef.current = operations;
+      return;
+    }
+
     const grew =
       !!prev &&
       !viewChanged &&
@@ -236,26 +287,37 @@ export function DrawingPad({
 
   const flushBatch = useCallback(() => {
     if (currentPointsRef.current.length < 2) return;
+    const points = [...currentPointsRef.current];
     emit(`${actionPrefix}:stroke`, {
-      points: [...currentPointsRef.current],
+      points,
       color,
       width,
       sessionId: pencilSessionIdRef.current,
     });
-    currentPointsRef.current = [
-      currentPointsRef.current[currentPointsRef.current.length - 1],
-    ];
+    pendingLocalOpsRef.current.push({
+      seq: batchSeqRef.current++,
+      op: {
+        id: newSessionId(),
+        kind: 'stroke',
+        points,
+        color,
+        width,
+        sessionId: pencilSessionIdRef.current ?? undefined,
+      },
+    });
+    currentPointsRef.current = [points[points.length - 1]];
   }, [color, width, emit, actionPrefix]);
 
   const startPencil = useCallback(
     (clientX: number, clientY: number) => {
       isPencilActiveRef.current = true;
       pencilSessionIdRef.current = newSessionId();
+      batchSeqRef.current = 0;
       const pos = screenToLogical(clientX, clientY);
       currentPointsRef.current = [pos];
-      batchTimerRef.current = setInterval(flushBatch, 50);
+      batchTimerRef.current = setInterval(flushBatch, flushIntervalMs);
     },
-    [screenToLogical, flushBatch]
+    [screenToLogical, flushBatch, flushIntervalMs]
   );
 
   const continuePencil = useCallback(
@@ -276,17 +338,38 @@ export function DrawingPad({
       clearInterval(batchTimerRef.current);
       batchTimerRef.current = null;
     }
+    // A tap that never moved leaves a single point. Duplicate it so the
+    // stroke has two identical points — with lineCap 'round' that renders
+    // as a filled dot everywhere (local, host, previews all guard on
+    // points.length < 2, which two points clear).
+    if (currentPointsRef.current.length === 1) {
+      const p = currentPointsRef.current[0];
+      currentPointsRef.current = [p, p];
+      drawSegmentImmediate(p, p);
+    }
     if (currentPointsRef.current.length >= 2) {
+      const points = [...currentPointsRef.current];
       emit(`${actionPrefix}:stroke`, {
-        points: [...currentPointsRef.current],
+        points,
         color,
         width,
         sessionId: pencilSessionIdRef.current,
       });
+      pendingLocalOpsRef.current.push({
+        seq: batchSeqRef.current++,
+        op: {
+          id: newSessionId(),
+          kind: 'stroke',
+          points,
+          color,
+          width,
+          sessionId: pencilSessionIdRef.current ?? undefined,
+        },
+      });
     }
     currentPointsRef.current = [];
     pencilSessionIdRef.current = null;
-  }, [color, width, emit, actionPrefix]);
+  }, [color, width, emit, actionPrefix, drawSegmentImmediate]);
 
   const cancelPencil = useCallback(() => {
     isPencilActiveRef.current = false;
@@ -306,10 +389,14 @@ export function DrawingPad({
   );
 
   const handleClear = useCallback(() => {
+    // Undo/clear invalidate pending strokes — the echoed snapshot is the
+    // authority on what survived, so don't repaint them over it.
+    pendingLocalOpsRef.current = [];
     emit(`${actionPrefix}:clear`, {});
   }, [emit, actionPrefix]);
 
   const handleUndo = useCallback(() => {
+    pendingLocalOpsRef.current = [];
     emit(`${actionPrefix}:undo`, {});
   }, [emit, actionPrefix]);
 

@@ -115,7 +115,10 @@ export class SlepiTelefoniModule extends BaseGameModule {
         }
         const draft = this.ensureDraft(playerId);
         appendStrokeOp(draft.operations!, { points, color, width, sessionId });
-        this.queuePrivateEmit(room, playerId);
+        // No private echo: the drawer's pad already painted the stroke
+        // locally, and the 1s tick carries the full draft for consistency.
+        // Echoing every 50ms batch re-sent the whole growing drawing and
+        // caused input lag on phones.
         return null;
       }
 
