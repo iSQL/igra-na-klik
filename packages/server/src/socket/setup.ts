@@ -241,9 +241,11 @@ export function setupSocket(
 
       const isRemoteHost = room.remoteHostPlayerId === playerId;
 
-      if (isRemoteHost) {
+      if (isRemoteHost && !room.hostless) {
         // Remote-host drove the show — tear the entire room down so the
         // remaining players aren't stuck waiting on a phantom controller.
+        // (Hostless rooms instead transfer the claim below — closing the
+        // room is an explicit choice via host:close-room.)
         destroyRoom(roomCode, 'Igrač koji je držao kontrolu je napustio sobu.');
         console.log(`Room ${roomCode} destroyed by remote-host ${playerId}`);
         return;
@@ -263,8 +265,13 @@ export function setupSocket(
       if (result) {
         io.to(roomCode).emit('room:player-removed', { playerId });
         if (result.remoteHostCleared) {
+          // In a hostless room the claim must not stay empty — hand it to
+          // the next connected player so someone can still run the show.
+          const nextHolder = room.hostless
+            ? roomManager.transferRemoteHost(roomCode)
+            : null;
           io.to(roomCode).emit('room:remote-host-changed', {
-            remoteHostPlayerId: null,
+            remoteHostPlayerId: nextHolder,
           });
         }
       }
@@ -296,8 +303,12 @@ export function setupSocket(
           disconnectTimers.delete(playerId);
           gameManager.handlePlayerDisconnect(roomCode, playerId);
           if (roomManager.clearRemoteHostIfHolder(roomCode, playerId)) {
+            const room = roomManager.getRoom(roomCode);
+            const nextHolder = room?.hostless
+              ? roomManager.transferRemoteHost(roomCode)
+              : null;
             io.to(roomCode).emit('room:remote-host-changed', {
-              remoteHostPlayerId: null,
+              remoteHostPlayerId: nextHolder,
             });
           }
           roomManager.removePlayer(roomCode, playerId);

@@ -22,6 +22,7 @@ export class RoomManager {
     const room: Room = {
       code,
       hostSocketId,
+      hostless: false,
       remoteHostPlayerId: null,
       players: [],
       status: 'lobby',
@@ -34,6 +35,45 @@ export class RoomManager {
     };
     this.rooms.set(code, room);
     return room;
+  }
+
+  /**
+   * Room created from a phone with no TV/host screen. hostConnected stays
+   * false forever, so the idle sweeper judges the room purely by whether
+   * any player is still connected.
+   */
+  createHostlessRoom(settings?: Partial<RoomSettings>): Room {
+    const code = this.generateUniqueCode();
+    const room: Room = {
+      code,
+      hostSocketId: null,
+      hostless: true,
+      remoteHostPlayerId: null,
+      players: [],
+      status: 'lobby',
+      currentGameId: null,
+      settings: { ...DEFAULT_ROOM_SETTINGS, ...settings },
+      createdAt: Date.now(),
+      chatMessages: [],
+      hostConnected: false,
+      idleSince: null,
+    };
+    this.rooms.set(code, room);
+    return room;
+  }
+
+  /**
+   * Hostless rooms must not go headless: hand the remote-host claim to the
+   * first connected player (if any). Returns the new holder's id, or null
+   * when nobody is connected (the claim stays empty — a returning player
+   * can claim it from the lobby, or the idle sweeper reaps the room).
+   */
+  transferRemoteHost(roomCode: string): string | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    const next = room.players.find((p) => p.isConnected);
+    room.remoteHostPlayerId = next?.id ?? null;
+    return next?.id ?? null;
   }
 
   joinRoom(

@@ -15,6 +15,7 @@ export function JoinScreen() {
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
   const [joining, setJoining] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [fetchingCode, setFetchingCode] = useState(false);
 
   useEffect(() => {
@@ -34,9 +35,13 @@ export function JoinScreen() {
     // success the App.tsx player:joined handler unmounts this screen so
     // we never see the false→true→false flicker; on error the message
     // surfaces here and the button becomes clickable again.
-    const onJoined = () => setJoining(false);
+    const onJoined = () => {
+      setJoining(false);
+      setCreating(false);
+    };
     const onError = ({ message }: { message: string }) => {
       setJoining(false);
+      setCreating(false);
       setError(message);
       // The most common cause of failure for a returning player is a
       // stale reconnect token (their previous slot was removed after
@@ -71,6 +76,16 @@ export function JoinScreen() {
       playerName: playerName.trim(),
       reconnectToken: reconnectToken || undefined,
     });
+  };
+
+  const handleCreate = () => {
+    if (!playerName.trim()) {
+      setError(t('join.enterName'));
+      return;
+    }
+    setError('');
+    setCreating(true);
+    socket.emit('player:create-room', { playerName: playerName.trim() });
   };
 
   return (
@@ -160,7 +175,7 @@ export function JoinScreen() {
 
       <button
         onClick={handleJoin}
-        disabled={joining || fetchingCode}
+        disabled={joining || creating || fetchingCode}
         style={{
           padding: '1rem',
           fontSize: '1.3rem',
@@ -172,6 +187,51 @@ export function JoinScreen() {
       >
         {joining ? t('join.joining') : t('join.enterGame')}
       </button>
+
+      {!SINGLE_ROOM_MODE && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              color: 'var(--text-secondary)',
+              fontSize: '0.85rem',
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: 'var(--bg-card)' }} />
+            {t('join.or')}
+            <span style={{ flex: 1, height: 1, background: 'var(--bg-card)' }} />
+          </div>
+
+          <button
+            onClick={handleCreate}
+            disabled={joining || creating}
+            style={{
+              padding: '0.85rem',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              borderRadius: '0.75rem',
+              background: 'transparent',
+              color: 'var(--text-primary)',
+              border: '2px solid var(--accent)',
+            }}
+          >
+            {creating ? t('join.creating') : t('join.createRoom')}
+          </button>
+          <p
+            style={{
+              margin: 0,
+              marginTop: '-0.75rem',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+            }}
+          >
+            {t('join.createRoomHint')}
+          </p>
+        </>
+      )}
 
       <a
         href="/"

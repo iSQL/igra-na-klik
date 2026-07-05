@@ -44,6 +44,10 @@ export interface ClientToServerEvents {
     playerName: string;
     reconnectToken?: string;
   }) => void;
+  // Create a hostless room from a phone: the creator joins as a regular
+  // player and automatically receives the remote-host claim. Responds with
+  // player:joined like a normal join.
+  'player:create-room': (data: { playerName: string }) => void;
   'host:start-game': (data: {
     gameId: string;
     customQuestions?: QuizImportQuestion[];

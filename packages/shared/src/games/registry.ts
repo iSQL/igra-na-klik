@@ -7,6 +7,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 2,
     maxPlayers: 8,
     description: 'Pitanja na vreme — najbrži tačan odgovor nosi najviše poena!',
+    supportsHostless: true,
   },
   'draw-guess': {
     id: 'draw-guess',
@@ -14,6 +15,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 3,
     maxPlayers: 8,
     description: 'Crtajte redom — ostali pogađaju reč!',
+    supportsHostless: true,
   },
   fibbage: {
     id: 'fibbage',

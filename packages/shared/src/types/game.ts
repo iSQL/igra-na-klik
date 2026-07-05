@@ -4,6 +4,10 @@ export interface GameDefinition {
   minPlayers: number;
   maxPlayers: number;
   description: string;
+  // Playable in a hostless room (no TV screen) — the controller UI shows
+  // everything needed to play. Games without this flag can only start in
+  // rooms that have a host screen.
+  supportsHostless?: boolean;
 }
 
 export type GamePhase = string;

@@ -86,7 +86,9 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
               }}
             >
               {iAmRemoteHost
-                ? t('leave.confirmBodyRemoteHost')
+                ? room?.hostless
+                  ? t('leave.confirmBodyHostlessHost')
+                  : t('leave.confirmBodyRemoteHost')
                 : t('leave.confirmBody')}
             </p>
             <div style={{ display: 'flex', gap: '0.6rem' }}>

@@ -5,11 +5,13 @@ import { useT } from '../../i18n/useT';
 import { WordPicker } from './components/WordPicker';
 import { DrawingPad } from './components/DrawingPad';
 import { GuessingInput } from './components/GuessingInput';
+import { SpectatorCanvas } from './components/SpectatorCanvas';
 import type { DrawGuessHostData, DrawGuessLeaderboardEntry } from '@igra/shared';
 
 export default function DrawGuessController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const t = useT();
 
   if (!gameState || !playerId) return null;
@@ -71,6 +73,32 @@ export default function DrawGuessController() {
       );
     }
 
+    // In a hostless room there is no TV showing the drawing — render a
+    // read-only copy of the canvas above the guess input.
+    if (hostless) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.5rem',
+          }}
+        >
+          <SpectatorCanvas operations={host.operations} />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <GuessingInput
+              hasGuessedCorrectly={myData?.hasGuessedCorrectly ?? false}
+              hint={host.wordHint}
+              timeRemaining={timeRemaining}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <GuessingInput
         hasGuessedCorrectly={myData?.hasGuessedCorrectly ?? false}
@@ -99,6 +127,56 @@ export default function DrawGuessController() {
         <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
           {host.revealedWord}
         </p>
+        {hostless && host.turnScores && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              width: '100%',
+              maxWidth: '320px',
+            }}
+          >
+            {host.turnScores.map((ts) => (
+              <div
+                key={ts.playerId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.4rem 0.7rem',
+                  background: 'var(--bg-card)',
+                  borderRadius: '0.5rem',
+                  borderLeft: `4px solid ${ts.avatarColor}`,
+                  fontSize: '0.9rem',
+                }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    textAlign: 'left',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {ts.playerName}
+                </span>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: ts.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                  }}
+                >
+                  +{ts.roundScore}
+                </span>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  {ts.totalScore}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

@@ -12,6 +12,10 @@ export default defineConfig(() => ({
   server: {
     host: true,
     port: 5173,
+    // The Express dev proxy targets this exact port. Without strictPort a
+    // leftover process on 5173 makes Vite silently shift to 5174, which
+    // steals the controller's port and breaks /host and /play routing.
+    strictPort: true,
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3001',

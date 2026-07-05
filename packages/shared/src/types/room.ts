@@ -29,7 +29,12 @@ export interface ChatMessage {
 
 export interface Room {
   code: string;
-  hostSocketId: string;
+  // null for hostless rooms — created from a phone, no TV/host screen.
+  hostSocketId: string | null;
+  // Hostless rooms live and die with their players: the creator gets the
+  // remote-host claim automatically, and the claim transfers to another
+  // connected player instead of destroying the room when the holder leaves.
+  hostless: boolean;
   remoteHostPlayerId: string | null;
   players: Player[];
   status: RoomStatus;

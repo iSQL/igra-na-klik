@@ -64,6 +64,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameSelect.start': 'Pokreni',
     'gameSelect.needMore': 'Treba još {n} {noun}',
     'gameSelect.playerRange': '{min}-{max} igrača',
+    'gameSelect.needsTv': 'Zahteva TV ekran',
 
     // --- in-game overlays ------------------------------------------------
     'overlay.endGame': 'Završi igru',
@@ -85,6 +86,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'leave.confirmTitle': 'Napustiti sobu?',
     'leave.confirmBodyRemoteHost':
       'Ti držiš kontrolu — ako izađeš, soba će biti zatvorena i svi ostali igrači će biti izbačeni.',
+    'leave.confirmBodyHostlessHost':
+      'Ti držiš kontrolu — ako izađeš, kontrola prelazi na sledećeg igrača. Ako želiš da zatvoriš sobu za sve, koristi „Zatvori sobu".',
     'leave.confirmBody':
       'Ako izađeš tokom igre, prekinućeš trenutnu rundu za ostale igrače.',
     'leave.exit': 'Izađi',
@@ -111,6 +114,10 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.enterGame': 'Uđi u igru',
     'join.home': '← Početna',
     'join.codeLabel': 'kod',
+    'join.or': 'ili',
+    'join.createRoom': 'Napravi sobu',
+    'join.creating': 'Kreiranje...',
+    'join.createRoomHint': 'Igra samo na telefonima — bez TV ekrana',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Konačni poredak',
@@ -301,6 +308,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameSelect.start': 'Start',
     'gameSelect.needMore': 'Need {n} more {noun}',
     'gameSelect.playerRange': '{min}-{max} players',
+    'gameSelect.needsTv': 'Requires a TV screen',
 
     // --- in-game overlays ------------------------------------------------
     'overlay.endGame': 'End game',
@@ -322,6 +330,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'leave.confirmTitle': 'Leave the room?',
     'leave.confirmBodyRemoteHost':
       'You are in control — if you leave, the room will be closed and all other players will be removed.',
+    'leave.confirmBodyHostlessHost':
+      'You are in control — if you leave, control passes to the next player. To close the room for everyone, use "Close room".',
     'leave.confirmBody':
       'If you leave during a game, you will cut the current round short for the other players.',
     'leave.exit': 'Leave',
@@ -348,6 +358,10 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.enterGame': 'Join the game',
     'join.home': '← Home',
     'join.codeLabel': 'code',
+    'join.or': 'or',
+    'join.createRoom': 'Create a room',
+    'join.creating': 'Creating...',
+    'join.createRoomHint': 'Play on phones only — no TV screen',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Final standings',

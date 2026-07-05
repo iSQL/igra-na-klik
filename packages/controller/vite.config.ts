@@ -20,6 +20,9 @@ export default defineConfig(() => ({
   server: {
     host: true,
     port: 5174,
+    // The Express dev proxy targets this exact port — fail loudly instead
+    // of silently shifting to another port if 5174 is already taken.
+    strictPort: true,
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3001',

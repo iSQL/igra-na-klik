@@ -204,6 +204,29 @@ export function GameSelectScreen() {
         <CloseRoomButton />
       </div>
 
+      {room.hostless && (
+        <p
+          style={{
+            margin: 0,
+            textAlign: 'center',
+            fontSize: '0.95rem',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {t('lobby.room')}{' '}
+          <strong
+            style={{
+              color: 'var(--accent)',
+              fontFamily: 'monospace',
+              fontSize: '1.15rem',
+              letterSpacing: '0.15rem',
+            }}
+          >
+            {room.code}
+          </strong>
+        </p>
+      )}
+
       {errorMessage && (
         <div
           role="alert"
@@ -223,7 +246,9 @@ export function GameSelectScreen() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {games.map((game) => {
+          const needsTv = room.hostless && !game.supportsHostless;
           const lacking = connectedCount < game.minPlayers;
+          const disabled = lacking || needsTv;
           const expanded = selectedGameId === game.id;
           return (
             <div
@@ -232,7 +257,7 @@ export function GameSelectScreen() {
                 background: 'var(--bg-card)',
                 borderRadius: '0.75rem',
                 padding: '0.85rem 1rem',
-                opacity: lacking ? 0.5 : 1,
+                opacity: disabled ? 0.5 : 1,
                 border: expanded
                   ? '1px solid var(--accent)'
                   : '1px solid transparent',
@@ -240,10 +265,10 @@ export function GameSelectScreen() {
             >
               <button
                 onClick={() => {
-                  if (lacking) return;
+                  if (disabled) return;
                   setSelectedGameId(expanded ? null : game.id);
                 }}
-                disabled={lacking}
+                disabled={disabled}
                 style={{
                   width: '100%',
                   display: 'flex',
@@ -252,7 +277,7 @@ export function GameSelectScreen() {
                   gap: '0.25rem',
                   background: 'transparent',
                   color: 'var(--text-primary)',
-                  cursor: lacking ? 'not-allowed' : 'pointer',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
                   padding: 0,
                   textAlign: 'left',
                 }}
@@ -269,7 +294,12 @@ export function GameSelectScreen() {
                 >
                   {t(`game.${game.id}.description`)}
                 </span>
-                {lacking && (
+                {needsTv && (
+                  <span style={{ fontSize: '0.8rem', color: '#e07070' }}>
+                    {t('gameSelect.needsTv')}
+                  </span>
+                )}
+                {!needsTv && lacking && (
                   <span style={{ fontSize: '0.8rem', color: '#e07070' }}>
                     {t('gameSelect.needMore', {
                       n: game.minPlayers - connectedCount,
@@ -283,7 +313,7 @@ export function GameSelectScreen() {
                 )}
               </button>
 
-              {expanded && !lacking && (
+              {expanded && !disabled && (
                 <div
                   style={{
                     marginTop: '0.75rem',

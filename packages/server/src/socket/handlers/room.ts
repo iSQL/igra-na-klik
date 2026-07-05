@@ -41,6 +41,37 @@ export function registerRoomHandlers(
     });
   });
 
+  socket.on('player:create-room', (data) => {
+    const playerName = (data.playerName ?? '').trim();
+    if (!playerName) {
+      socket.emit('error', { code: 'CREATE_ERROR', message: 'Name required' });
+      return;
+    }
+    if (socket.data.roomCode) {
+      socket.emit('error', { code: 'CREATE_ERROR', message: 'Already in a room' });
+      return;
+    }
+
+    const room = roomManager.createHostlessRoom();
+    const result = roomManager.joinRoom(room.code, playerName);
+    if ('error' in result) {
+      roomManager.deleteRoom(room.code);
+      socket.emit('error', { code: 'CREATE_ERROR', message: result.error });
+      return;
+    }
+
+    const { player } = result;
+    // The creator drives the show from their phone.
+    room.remoteHostPlayerId = player.id;
+
+    socket.data.roomCode = room.code;
+    socket.data.playerId = player.id;
+    socket.join(room.code);
+
+    socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
+    console.log(`Hostless room ${room.code} created by ${player.name}`);
+  });
+
   socket.on('player:join-room', (data) => {
     const { roomCode, playerName, reconnectToken } = data;
 
