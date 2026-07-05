@@ -32,6 +32,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
+    supportsHostless: true,
   },
   'geo-pogodi': {
     id: 'geo-pogodi',

@@ -5,11 +5,12 @@ import { socket } from '../../socket';
 import { useT } from '../../i18n/useT';
 import { DrawingPad } from '../draw-guess/components/DrawingPad';
 import type {
+  Chain,
   DrawOp,
   SlepiTelefoniControllerData,
   SlepiTelefoniHostData,
 } from '@igra/shared';
-import { visibleOps } from '@igra/shared';
+import { visibleOps, legacyStrokesToOps } from '@igra/shared';
 
 const MAX_PROMPT_LENGTH = 80;
 const MAX_GUESS_LENGTH = 80;
@@ -20,6 +21,7 @@ export default function SlepiTelefoniController() {
   const remoteHostPlayerId = usePlayerStore(
     (s) => s.room?.remoteHostPlayerId ?? null
   );
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const t = useT();
 
   if (!gameState || !playerId) return null;
@@ -66,9 +68,24 @@ export default function SlepiTelefoniController() {
   }
 
   if (phase === 'reveal') {
+    const chainNumber = (host?.currentRevealChain ?? 0) + 1;
+    const totalChains = host?.totalChains ?? 0;
+
+    // Hostless room: there is no TV to reveal on — render the whole
+    // current chain on every phone (chainBeingRevealed is public host
+    // data). The control holder gets the advance button under the chain.
+    if (hostless) {
+      return (
+        <HostlessReveal
+          chain={host?.chainBeingRevealed}
+          chainNumber={chainNumber}
+          totalChains={totalChains}
+          isController={remoteHostPlayerId === playerId}
+        />
+      );
+    }
+
     if (remoteHostPlayerId === playerId) {
-      const chainNumber = (host?.currentRevealChain ?? 0) + 1;
-      const totalChains = host?.totalChains ?? 0;
       return (
         <RevealRemoteHostControl
           chainNumber={chainNumber}
@@ -81,7 +98,7 @@ export default function SlepiTelefoniController() {
   }
 
   if (phase === 'ended') {
-    return <EndedScreen />;
+    return <EndedScreen hostless={hostless} />;
   }
 
   return <WaitingScreen message={t('common.loading')} />;
@@ -106,7 +123,7 @@ function WaitingScreen({ message }: { message: string }) {
   );
 }
 
-function EndedScreen() {
+function EndedScreen({ hostless }: { hostless: boolean }) {
   const t = useT();
   return (
     <div
@@ -131,7 +148,7 @@ function EndedScreen() {
           margin: 0,
         }}
       >
-        {t('slepi.seeBigScreen')}
+        {hostless ? t('slepi.thanks') : t('slepi.seeBigScreen')}
       </p>
       <div
         style={{
@@ -154,6 +171,127 @@ function EndedScreen() {
         />
         <span style={{ fontSize: '0.9rem' }}>{t('common.returningToGameSelect')}</span>
       </div>
+    </div>
+  );
+}
+
+function HostlessReveal({
+  chain,
+  chainNumber,
+  totalChains,
+  isController,
+}: {
+  chain: Chain | undefined;
+  chainNumber: number;
+  totalChains: number;
+  isController: boolean;
+}) {
+  const t = useT();
+  const isLast = totalChains > 0 && chainNumber >= totalChains;
+  // Same click guard as RevealRemoteHostControl — one tap per chain.
+  const lockedRef = useRef(false);
+  useEffect(() => {
+    lockedRef.current = false;
+  }, [chainNumber]);
+
+  const advance = () => {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+    socket.emit('host:game-action', { action: 'slepi:next-chain' });
+  };
+
+  const kindLabel = (kind: string) =>
+    kind === 'drawing'
+      ? t('slepi.drew')
+      : kind === 'guess'
+        ? t('slepi.guessed')
+        : t('slepi.wrote');
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        gap: '0.6rem',
+        padding: '0.75rem',
+      }}
+    >
+      <p
+        style={{
+          textAlign: 'center',
+          fontSize: '1rem',
+          fontWeight: 700,
+          margin: 0,
+        }}
+      >
+        {totalChains > 0 && t('slepi.chain', { n: chainNumber, total: totalChains })}
+      </p>
+
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.6rem',
+        }}
+      >
+        {(chain?.items ?? []).map((item, i) => (
+          <div
+            key={i}
+            style={{
+              background: 'var(--bg-card)',
+              borderRadius: '0.6rem',
+              padding: '0.6rem 0.75rem',
+              borderLeft: `4px solid ${item.authorColor}`,
+            }}
+          >
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-secondary)',
+                margin: '0 0 0.35rem',
+              }}
+            >
+              <strong style={{ color: 'var(--text-primary)' }}>
+                {item.authorName}
+              </strong>{' '}
+              {kindLabel(item.kind)}:
+            </p>
+            {item.kind === 'drawing' ? (
+              <SmallOpsPreview
+                operations={item.operations ?? legacyStrokesToOps(item.strokes)}
+              />
+            ) : (
+              <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+                „{item.text}"
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {isController && (
+        <button
+          onClick={advance}
+          style={{
+            padding: '0.8rem 1.5rem',
+            background: 'var(--accent)',
+            color: '#fff',
+            borderRadius: '999px',
+            fontSize: '1rem',
+            fontWeight: 700,
+            minHeight: '48px',
+            border: 'none',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
+        </button>
+      )}
     </div>
   );
 }
