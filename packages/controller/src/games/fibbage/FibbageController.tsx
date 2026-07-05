@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
+import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
 import { AnswerInput } from './components/AnswerInput';
 import { VoteOptions } from './components/VoteOptions';
 import { WaitingScreen } from './components/WaitingScreen';
@@ -7,12 +8,14 @@ import { RoundResult } from './components/RoundResult';
 import type {
   FibbageQuestionPublic,
   FibbageAnswerOptionPublic,
+  FibbageResultData,
   FibbageLeaderboardEntry,
 } from '@igra/shared';
 
 export default function FibbageController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
 
   if (!gameState || !playerId) return null;
 
@@ -82,7 +85,7 @@ export default function FibbageController() {
         }
       | undefined;
 
-    return (
+    const voteBody = (
       <VoteOptions
         options={options}
         hasVoted={myData?.hasVoted ?? false}
@@ -91,6 +94,36 @@ export default function FibbageController() {
         isAutoFinder={myData?.isAutoFinder ?? false}
       />
     );
+
+    // Hostless room: the question lives only on the TV otherwise — show it
+    // above the vote options so players know what they're voting on.
+    if (hostless && question) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            padding: '0.5rem',
+          }}
+        >
+          <p
+            style={{
+              textAlign: 'center',
+              fontSize: '1rem',
+              fontWeight: 700,
+              lineHeight: 1.3,
+              margin: '0.5rem 0.75rem',
+            }}
+          >
+            {question.text}
+          </p>
+          <div style={{ flex: 1, minHeight: 0 }}>{voteBody}</div>
+        </div>
+      );
+    }
+
+    return voteBody;
   }
 
   if (phase === 'showing-results') {
@@ -105,6 +138,77 @@ export default function FibbageController() {
 
     if (!myData) return null;
 
+    // Hostless room: append the TV's reveal (who fooled whom) under the
+    // player's own result. data.results is shared/public round data.
+    if (hostless && data.results) {
+      const results = data.results as FibbageResultData;
+      const fools = results.fools.filter((f) => f.fooledPlayerNames.length > 0);
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            gap: '0.75rem',
+            padding: '1rem',
+            overflowY: 'auto',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Pravi odgovor
+          </p>
+          <p
+            style={{
+              fontSize: '1.6rem',
+              fontWeight: 800,
+              color: 'var(--success)',
+              margin: 0,
+            }}
+          >
+            {results.realAnswer}
+          </p>
+          <p style={{ fontSize: '1rem', margin: '0.25rem 0' }}>
+            {myData.foundTruth ? '✅ Pogodio/la si istinu!' : '❌ Nisi našao/la istinu'}
+            {myData.fooledCount > 0 && ` · Prevario/la si ${myData.fooledCount}`}
+            {' · '}
+            <strong style={{ color: 'var(--accent)' }}>
+              +{myData.roundScore}
+            </strong>
+          </p>
+          {fools.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.4rem',
+                textAlign: 'left',
+              }}
+            >
+              {fools.map((f) => (
+                <div
+                  key={f.optionId}
+                  style={{
+                    padding: '0.5rem 0.7rem',
+                    background: 'var(--bg-card)',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <strong>{f.fakerNames.join(', ')}</strong>{' '}
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    „{f.optionText}" prevario/la:
+                  </span>{' '}
+                  {f.fooledPlayerNames.join(', ')}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <RoundResult
         foundTruth={myData.foundTruth}
@@ -118,6 +222,16 @@ export default function FibbageController() {
   if ((phase === 'leaderboard' || phase === 'ended') && data.leaderboard) {
     const leaderboard = data.leaderboard as FibbageLeaderboardEntry[];
     const myEntry = leaderboard.find((e) => e.playerId === playerId);
+
+    if (hostless) {
+      return (
+        <HostlessLeaderboard
+          title={phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
+          entries={leaderboard}
+          myPlayerId={playerId}
+        />
+      );
+    }
 
     return (
       <div

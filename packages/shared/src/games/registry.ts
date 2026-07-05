@@ -23,6 +23,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 3,
     maxPlayers: 8,
     description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
+    supportsHostless: true,
   },
   'slepi-telefoni': {
     id: 'slepi-telefoni',
@@ -55,6 +56,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Lična pitanja o igračima — koliko dobro poznajete jedni druge?',
+    supportsHostless: true,
   },
   'spot-it': {
     id: 'spot-it',
