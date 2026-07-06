@@ -7,6 +7,8 @@
  * classic Dobble deck.
  */
 
+import { shuffleInPlace } from '../utils/shuffle.js';
+
 export const SPOT_IT_PRIME = 7;
 export const SPOT_IT_SYMBOLS_PER_CARD = SPOT_IT_PRIME + 1; // 8
 export const SPOT_IT_DECK_SIZE = SPOT_IT_PRIME * SPOT_IT_PRIME + SPOT_IT_PRIME + 1; // 57
@@ -68,14 +70,6 @@ export function generateDobbleDeck(p: number = SPOT_IT_PRIME): number[][] {
   }
 
   return cards;
-}
-
-function shuffleInPlace<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
 }
 
 /**

@@ -26,7 +26,9 @@ export const MAX_PHOTOS_PER_PLAYER = 4;
 export const DEFAULT_PHOTOS_PER_PLAYER = 2;
 
 export interface CustomSubmissionDraft {
-  imageBase64: string;
+  /** Short server URL (customPhotoStore) — never inline base64, which would
+   * ride along in every state broadcast. */
+  imageUrl: string;
   pin: GeoPin;
   caption?: string;
 }

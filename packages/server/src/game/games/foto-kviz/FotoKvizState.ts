@@ -1,5 +1,4 @@
 import type {
-  CustomFotoKvizSubmission,
   FotoKvizFullQuestion,
   FotoKvizMode,
   FotoKvizPhase,
@@ -28,6 +27,13 @@ export const MIN_CAPTION_LENGTH = 2;
 export const MAX_CAPTION_LENGTH = 80;
 export const MAX_BASE64_BYTES = 700_000;
 
+/** A stored custom-mode photo: short server URL (customPhotoStore), never
+ * inline base64, which would ride along in every state broadcast. */
+export interface FotoKvizStoredSubmission {
+  imageUrl: string;
+  caption: string;
+}
+
 export interface FotoKvizPlayerAnswer {
   optionIndex: number;
   timeMs: number;
@@ -54,7 +60,7 @@ export interface FotoKvizInternalState {
   totalScores: Map<string, number>;
 
   /** Custom-mode submissions, alive for the duration of one game. */
-  customSubmissions: Map<string, CustomFotoKvizSubmission[]>;
+  customSubmissions: Map<string, FotoKvizStoredSubmission[]>;
   customPhotosPerPlayer: number;
 
   /** Custom-mode roster — players eligible to submit at submission start. */

@@ -14,9 +14,14 @@ import type {
   GeoSubmissionProgress,
   QuizOption,
 } from '@igra/shared';
-import { QUIZ_OPTION_COLORS } from '@igra/shared';
+import { QUIZ_OPTION_COLORS, shuffleInPlace } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { resolveGeoPack } from '../geo-pogodi/geo-pack-resolver.js';
+import {
+  clearRoomPhotos,
+  deleteCustomPhotoByUrl,
+  storeCustomPhoto,
+} from '../../customPhotoStore.js';
 import {
   ANSWERING_DURATION,
   DEFAULT_PHOTOS_PER_PLAYER,
@@ -51,14 +56,6 @@ function clampPhotosPerPlayer(raw: unknown): number {
   if (n < MIN_PHOTOS_PER_PLAYER) return MIN_PHOTOS_PER_PLAYER;
   if (n > MAX_PHOTOS_PER_PLAYER) return MAX_PHOTOS_PER_PLAYER;
   return n;
-}
-
-function shuffleInPlace<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
 }
 
 /**
@@ -193,8 +190,9 @@ export class FotoKvizModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
-  onEnd(_room: Room, _gameState: GameState): void {
+  onEnd(room: Room, _gameState: GameState): void {
     this.state.customSubmissions.clear();
+    clearRoomPhotos(room.code);
   }
 
   // -- Predefined-pack loading -------------------------------------------
@@ -247,7 +245,12 @@ export class FotoKvizModule extends BaseGameModule {
     const sub = parseCustomSubmission(data);
     if (!sub) return null;
 
-    existing.push(sub);
+    // Park the image bytes in the photo store; the state carries only the
+    // short URL so broadcasts stay small and browsers can cache the image.
+    const imageUrl = storeCustomPhoto(room.code, sub.imageBase64);
+    if (!imageUrl) return null;
+
+    existing.push({ imageUrl, caption: sub.caption });
     this.state.customSubmissions.set(playerId, existing);
 
     this.maybeAdvanceFromSubmission(room);
@@ -258,7 +261,8 @@ export class FotoKvizModule extends BaseGameModule {
     if (this.state.phase !== 'submission') return null;
     const existing = this.state.customSubmissions.get(playerId);
     if (!existing || existing.length === 0) return null;
-    existing.pop();
+    const removed = existing.pop();
+    if (removed) deleteCustomPhotoByUrl(room.code, removed.imageUrl);
     return this.buildGameState(room);
   }
 
@@ -280,7 +284,7 @@ export class FotoKvizModule extends BaseGameModule {
         idx += 1;
         locations.push({
           id: `custom-${idx}`,
-          imageUrl: sub.imageBase64,
+          imageUrl: sub.imageUrl,
           // Custom-mode locations don't carry real lat/lng — Foto kviz
           // doesn't use them. Set placeholders.
           lat: 0,

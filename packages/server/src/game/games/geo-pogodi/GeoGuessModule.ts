@@ -15,6 +15,7 @@ import {
   haversineKm,
   latLngToSvg,
   parseCustomPhotoSubmission,
+  shuffleInPlace,
   svgToLatLng,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -36,6 +37,11 @@ import type {
 } from './GeoGuessState.js';
 import { resolveGeoPack } from './geo-pack-resolver.js';
 import { pointsForDistanceKm } from './scoring.js';
+import {
+  clearRoomPhotos,
+  deleteCustomPhotoByUrl,
+  storeCustomPhoto,
+} from '../../customPhotoStore.js';
 
 interface GeoCustomContent {
   geoPackId?: string;
@@ -51,14 +57,6 @@ function clampPhotosPerPlayer(raw: unknown): number {
   if (n < MIN_PHOTOS_PER_PLAYER) return MIN_PHOTOS_PER_PLAYER;
   if (n > MAX_PHOTOS_PER_PLAYER) return MAX_PHOTOS_PER_PLAYER;
   return n;
-}
-
-function shuffleInPlace<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
 }
 
 export class GeoGuessModule extends BaseGameModule {
@@ -179,9 +177,10 @@ export class GeoGuessModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
-  onEnd(_room: Room, _gameState: GameState): void {
-    // Free the in-memory base64 photos.
+  onEnd(room: Room, _gameState: GameState): void {
+    // Free the in-memory photos held by the photo store for this game.
     this.state.customSubmissions.clear();
+    clearRoomPhotos(room.code);
   }
 
   // -- Predefined-pack loading -------------------------------------------
@@ -243,7 +242,16 @@ export class GeoGuessModule extends BaseGameModule {
     const parsed = parseCustomPhotoSubmission(data);
     if (!parsed.ok) return null;
 
-    const draft: CustomSubmissionDraft = parsed.submission;
+    // Park the image bytes in the photo store; the state carries only the
+    // short URL so broadcasts stay small and browsers can cache the image.
+    const imageUrl = storeCustomPhoto(room.code, parsed.submission.imageBase64);
+    if (!imageUrl) return null;
+
+    const draft: CustomSubmissionDraft = {
+      imageUrl,
+      pin: parsed.submission.pin,
+      caption: parsed.submission.caption,
+    };
     existing.push(draft);
     this.state.customSubmissions.set(playerId, existing);
 
@@ -255,7 +263,8 @@ export class GeoGuessModule extends BaseGameModule {
     if (this.state.phase !== 'submission') return null;
     const existing = this.state.customSubmissions.get(playerId);
     if (!existing || existing.length === 0) return null;
-    existing.pop();
+    const removed = existing.pop();
+    if (removed) deleteCustomPhotoByUrl(room.code, removed.imageUrl);
     return this.buildGameState(room);
   }
 
@@ -278,7 +287,7 @@ export class GeoGuessModule extends BaseGameModule {
         idx += 1;
         all.push({
           id: `custom-${idx}`,
-          imageUrl: sub.imageBase64,
+          imageUrl: sub.imageUrl,
           lat,
           lng,
           caption: sub.caption,

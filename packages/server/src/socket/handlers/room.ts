@@ -7,6 +7,7 @@ import type {
 } from '@igra/shared';
 import { CHAT_MAX_LENGTH, CHAT_THROTTLE_MS } from '@igra/shared';
 import { RoomManager } from '../../room/RoomManager.js';
+import { hostRoom, playerRoom } from '../rooms.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -35,6 +36,7 @@ export function registerRoomHandlers(
     socket.data.roomCode = room.code;
     socket.data.isHost = true;
     socket.join(room.code);
+    socket.join(hostRoom(room.code));
     socket.emit('host:room-created', {
       roomCode: room.code,
       room: roomManager.toPublicRoom(room),
@@ -67,6 +69,7 @@ export function registerRoomHandlers(
     socket.data.roomCode = room.code;
     socket.data.playerId = player.id;
     socket.join(room.code);
+    socket.join(playerRoom(player.id));
 
     socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
     console.log(`Hostless room ${room.code} created by ${player.name}`);
@@ -87,6 +90,7 @@ export function registerRoomHandlers(
         socket.data.roomCode = found.roomCode;
         socket.data.playerId = found.playerId;
         socket.join(found.roomCode);
+        socket.join(playerRoom(found.playerId));
 
         socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
         socket.to(found.roomCode).emit('room:player-reconnected', {
@@ -110,6 +114,7 @@ export function registerRoomHandlers(
     socket.data.roomCode = room.code;
     socket.data.playerId = player.id;
     socket.join(room.code);
+    socket.join(playerRoom(player.id));
 
     socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
     if (reclaimed) {

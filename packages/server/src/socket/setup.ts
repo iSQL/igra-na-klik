@@ -27,6 +27,7 @@ import { TajniAgentiModule } from '../game/games/tajni-agenti/TajniAgentiModule.
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
+import { hostRoom, playerRoom } from './rooms.js';
 
 export function setupSocket(
   httpServer: HttpServer,
@@ -54,17 +55,20 @@ export function setupSocket(
   });
 
   const roomManager = new RoomManager();
+  // Factories, not instances: GameManager creates a fresh module per game
+  // so concurrent rooms playing the same game don't share mutable state.
   const gameRegistry = new GameRegistry();
-  gameRegistry.register(new TestGameModule());
-  gameRegistry.register(new QuizGameModule());
-  gameRegistry.register(new DrawGuessModule());
-  gameRegistry.register(new FibbageModule());
-  gameRegistry.register(new SlepiTelefoniModule());
-  gameRegistry.register(new GeoGuessModule(options?.geoPacksDir ?? ''));
-  gameRegistry.register(new FotoKvizModule(options?.geoPacksDir ?? ''));
-  gameRegistry.register(new KoSamJaModule());
-  gameRegistry.register(new SpotItModule());
-  gameRegistry.register(new TajniAgentiModule());
+  const geoPacksDir = options?.geoPacksDir ?? '';
+  gameRegistry.register(() => new TestGameModule());
+  gameRegistry.register(() => new QuizGameModule());
+  gameRegistry.register(() => new DrawGuessModule());
+  gameRegistry.register(() => new FibbageModule());
+  gameRegistry.register(() => new SlepiTelefoniModule());
+  gameRegistry.register(() => new GeoGuessModule(geoPacksDir));
+  gameRegistry.register(() => new FotoKvizModule(geoPacksDir));
+  gameRegistry.register(() => new KoSamJaModule());
+  gameRegistry.register(() => new SpotItModule());
+  gameRegistry.register(() => new TajniAgentiModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 
@@ -100,10 +104,12 @@ export function setupSocket(
         sock.emit('room:destroyed', { reason });
         sock.data.roomCode = undefined;
         sock.leave(roomCode);
+        sock.leave(hostRoom(roomCode));
         continue;
       }
       if (sock.data.playerId) {
         sock.emit('room:kicked', { reason });
+        sock.leave(playerRoom(sock.data.playerId));
         sock.data.roomCode = undefined;
         sock.data.playerId = undefined;
         sock.leave(roomCode);
@@ -145,6 +151,7 @@ export function setupSocket(
         socket.data.roomCode = found.roomCode;
         socket.data.playerId = found.playerId;
         socket.join(found.roomCode);
+        socket.join(playerRoom(found.playerId));
 
         const room = roomManager.getRoom(found.roomCode)!;
         const player = room.players.find((p) => p.id === found.playerId)!;
@@ -204,6 +211,7 @@ export function setupSocket(
           sock.data.roomCode = undefined;
           sock.data.playerId = undefined;
           sock.leave(roomCode);
+          sock.leave(playerRoom(playerId));
           sock.disconnect(true);
         }
       }
@@ -260,6 +268,7 @@ export function setupSocket(
       socket.data.roomCode = undefined;
       socket.data.playerId = undefined;
       socket.leave(roomCode);
+      socket.leave(playerRoom(playerId));
       socket.disconnect(true);
 
       if (result) {

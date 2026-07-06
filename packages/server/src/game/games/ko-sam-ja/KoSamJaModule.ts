@@ -13,6 +13,7 @@ import {
   parseKoSamJaImport,
   KO_SAM_JA_DEFAULT_BANK,
   KO_SAM_JA_FREE_FALLBACK,
+  shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import {
@@ -79,7 +80,7 @@ export class KoSamJaModule extends BaseGameModule {
       extraOptions: q.shape === 'pickN' ? q.extraOptions : undefined,
     }));
 
-    const shuffledPool = [...pool].sort(() => Math.random() - 0.5);
+    const shuffledPool = shuffled(pool);
     const selectedQuestions = shuffledPool.slice(
       0,
       Math.min(NUM_ROUNDS, shuffledPool.length)

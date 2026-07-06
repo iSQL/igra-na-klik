@@ -55,6 +55,13 @@ export function DrawingPad({
   const lastOpsRef = useRef<DrawOp[] | null>(null);
   const lastViewVersionRef = useRef(-1);
 
+  // Scale-1 raster cache of the committed ops. Pinch-zoom frames blit a
+  // crop of this bitmap instead of replaying every stroke + flood fill per
+  // frame; a crisp vector repaint follows when the gesture ends.
+  // offscreenForOpsRef tracks which ops array the bitmap represents.
+  const offscreenRef = useRef<HTMLCanvasElement | null>(null);
+  const offscreenForOpsRef = useRef<DrawOp[] | null>(null);
+
   // Strokes flushed to the server but not yet present in an `operations`
   // snapshot. The server doesn't echo stroke batches back (slepi), so a
   // full repaint before the next snapshot (pinch-zoom, resize) would
@@ -124,43 +131,7 @@ export function DrawingPad({
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, w, h);
 
-      const visible = visibleOps(operations);
-
-      // Batch consecutive fills into one getImageData/putImageData round trip.
-      let i = 0;
-      while (i < visible.length) {
-        const op = visible[i];
-        if (op.kind === 'stroke') {
-          paintStrokeView(ctx, op, w, h, scale, tx, ty);
-          i++;
-        } else if (op.kind === 'fill') {
-          let img: ImageData | null = null;
-          try {
-            img = ctx.getImageData(0, 0, w, h);
-          } catch {
-            i++;
-            continue;
-          }
-          while (i < visible.length && visible[i].kind === 'fill') {
-            const f = visible[i] as FillOp;
-            const sx = Math.floor((f.x - tx) * w * scale);
-            const sy = Math.floor((f.y - ty) * h * scale);
-            scanlineFloodFill(
-              img.data,
-              w,
-              h,
-              sx,
-              sy,
-              parseHexColor(f.color),
-              f.tolerance ?? 0
-            );
-            i++;
-          }
-          ctx.putImageData(img, 0, 0);
-        } else {
-          i++;
-        }
-      }
+      paintOpsBatched(ctx, visibleOps(operations), w, h, scale, tx, ty);
 
       // Flushed-but-unacked strokes are always newer than every server op,
       // so painting them last keeps chronological order.
@@ -170,6 +141,38 @@ export function DrawingPad({
     },
     [operations]
   );
+
+  const rebuildOffscreen = useCallback(() => {
+    const { w, h } = canvasSizeRef.current;
+    let off = offscreenRef.current;
+    if (!off) {
+      off = document.createElement('canvas');
+      offscreenRef.current = off;
+    }
+    if (off.width !== w || off.height !== h) {
+      off.width = w;
+      off.height = h;
+    }
+    const offCtx = off.getContext('2d');
+    if (!offCtx) return;
+    offCtx.fillStyle = '#ffffff';
+    offCtx.fillRect(0, 0, w, h);
+    paintOpsBatched(offCtx, visibleOps(operations), w, h, 1, 0, 0);
+    offscreenForOpsRef.current = operations;
+  }, [operations]);
+
+  const blitFromOffscreen = useCallback((ctx: CanvasRenderingContext2D) => {
+    const off = offscreenRef.current;
+    if (!off) return;
+    const { w, h } = canvasSizeRef.current;
+    const { scale, tx, ty } = viewRef.current;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(off, tx * w, ty * h, w / scale, h / scale, 0, 0, w, h);
+    for (const { op } of pendingLocalOpsRef.current) {
+      paintStrokeView(ctx, op, w, h, scale, tx, ty);
+    }
+  }, []);
 
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -202,14 +205,20 @@ export function DrawingPad({
       );
     }
 
+    const sameOps =
+      !!prev &&
+      operations.length === prevLen &&
+      (prevLen === 0 || operations[prevLen - 1]?.id === prev[prevLen - 1].id);
+
+    // The offscreen cache tracks ops arrays by reference — keep the pointer
+    // fresh when a new array carries identical content (server re-serialize).
+    if (sameOps && offscreenForOpsRef.current === prev) {
+      offscreenForOpsRef.current = operations;
+    }
+
     // Same ops and same view (e.g. a timer-tick re-render): skip repainting.
     // In-progress segments are already on the canvas via drawSegmentImmediate.
-    if (
-      prev &&
-      !viewChanged &&
-      operations.length === prevLen &&
-      (prevLen === 0 || operations[prevLen - 1]?.id === prev[prevLen - 1].id)
-    ) {
+    if (sameOps && !viewChanged) {
       lastOpsRef.current = operations;
       return;
     }
@@ -221,22 +230,56 @@ export function DrawingPad({
       (prevLen === 0 || operations[prevLen - 1]?.id === prev[prevLen - 1].id);
 
     const newOps = grew ? operations.slice(prevLen) : operations;
-    const needsFullRedraw =
-      viewChanged || !grew || newOps.some((o) => o.kind === 'fill' || o.kind === 'erase');
+    const appendOnlyStrokes =
+      grew && !newOps.some((o) => o.kind === 'fill' || o.kind === 'erase');
 
-    if (needsFullRedraw) {
-      fullRepaint(ctx);
-    } else {
+    // Keep the scale-1 cache in step: cheap incremental append when
+    // possible, otherwise drop it and rebuild lazily before the next blit.
+    if (!sameOps) {
+      if (
+        appendOnlyStrokes &&
+        offscreenForOpsRef.current === prev &&
+        offscreenRef.current &&
+        offscreenRef.current.width === w &&
+        offscreenRef.current.height === h
+      ) {
+        const offCtx = offscreenRef.current.getContext('2d');
+        if (offCtx) {
+          for (const op of newOps) {
+            if (op.kind === 'stroke') paintStrokeView(offCtx, op, w, h, 1, 0, 0);
+          }
+          offscreenForOpsRef.current = operations;
+        }
+      } else {
+        offscreenForOpsRef.current = null;
+      }
+    }
+
+    if (appendOnlyStrokes) {
       for (const op of newOps) {
         if (op.kind === 'stroke') paintStrokeView(ctx, op, w, h, scale, tx, ty);
       }
+    } else if (sameOps && viewChanged && gestureModeRef.current === 'pan-zoom') {
+      // Pinch frames: blit the cached raster instead of replaying every
+      // stroke + flood fill. Crisp vector repaint follows on gesture end.
+      if (
+        offscreenForOpsRef.current !== operations ||
+        !offscreenRef.current ||
+        offscreenRef.current.width !== w ||
+        offscreenRef.current.height !== h
+      ) {
+        rebuildOffscreen();
+      }
+      blitFromOffscreen(ctx);
+    } else {
+      fullRepaint(ctx);
     }
 
     paintInProgress(ctx);
 
     lastOpsRef.current = operations;
     lastViewVersionRef.current = viewVersionRef.current;
-  }, [operations, fullRepaint, paintInProgress]);
+  }, [operations, fullRepaint, paintInProgress, rebuildOffscreen, blitFromOffscreen]);
 
   useEffect(() => {
     renderCanvas();
@@ -503,6 +546,9 @@ export function DrawingPad({
         if (count <= 1) {
           gestureModeRef.current = 'idle';
           pinchStartRef.current = null;
+          // Pinch frames were blitted from the scale-1 cache — do one
+          // crisp vector repaint now that the gesture settled.
+          invalidateView();
         }
       }
     };
@@ -550,6 +596,7 @@ export function DrawingPad({
     triggerFill,
     startPinch,
     updatePinch,
+    invalidateView,
   ]);
 
   const zoomed = viewRef.current.scale > 1.01;
@@ -677,6 +724,55 @@ export function DrawingPad({
 
 function newSessionId(): string {
   return `s${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+}
+
+/**
+ * Paints ops in order at the given view transform, batching consecutive
+ * fills into one getImageData/putImageData round trip.
+ */
+function paintOpsBatched(
+  ctx: CanvasRenderingContext2D,
+  visible: DrawOp[],
+  w: number,
+  h: number,
+  scale: number,
+  tx: number,
+  ty: number
+): void {
+  let i = 0;
+  while (i < visible.length) {
+    const op = visible[i];
+    if (op.kind === 'stroke') {
+      paintStrokeView(ctx, op, w, h, scale, tx, ty);
+      i++;
+    } else if (op.kind === 'fill') {
+      let img: ImageData | null = null;
+      try {
+        img = ctx.getImageData(0, 0, w, h);
+      } catch {
+        i++;
+        continue;
+      }
+      while (i < visible.length && visible[i].kind === 'fill') {
+        const f = visible[i] as FillOp;
+        const sx = Math.floor((f.x - tx) * w * scale);
+        const sy = Math.floor((f.y - ty) * h * scale);
+        scanlineFloodFill(
+          img.data,
+          w,
+          h,
+          sx,
+          sy,
+          parseHexColor(f.color),
+          f.tolerance ?? 0
+        );
+        i++;
+      }
+      ctx.putImageData(img, 0, 0);
+    } else {
+      i++;
+    }
+  }
 }
 
 function paintStrokeView(

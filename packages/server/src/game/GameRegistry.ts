@@ -1,21 +1,30 @@
 import type { IGameModule } from './IGameModule.js';
 
-export class GameRegistry {
-  private modules = new Map<string, IGameModule>();
+export type GameModuleFactory = () => IGameModule;
 
-  register(module: IGameModule): void {
-    this.modules.set(module.gameId, module);
+/**
+ * Registry of game module factories. Modules hold per-game mutable state on
+ * the instance, so every room gets its own instance (created via `create`)
+ * — a shared singleton would let two rooms playing the same game clobber
+ * each other's state.
+ */
+export class GameRegistry {
+  private factories = new Map<string, GameModuleFactory>();
+
+  register(factory: GameModuleFactory): void {
+    // Probe instance just to read the gameId; discarded immediately.
+    this.factories.set(factory().gameId, factory);
   }
 
-  get(gameId: string): IGameModule | undefined {
-    return this.modules.get(gameId);
+  create(gameId: string): IGameModule | undefined {
+    return this.factories.get(gameId)?.();
   }
 
   has(gameId: string): boolean {
-    return this.modules.has(gameId);
+    return this.factories.has(gameId);
   }
 
   list(): string[] {
-    return Array.from(this.modules.keys());
+    return Array.from(this.factories.keys());
   }
 }

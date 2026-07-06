@@ -6,6 +6,7 @@ import type {
   ChatMessage,
 } from './room.js';
 import type { GameState } from './game.js';
+import type { DrawOp } from './draw-guess.js';
 import type { QuizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
@@ -27,7 +28,19 @@ export interface ServerToClientEvents {
   }) => void;
   'game:started': (data: { gameId: string; gameState: GameState }) => void;
   'game:state-update': (data: { gameState: GameState }) => void;
-  'game:player-state': (data: { gameState: GameState }) => void;
+  // Per-player private slice only. The shared ("host view") data already
+  // arrives via the game:state-update room broadcast — re-sending it per
+  // player doubled every state emit on the wire.
+  'game:player-state': (data: {
+    playerData: Record<string, Record<string, unknown>>;
+  }) => void;
+  // Lightweight once-a-second countdown tick, sent instead of a full
+  // game:state-update when nothing but the clock changed.
+  'game:timer': (data: { timeRemaining: number }) => void;
+  // Incremental drawing ops (draw-guess strokes/fills). Clients append to
+  // the operations array in data.host; full snapshots (undo/clear/phase
+  // changes/reconnect) remain the authority and replace it wholesale.
+  'game:ops-append': (data: { gameId: string; ops: DrawOp[] }) => void;
   'game:ended': (data: { finalScores: { playerId: string; score: number }[] }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
   'room:chat-message': (data: { message: ChatMessage }) => void;

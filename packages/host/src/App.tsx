@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
+import type { DrawOp } from '@igra/shared';
 import { socket } from './socket';
 import { useRoomStore } from './store/roomStore';
 import { useGameStore } from './store/gameStore';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
+import { prefetchGameComponents } from './games/registry';
 import { useT } from './i18n/useT';
 
 export function App() {
@@ -24,6 +26,12 @@ export function App() {
     reset: resetRoom,
   } = useRoomStore();
   const { setGameState, resetGame } = useGameStore();
+
+  // Warm the lazy game chunks once the room is up so starting a game
+  // doesn't stall on a chunk download.
+  useEffect(() => {
+    if (status === 'lobby') prefetchGameComponents();
+  }, [status]);
 
   useEffect(() => {
     socket.connect();
@@ -74,6 +82,31 @@ export function App() {
 
     socket.on('game:state-update', ({ gameState }) => {
       setGameState(gameState);
+    });
+
+    socket.on('game:timer', ({ timeRemaining }) => {
+      // Lightweight countdown tick — the server skips full state
+      // broadcasts when nothing but the clock changed.
+      const prev = useGameStore.getState().gameState;
+      if (!prev || prev.timeRemaining === timeRemaining) return;
+      setGameState({ ...prev, timeRemaining });
+    });
+
+    socket.on('game:ops-append', ({ gameId, ops }) => {
+      // Incremental drawing ops (draw-guess). Append to the operations
+      // array in the shared host data; full snapshots keep replacing it
+      // wholesale, so the arrays stay consistent either way.
+      const prev = useGameStore.getState().gameState;
+      if (!prev || prev.gameId !== gameId) return;
+      const host = prev.data.host as { operations?: DrawOp[] } | undefined;
+      if (!host) return;
+      setGameState({
+        ...prev,
+        data: {
+          ...prev.data,
+          host: { ...host, operations: [...(host.operations ?? []), ...ops] },
+        },
+      });
     });
 
     socket.on('game:ended', () => {
@@ -128,6 +161,8 @@ export function App() {
       socket.off('room:chat-history');
       socket.off('game:started');
       socket.off('game:state-update');
+      socket.off('game:timer');
+      socket.off('game:ops-append');
       socket.off('game:ended');
       socket.off('room:destroyed');
       socket.off('error');

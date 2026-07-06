@@ -10,7 +10,11 @@ import type {
   FibbageLeaderboardEntry,
   FibbageQuestionPublic,
 } from '@igra/shared';
-import { FIBBAGE_QUESTION_BANK, FIBBAGE_MAX_ANSWER_LENGTH } from '@igra/shared';
+import {
+  FIBBAGE_QUESTION_BANK,
+  FIBBAGE_MAX_ANSWER_LENGTH,
+  shuffled,
+} from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type {
   FibbageInternalState,
@@ -34,12 +38,10 @@ export class FibbageModule extends BaseGameModule {
   private state!: FibbageInternalState;
 
   onStart(room: Room): GameState {
-    const shuffled = [...FIBBAGE_QUESTION_BANK]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, NUM_QUESTIONS);
+    const questions = shuffled(FIBBAGE_QUESTION_BANK).slice(0, NUM_QUESTIONS);
 
     this.state = {
-      questions: shuffled,
+      questions,
       currentIndex: 0,
       phase: 'showing-question',
       phaseTimeRemaining: SHOWING_QUESTION_DURATION,

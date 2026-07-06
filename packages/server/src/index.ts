@@ -16,6 +16,7 @@ import {
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
+import { getCustomPhoto } from './game/customPhotoStore.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:5173';
@@ -283,6 +284,19 @@ app.get('/api/geo-packs', async (_req, res) => {
     console.error('Failed to read geo packs directory:', err);
     res.status(500).json({ error: 'Failed to read geo packs' });
   }
+});
+
+// Player-uploaded photos (geo/foto custom modes) live in memory for the
+// duration of a game; the game state carries only these short URLs instead
+// of inline base64. Ids are immutable UUIDs, so clients may cache hard.
+app.get('/api/custom-photos/:roomCode/:photoId', (req, res) => {
+  const photo = getCustomPhoto(req.params.roomCode, req.params.photoId);
+  if (!photo) {
+    res.status(404).json({ error: 'Photo not found' });
+    return;
+  }
+  res.setHeader('Cache-Control', 'private, max-age=86400, immutable');
+  res.type(photo.mime).send(photo.data);
 });
 
 // Serve pack image folders so the host (and any browser) can render them.

@@ -4,6 +4,7 @@ import type {
   DrawGuessHostData,
   DrawGuessTurnScore,
   DrawGuessLeaderboardEntry,
+  DrawOp,
   Language,
 } from '@igra/shared';
 import {
@@ -13,6 +14,7 @@ import {
   appendEraseOp,
   undoLast,
   clearOps,
+  shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { DrawGuessInternalState, DrawGuessPhase } from './DrawGuessState.js';
@@ -30,14 +32,23 @@ export class DrawGuessModule extends BaseGameModule {
   private usedWords = new Set<string>();
   // The host's UI language at start time, used only to pick the word bank.
   private language: Language = 'sr';
+  // Ops appended since the last poll, broadcast as game:ops-append instead
+  // of re-sending the whole state (and its full operations history) on
+  // every 50ms stroke batch.
+  private pendingOps: DrawOp[] = [];
+
+  getPendingOpsAppend(): DrawOp[] | null {
+    if (this.pendingOps.length === 0) return null;
+    const ops = this.pendingOps;
+    this.pendingOps = [];
+    return ops;
+  }
 
   onStart(room: Room, customContent?: unknown): GameState {
     const opts = customContent as { language?: Language } | undefined;
     this.language = opts?.language ?? 'sr';
     const connectedPlayers = room.players.filter((p) => p.isConnected);
-    const turnOrder = connectedPlayers
-      .map((p) => p.id)
-      .sort(() => Math.random() - 0.5);
+    const turnOrder = shuffled(connectedPlayers.map((p) => p.id));
 
     const totalRounds = Math.min(room.settings.roundCount, 3);
 
@@ -96,8 +107,16 @@ export class DrawGuessModule extends BaseGameModule {
         const width = data.width as number;
         const sessionId = data.sessionId as string | undefined;
         if (!Array.isArray(points) || points.length < 2) return null;
-        appendStrokeOp(this.state.operations, { points, color, width, sessionId });
-        return this.buildGameState(room);
+        // Append-only: broadcast just the new op via game:ops-append; the
+        // next full snapshot (guess, hint, phase change) stays authoritative.
+        const op = appendStrokeOp(this.state.operations, {
+          points,
+          color,
+          width,
+          sessionId,
+        });
+        this.pendingOps.push(op);
+        return null;
       }
 
       case 'draw:fill': {
@@ -106,8 +125,9 @@ export class DrawGuessModule extends BaseGameModule {
         const y = data.y as number;
         const color = data.color as string;
         if (typeof x !== 'number' || typeof y !== 'number' || !color) return null;
-        appendFillOp(this.state.operations, { x, y, color });
-        return this.buildGameState(room);
+        const op = appendFillOp(this.state.operations, { x, y, color });
+        this.pendingOps.push(op);
+        return null;
       }
 
       case 'draw:erase': {
@@ -174,16 +194,22 @@ export class DrawGuessModule extends BaseGameModule {
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
     this.state.phaseTimeRemaining -= deltaMs / 1000;
 
+    let changed = false;
+
     // Progressive hints during drawing phase
     if (this.state.phase === 'drawing' && this.state.currentWord) {
-      this.maybeRevealHint();
+      changed = this.maybeRevealHint();
     }
 
     if (this.state.phaseTimeRemaining <= 0) {
       this.advancePhase(room);
+      changed = true;
     }
 
-    return this.buildGameState(room);
+    // Nothing but the clock moved — let GameManager send a lightweight
+    // game:timer tick instead of re-broadcasting the whole state (whose
+    // operations array can be large mid-drawing).
+    return changed ? this.buildGameState(room) : null;
   }
 
   onPlayerDisconnect(
@@ -313,8 +339,9 @@ export class DrawGuessModule extends BaseGameModule {
 
   // --- Hints ---
 
-  private maybeRevealHint(): void {
-    if (!this.state.currentWord) return;
+  /** Returns true when the hint actually changed this tick. */
+  private maybeRevealHint(): boolean {
+    if (!this.state.currentWord) return false;
 
     const timeElapsed = (Date.now() - this.state.drawingStartTime) / 1000;
     const fraction = timeElapsed / this.state.drawTimeLimit;
@@ -331,7 +358,9 @@ export class DrawGuessModule extends BaseGameModule {
       );
       const revealedIndices = letterIndices.slice(0, Math.min(numToReveal, letterIndices.length - 1));
       this.state.wordHint = this.buildHint(word, revealedIndices);
+      return true;
     }
+    return false;
   }
 
   private buildHint(word: string, revealedIndices: number[]): string {
@@ -364,20 +393,20 @@ export class DrawGuessModule extends BaseGameModule {
     const available = getDrawWordBank(this.language).filter(
       (w) => !this.usedWords.has(w.word)
     );
-    const shuffled = [...available].sort(() => Math.random() - 0.5);
+    const pool = shuffled(available);
 
     // Try to pick one from each difficulty
-    const easy = shuffled.find((w) => w.difficulty === 'easy');
-    const medium = shuffled.find((w) => w.difficulty === 'medium');
-    const hard = shuffled.find((w) => w.difficulty === 'hard');
+    const easy = pool.find((w) => w.difficulty === 'easy');
+    const medium = pool.find((w) => w.difficulty === 'medium');
+    const hard = pool.find((w) => w.difficulty === 'hard');
 
     const choices = [easy, medium, hard]
       .filter((w): w is NonNullable<typeof w> => w != null)
       .map((w) => w.word);
 
     // Pad to 3 if needed
-    while (choices.length < 3 && shuffled.length > choices.length) {
-      const next = shuffled.find((w) => !choices.includes(w.word));
+    while (choices.length < 3 && pool.length > choices.length) {
+      const next = pool.find((w) => !choices.includes(w.word));
       if (next) choices.push(next.word);
       else break;
     }

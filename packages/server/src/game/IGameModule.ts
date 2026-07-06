@@ -1,4 +1,4 @@
-import type { Room, GameState } from '@igra/shared';
+import type { Room, GameState, DrawOp } from '@igra/shared';
 
 export interface IGameModule {
   readonly gameId: string;
@@ -56,4 +56,15 @@ export interface IGameModule {
     playerId: string;
     gameState: GameState;
   } | null;
+
+  /**
+   * Optional hook polled by GameManager after onPlayerAction returns null.
+   * Lets a module broadcast newly appended drawing ops as a tiny
+   * `game:ops-append` event instead of re-emitting the entire game state
+   * (whose operations array grows with every 50ms stroke batch — O(n²)
+   * traffic over a drawing turn). Full state snapshots remain the
+   * authority; clients replace their ops array whenever one arrives.
+   * Implementations must clear the pending ops on read so they fire once.
+   */
+  getPendingOpsAppend?(): DrawOp[] | null;
 }

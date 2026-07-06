@@ -11,6 +11,7 @@ import {
   appendEraseOp,
   undoLast,
   clearOps,
+  shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { SlepiTelefoniInternalState } from './SlepiTelefoniState.js';
@@ -252,7 +253,7 @@ export class SlepiTelefoniModule extends BaseGameModule {
 
   private enterPromptPhase(room: Room): void {
     const connected = room.players.filter((p) => p.isConnected);
-    const order = connected.map((p) => p.id).sort(() => Math.random() - 0.5);
+    const order = shuffled(connected.map((p) => p.id));
 
     this.state.playerOrder = order;
     this.state.chains = order.map((playerId, i) => {

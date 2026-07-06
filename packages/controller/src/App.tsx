@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import type { DrawOp } from '@igra/shared';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
 import { useGameStore } from './store/gameStore';
 import { useNavStore } from './store/navStore';
 import { useWakeLock } from './hooks/useWakeLock';
+import { prefetchGameComponents } from './games/registry';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
@@ -74,6 +76,12 @@ export function App() {
   // Hold a screen wake lock once the player is in a room — prevents the
   // phone from sleeping mid-round and dropping the WebSocket.
   useWakeLock(!!player);
+
+  // Warm the lazy game chunks while idling in the lobby so game start
+  // doesn't stall on a chunk download over a slow phone connection.
+  useEffect(() => {
+    if (player) prefetchGameComponents();
+  }, [player]);
 
   useEffect(() => {
     socket.connect();
@@ -185,12 +193,42 @@ export function App() {
       }
     });
 
-    socket.on('game:player-state', ({ gameState }) => {
-      setGameState(gameState);
+    socket.on('game:player-state', ({ playerData }) => {
+      // Carries ONLY our private slice — the shared data arrived just
+      // before via the game:state-update broadcast. Merge the slice into
+      // the current state instead of expecting a full snapshot.
+      const prev = useGameStore.getState().gameState;
+      if (!prev) return;
+      setGameState({ ...prev, playerData });
       const playerId = usePlayerStore.getState().player?.id;
-      if (playerId && gameState.playerData[playerId]) {
-        setPlayerData(gameState.playerData[playerId]);
+      if (playerId && playerData[playerId]) {
+        setPlayerData(playerData[playerId]);
       }
+    });
+
+    socket.on('game:timer', ({ timeRemaining }) => {
+      // Lightweight countdown tick — the server skips full state
+      // broadcasts when nothing but the clock changed.
+      const prev = useGameStore.getState().gameState;
+      if (!prev || prev.timeRemaining === timeRemaining) return;
+      setGameState({ ...prev, timeRemaining });
+    });
+
+    socket.on('game:ops-append', ({ gameId, ops }) => {
+      // Incremental drawing ops (draw-guess). Append to the operations
+      // array in the shared host data; full snapshots keep replacing it
+      // wholesale, so the arrays stay consistent either way.
+      const prev = useGameStore.getState().gameState;
+      if (!prev || prev.gameId !== gameId) return;
+      const host = prev.data.host as { operations?: DrawOp[] } | undefined;
+      if (!host) return;
+      setGameState({
+        ...prev,
+        data: {
+          ...prev.data,
+          host: { ...host, operations: [...(host.operations ?? []), ...ops] },
+        },
+      });
     });
 
     socket.on('game:ended', () => {
@@ -238,6 +276,8 @@ export function App() {
       socket.off('game:started');
       socket.off('game:state-update');
       socket.off('game:player-state');
+      socket.off('game:timer');
+      socket.off('game:ops-append');
       socket.off('game:ended');
       socket.off('room:kicked');
       socket.off('error');

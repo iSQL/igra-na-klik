@@ -3,6 +3,7 @@ export * from './types/game.js';
 export * from './types/events.js';
 export * from './constants.js';
 export * from './utils/room-code.js';
+export * from './utils/shuffle.js';
 export * from './i18n/index.js';
 export * from './types/quiz.js';
 export * from './types/draw-guess.js';

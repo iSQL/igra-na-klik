@@ -9,6 +9,8 @@ import type {
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { RoomManager } from '../room/RoomManager.js';
 import { GameRegistry } from './GameRegistry.js';
+import type { IGameModule } from './IGameModule.js';
+import { hostRoom, playerRoom } from '../socket/rooms.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -21,9 +23,19 @@ function stripPlayerData(gameState: GameState): GameState {
   return { ...gameState, playerData: {} };
 }
 
+// Content signature used to skip re-broadcasting a state whose only change
+// since the last emit is the countdown. timeRemaining is zeroed out so a
+// pure clock tick compares equal; any real change (phase, scores, answers,
+// drawings, playerData) produces a different string.
+function stateSignature(gameState: GameState): string {
+  return JSON.stringify({ ...gameState, timeRemaining: 0 });
+}
+
 interface ActiveGame {
+  module: IGameModule;
   gameState: GameState;
   intervalId: ReturnType<typeof setInterval>;
+  lastSignature: string;
 }
 
 export class GameManager {
@@ -44,7 +56,10 @@ export class GameManager {
     if (!room) return { error: 'Room not found' };
     if (room.status !== 'lobby') return { error: 'Game already in progress' };
 
-    const module = this.registry.get(gameId);
+    // Fresh module instance per game: modules keep their mutable state on
+    // the instance, so sharing one across rooms would let two rooms playing
+    // the same game corrupt each other.
+    const module = this.registry.create(gameId);
     if (!module) return { error: 'Unknown game' };
 
     const definition = GAME_DEFINITIONS[gameId];
@@ -81,23 +96,24 @@ export class GameManager {
     // are excluded from the stripped broadcast and get the full state).
     // Order matters: game:started first so the controller's GameRouter is
     // mounted before player-state lands.
-    const hostIds = this.hostSocketIds(roomCode);
+    const hosts = hostRoom(roomCode);
     this.io
       .to(roomCode)
-      .except(hostIds)
+      .except(hosts)
       .emit('game:started', { gameId, gameState: stripPlayerData(gameState) });
-    for (const id of hostIds) {
-      this.io.sockets.sockets
-        .get(id)
-        ?.emit('game:started', { gameId, gameState });
-    }
-    this.emitGameState(roomCode, gameState);
+    this.io.to(hosts).emit('game:started', { gameId, gameState });
 
     const intervalId = setInterval(() => {
       this.tick(roomCode);
     }, 1000);
 
-    this.activeGames.set(roomCode, { gameState, intervalId });
+    this.activeGames.set(roomCode, {
+      module,
+      gameState,
+      intervalId,
+      lastSignature: '',
+    });
+    this.emitGameState(roomCode, gameState);
 
     return {};
   }
@@ -114,10 +130,7 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const module = this.registry.get(room.currentGameId!);
-    if (!module) return;
-
-    const newState = module.onPlayerAction(
+    const newState = active.module.onPlayerAction(
       room,
       active.gameState,
       playerId,
@@ -135,9 +148,19 @@ export class GameManager {
       return;
     }
 
+    // Append-only path: the module added drawing ops and asked us to
+    // broadcast just those instead of the whole state (whose operations
+    // array re-sends every stroke drawn so far on every 50ms batch).
+    const ops = active.module.getPendingOpsAppend?.();
+    if (ops && ops.length > 0) {
+      this.io
+        .to(roomCode)
+        .emit('game:ops-append', { gameId: active.gameState.gameId, ops });
+    }
+
     // Private-only path: the module mutated state for one player and asked
     // us not to broadcast (e.g. slepi-telefoni private drawing drafts).
-    const pending = module.getPendingPrivateUpdate?.();
+    const pending = active.module.getPendingPrivateUpdate?.();
     if (pending) {
       active.gameState = pending.gameState;
       this.emitPlayerState(roomCode, pending.playerId, pending.gameState);
@@ -155,10 +178,9 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const module = this.registry.get(room.currentGameId!);
-    if (!module || !module.onHostAction) return;
+    if (!active.module.onHostAction) return;
 
-    const newState = module.onHostAction(
+    const newState = active.module.onHostAction(
       room,
       active.gameState,
       action,
@@ -182,10 +204,7 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const module = this.registry.get(room.currentGameId!);
-    if (!module) return;
-
-    const newState = module.onPlayerDisconnect(
+    const newState = active.module.onPlayerDisconnect(
       room,
       active.gameState,
       playerId
@@ -204,19 +223,44 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const module = this.registry.get(room.currentGameId!);
-    if (!module) return;
+    const newState = active.module.onTick(room, active.gameState, 1000);
 
-    const newState = module.onTick(room, active.gameState, 1000);
-
-    if (newState) {
-      active.gameState = newState;
-      this.emitGameState(roomCode, newState);
-
-      if (newState.phase === 'ended') {
-        this.endGame(roomCode);
-      }
+    if (!newState) {
+      // Module says nothing (or nothing but its internal clock) changed.
+      // Keep the cached countdown in step and send a lightweight timer
+      // tick instead of a full state broadcast.
+      this.emitTimerTick(roomCode, active);
+      return;
     }
+
+    active.gameState = newState;
+
+    if (newState.phase === 'ended') {
+      this.emitGameState(roomCode, newState);
+      this.endGame(roomCode);
+      return;
+    }
+
+    // Most ticks only move the countdown — comparing content signatures
+    // lets those go out as a tiny game:timer event instead of re-sending
+    // the entire state (with drawings/results/etc.) every second.
+    const sig = stateSignature(newState);
+    if (sig === active.lastSignature) {
+      this.io
+        .to(roomCode)
+        .emit('game:timer', { timeRemaining: newState.timeRemaining });
+      return;
+    }
+
+    this.emitGameState(roomCode, newState);
+  }
+
+  private emitTimerTick(roomCode: string, active: ActiveGame): void {
+    if (active.gameState.timeRemaining <= 0) return;
+    active.gameState.timeRemaining -= 1;
+    this.io
+      .to(roomCode)
+      .emit('game:timer', { timeRemaining: active.gameState.timeRemaining });
   }
 
   stopGame(roomCode: string): { error?: string } {
@@ -235,10 +279,7 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const module = this.registry.get(room.currentGameId!);
-    if (module) {
-      module.onEnd(room, active.gameState);
-    }
+    active.module.onEnd(room, active.gameState);
 
     const finalScores = room.players.map((p) => ({
       playerId: p.id,
@@ -253,41 +294,31 @@ export class GameManager {
   }
 
   private emitGameState(roomCode: string, gameState: GameState): void {
+    const active = this.activeGames.get(roomCode);
+    if (active) active.lastSignature = stateSignature(gameState);
+
     // Room-wide broadcast carries the shared/"host view" data but no
     // per-player private data — a curious player could otherwise read
     // other players' secrets (e.g. the drawer's word choices) off the
     // wire. Controllers get their own slice via game:player-state below;
     // host sockets are excluded here and receive only the full state, so
     // the TV never renders a transient stripped frame.
-    const hostIds = this.hostSocketIds(roomCode);
-    this.io.to(roomCode).except(hostIds).emit('game:state-update', {
+    const hosts = hostRoom(roomCode);
+    this.io.to(roomCode).except(hosts).emit('game:state-update', {
       gameState: stripPlayerData(gameState),
     });
-    for (const id of hostIds) {
-      this.io.sockets.sockets.get(id)?.emit('game:state-update', { gameState });
-    }
+    this.io.to(hosts).emit('game:state-update', { gameState });
 
-    // Send per-player state to each controller
+    // Send each player only their own private slice. The shared data is
+    // already on its way via the room broadcast above — repeating it here
+    // used to double every state emit on the wire.
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
     for (const player of room.players) {
-      const playerState: GameState = {
-        ...gameState,
-        playerData: {
-          [player.id]: gameState.playerData[player.id] || {},
-        },
-      };
-
-      // Emit to the player's socket via the room
-      // We use the io.sockets to find the player's socket by iterating
-      const sockets = this.io.sockets.sockets;
-      for (const [, sock] of sockets) {
-        if (sock.data.playerId === player.id && sock.data.roomCode === roomCode) {
-          sock.emit('game:player-state', { gameState: playerState });
-          break;
-        }
-      }
+      this.io.to(playerRoom(player.id)).emit('game:player-state', {
+        playerData: { [player.id]: gameState.playerData[player.id] || {} },
+      });
     }
   }
 
@@ -295,33 +326,15 @@ export class GameManager {
     return this.activeGames.has(roomCode);
   }
 
-  // The host socket id stored on the room can go stale across socket.io
-  // reconnects, so find host sockets by their socket data instead.
-  private hostSocketIds(roomCode: string): string[] {
-    const ids: string[] = [];
-    for (const [id, sock] of this.io.sockets.sockets) {
-      if (sock.data.isHost && sock.data.roomCode === roomCode) ids.push(id);
-    }
-    return ids;
-  }
-
   private emitPlayerState(
     roomCode: string,
     playerId: string,
     gameState: GameState
   ): void {
-    const playerState: GameState = {
-      ...gameState,
-      playerData: {
-        [playerId]: gameState.playerData[playerId] || {},
-      },
-    };
-    for (const [, sock] of this.io.sockets.sockets) {
-      if (sock.data.playerId === playerId && sock.data.roomCode === roomCode) {
-        sock.emit('game:player-state', { gameState: playerState });
-        return;
-      }
-    }
+    void roomCode;
+    this.io.to(playerRoom(playerId)).emit('game:player-state', {
+      playerData: { [playerId]: gameState.playerData[playerId] || {} },
+    });
   }
 
   /**
@@ -353,6 +366,6 @@ export class GameManager {
       gameId: active.gameState.gameId,
       gameState: playerState,
     });
-    sock.emit('game:player-state', { gameState: playerState });
+    sock.emit('game:player-state', { playerData: playerState.playerData });
   }
 }
