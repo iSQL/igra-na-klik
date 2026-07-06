@@ -49,6 +49,8 @@ export interface FibbageLeaderboardEntry {
   avatarColor: string;
   score: number;
   rank: number;
+  /** Points gained in the just-finished round — shown as "+N" beside the total. */
+  roundScore?: number;
 }
 
 export const FIBBAGE_MAX_ANSWER_LENGTH = 80;

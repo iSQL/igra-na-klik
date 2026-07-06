@@ -410,7 +410,14 @@ export class FibbageModule extends BaseGameModule {
         break;
       }
 
-      case 'showing-results': {
+      // Results and leaderboard are built for all three phases so clients
+      // can show a single merged "reveal + standings" screen; the TV still
+      // picks what to render by phase. currentIndex only advances when the
+      // next question starts, so the round's votes/options are still valid
+      // here.
+      case 'showing-results':
+      case 'leaderboard':
+      case 'ended': {
         const publicOptions: FibbageAnswerOptionPublic[] = this.state.options.map(
           (o) => ({ id: o.id, text: o.text })
         );
@@ -483,17 +490,14 @@ export class FibbageModule extends BaseGameModule {
             realAnswer: question.answer,
           };
         }
-        break;
-      }
 
-      case 'leaderboard':
-      case 'ended': {
         const leaderboard: FibbageLeaderboardEntry[] = room.players
           .map((p) => ({
             playerId: p.id,
             name: p.name,
             avatarColor: p.avatarColor,
             score: p.score,
+            roundScore: this.state.roundScores.get(p.id) ?? 0,
             rank: 0,
           }))
           .sort((a, b) => b.score - a.score)
