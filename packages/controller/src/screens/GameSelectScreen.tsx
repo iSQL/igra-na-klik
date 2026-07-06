@@ -16,6 +16,7 @@ import { useNavStore } from '../store/navStore';
 import { useLanguageStore } from '../store/languageStore';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
+import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 
@@ -205,26 +206,36 @@ export function GameSelectScreen() {
       </div>
 
       {room.hostless && (
-        <p
+        <div
           style={{
-            margin: 0,
-            textAlign: 'center',
-            fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
           }}
         >
-          {t('lobby.room')}{' '}
-          <strong
+          <p
             style={{
-              color: 'var(--accent)',
-              fontFamily: 'monospace',
-              fontSize: '1.15rem',
-              letterSpacing: '0.15rem',
+              margin: 0,
+              fontSize: '0.95rem',
+              color: 'var(--text-secondary)',
             }}
           >
-            {room.code}
-          </strong>
-        </p>
+            {t('lobby.room')}{' '}
+            <strong
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'monospace',
+                fontSize: '1.15rem',
+                letterSpacing: '0.15rem',
+              }}
+            >
+              {room.code}
+            </strong>
+          </p>
+          <CopyRoomLinkButton code={room.code} />
+        </div>
       )}
 
       {errorMessage && (

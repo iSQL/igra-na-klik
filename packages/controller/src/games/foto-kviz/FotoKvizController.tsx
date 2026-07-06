@@ -6,12 +6,15 @@ import type {
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
+import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
+import { PhotoFrame } from '../../components/PhotoFrame';
 import { AnswerButtons } from './components/AnswerButtons';
 import { FotoKvizPhotoSubmitter } from './FotoKvizPhotoSubmitter';
 
 export default function FotoKvizController() {
   const gameState = useGameStore((s) => s.gameState);
   const player = usePlayerStore((s) => s.player);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const playerId = player?.id;
 
   if (!gameState || !playerId) return <Centered message="Učitavanje..." />;
@@ -50,6 +53,36 @@ export default function FotoKvizController() {
   }
 
   if (phase === 'showing-photo') {
+    // Hostless room: the photo lives only on the TV otherwise — show it
+    // full-screen on the phone. imageUrl is public round data (either a
+    // same-origin /geo-images URL or a base64 custom photo).
+    const imageUrl = host?.currentRound?.question.imageUrl;
+    if (hostless && imageUrl) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.5rem',
+          }}
+        >
+          <PhotoFrame imageUrl={imageUrl} />
+          <p
+            style={{
+              textAlign: 'center',
+              fontSize: '0.9rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+              flexShrink: 0,
+            }}
+          >
+            Odgovori stižu za {timeRemaining}s
+          </p>
+        </div>
+      );
+    }
     return (
       <Centered>
         <p style={{ fontSize: '1.05rem', fontWeight: 600 }}>
@@ -85,6 +118,7 @@ export default function FotoKvizController() {
 
     const options = host?.currentRound?.question.options ?? [];
     const lowTime = timeRemaining <= 5;
+    const answeringImageUrl = host?.currentRound?.question.imageUrl;
 
     return (
       <div
@@ -97,6 +131,11 @@ export default function FotoKvizController() {
           gap: '0.75rem',
         }}
       >
+        {hostless && answeringImageUrl && (
+          <div style={{ flexShrink: 0, height: '28%', minHeight: 0 }}>
+            <PhotoFrame imageUrl={answeringImageUrl} />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',
@@ -147,10 +186,108 @@ export default function FotoKvizController() {
   }
 
   if (phase === 'showing-results') {
+    // Hostless room: append the TV's reveal (correct answer + everyone's
+    // answers) — host.roundResult is public data.
+    const rr = host?.roundResult;
+    if (hostless && rr) {
+      const correctText =
+        rr.question.options[rr.question.correctIndex]?.text ?? '?';
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            gap: '0.6rem',
+            padding: '1rem',
+            overflowY: 'auto',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Tačan odgovor
+          </p>
+          <p
+            style={{
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: 'var(--success)',
+              margin: 0,
+              lineHeight: 1.3,
+            }}
+          >
+            {correctText}
+          </p>
+          {!myData.isOwnPhoto && (
+            <p style={{ fontSize: '0.95rem', margin: '0.2rem 0' }}>
+              {myData.ownCorrect ? '✅ Tačno!' : '❌ Netačno'} ·{' '}
+              <strong style={{ color: 'var(--accent)' }}>
+                +{myData.ownPoints ?? 0}
+              </strong>
+            </p>
+          )}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+              textAlign: 'left',
+            }}
+          >
+            {rr.perPlayer.map((p) => (
+              <div
+                key={p.playerId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.45rem 0.7rem',
+                  background: 'var(--bg-card)',
+                  borderRadius: '0.5rem',
+                  borderLeft: `4px solid ${p.avatarColor}`,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <span>{p.correct ? '✅' : '❌'}</span>
+                <span
+                  style={{
+                    flex: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 600,
+                  }}
+                >
+                  {p.name}
+                  {p.optionIndex === null && (
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>
+                      {' '}
+                      — bez odgovora
+                    </span>
+                  )}
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                  +{p.pointsAwarded}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     return <ResultsStatus myData={myData} />;
   }
 
   if (phase === 'final-leaderboard' || phase === 'ended') {
+    if (hostless && host?.finalLeaderboard) {
+      return (
+        <HostlessLeaderboard
+          title="Konačni poredak"
+          entries={host.finalLeaderboard}
+          myPlayerId={playerId}
+        />
+      );
+    }
     const entry = host?.finalLeaderboard?.find(
       (e: GeoLeaderboardEntry) => e.playerId === playerId
     );

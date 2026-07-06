@@ -1,12 +1,16 @@
 import type { GeoControllerData, GeoHostData, GeoLeaderboardEntry } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
+import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
+import { PhotoFrame } from '../../components/PhotoFrame';
 import { PhotoSubmitter } from './PhotoSubmitter';
 import { MapPinPicker } from './MapPinPicker';
+import { SerbiaMap } from './components/SerbiaMap';
 
 export default function GeoGuessController() {
   const gameState = useGameStore((s) => s.gameState);
   const player = usePlayerStore((s) => s.player);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const playerId = player?.id;
 
   if (!gameState || !playerId) return <Centered message="Učitavanje..." />;
@@ -43,6 +47,34 @@ export default function GeoGuessController() {
   }
 
   if (phase === 'viewing') {
+    // Hostless room: no TV — show the round photo full-screen on the phone.
+    const imageUrl = host?.currentRound?.location.imageUrl;
+    if (hostless && imageUrl) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.5rem',
+          }}
+        >
+          <PhotoFrame imageUrl={imageUrl} />
+          <p
+            style={{
+              textAlign: 'center',
+              fontSize: '0.9rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+              flexShrink: 0,
+            }}
+          >
+            Mapa stiže za {timeRemaining}s
+          </p>
+        </div>
+      );
+    }
     return (
       <Centered>
         <p style={{ fontSize: '1.05rem', fontWeight: 600 }}>Pogledaj sliku na ekranu</p>
@@ -79,15 +111,36 @@ export default function GeoGuessController() {
         hasLocked={myData.hasLocked === true}
         ownPin={myData.ownPin}
         ownColor={ownColor}
+        photoUrl={hostless ? host?.currentRound?.location.imageUrl : undefined}
       />
     );
   }
 
   if (phase === 'reveal') {
+    // Hostless room: render the TV's reveal map (everyone's pins + the
+    // true location) plus per-player distances — all public host data.
+    if (hostless && host?.revealPins && host.truePinSvg) {
+      return (
+        <HostlessReveal
+          host={host}
+          myPlayerId={playerId}
+          timeRemaining={timeRemaining}
+        />
+      );
+    }
     return <RevealStatus myData={myData} timeRemaining={timeRemaining} />;
   }
 
   if (phase === 'final-leaderboard' || phase === 'ended') {
+    if (hostless && host?.finalLeaderboard) {
+      return (
+        <HostlessLeaderboard
+          title="Konačni poredak"
+          entries={host.finalLeaderboard}
+          myPlayerId={playerId}
+        />
+      );
+    }
     const entry = host?.finalLeaderboard?.find(
       (e: GeoLeaderboardEntry) => e.playerId === playerId
     );
@@ -113,6 +166,110 @@ export default function GeoGuessController() {
   }
 
   return <Centered message="Učitavanje..." />;
+}
+
+function HostlessReveal({
+  host,
+  myPlayerId,
+  timeRemaining,
+}: {
+  host: GeoHostData;
+  myPlayerId: string;
+  timeRemaining: number;
+}) {
+  const markers = [
+    ...(host.revealPins ?? []).map((p) => ({
+      x: p.pin.x,
+      y: p.pin.y,
+      color: p.color,
+    })),
+    ...(host.truePinSvg
+      ? [{ ...host.truePinSvg, color: '#ffd700', isTrue: true }]
+      : []),
+  ];
+  const results = host.roundResults ?? [];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        padding: '0.75rem 0',
+        gap: '0.5rem',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0 1rem',
+        }}
+      >
+        <p style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+          ⭐ Tačna lokacija
+        </p>
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          {timeRemaining}s
+        </span>
+      </div>
+      <SerbiaMap disabled markers={markers} maxHeightCss="46dvh" />
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem',
+          padding: '0 1rem',
+        }}
+      >
+        {results.map((r) => {
+          const isMe = r.playerId === myPlayerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.4rem 0.7rem',
+                background: isMe ? 'var(--bg-card)' : 'var(--bg-secondary)',
+                borderRadius: '0.5rem',
+                borderLeft: `4px solid ${r.avatarColor}`,
+                outline: isMe ? '1px solid var(--accent)' : undefined,
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  fontWeight: isMe ? 700 : 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {r.distanceKm === null
+                  ? 'bez pina'
+                  : r.distanceKm < 1
+                    ? `${Math.round(r.distanceKm * 1000)} m`
+                    : `${r.distanceKm.toFixed(1)} km`}
+              </span>
+              <span style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                +{r.pointsAwarded}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function RevealStatus({

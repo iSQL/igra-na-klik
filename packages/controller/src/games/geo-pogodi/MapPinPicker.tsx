@@ -8,6 +8,11 @@ interface MapPinPickerProps {
   hasLocked: boolean;
   ownPin?: GeoPin;
   ownColor?: string;
+  /**
+   * Hostless rooms: the round photo, shown as a header thumbnail that
+   * expands full-screen on tap (there is no TV keeping it visible).
+   */
+  photoUrl?: string;
 }
 
 // Vertical chrome around the map: header (~30px) + button (~60px) + outer
@@ -33,8 +38,10 @@ export function MapPinPicker({
   hasLocked,
   ownPin,
   ownColor,
+  photoUrl,
 }: MapPinPickerProps) {
   const [draftPin, setDraftPin] = useState<GeoPin | null>(ownPin ?? null);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   // Sync the draft pin with the server's authoritative ownPin (e.g. on
   // reconnect during placing).
@@ -52,6 +59,60 @@ export function MapPinPicker({
 
   const lowTime = timeRemaining <= 5;
 
+  const photoThumb = photoUrl ? (
+    <button
+      onClick={() => setPhotoOpen(true)}
+      aria-label="Prikaži sliku"
+      style={{
+        padding: 0,
+        border: '2px solid var(--accent)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        background: '#000',
+        width: '64px',
+        height: '44px',
+        flexShrink: 0,
+        cursor: 'pointer',
+      }}
+    >
+      <img
+        src={photoUrl}
+        alt=""
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+    </button>
+  ) : null;
+
+  const photoOverlay =
+    photoUrl && photoOpen ? (
+      <div
+        onClick={() => setPhotoOpen(false)}
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.92)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem',
+          gap: '0.75rem',
+        }}
+      >
+        <img
+          src={photoUrl}
+          alt=""
+          style={{ maxWidth: '100%', maxHeight: '85dvh', objectFit: 'contain' }}
+        />
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+          Tapni bilo gde da zatvoriš
+        </p>
+      </div>
+    ) : null;
+
   if (hasLocked) {
     return (
       <div style={containerStyle}>
@@ -66,15 +127,18 @@ export function MapPinPicker({
           <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#7be37b' }}>
             ✓ Pin zaključan
           </p>
-          <span
-            style={{
-              fontSize: '1.05rem',
-              fontWeight: 700,
-              color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
-            }}
-          >
-            {timeRemaining}s
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            {photoThumb}
+            <span
+              style={{
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
+              }}
+            >
+              {timeRemaining}s
+            </span>
+          </div>
         </div>
         <SerbiaMap
           pin={draftPin ?? undefined}
@@ -93,6 +157,7 @@ export function MapPinPicker({
         >
           Čekamo ostale...
         </p>
+        {photoOverlay}
       </div>
     );
   }
@@ -110,15 +175,18 @@ export function MapPinPicker({
         <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
           Tapni gde je slikana
         </p>
-        <span
-          style={{
-            fontSize: lowTime ? '1.4rem' : '1.05rem',
-            fontWeight: 700,
-            color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
-          }}
-        >
-          {timeRemaining}s
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          {photoThumb}
+          <span
+            style={{
+              fontSize: lowTime ? '1.4rem' : '1.05rem',
+              fontWeight: 700,
+              color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
+            }}
+          >
+            {timeRemaining}s
+          </span>
+        </div>
       </div>
       <SerbiaMap
         pin={draftPin ?? undefined}
@@ -144,6 +212,7 @@ export function MapPinPicker({
           Potvrdi pin
         </button>
       </div>
+      {photoOverlay}
     </div>
   );
 }

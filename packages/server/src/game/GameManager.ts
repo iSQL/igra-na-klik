@@ -1,4 +1,4 @@
-import type { Server, Socket } from 'socket.io';
+import type { Server } from 'socket.io';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -16,13 +16,6 @@ type IoServer = Server<
   InterServerEvents,
   SocketData
 >;
-type IoSocket = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
-
 // Broadcast-safe copy: shared data stays, per-player private data goes.
 function stripPlayerData(gameState: GameState): GameState {
   return { ...gameState, playerData: {} };
@@ -84,15 +77,20 @@ export class GameManager {
 
     const gameState = module.onStart(room, customContent);
     // Broadcast game:started without per-player private data (controllers
-    // get their own slice via game:player-state right after; the host gets
-    // the full state below). Order matters: game:started first so the
-    // controller's GameRouter is mounted before player-state lands.
+    // get their own slice via game:player-state right after; host sockets
+    // are excluded from the stripped broadcast and get the full state).
+    // Order matters: game:started first so the controller's GameRouter is
+    // mounted before player-state lands.
+    const hostIds = this.hostSocketIds(roomCode);
     this.io
       .to(roomCode)
+      .except(hostIds)
       .emit('game:started', { gameId, gameState: stripPlayerData(gameState) });
-    this.emitToHostSockets(roomCode, (sock) =>
-      sock.emit('game:started', { gameId, gameState })
-    );
+    for (const id of hostIds) {
+      this.io.sockets.sockets
+        .get(id)
+        ?.emit('game:started', { gameId, gameState });
+    }
     this.emitGameState(roomCode, gameState);
 
     const intervalId = setInterval(() => {
@@ -259,13 +257,15 @@ export class GameManager {
     // per-player private data — a curious player could otherwise read
     // other players' secrets (e.g. the drawer's word choices) off the
     // wire. Controllers get their own slice via game:player-state below;
-    // only the host screen receives the full state.
-    this.io.to(roomCode).emit('game:state-update', {
+    // host sockets are excluded here and receive only the full state, so
+    // the TV never renders a transient stripped frame.
+    const hostIds = this.hostSocketIds(roomCode);
+    this.io.to(roomCode).except(hostIds).emit('game:state-update', {
       gameState: stripPlayerData(gameState),
     });
-    this.emitToHostSockets(roomCode, (sock) =>
-      sock.emit('game:state-update', { gameState })
-    );
+    for (const id of hostIds) {
+      this.io.sockets.sockets.get(id)?.emit('game:state-update', { gameState });
+    }
 
     // Send per-player state to each controller
     const room = this.roomManager.getRoom(roomCode);
@@ -297,13 +297,12 @@ export class GameManager {
 
   // The host socket id stored on the room can go stale across socket.io
   // reconnects, so find host sockets by their socket data instead.
-  private emitToHostSockets(
-    roomCode: string,
-    emit: (sock: IoSocket) => void
-  ): void {
-    for (const [, sock] of this.io.sockets.sockets) {
-      if (sock.data.isHost && sock.data.roomCode === roomCode) emit(sock);
+  private hostSocketIds(roomCode: string): string[] {
+    const ids: string[] = [];
+    for (const [id, sock] of this.io.sockets.sockets) {
+      if (sock.data.isHost && sock.data.roomCode === roomCode) ids.push(id);
     }
+    return ids;
   }
 
   private emitPlayerState(

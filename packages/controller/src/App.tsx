@@ -171,7 +171,18 @@ export function App() {
     });
 
     socket.on('game:state-update', ({ gameState }) => {
-      setGameState(gameState);
+      // The room broadcast carries NO per-player data (playerData is
+      // stripped server-side; our slice arrives via game:player-state).
+      // Keep the previous playerData instead of clobbering it with the
+      // empty object — otherwise every 1s tick momentarily blanks myData,
+      // remounting game UIs and wiping their local state (e.g. the geo
+      // draft pin).
+      const prev = useGameStore.getState().gameState;
+      if (prev && prev.gameId === gameState.gameId) {
+        setGameState({ ...gameState, playerData: prev.playerData });
+      } else {
+        setGameState(gameState);
+      }
     });
 
     socket.on('game:player-state', ({ gameState }) => {

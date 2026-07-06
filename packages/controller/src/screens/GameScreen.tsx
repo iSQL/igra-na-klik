@@ -22,8 +22,8 @@ export function GameScreen() {
       <div
         style={{
           position: 'fixed',
-          top: '0.6rem',
-          right: '0.6rem',
+          bottom: '0.6rem',
+          left: '0.6rem',
           zIndex: 50,
           display: 'flex',
           gap: '0.4rem',

@@ -41,6 +41,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Pogodi gde je u Srbiji slikana fotografija — bliža igla, više poena!',
+    supportsHostless: true,
   },
   'foto-kviz': {
     id: 'foto-kviz',
@@ -49,6 +50,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Pogledaj fotografiju i izaberi pravu lokaciju od 4 ponuđena odgovora!',
+    supportsHostless: true,
   },
   'ko-sam-ja': {
     id: 'ko-sam-ja',

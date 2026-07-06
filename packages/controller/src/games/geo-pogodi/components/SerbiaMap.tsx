@@ -2,6 +2,15 @@ import { useCallback, useRef, useState } from 'react';
 import type { GeoPin } from '@igra/shared';
 import serbiaSvgUrl from '../assets/serbia.svg';
 
+/** Extra read-only pin for the hostless reveal map (players + truth). */
+export interface MapMarker {
+  x: number;
+  y: number;
+  color: string;
+  /** Renders bigger with a ⭐ — the round's true location. */
+  isTrue?: boolean;
+}
+
 interface SerbiaMapProps {
   pin?: GeoPin;
   onPinChange?: (pin: GeoPin) => void;
@@ -14,6 +23,8 @@ interface SerbiaMapProps {
    */
   maxHeightCss?: string;
   pinColor?: string;
+  /** Read-only markers rendered on top of the map (hostless reveal). */
+  markers?: MapMarker[];
 }
 
 const SVG_W = 724.531;
@@ -56,6 +67,7 @@ export function SerbiaMap({
   disabled,
   maxHeightCss = '60dvh',
   pinColor = '#ff3b3b',
+  markers,
 }: SerbiaMapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -278,6 +290,41 @@ export function SerbiaMap({
             opacity: disabled ? 0.6 : 1,
           }}
         />
+        {markers?.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${m.x * 100}%`,
+              top: `${m.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              zIndex: m.isTrue ? 2 : 1,
+            }}
+          >
+            {m.isTrue ? (
+              <div
+                style={{
+                  fontSize: '1.3rem',
+                  filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))',
+                  lineHeight: 1,
+                }}
+              >
+                ⭐
+              </div>
+            ) : (
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: m.color,
+                  boxShadow: '0 0 0 2px rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.6)',
+                }}
+              />
+            )}
+          </div>
+        ))}
         {pin && (
           <div
             style={{

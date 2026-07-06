@@ -5,6 +5,7 @@ import { useNavStore } from '../store/navStore';
 import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
+import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LobbyChat } from '../components/LobbyChat';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
@@ -57,9 +58,20 @@ export function LobbyScreen() {
 
       <h1 style={{ fontSize: '1.5rem' }}>{player.name}</h1>
 
-      <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-        {t('lobby.room')} <strong style={{ color: 'var(--accent)' }}>{room.code}</strong>
-      </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', margin: 0 }}>
+          {t('lobby.room')} <strong style={{ color: 'var(--accent)' }}>{room.code}</strong>
+        </p>
+        {room.hostless && <CopyRoomLinkButton code={room.code} />}
+      </div>
 
       <div
         style={{
