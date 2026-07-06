@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AVATAR_COLORS, AVATAR_EMOJIS } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
+import { useGameStore } from '../store/gameStore';
 import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
@@ -13,6 +14,7 @@ import { useT } from '../i18n/useT';
 export function LobbyScreen() {
   const { player, room } = usePlayerStore();
   const setScreen = useNavStore((s) => s.setScreen);
+  const lastStartPayload = useGameStore((s) => s.lastStartPayload);
   const [pickerOpen, setPickerOpen] = useState(false);
   const t = useT();
 
@@ -97,6 +99,26 @@ export function LobbyScreen() {
             >
               {t('lobby.chooseGameArrow')}
             </button>
+            {lastStartPayload && (
+              <button
+                onClick={() =>
+                  socket.emit('host:start-game', lastStartPayload)
+                }
+                style={{
+                  padding: '0.6rem 1.2rem',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  borderRadius: '0.6rem',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  border: '2px solid var(--accent)',
+                }}
+              >
+                {t('lobby.playAgain', {
+                  name: t(`game.${lastStartPayload.gameId}.name`),
+                })}
+              </button>
+            )}
             <button
               onClick={() => socket.emit('player:release-remote-host')}
               style={{

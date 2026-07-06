@@ -1,10 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 
 const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
+// Last name used to enter a room — returning players get it pre-filled so
+// rejoining is one tap (and name-based slot reclaim just works).
+const LAST_NAME_KEY = 'igra-player-name';
+
+// Server join errors are fixed English strings — map the known ones to
+// localized, friendlier messages (the raw text still shows for unknowns).
+const SERVER_ERROR_KEYS: Record<string, string> = {
+  'Game already in progress': 'join.gameInProgress',
+  'Room not found': 'join.roomNotFound',
+  'Name already taken': 'join.nameTaken',
+  'Room is full': 'join.roomFull',
+};
 
 export function JoinScreen() {
   const reconnectToken = usePlayerStore((s) => s.reconnectToken);
@@ -12,11 +24,14 @@ export function JoinScreen() {
 
   const params = new URLSearchParams(window.location.search);
   const [roomCode, setRoomCode] = useState(params.get('code') || '');
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem(LAST_NAME_KEY) ?? ''
+  );
   const [error, setError] = useState('');
   const [joining, setJoining] = useState(false);
   const [creating, setCreating] = useState(false);
   const [fetchingCode, setFetchingCode] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!SINGLE_ROOM_MODE || params.get('code')) return;
@@ -57,36 +72,58 @@ export function JoinScreen() {
     };
   }, []);
 
-  const handleJoin = () => {
-    const codeLength = roomCode.length;
-    if (codeLength === 0) {
+  // Optional override lets the room-code input auto-join on the keystroke
+  // that completes the code, before React state has caught up.
+  const handleJoin = (codeOverride?: string) => {
+    const code = (codeOverride ?? roomCode).trim();
+    if (code.length === 0) {
       setError(t('join.roomNotOpen'));
       return;
     }
-    if (!playerName.trim()) {
+    const name = playerName.trim();
+    if (!name) {
       setError(t('join.enterName'));
       return;
     }
 
     setError('');
     setJoining(true);
+    localStorage.setItem(LAST_NAME_KEY, name);
 
     socket.emit('player:join-room', {
-      roomCode: roomCode.toUpperCase(),
-      playerName: playerName.trim(),
+      roomCode: code.toUpperCase(),
+      playerName: name,
       reconnectToken: reconnectToken || undefined,
     });
   };
 
+  const handleCodeChange = (raw: string) => {
+    const cleaned = raw.toUpperCase().replace(/[^A-Z]/g, '');
+    setRoomCode(cleaned);
+    if (cleaned.length !== 2 || joining || creating) return;
+    // Code just completed: join right away if the name is ready, otherwise
+    // hop the focus over so the player types their name next.
+    if (playerName.trim()) {
+      handleJoin(cleaned);
+    } else {
+      nameInputRef.current?.focus();
+    }
+  };
+
   const handleCreate = () => {
-    if (!playerName.trim()) {
+    const name = playerName.trim();
+    if (!name) {
       setError(t('join.enterName'));
       return;
     }
     setError('');
     setCreating(true);
-    socket.emit('player:create-room', { playerName: playerName.trim() });
+    localStorage.setItem(LAST_NAME_KEY, name);
+    socket.emit('player:create-room', { playerName: name });
   };
+
+  const errorKey = SERVER_ERROR_KEYS[error];
+  const displayError = errorKey ? t(errorKey) : error;
 
   return (
     <div
@@ -113,7 +150,7 @@ export function JoinScreen() {
           maxLength={2}
           autoFocus={!roomCode}
           value={roomCode}
-          onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
+          onChange={(e) => handleCodeChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
           style={{
             padding: '0.75rem 1rem',
@@ -153,6 +190,7 @@ export function JoinScreen() {
       )}
 
       <input
+        ref={nameInputRef}
         type="text"
         placeholder={t('join.yourName')}
         maxLength={20}
@@ -170,11 +208,13 @@ export function JoinScreen() {
       />
 
       {error && (
-        <p style={{ color: 'var(--danger)', textAlign: 'center' }}>{error}</p>
+        <p style={{ color: 'var(--danger)', textAlign: 'center' }}>
+          {displayError}
+        </p>
       )}
 
       <button
-        onClick={handleJoin}
+        onClick={() => handleJoin()}
         disabled={joining || creating || fetchingCode}
         style={{
           padding: '1rem',

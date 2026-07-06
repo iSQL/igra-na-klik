@@ -102,6 +102,14 @@ export interface ClientToServerEvents {
   }) => void;
 }
 
+/**
+ * The host:start-game payload as a standalone type — clients keep the last
+ * one around to offer a one-tap "play again" with identical settings.
+ */
+export type HostStartGamePayload = Parameters<
+  ClientToServerEvents['host:start-game']
+>[0];
+
 export interface InterServerEvents {
   ping: () => void;
 }

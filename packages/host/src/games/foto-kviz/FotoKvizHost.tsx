@@ -12,6 +12,7 @@ import type {
 import { useGameStore } from '../../store/gameStore';
 import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
+import { WaitingChips } from '../../components/WaitingChips';
 
 export default function FotoKvizHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -87,6 +88,12 @@ export default function FotoKvizHost() {
         showOptions
         footer={`Odgovorilo: ${host.answeredCount ?? 0} / ${host.totalPlayers ?? 0}`}
         timerHighlight={lowTime}
+        waiting={
+          <WaitingChips
+            expectedIds={host.expectedIds ?? []}
+            answeredIds={host.answeredIds ?? []}
+          />
+        }
       />
     );
   }
@@ -279,6 +286,7 @@ function PhotoLayout({
   showOptions,
   footer,
   timerHighlight,
+  waiting,
 }: {
   question: FotoKvizPublicQuestion;
   roundNumber: number;
@@ -287,6 +295,7 @@ function PhotoLayout({
   showOptions: boolean;
   footer: string;
   timerHighlight?: boolean;
+  waiting?: React.ReactNode;
 }) {
   return (
     <div
@@ -353,6 +362,7 @@ function PhotoLayout({
         {showOptions && (
           <OptionGrid options={question.options} />
         )}
+        {waiting}
       </div>
     </div>
   );

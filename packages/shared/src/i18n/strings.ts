@@ -47,6 +47,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'lobby.changeAvatar': 'Promeni avatar',
     'lobby.room': 'Soba',
     'lobby.chooseGameArrow': 'Izaberi igru →',
+    'lobby.playAgain': '🔁 Igraj ponovo: {name}',
     'lobby.releaseControl': 'Otpusti kontrolu',
     'lobby.claimControl': 'Preuzmi kontrolu',
     'lobby.holdsControl': 'drži kontrolu',
@@ -80,6 +81,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'reconnect.wait': 'Sačekaj',
     'reconnect.gameEnded': 'Igra je završena',
     'reconnect.returningToLobby': 'Vraćamo se u lobi...',
+    'gameEnd.placement': '{rank}. mesto · {points} poena',
+    'kicked.ok': 'U redu',
 
     // --- leave room ------------------------------------------------------
     'leave.leaveRoom': 'Napusti sobu',
@@ -120,6 +123,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.createRoom': 'Napravi sobu',
     'join.creating': 'Kreiranje...',
     'join.createRoomHint': 'Igra samo na telefonima — bez TV ekrana',
+    'join.gameInProgress':
+      'Igra je u toku — sačekaj da se završi, pa pokušaj ponovo.',
+    'join.roomNotFound': 'Soba nije pronađena. Proveri kod.',
+    'join.nameTaken': 'To ime je već zauzeto u ovoj sobi.',
+    'join.roomFull': 'Soba je puna.',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Konačni poredak',
@@ -293,6 +301,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'lobby.changeAvatar': 'Change avatar',
     'lobby.room': 'Room',
     'lobby.chooseGameArrow': 'Choose a game →',
+    'lobby.playAgain': '🔁 Play again: {name}',
     'lobby.releaseControl': 'Release control',
     'lobby.claimControl': 'Take control',
     'lobby.holdsControl': 'is in control',
@@ -326,6 +335,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'reconnect.wait': 'Please wait',
     'reconnect.gameEnded': 'The game has ended',
     'reconnect.returningToLobby': 'Returning to the lobby...',
+    'gameEnd.placement': 'Place {rank} · {points} points',
+    'kicked.ok': 'OK',
 
     // --- leave room ------------------------------------------------------
     'leave.leaveRoom': 'Leave room',
@@ -366,6 +377,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.createRoom': 'Create a room',
     'join.creating': 'Creating...',
     'join.createRoomHint': 'Play on phones only — no TV screen',
+    'join.gameInProgress':
+      'A game is in progress — wait for it to finish, then try again.',
+    'join.roomNotFound': 'Room not found. Check the code.',
+    'join.nameTaken': 'That name is already taken in this room.',
+    'join.roomFull': 'The room is full.',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Final standings',

@@ -13,6 +13,7 @@ import type {
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
+import { useGameStore } from '../store/gameStore';
 import { useLanguageStore } from '../store/languageStore';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
@@ -153,6 +154,8 @@ export function GameSelectScreen() {
       }
     }
     payload.language = useLanguageStore.getState().language;
+    // Remember for the lobby's "Igraj ponovo" rematch shortcut.
+    useGameStore.getState().setLastStartPayload(payload);
     socket.emit('host:start-game', payload);
   };
 

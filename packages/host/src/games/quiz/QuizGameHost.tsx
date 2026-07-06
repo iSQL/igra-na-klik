@@ -6,6 +6,7 @@ import { useSound } from '../../hooks/useSound';
 import { QuestionDisplay } from './components/QuestionDisplay';
 import { OptionGrid } from './components/OptionGrid';
 import { AnswerCounter } from './components/AnswerCounter';
+import { WaitingChips } from '../../components/WaitingChips';
 import { Leaderboard } from './components/Leaderboard';
 import type { QuizOption, QuizResultData, QuizLeaderboardEntry } from '@igra/shared';
 
@@ -91,6 +92,10 @@ export default function QuizGameHost() {
           <AnswerCounter
             answeredCount={data.answeredCount as number}
             totalPlayers={data.totalPlayers as number}
+          />
+          <WaitingChips
+            expectedIds={(data.expectedIds as string[]) ?? []}
+            answeredIds={(data.answeredIds as string[]) ?? []}
           />
         </>
       )}

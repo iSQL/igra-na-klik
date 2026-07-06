@@ -36,7 +36,11 @@ function ReconnectingOverlay() {
   );
 }
 
-function GameEndedOverlay() {
+function GameEndedOverlay({
+  placement,
+}: {
+  placement: { rank: number; points: number } | null;
+}) {
   const t = useT();
   return (
     <div
@@ -53,6 +57,24 @@ function GameEndedOverlay() {
     >
       <div style={{ textAlign: 'center' }}>
         <p style={{ fontSize: '1.6rem', fontWeight: 700 }}>{t('reconnect.gameEnded')}</p>
+        {placement && (
+          <p
+            style={{
+              marginTop: '0.8rem',
+              fontSize: '1.3rem',
+              fontWeight: 700,
+              color: 'var(--accent)',
+            }}
+          >
+            {placement.rank === 1 && '🥇 '}
+            {placement.rank === 2 && '🥈 '}
+            {placement.rank === 3 && '🥉 '}
+            {t('gameEnd.placement', {
+              rank: placement.rank,
+              points: placement.points,
+            })}
+          </p>
+        )}
         <p
           style={{
             color: 'var(--text-secondary)',
@@ -67,11 +89,70 @@ function GameEndedOverlay() {
   );
 }
 
+function KickedOverlay({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 15, 35, 0.92)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1100,
+        padding: '1.5rem',
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--bg-secondary)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+          maxWidth: '340px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}
+      >
+        <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>{message}</p>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '0.75rem',
+            fontSize: '1rem',
+            fontWeight: 700,
+            borderRadius: '0.6rem',
+            background: 'var(--accent)',
+            color: '#fff',
+            border: 'none',
+          }}
+        >
+          {t('kicked.ok')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const { player, isConnected, setPlayer, setRoom, setConnected, reset } =
     usePlayerStore();
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
   const [gameEndedNotice, setGameEndedNotice] = useState(false);
+  const [finalPlacement, setFinalPlacement] = useState<{
+    rank: number;
+    points: number;
+  } | null>(null);
+  const [kickNotice, setKickNotice] = useState<string | null>(null);
 
   // Hold a screen wake lock once the player is in a room — prevents the
   // phone from sleeping mid-round and dropping the WebSocket.
@@ -231,16 +312,30 @@ export function App() {
       });
     });
 
-    socket.on('game:ended', () => {
+    socket.on('game:ended', ({ finalScores }) => {
       // Surface a quick "Igra je završena" notice so players (especially
       // when the remote host triggered "Završi igru") see why the game UI
       // is about to vanish, instead of being snapped back to the lobby
-      // with no explanation.
+      // with no explanation. In TV mode the podium lives on the big screen,
+      // so show at least the player's own placement here.
+      const myId = usePlayerStore.getState().player?.id;
+      const mine = myId
+        ? finalScores.find((s) => s.playerId === myId)
+        : undefined;
+      if (mine) {
+        const sorted = [...finalScores].sort((a, b) => b.score - a.score);
+        // Ties share the higher rank (two players at 1000 are both 1st).
+        const rank = sorted.findIndex((s) => s.score === mine.score) + 1;
+        setFinalPlacement({ rank, points: mine.score });
+      } else {
+        setFinalPlacement(null);
+      }
       setGameEndedNotice(true);
       setTimeout(() => {
         setGameEndedNotice(false);
+        setFinalPlacement(null);
         resetGame();
-      }, 3000);
+      }, 4000);
     });
 
     socket.on('room:kicked', ({ reason }) => {
@@ -248,13 +343,12 @@ export function App() {
       // don't try to silently rejoin, drop game state, and bounce back
       // to the join screen. The follow-up disconnect from the server
       // triggers the manual reconnect in the disconnect handler above.
+      // The reason renders as an in-app overlay (never a blocking
+      // alert(), which froze the event loop and raced the reconnect).
       resetGame();
       reset();
       useNavStore.getState().setScreen('lobby');
-      // Defer the alert so it doesn't block the event loop — otherwise
-      // the queued 'disconnect' event sits behind the modal and the
-      // manual reconnect ends up racing whatever the user does next.
-      if (reason) setTimeout(() => alert(reason), 0);
+      if (reason) setKickNotice(reason);
     });
 
     socket.on('error', ({ message }) => {
@@ -303,7 +397,10 @@ export function App() {
     <>
       {showReconnecting && <ReconnectingOverlay />}
       {body}
-      {gameEndedNotice && <GameEndedOverlay />}
+      {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
+      {kickNotice && (
+        <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />
+      )}
     </>
   );
 }

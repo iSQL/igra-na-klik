@@ -185,6 +185,9 @@ export class QuizGameModule extends BaseGameModule {
         data.timeLimit = question.timeLimit;
         data.answeredCount = this.state.answers.size;
         data.totalPlayers = connectedPlayers.length;
+        // Names for the TV's "waiting on..." chips — who answered, not what.
+        data.expectedIds = Array.from(this.state.expectedAnswererIds);
+        data.answeredIds = Array.from(this.state.answers.keys());
 
         for (const player of room.players) {
           const answer = this.state.answers.get(player.id);

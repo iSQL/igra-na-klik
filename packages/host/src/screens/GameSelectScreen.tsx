@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { GAME_DEFINITIONS } from '@igra/shared';
+import type { HostStartGamePayload } from '@igra/shared';
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
+import { useGameStore } from '../store/gameStore';
 import { useQuizImportStore } from '../store/quizImportStore';
 import { useSlepiConfigStore } from '../store/slepiConfigStore';
 import { useGeoConfigStore } from '../store/geoConfigStore';
@@ -95,7 +97,7 @@ export function GameSelectScreen() {
         ? tajniAgentiStore.scenarioCode ?? undefined
         : undefined;
 
-    socket.emit('host:start-game', {
+    const payload: HostStartGamePayload = {
       gameId,
       customQuestions,
       slepiRounds,
@@ -108,7 +110,10 @@ export function GameSelectScreen() {
       tajniAgentiScenarioCode,
       customTajniAgentiScenario,
       language: useLanguageStore.getState().language,
-    });
+    };
+    // Remember for the lobby's "Igraj ponovo" rematch shortcut.
+    useGameStore.getState().setLastStartPayload(payload);
+    socket.emit('host:start-game', payload);
   };
 
   return (

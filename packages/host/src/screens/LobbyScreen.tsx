@@ -1,5 +1,6 @@
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { useRoomStore } from '../store/roomStore';
+import { useGameStore } from '../store/gameStore';
 import { socket } from '../socket';
 import { PlayerList } from '../components/PlayerList';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
@@ -16,6 +17,7 @@ const MIN_PLAYERS_OVERALL = Math.min(
 
 export function LobbyScreen() {
   const { room, players, setStatus, remoteHostPlayerId } = useRoomStore();
+  const lastStartPayload = useGameStore((s) => s.lastStartPayload);
   const t = useT();
 
   if (!room) return null;
@@ -103,6 +105,25 @@ export function LobbyScreen() {
           ? t('lobby.chooseGame')
           : t('lobby.needAtLeast', { n: MIN_PLAYERS_OVERALL, noun: minNoun })}
       </button>
+
+      {canStart && lastStartPayload && (
+        <button
+          onClick={() => socket.emit('host:start-game', lastStartPayload)}
+          style={{
+            padding: '0.7rem 1.6rem',
+            fontSize: '1.05rem',
+            fontWeight: 700,
+            borderRadius: '0.75rem',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            border: '2px solid var(--accent)',
+          }}
+        >
+          {t('lobby.playAgain', {
+            name: t(`game.${lastStartPayload.gameId}.name`),
+          })}
+        </button>
+      )}
 
       <LobbyChatPanel />
 

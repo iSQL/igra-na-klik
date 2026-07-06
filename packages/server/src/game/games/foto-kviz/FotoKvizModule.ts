@@ -557,6 +557,9 @@ export class FotoKvizModule extends BaseGameModule {
       hostData.answeredCount = eligible.filter((id) =>
         this.state.answers.has(id)
       ).length;
+      // Names for the TV's "waiting on..." chips — who answered, not what.
+      hostData.expectedIds = Array.from(this.state.expectedAnswererIds);
+      hostData.answeredIds = Array.from(this.state.answers.keys());
     }
 
     if (this.state.phase === 'showing-results') {

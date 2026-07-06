@@ -73,6 +73,10 @@ export interface FotoKvizHostData {
   // answering
   answeredCount?: number;
   totalPlayers?: number;
+  // Who is expected to answer this round and who already has — lets the TV
+  // name the players everyone is waiting on (no option choices leaked).
+  expectedIds?: string[];
+  answeredIds?: string[];
   // showing-results
   roundResult?: FotoKvizRoundResult;
   // final-leaderboard
