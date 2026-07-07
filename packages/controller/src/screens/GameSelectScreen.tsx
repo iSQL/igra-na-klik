@@ -44,6 +44,18 @@ interface KoSamJaPackSummary {
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 const PHOTO_OPTIONS = [1, 2, 3, 4];
 
+const GAME_ICONS: Record<string, string> = {
+  quiz: '🧠',
+  'draw-guess': '🎨',
+  fibbage: '🤥',
+  'slepi-telefoni': '📝',
+  'geo-pogodi': '📍',
+  'foto-kviz': '📸',
+  'ko-sam-ja': '🕵️',
+  'spot-it': '🔴',
+  'tajni-agenti': '🟦',
+};
+
 export function GameSelectScreen() {
   const room = usePlayerStore((s) => s.room);
   const setScreen = useNavStore((s) => s.setScreen);
@@ -183,29 +195,57 @@ export function GameSelectScreen() {
           onClick={() => setScreen('lobby')}
           style={{
             padding: '0.5rem 0.9rem',
-            fontSize: '0.9rem',
-            borderRadius: '0.5rem',
+            fontSize: '0.85rem',
+            fontWeight: 800,
+            borderRadius: '12px',
             background: 'transparent',
             color: 'var(--text-secondary)',
-            border: '1px solid var(--bg-card)',
+            border: '1px solid var(--line2)',
+            minHeight: '42px',
           }}
         >
           {t('gameSelect.backArrow')}
         </button>
-        <h1 style={{ fontSize: '1.4rem', margin: 0 }}>{t('gameSelect.title')}</h1>
-        <LeaveRoomButton />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+          }}
+        >
+          <LanguageSwitch />
+          <LeaveRoomButton />
+          <CloseRoomButton />
+        </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '0.6rem',
-        }}
-      >
-        <LanguageSwitch />
-        <CloseRoomButton />
+      <div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.3rem',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: 'var(--pink)',
+              background: 'rgba(255,46,136,.14)',
+              padding: '4px 9px',
+              borderRadius: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            🎮 {t('lobby.canStartFromPhone')}
+          </span>
+        </div>
+        <h1 className="display" style={{ fontSize: '1.6rem', margin: 0 }}>
+          {t('gameSelect.title')}
+        </h1>
       </div>
 
       {room.hostless && (
@@ -221,16 +261,17 @@ export function GameSelectScreen() {
           <p
             style={{
               margin: 0,
-              fontSize: '0.95rem',
+              fontSize: '0.9rem',
+              fontWeight: 700,
               color: 'var(--text-secondary)',
             }}
           >
             {t('lobby.room')}{' '}
             <strong
+              className="display"
               style={{
-                color: 'var(--accent)',
-                fontFamily: 'monospace',
-                fontSize: '1.15rem',
+                color: 'var(--text-primary)',
+                fontSize: '1.2rem',
                 letterSpacing: '0.15rem',
               }}
             >
@@ -246,11 +287,12 @@ export function GameSelectScreen() {
           role="alert"
           style={{
             padding: '0.6rem 0.9rem',
-            background: 'rgba(231, 76, 60, 0.15)',
-            border: '1px solid #e74c3c',
-            borderRadius: '0.5rem',
-            color: '#ffb1ab',
+            background: 'rgba(255, 77, 94, 0.14)',
+            border: '1px solid rgba(255, 77, 94, 0.45)',
+            borderRadius: '13px',
+            color: 'var(--danger)',
             fontSize: '0.85rem',
+            fontWeight: 700,
             textAlign: 'center',
           }}
         >
@@ -258,7 +300,13 @@ export function GameSelectScreen() {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '0.65rem',
+        }}
+      >
         {games.map((game) => {
           const needsTv = room.hostless && !game.supportsHostless;
           const lacking = connectedCount < game.minPlayers;
@@ -268,13 +316,16 @@ export function GameSelectScreen() {
             <div
               key={game.id}
               style={{
-                background: 'var(--bg-card)',
-                borderRadius: '0.75rem',
-                padding: '0.85rem 1rem',
-                opacity: disabled ? 0.5 : 1,
+                gridColumn: expanded ? '1 / -1' : 'auto',
+                borderRadius: '16px',
+                background: expanded
+                  ? 'linear-gradient(150deg, rgba(255,46,136,.22), var(--bg-secondary))'
+                  : 'var(--bg-secondary)',
                 border: expanded
-                  ? '1px solid var(--accent)'
-                  : '1px solid transparent',
+                  ? '1px solid rgba(255,46,136,.4)'
+                  : '1px solid var(--line)',
+                padding: '0.75rem',
+                opacity: disabled ? 0.55 : 1,
               }}
             >
               <button
@@ -288,7 +339,7 @@ export function GameSelectScreen() {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'flex-start',
-                  gap: '0.25rem',
+                  gap: '0.45rem',
                   background: 'transparent',
                   color: 'var(--text-primary)',
                   cursor: disabled ? 'not-allowed' : 'pointer',
@@ -296,35 +347,61 @@ export function GameSelectScreen() {
                   textAlign: 'left',
                 }}
               >
-                <strong style={{ fontSize: '1.05rem' }}>
-                  {t(`game.${game.id}.name`)}
-                </strong>
                 <span
                   style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    fontWeight: 400,
+                    fontSize: '1.5rem',
+                    filter: disabled ? 'grayscale(1)' : 'none',
+                    lineHeight: 1,
                   }}
                 >
-                  {t(`game.${game.id}.description`)}
+                  {GAME_ICONS[game.id] ?? '🎮'}
                 </span>
-                {needsTv && (
-                  <span style={{ fontSize: '0.8rem', color: '#e07070' }}>
-                    {t('gameSelect.needsTv')}
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                  <strong style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+                    {t(`game.${game.id}.name`)}
+                  </strong>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {game.minPlayers}–{game.maxPlayers}
+                    {expanded && (
+                      <> · {t(`game.${game.id}.description`)}</>
+                    )}
                   </span>
-                )}
-                {!needsTv && lacking && (
-                  <span style={{ fontSize: '0.8rem', color: '#e07070' }}>
-                    {t('gameSelect.needMore', {
-                      n: game.minPlayers - connectedCount,
-                      noun: t(
-                        game.minPlayers - connectedCount === 1
-                          ? 'common.player.one'
-                          : 'common.player.many'
-                      ),
-                    })}
-                  </span>
-                )}
+                  {needsTv && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        color: 'var(--amber)',
+                      }}
+                    >
+                      🔒 {t('gameSelect.needsTv')}
+                    </span>
+                  )}
+                  {!needsTv && lacking && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        color: 'var(--danger)',
+                      }}
+                    >
+                      {t('gameSelect.needMore', {
+                        n: game.minPlayers - connectedCount,
+                        noun: t(
+                          game.minPlayers - connectedCount === 1
+                            ? 'common.player.one'
+                            : 'common.player.many'
+                        ),
+                      })}
+                    </span>
+                  )}
+                </span>
               </button>
 
               {expanded && !disabled && (
@@ -332,7 +409,7 @@ export function GameSelectScreen() {
                   style={{
                     marginTop: '0.75rem',
                     paddingTop: '0.75rem',
-                    borderTop: '1px solid var(--bg-secondary)',
+                    borderTop: '1px solid var(--line)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.6rem',
@@ -375,19 +452,8 @@ export function GameSelectScreen() {
                       setError={setKoSamJaImportError}
                     />
                   )}
-                  <button
-                    onClick={() => handleStart(game)}
-                    style={{
-                      padding: '0.8rem 1rem',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      borderRadius: '0.6rem',
-                      background: 'var(--accent)',
-                      color: '#fff',
-                      border: 'none',
-                    }}
-                  >
-                    {t('gameSelect.start')}
+                  <button className="btn-primary" onClick={() => handleStart(game)}>
+                    ▶ {t('gameSelect.start')}
                   </button>
                 </div>
               )}
@@ -433,7 +499,7 @@ function GeoConfig({
       {mode === 'predefined' && (
         <>
           {packs.length === 0 ? (
-            <span style={{ fontSize: '0.8rem', color: '#e74c3c' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>
               {t('config.noPacks')}
             </span>
           ) : (
@@ -441,12 +507,13 @@ function GeoConfig({
               value={selectedPackId ?? ''}
               onChange={(e) => setSelectedPackId(e.target.value || null)}
               style={{
-                padding: '0.5rem 0.6rem',
+                padding: '0.6rem 0.7rem',
                 fontSize: '0.9rem',
-                borderRadius: '0.4rem',
-                background: 'var(--bg-secondary)',
+                fontWeight: 700,
+                borderRadius: '11px',
+                background: 'var(--bg-primary)',
                 color: 'var(--text-primary)',
-                border: '1px solid var(--bg-card)',
+                border: '1.5px solid var(--line2)',
               }}
             >
               {packs.map((p) => (
@@ -554,12 +621,13 @@ function QuizConfig({
         onChange={(e) => handlePackChange(e.target.value)}
         disabled={isFileImport}
         style={{
-          padding: '0.5rem 0.6rem',
+          padding: '0.6rem 0.7rem',
           fontSize: '0.9rem',
-          borderRadius: '0.4rem',
-          background: 'var(--bg-secondary)',
+          fontWeight: 700,
+          borderRadius: '11px',
+          background: 'var(--bg-primary)',
           color: 'var(--text-primary)',
-          border: '1px solid var(--bg-card)',
+          border: '1.5px solid var(--line2)',
           opacity: isFileImport ? 0.5 : 1,
         }}
       >
@@ -616,20 +684,20 @@ function QuizConfig({
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{
-            padding: '0.45rem 0.7rem',
+            padding: '0.6rem 0.7rem',
             fontSize: '0.8rem',
-            fontWeight: 600,
-            borderRadius: '0.4rem',
+            fontWeight: 800,
+            borderRadius: '11px',
             background: 'transparent',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--bg-card)',
+            color: 'var(--cyan)',
+            border: '1.5px dashed var(--line2)',
           }}
         >
           {t('import.importQuestionsFile')}
         </button>
       )}
       {error && (
-        <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>{error}</span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{error}</span>
       )}
     </div>
   );
@@ -719,12 +787,13 @@ function KoSamJaConfig({
         onChange={(e) => handlePackChange(e.target.value)}
         disabled={isFileImport}
         style={{
-          padding: '0.5rem 0.6rem',
+          padding: '0.6rem 0.7rem',
           fontSize: '0.9rem',
-          borderRadius: '0.4rem',
-          background: 'var(--bg-secondary)',
+          fontWeight: 700,
+          borderRadius: '11px',
+          background: 'var(--bg-primary)',
           color: 'var(--text-primary)',
-          border: '1px solid var(--bg-card)',
+          border: '1.5px solid var(--line2)',
           opacity: isFileImport ? 0.5 : 1,
         }}
       >
@@ -781,20 +850,20 @@ function KoSamJaConfig({
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{
-            padding: '0.45rem 0.7rem',
+            padding: '0.6rem 0.7rem',
             fontSize: '0.8rem',
-            fontWeight: 600,
-            borderRadius: '0.4rem',
+            fontWeight: 800,
+            borderRadius: '11px',
             background: 'transparent',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--bg-card)',
+            color: 'var(--cyan)',
+            border: '1.5px dashed var(--line2)',
           }}
         >
           {t('import.importQuestionsFile')}
         </button>
       )}
       {error && (
-        <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>{error}</span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{error}</span>
       )}
     </div>
   );
@@ -840,11 +909,11 @@ function ModeButton({
         flex: 1,
         padding: '0.5rem 0.7rem',
         fontSize: '0.85rem',
-        fontWeight: 700,
-        borderRadius: '0.4rem',
-        background: active ? 'var(--accent)' : 'var(--bg-secondary)',
-        color: active ? '#fff' : 'var(--text-primary)',
-        border: '1px solid var(--bg-card)',
+        fontWeight: 800,
+        borderRadius: '10px',
+        background: active ? 'var(--grad)' : 'var(--bg-primary)',
+        color: active ? '#fff' : 'var(--text-secondary)',
+        border: active ? '1px solid transparent' : '1px solid var(--line2)',
       }}
     >
       {children}
@@ -865,13 +934,15 @@ function Pill({
     <button
       onClick={onClick}
       style={{
+        flex: 1,
         padding: '0.35rem 0.7rem',
-        fontSize: '0.9rem',
-        fontWeight: 700,
-        borderRadius: '0.4rem',
-        background: active ? 'var(--accent)' : 'var(--bg-secondary)',
-        color: active ? '#fff' : 'var(--text-primary)',
-        minWidth: '40px',
+        fontSize: '0.95rem',
+        fontWeight: 800,
+        borderRadius: '10px',
+        background: active ? 'var(--grad)' : 'var(--bg-primary)',
+        color: active ? '#fff' : 'var(--text-secondary)',
+        border: active ? '1px solid transparent' : '1px solid var(--line2)',
+        minWidth: '42px',
       }}
     >
       {children}

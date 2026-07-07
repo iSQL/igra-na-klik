@@ -118,7 +118,38 @@ function WaitingScreen({ message }: { message: string }) {
         textAlign: 'center',
       }}
     >
-      <p style={{ fontSize: '1.25rem', fontWeight: 600 }}>{message}</p>
+      <div style={{ display: 'flex', gap: '9px' }}>
+        <span
+          style={{
+            width: '13px',
+            height: '13px',
+            borderRadius: '50%',
+            background: 'var(--pink)',
+            animation: 'igra-floaty 1.2s infinite',
+          }}
+        />
+        <span
+          style={{
+            width: '13px',
+            height: '13px',
+            borderRadius: '50%',
+            background: 'var(--violet)',
+            animation: 'igra-floaty 1.2s infinite .2s',
+          }}
+        />
+        <span
+          style={{
+            width: '13px',
+            height: '13px',
+            borderRadius: '50%',
+            background: 'var(--cyan)',
+            animation: 'igra-floaty 1.2s infinite .4s',
+          }}
+        />
+      </div>
+      <p className="display" style={{ fontSize: '1.35rem', fontWeight: 600, margin: 0 }}>
+        {message}
+      </p>
     </div>
   );
 }
@@ -138,7 +169,7 @@ function EndedScreen({ hostless }: { hostless: boolean }) {
         textAlign: 'center',
       }}
     >
-      <p style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
+      <p className="display" style={{ fontSize: '2.2rem', fontWeight: 700, margin: 0, animation: 'igra-pop .5s' }}>
         {t('slepi.gameOver')}
       </p>
       <p
@@ -242,33 +273,46 @@ function HostlessReveal({
           <div
             key={i}
             style={{
-              background: 'var(--bg-card)',
-              borderRadius: '0.6rem',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line)',
+              borderRadius: '13px',
               padding: '0.6rem 0.75rem',
-              borderLeft: `4px solid ${item.authorColor}`,
+              display: 'flex',
+              gap: '0.6rem',
             }}
           >
+            <span
+              className="avatar-tile"
+              style={{
+                width: '26px',
+                height: '26px',
+                backgroundColor: item.authorColor,
+                marginTop: '2px',
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-secondary)',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--dim)',
                 margin: '0 0 0.35rem',
               }}
             >
-              <strong style={{ color: 'var(--text-primary)' }}>
-                {item.authorName}
-              </strong>{' '}
-              {kindLabel(item.kind)}:
+              {item.authorName} {kindLabel(item.kind)}:
             </p>
             {item.kind === 'drawing' ? (
               <SmallOpsPreview
                 operations={item.operations ?? legacyStrokesToOps(item.strokes)}
               />
             ) : (
-              <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+              <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
                 „{item.text}"
               </p>
             )}
+            </div>
           </div>
         ))}
       </div>
@@ -276,18 +320,8 @@ function HostlessReveal({
       {isController && (
         <button
           onClick={advance}
-          style={{
-            padding: '0.8rem 1.5rem',
-            background: 'var(--accent)',
-            color: '#fff',
-            borderRadius: '999px',
-            fontSize: '1rem',
-            fontWeight: 700,
-            minHeight: '48px',
-            border: 'none',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
+          className="btn-primary"
+          style={{ flexShrink: 0 }}
         >
           {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
         </button>
@@ -345,18 +379,8 @@ function RevealRemoteHostControl({
       )}
       <button
         onClick={advance}
-        style={{
-          padding: '0.9rem 1.75rem',
-          background: 'var(--accent)',
-          color: '#fff',
-          borderRadius: '999px',
-          fontSize: '1.1rem',
-          fontWeight: 700,
-          minHeight: '52px',
-          minWidth: '220px',
-          border: 'none',
-          cursor: 'pointer',
-        }}
+        className="btn-primary"
+        style={{ minWidth: '220px' }}
       >
         {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
       </button>
@@ -394,18 +418,30 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600 }}>{t('slepi.writePrompt')}</p>
         <span
           style={{
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--text-primary)',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            color: 'var(--cyan)',
+            background: 'rgba(34,222,230,.12)',
+            padding: '5px 11px',
+            borderRadius: '9px',
           }}
         >
-          {timeRemaining}s
+          ✍️ {t('slepi.writePrompt')}
+        </span>
+        <span
+          className="display"
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
+          }}
+        >
+          {timeRemaining}
         </span>
       </div>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
         {t('slepi.nextPlayerDraws')}
       </p>
       <textarea
@@ -415,10 +451,12 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
         placeholder={t('slepi.promptPlaceholder')}
         style={{
           flex: 1,
-          padding: '0.75rem',
-          fontSize: '1rem',
-          borderRadius: '8px',
-          border: '2px solid var(--bg-card)',
+          padding: '0.85rem',
+          fontSize: '1.05rem',
+          fontWeight: 700,
+          borderRadius: '16px',
+          border: '1.5px solid var(--cyan)',
+          boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           resize: 'none',
@@ -428,28 +466,20 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '0.8rem',
-          color: 'var(--text-secondary)',
+          justifyContent: 'flex-end',
+          fontSize: '0.78rem',
+          fontWeight: 700,
+          color: 'var(--dim)',
         }}
       >
         <span>{text.length}/{MAX_PROMPT_LENGTH}</span>
       </div>
       <button
+        className="btn-primary"
         onClick={submit}
         disabled={text.trim().length === 0}
-        style={{
-          padding: '0.9rem',
-          fontSize: '1.1rem',
-          fontWeight: 700,
-          background: text.trim() ? 'var(--accent)' : 'var(--bg-card)',
-          color: '#fff',
-          borderRadius: '10px',
-          minHeight: '48px',
-          opacity: text.trim() ? 1 : 0.6,
-        }}
       >
-        {t('common.send')}
+        {t('common.send')} ✓
       </button>
     </div>
   );
@@ -483,15 +513,27 @@ function DrawingRound({
     >
       <div
         style={{
-          padding: '0.5rem 0.75rem',
-          background: 'var(--bg-card)',
+          margin: '0.3rem 0.3rem 0',
+          padding: '0.55rem 0.85rem',
+          background: 'rgba(255,46,136,.12)',
+          border: '1px solid rgba(255,46,136,.4)',
+          borderRadius: '12px',
           textAlign: 'center',
         }}
       >
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        <p
+          style={{
+            fontSize: '0.65rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: 'var(--text-secondary)',
+            margin: 0,
+          }}
+        >
           {t('slepi.draw')}
         </p>
-        <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>„{prompt}”</p>
+        <p style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>„{prompt}”</p>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <DrawingPad
@@ -503,16 +545,8 @@ function DrawingRound({
       <div style={{ padding: '0.5rem 0.75rem' }}>
         <button
           onClick={submit}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            fontSize: '1rem',
-            fontWeight: 700,
-            background: 'var(--success)',
-            color: '#fff',
-            borderRadius: '10px',
-            minHeight: '44px',
-          }}
+          className="btn-primary"
+          style={{ width: '100%', minHeight: '48px' }}
         >
           {t('slepi.done')}
         </button>
@@ -557,15 +591,27 @@ function GuessRound({
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600 }}>{t('slepi.whatDoYouSee')}</p>
         <span
           style={{
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--text-primary)',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            color: 'var(--cyan)',
+            background: 'rgba(34,222,230,.12)',
+            padding: '5px 11px',
+            borderRadius: '9px',
           }}
         >
-          {timeRemaining}s
+          👀 {t('slepi.whatDoYouSee')}
+        </span>
+        <span
+          className="display"
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
+          }}
+        >
+          {timeRemaining}
         </span>
       </div>
       <SmallOpsPreview operations={operations} />
@@ -577,28 +623,21 @@ function GuessRound({
         style={{
           padding: '0.75rem',
           fontSize: '1rem',
-          borderRadius: '8px',
-          border: '2px solid var(--bg-card)',
+          fontWeight: 700,
+          borderRadius: '14px',
+          border: '1.5px solid var(--cyan)',
+          boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           fontFamily: 'inherit',
         }}
       />
       <button
+        className="btn-primary"
         onClick={submit}
         disabled={text.trim().length === 0}
-        style={{
-          padding: '0.9rem',
-          fontSize: '1.1rem',
-          fontWeight: 700,
-          background: text.trim() ? 'var(--accent)' : 'var(--bg-card)',
-          color: '#fff',
-          borderRadius: '10px',
-          minHeight: '48px',
-          opacity: text.trim() ? 1 : 0.6,
-        }}
       >
-        {t('common.send')}
+        {t('common.send')} ✓
       </button>
     </div>
   );

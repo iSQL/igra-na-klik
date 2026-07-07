@@ -294,7 +294,7 @@ export function PhotoSubmitter({
       )}
 
       {error && (
-        <p style={{ fontSize: '0.85rem', color: '#e74c3c', textAlign: 'center', margin: 0 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>
           {error}
         </p>
       )}

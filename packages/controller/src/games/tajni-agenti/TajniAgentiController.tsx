@@ -14,10 +14,10 @@ import type {
   TajniAgentiEndedData,
 } from '@igra/shared';
 
-const TEAM_RED = '#e74c3c';
-const TEAM_BLUE = '#3498db';
-const NEUTRAL = '#cdc7b8';
-const ASSASSIN = '#1a1a2e';
+const TEAM_RED = '#FF4D5E';
+const TEAM_BLUE = '#3B82F6';
+const NEUTRAL = '#c9b896';
+const ASSASSIN = '#111319';
 
 const typeColor = (t: TajniAgentiCardType): string => {
   if (t === 'red') return TEAM_RED;
@@ -564,8 +564,10 @@ function ClueGivingForm({
         style={{
           padding: '0.65rem',
           fontSize: '1rem',
-          borderRadius: '0.5rem',
-          border: '1px solid var(--text-secondary)',
+          fontWeight: 800,
+          fontFamily: 'var(--font-display)',
+          borderRadius: '12px',
+          border: '1.5px solid var(--line2)',
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           textAlign: 'center',
@@ -607,33 +609,25 @@ function ClueGivingForm({
         </button>
       </div>
       <button
+        className="btn-primary"
         onClick={submit}
         disabled={submitted || !word.trim() || /\s/.test(word.trim())}
-        style={{
-          padding: '0.85rem',
-          fontSize: '1rem',
-          fontWeight: 700,
-          borderRadius: '0.6rem',
-          background: 'var(--accent)',
-          color: '#fff',
-          opacity: submitted || !word.trim() ? 0.5 : 1,
-        }}
       >
-        {submitted ? 'Poslato' : 'Pošalji šifru'}
+        {submitted ? 'Poslato ✓' : 'Pošalji šifru ➤'}
       </button>
     </div>
   );
 }
 
 const stepperBtn: React.CSSProperties = {
-  width: '2.5rem',
-  height: '2.5rem',
-  borderRadius: '0.5rem',
+  width: '3rem',
+  height: '3rem',
+  borderRadius: '12px',
   background: 'var(--bg-secondary)',
   color: 'var(--text-primary)',
   fontSize: '1.4rem',
-  fontWeight: 700,
-  border: '1px solid var(--text-secondary)',
+  fontWeight: 800,
+  border: '1.5px solid var(--line2)',
 };
 
 // ============================================================ guessing
@@ -713,8 +707,10 @@ function GuessingGrid({
             card.revealed && card.type ? typeColor(card.type) : '#f3eedd';
           const fg = card.revealed
             ? card.type === 'assassin'
-              ? '#e74c3c'
-              : '#fff'
+              ? 'var(--danger)'
+              : card.type === 'neutral'
+                ? '#2b230f'
+                : '#fff'
             : '#2b2412';
           return (
             <button
@@ -824,7 +820,12 @@ function SecretMiniBoard({ cards }: { cards: TajniAgentiSecretCard[] }) {
             key={card.id}
             style={{
               background: fill,
-              color: card.type === 'assassin' ? '#e74c3c' : '#fff',
+              color:
+                card.type === 'assassin'
+                  ? 'var(--danger)'
+                  : card.type === 'neutral'
+                    ? '#2b230f'
+                    : '#fff',
               fontSize: '0.6rem',
               fontWeight: 700,
               padding: '0.15rem',

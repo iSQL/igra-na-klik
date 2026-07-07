@@ -92,7 +92,9 @@ export default function SpotItController() {
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
           {t('spotIt.roundShort', { n: roundNumber })}
         </p>
-        <p style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{t('spotIt.getReady')}</p>
+        <p className="display" style={{ fontSize: '1.9rem', fontWeight: 700, margin: 0, animation: 'igra-pop .4s' }}>
+          {t('spotIt.getReady')}
+        </p>
       </CenteredScreen>
     );
   }
@@ -101,8 +103,10 @@ export default function SpotItController() {
     if (iWonRound) {
       return (
         <CenteredScreen>
-          <p style={{ fontSize: '2.5rem', margin: 0 }}>🏆</p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>{t('spotIt.wellDone')}</p>
+          <p style={{ fontSize: '2.5rem', margin: 0, animation: 'igra-pop .5s' }}>🏆</p>
+          <p className="display" style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--success)', margin: 0 }}>
+            {t('spotIt.wellDone')}
+          </p>
           <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
             {t('spotIt.waitForOthers')}
           </p>
@@ -216,11 +220,14 @@ export default function SpotItController() {
             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
               {t('common.finalPlace')}
             </p>
-            <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
+            <p className="display text-grad" style={{ fontSize: '4rem', fontWeight: 700, margin: 0, animation: 'igra-pop .5s' }}>
               #{myEntry.rank}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
-              {myEntry.score.toLocaleString()} {t('common.points')}
+            <p className="display" style={{ fontSize: '1.6rem', fontWeight: 600, margin: 0 }}>
+              {myEntry.score.toLocaleString()}{' '}
+              <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+                {t('common.points')}
+              </span>
             </p>
           </>
         )}

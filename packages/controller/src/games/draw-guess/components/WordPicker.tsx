@@ -19,7 +19,9 @@ export function WordPicker({ words, onPick }: WordPickerProps) {
         padding: '1rem',
       }}
     >
-      <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{t('drawGuess.chooseWord')}</p>
+      <p className="display" style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0 }}>
+        {t('drawGuess.chooseWord')}
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '300px' }}>
         {words.map((word, i) => (
           <button
@@ -27,11 +29,12 @@ export function WordPicker({ words, onPick }: WordPickerProps) {
             onClick={() => onPick(i)}
             style={{
               padding: '1rem',
-              fontSize: '1.2rem',
-              fontWeight: 700,
-              background: 'var(--bg-card)',
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
-              borderRadius: '12px',
+              border: '1.5px solid var(--line2)',
+              borderRadius: '14px',
               textTransform: 'capitalize',
             }}
           >

@@ -19,16 +19,34 @@ function ReconnectingOverlay() {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15, 15, 35, 0.9)',
+        background: 'rgba(11, 10, 23, 0.92)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
+        padding: '1.5rem',
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>{t('reconnect.reconnecting')}</p>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+        <span
+          style={{
+            display: 'inline-block',
+            width: '44px',
+            height: '44px',
+            border: '4px solid var(--amber)',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'igra-spin .8s linear infinite',
+            marginBottom: '1.2rem',
+          }}
+        />
+        <p
+          className="display"
+          style={{ fontSize: '1.4rem', fontWeight: 600, color: 'var(--amber)' }}
+        >
+          {t('reconnect.reconnecting')}
+        </p>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontWeight: 700 }}>
           {t('reconnect.wait')}
         </p>
       </div>
@@ -47,7 +65,8 @@ function GameEndedOverlay({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15, 15, 35, 0.92)',
+        background:
+          'radial-gradient(600px 400px at 50% 30%, rgba(139,65,242,.35), rgba(11,10,23,.96))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -55,15 +74,23 @@ function GameEndedOverlay({
         padding: '1.5rem',
       }}
     >
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: '1.6rem', fontWeight: 700 }}>{t('reconnect.gameEnded')}</p>
+      <div style={{ textAlign: 'center', animation: 'igra-pop .5s' }}>
+        <p className="display" style={{ fontSize: '2rem', fontWeight: 700 }}>
+          {t('reconnect.gameEnded')}
+        </p>
         {placement && (
           <p
+            className="display"
             style={{
-              marginTop: '0.8rem',
-              fontSize: '1.3rem',
+              marginTop: '0.9rem',
+              fontSize: '1.5rem',
               fontWeight: 700,
-              color: 'var(--accent)',
+              display: 'inline-block',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              padding: '0.7rem 1.4rem',
+              borderRadius: '16px',
+              animation: 'igra-pop .6s',
             }}
           >
             {placement.rank === 1 && '🥇 '}
@@ -78,8 +105,9 @@ function GameEndedOverlay({
         <p
           style={{
             color: 'var(--text-secondary)',
-            marginTop: '0.6rem',
-            fontSize: '1rem',
+            marginTop: '0.8rem',
+            fontSize: '0.95rem',
+            fontWeight: 700,
           }}
         >
           {t('reconnect.returningToLobby')}
@@ -102,40 +130,46 @@ function KickedOverlay({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(15, 15, 35, 0.92)',
+        background: 'linear-gradient(180deg, #1a0d12, var(--bg-primary))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1100,
-        padding: '1.5rem',
+        padding: '2rem',
       }}
     >
       <div
         style={{
-          background: 'var(--bg-secondary)',
-          borderRadius: '1rem',
-          padding: '1.5rem',
-          maxWidth: '340px',
           width: '100%',
+          maxWidth: '340px',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1rem',
+          alignItems: 'center',
+          gap: '1.4rem',
         }}
       >
-        <p style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>{message}</p>
-        <button
-          onClick={onClose}
+        <div
           style={{
-            padding: '0.75rem',
-            fontSize: '1rem',
-            fontWeight: 700,
-            borderRadius: '0.6rem',
-            background: 'var(--accent)',
-            color: '#fff',
-            border: 'none',
+            width: '96px',
+            height: '96px',
+            borderRadius: '50%',
+            background: 'rgba(255,77,94,.14)',
+            border: '1px solid rgba(255,77,94,.4)',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: '2.6rem',
           }}
         >
+          🚪
+        </div>
+        <p
+          className="display"
+          style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}
+        >
+          {message}
+        </p>
+        <button className="btn-primary" onClick={onClose} style={{ width: '100%' }}>
           {t('kicked.ok')}
         </button>
       </div>

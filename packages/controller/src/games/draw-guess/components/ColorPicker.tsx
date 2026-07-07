@@ -45,10 +45,11 @@ export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
             minWidth: '30px',
             borderRadius: '50%',
             background: color,
-            border:
+            border: 'none',
+            boxShadow:
               selectedColor === color
-                ? '3px solid var(--accent)'
-                : '2px solid var(--text-secondary)',
+                ? '0 0 0 2px #fff, 0 0 0 4px var(--pink)'
+                : '0 0 0 1px var(--line2)',
             padding: 0,
           }}
         />

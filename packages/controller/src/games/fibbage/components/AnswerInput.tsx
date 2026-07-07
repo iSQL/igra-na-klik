@@ -37,10 +37,30 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
           padding: '1rem',
         }}
       >
-        <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>
+        <div
+          style={{
+            width: '90px',
+            height: '90px',
+            borderRadius: '50%',
+            background: 'var(--success)',
+            color: '#04120b',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: '2.6rem',
+            fontWeight: 800,
+            boxShadow: '0 0 34px rgba(47,224,138,.5)',
+            animation: 'igra-pop .4s',
+          }}
+        >
+          ✓
+        </div>
+        <p
+          className="display"
+          style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success)', margin: 0 }}
+        >
           Poslato!
         </p>
-        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)', margin: 0 }}>
           Čekamo ostale...
         </p>
       </div>
@@ -58,11 +78,15 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
       }}
     >
       <p
+        className="display card"
         style={{
-          fontSize: '1.1rem',
+          fontSize: '1.15rem',
           fontWeight: 600,
           lineHeight: 1.3,
           textAlign: 'center',
+          padding: '0.9rem 1rem',
+          borderRadius: '16px',
+          margin: 0,
         }}
       >
         {questionText}
@@ -76,11 +100,13 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
         style={{
           flex: 1,
           width: '100%',
-          fontSize: '1.2rem',
+          fontSize: '1.1rem',
+          fontWeight: 700,
           padding: '1rem',
-          borderRadius: '0.75rem',
-          border: '2px solid var(--bg-card)',
-          background: 'var(--bg-card)',
+          borderRadius: '16px',
+          border: '1.5px solid var(--cyan)',
+          boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
+          background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           resize: 'none',
           fontFamily: 'inherit',
@@ -90,10 +116,11 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          color: 'var(--dim)',
         }}
       >
         <span>
@@ -101,22 +128,8 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
         </span>
       </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={!text.trim()}
-        style={{
-          background: text.trim() ? 'var(--accent)' : 'var(--bg-card)',
-          color: text.trim() ? '#fff' : 'var(--text-secondary)',
-          border: 'none',
-          borderRadius: '0.75rem',
-          padding: '1rem',
-          fontSize: '1.3rem',
-          fontWeight: 700,
-          minHeight: '56px',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        Pošalji
+      <button className="btn-primary" onClick={handleSubmit} disabled={!text.trim()}>
+        Pošalji ✓
       </button>
     </div>
   );

@@ -125,105 +125,142 @@ export function JoinScreen() {
   const errorKey = SERVER_ERROR_KEYS[error];
   const displayError = errorKey ? t(errorKey) : error;
 
+  const labelStyle: React.CSSProperties = {
+    fontSize: '0.72rem',
+    color: 'var(--text-secondary)',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  };
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.25rem',
+        gap: '1.1rem',
         width: '100%',
         maxWidth: '400px',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span
+          className="display"
+          style={{ fontWeight: 700, fontSize: '1.4rem' }}
+        >
+          igra na <span className="text-grad">KLIK</span>
+        </span>
         <LanguageSwitch />
       </div>
 
-      <h1 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 700 }}>
-        {t('common.appName')}
-      </h1>
+      <div>
+        <h2
+          className="display"
+          style={{ fontSize: '1.9rem', lineHeight: 1, margin: '0 0 0.3rem' }}
+        >
+          {t('join.enterGame')}
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+          {t('join.createRoomHint')}
+        </p>
+      </div>
 
       {!SINGLE_ROOM_MODE && (
-        <input
-          type="text"
-          placeholder={t('join.roomCode')}
-          maxLength={2}
-          autoFocus={!roomCode}
-          value={roomCode}
-          onChange={(e) => handleCodeChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-          style={{
-            padding: '0.75rem 1rem',
-            fontSize: '2rem',
-            textAlign: 'center',
-            letterSpacing: '0.5rem',
-            fontFamily: 'monospace',
-            fontWeight: 700,
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            border: '2px solid var(--bg-card)',
-            borderRadius: '0.75rem',
-          }}
-        />
-      )}
-
-      {SINGLE_ROOM_MODE && (
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: '2rem',
-            fontFamily: 'monospace',
-            fontWeight: 700,
-            letterSpacing: '0.5rem',
-            color: fetchingCode ? 'var(--text-secondary)' : 'var(--accent)',
-            padding: '0.75rem',
-            background: 'var(--bg-secondary)',
-            borderRadius: '0.75rem',
-            minHeight: '4rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {fetchingCode ? '...' : roomCode || '—'}
+        <div>
+          <label style={labelStyle}>{t('join.roomCode')}</label>
+          <input
+            type="text"
+            maxLength={2}
+            autoFocus={!roomCode}
+            value={roomCode}
+            onChange={(e) => handleCodeChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+            style={{
+              marginTop: '0.5rem',
+              width: '100%',
+              height: '70px',
+              fontSize: '2.3rem',
+              textAlign: 'center',
+              letterSpacing: '0.6rem',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: roomCode.length === 2 ? '2px solid var(--pink)' : '2px solid var(--line2)',
+              boxShadow: roomCode.length === 2 ? '0 0 0 4px rgba(255,46,136,.15)' : 'none',
+              borderRadius: '16px',
+            }}
+          />
         </div>
       )}
 
-      <input
-        ref={nameInputRef}
-        type="text"
-        placeholder={t('join.yourName')}
-        maxLength={20}
-        autoFocus={SINGLE_ROOM_MODE || !!roomCode}
-        value={playerName}
-        onChange={(e) => setPlayerName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-        style={{
-          padding: '0.75rem 1rem',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          border: '2px solid var(--bg-card)',
-          borderRadius: '0.75rem',
-        }}
-      />
+      {SINGLE_ROOM_MODE && (
+        <div>
+          <label style={labelStyle}>{t('join.roomCode')}</label>
+          <div
+            style={{
+              marginTop: '0.5rem',
+              textAlign: 'center',
+              fontSize: '2.3rem',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              letterSpacing: '0.6rem',
+              color: fetchingCode ? 'var(--text-secondary)' : 'var(--text-primary)',
+              height: '70px',
+              background: 'var(--bg-secondary)',
+              border: '2px solid var(--line2)',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {fetchingCode ? '...' : roomCode || '—'}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label style={labelStyle}>{t('join.yourName')}</label>
+        <input
+          ref={nameInputRef}
+          type="text"
+          placeholder={t('join.yourName')}
+          maxLength={20}
+          autoFocus={SINGLE_ROOM_MODE || !!roomCode}
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+          style={{
+            marginTop: '0.5rem',
+            width: '100%',
+            height: '54px',
+            padding: '0 1rem',
+            fontWeight: 700,
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1.5px solid var(--line2)',
+            borderRadius: '14px',
+          }}
+        />
+      </div>
 
       {error && (
-        <p style={{ color: 'var(--danger)', textAlign: 'center' }}>
+        <p style={{ color: 'var(--danger)', textAlign: 'center', fontWeight: 700 }}>
           {displayError}
         </p>
       )}
 
       <button
+        className="btn-primary"
         onClick={() => handleJoin()}
         disabled={joining || creating || fetchingCode}
-        style={{
-          padding: '1rem',
-          fontSize: '1.3rem',
-          fontWeight: 700,
-          borderRadius: '0.75rem',
-          background: 'var(--accent)',
-          color: '#fff',
-        }}
       >
         {joining ? t('join.joining') : t('join.enterGame')}
       </button>
@@ -235,41 +272,23 @@ export function JoinScreen() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
-              color: 'var(--text-secondary)',
-              fontSize: '0.85rem',
+              color: 'var(--dim)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
             }}
           >
-            <span style={{ flex: 1, height: 1, background: 'var(--bg-card)' }} />
+            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
             {t('join.or')}
-            <span style={{ flex: 1, height: 1, background: 'var(--bg-card)' }} />
+            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
           </div>
 
           <button
+            className="btn-ghost"
             onClick={handleCreate}
             disabled={joining || creating}
-            style={{
-              padding: '0.85rem',
-              fontSize: '1.05rem',
-              fontWeight: 700,
-              borderRadius: '0.75rem',
-              background: 'transparent',
-              color: 'var(--text-primary)',
-              border: '2px solid var(--accent)',
-            }}
           >
-            {creating ? t('join.creating') : t('join.createRoom')}
+            ＋ {creating ? t('join.creating') : t('join.createRoom')}
           </button>
-          <p
-            style={{
-              margin: 0,
-              marginTop: '-0.75rem',
-              fontSize: '0.8rem',
-              color: 'var(--text-secondary)',
-              textAlign: 'center',
-            }}
-          >
-            {t('join.createRoomHint')}
-          </p>
         </>
       )}
 
@@ -278,10 +297,10 @@ export function JoinScreen() {
         style={{
           fontSize: '0.85rem',
           color: 'var(--text-secondary)',
+          fontWeight: 700,
           textDecoration: 'none',
           textAlign: 'center',
-          marginTop: '-0.5rem',
-          opacity: 0.7,
+          opacity: 0.8,
         }}
       >
         {t('join.home')}

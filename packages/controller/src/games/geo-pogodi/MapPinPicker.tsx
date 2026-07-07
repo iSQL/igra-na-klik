@@ -124,7 +124,7 @@ export function MapPinPicker({
             alignItems: 'center',
           }}
         >
-          <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#7be37b' }}>
+          <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--success)' }}>
             ✓ Pin zaključan
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -172,19 +172,20 @@ export function MapPinPicker({
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
+        <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>
           Tapni gde je slikana
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           {photoThumb}
           <span
+            className="display"
             style={{
-              fontSize: lowTime ? '1.4rem' : '1.05rem',
+              fontSize: lowTime ? '1.4rem' : '1.15rem',
               fontWeight: 700,
-              color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
+              color: lowTime ? 'var(--danger)' : 'var(--amber)',
             }}
           >
-            {timeRemaining}s
+            {timeRemaining}
           </span>
         </div>
       </div>
@@ -196,20 +197,12 @@ export function MapPinPicker({
       />
       <div style={rowPad}>
         <button
+          className="btn-primary"
           onClick={handleLock}
           disabled={!draftPin}
-          style={{
-            width: '100%',
-            padding: '0.9rem 1rem',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            borderRadius: '12px',
-            background: draftPin ? 'var(--accent)' : 'var(--bg-card)',
-            color: draftPin ? '#fff' : 'var(--text-secondary)',
-            border: 'none',
-          }}
+          style={{ width: '100%' }}
         >
-          Potvrdi pin
+          Potvrdi lokaciju 📍
         </button>
       </div>
       {photoOverlay}

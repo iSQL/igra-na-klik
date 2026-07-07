@@ -80,23 +80,32 @@ export default function KoSamJaController() {
         }}
       >
         <p
+          className="display"
           style={{
-            fontSize: '0.9rem',
-            color: 'var(--text-secondary)',
+            fontSize: '1.15rem',
+            fontWeight: 600,
             margin: 0,
           }}
         >
-          {isSubject
-            ? 'Pitanje o tebi…'
-            : `Pitanje za ${subjectName ?? '?'}…`}
+          {isSubject ? (
+            'Pitanje o tebi…'
+          ) : (
+            <>
+              Pitanje za{' '}
+              <span style={{ color: 'var(--violet)' }}>{subjectName ?? '?'}</span>…
+            </>
+          )}
         </p>
         {questionText && (
           <p
+            className="card"
             style={{
-              fontSize: '1.3rem',
-              fontWeight: 700,
-              lineHeight: 1.3,
+              fontSize: '1.15rem',
+              fontWeight: 800,
+              lineHeight: 1.35,
               margin: 0,
+              padding: '1rem 1.1rem',
+              borderRadius: '16px',
             }}
           >
             {questionText}
@@ -245,19 +254,35 @@ export default function KoSamJaController() {
             textAlign: 'center',
           }}
         >
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: 'var(--text-secondary)',
+              margin: 0,
+            }}
+          >
             {results.subjectName} — odgovor:
           </p>
           <p
+            className="display"
             style={{
-              fontSize: '1.4rem',
-              fontWeight: 800,
+              alignSelf: 'center',
+              fontSize: '1.35rem',
+              fontWeight: 700,
               color: 'var(--success)',
+              background: 'rgba(47,224,138,.14)',
+              border: '1px solid var(--success)',
+              padding: '0.5rem 1.1rem',
+              borderRadius: '14px',
               margin: 0,
               lineHeight: 1.3,
+              animation: 'igra-pop .4s',
             }}
           >
-            {correctText}
+            ✓ {correctText}
           </p>
           <p style={{ fontSize: '0.95rem', margin: '0.2rem 0' }}>
             {myData.wasSubject ? (

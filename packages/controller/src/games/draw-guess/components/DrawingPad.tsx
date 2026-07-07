@@ -620,7 +620,7 @@ export function DrawingPad({
           width: '100%',
           position: 'relative',
           background: '#fff',
-          borderRadius: '8px',
+          borderRadius: '16px',
           overflow: 'hidden',
         }}
       >
@@ -685,35 +685,37 @@ export function DrawingPad({
         <BrushSizePicker width={width} onChange={setWidth} />
         <button
           onClick={handleUndo}
+          aria-label={t('drawGuess.undo')}
           style={{
-            minWidth: '56px',
-            height: '36px',
-            padding: '0 0.5rem',
-            borderRadius: '8px',
-            border: '2px solid var(--text-secondary)',
+            minWidth: '44px',
+            height: '40px',
+            padding: '0 0.6rem',
+            borderRadius: '12px',
+            border: '1px solid var(--line2)',
             background: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
-            fontWeight: 600,
-            fontSize: '0.8rem',
+            fontWeight: 800,
+            fontSize: '0.95rem',
           }}
         >
-          {t('drawGuess.undo')}
+          ↩︎
         </button>
         <button
           onClick={handleClear}
+          aria-label={t('drawGuess.clearAll')}
           style={{
-            minWidth: '56px',
-            height: '36px',
-            padding: '0 0.5rem',
-            borderRadius: '8px',
-            border: 'none',
-            background: 'var(--danger)',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: '0.8rem',
+            minWidth: '44px',
+            height: '40px',
+            padding: '0 0.6rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,77,94,.5)',
+            background: 'rgba(255,77,94,.14)',
+            color: 'var(--danger)',
+            fontWeight: 800,
+            fontSize: '0.9rem',
           }}
         >
-          {t('drawGuess.clearAll')}
+          🗑
         </button>
       </div>
 

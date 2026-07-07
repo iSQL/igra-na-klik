@@ -2,6 +2,7 @@ import type { KoSamJaPublicOption } from '@igra/shared';
 import { KO_SAM_JA_FIXED_OPTION_COLORS } from '@igra/shared';
 import { socket } from '../../../socket';
 import { useHaptics } from '../../../hooks/useHaptics';
+import { OPTION_TEXT_COLORS } from '../../quiz/components/AnswerButtons';
 
 interface GuessButtonsProps {
   options: KoSamJaPublicOption[];
@@ -52,10 +53,10 @@ export function GuessButtons({
             style={{
               background: color,
               border: isSelected ? '4px solid #fff' : '4px solid transparent',
-              borderRadius: '1rem',
-              color: '#fff',
-              fontSize: '1.2rem',
-              fontWeight: 700,
+              borderRadius: '16px',
+              color: OPTION_TEXT_COLORS[color] ?? '#fff',
+              fontSize: '1.1rem',
+              fontWeight: 800,
               opacity: hasGuessed && !isSelected ? 0.4 : 1,
               transition: 'opacity 0.2s, transform 0.1s',
               display: 'flex',

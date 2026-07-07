@@ -1,4 +1,5 @@
 import type { QuizOption } from '@igra/shared';
+import { OPTION_TEXT_COLORS } from '../../quiz/components/AnswerButtons';
 
 interface AnswerButtonsProps {
   options: QuizOption[];
@@ -41,24 +42,24 @@ export function AnswerButtons({
             style={{
               minHeight: '80px',
               padding: '0.75rem 0.6rem',
-              borderRadius: '12px',
+              borderRadius: '14px',
               background: opt.color,
-              color: '#fff',
+              color: OPTION_TEXT_COLORS[opt.color] ?? '#fff',
               fontSize: '1rem',
-              fontWeight: 700,
+              fontWeight: 800,
               lineHeight: 1.25,
               border: 'none',
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: isWrong ? 0.45 : 1,
               transform: isSelected ? 'scale(0.97)' : 'scale(1)',
               outline: isCorrect
-                ? '3px solid #7be37b'
+                ? '3px solid var(--success)'
                 : isSelected
                 ? '3px solid #fff'
                 : 'none',
               outlineOffset: '2px',
               boxShadow: isCorrect
-                ? '0 0 14px rgba(123, 227, 123, 0.55)'
+                ? '0 0 14px rgba(47, 224, 138, 0.55)'
                 : '0 1px 4px rgba(0,0,0,0.4)',
               transition: 'transform 0.1s, opacity 0.2s',
             }}

@@ -16,17 +16,18 @@ export function StopGameButton() {
       <button
         onClick={() => setConfirming(true)}
         style={{
-          padding: '0.4rem 0.7rem',
+          padding: '0.4rem 0.8rem',
           fontSize: '0.8rem',
-          fontWeight: 600,
-          borderRadius: '0.5rem',
-          background: 'rgba(0, 0, 0, 0.55)',
-          color: 'var(--text-secondary)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          fontWeight: 800,
+          borderRadius: '12px',
+          background: 'rgba(255, 77, 94, 0.14)',
+          color: 'var(--danger)',
+          border: '1px solid rgba(255, 77, 94, 0.5)',
           backdropFilter: 'blur(4px)',
+          minHeight: '40px',
         }}
       >
-        {t('overlay.endGame')}
+        ✕ {t('overlay.endGame')}
       </button>
 
       {confirming && (
@@ -46,8 +47,9 @@ export function StopGameButton() {
         >
           <div
             style={{
-              background: 'var(--bg-card)',
-              borderRadius: '0.9rem',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              borderRadius: '18px',
               padding: '1.4rem',
               maxWidth: '22rem',
               width: '100%',
@@ -55,31 +57,35 @@ export function StopGameButton() {
               flexDirection: 'column',
               gap: '1rem',
               textAlign: 'center',
+              animation: 'igra-pop .25s',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('overlay.endGameConfirmTitle')}</h2>
+            <h2 className="display" style={{ margin: 0, fontSize: '1.25rem' }}>
+              {t('overlay.endGameConfirmTitle')}
+            </h2>
             <p
               style={{
                 margin: 0,
-                fontSize: '0.95rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
                 color: 'var(--text-secondary)',
-                lineHeight: 1.4,
+                lineHeight: 1.45,
               }}
             >
               {t('overlay.endGameConfirmBody')}
             </p>
-            <div style={{ display: 'flex', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', gap: '0.65rem' }}>
               <button
                 onClick={() => setConfirming(false)}
                 style={{
                   flex: 1,
                   padding: '0.7rem',
                   fontSize: '0.95rem',
-                  fontWeight: 600,
-                  borderRadius: '0.6rem',
-                  background: 'var(--bg-secondary)',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'transparent',
                   color: 'var(--text-primary)',
-                  border: '1px solid var(--bg-card)',
+                  border: '1.5px solid var(--line2)',
                 }}
               >
                 {t('common.cancel')}
@@ -90,9 +96,9 @@ export function StopGameButton() {
                   flex: 1,
                   padding: '0.7rem',
                   fontSize: '0.95rem',
-                  fontWeight: 700,
-                  borderRadius: '0.6rem',
-                  background: '#f39c12',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'var(--danger)',
                   color: '#fff',
                   border: 'none',
                 }}

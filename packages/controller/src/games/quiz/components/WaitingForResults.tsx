@@ -18,20 +18,25 @@ export function WaitingForResults({ selectedIndex, optionColor }: WaitingForResu
     >
       <div
         style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
+          width: '90px',
+          height: '90px',
+          borderRadius: '28px',
           background: optionColor,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '2rem',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '2.2rem',
+          animation: 'igra-pop .4s',
+          boxShadow: `0 0 34px ${optionColor}66`,
         }}
       >
         ✓
       </div>
-      <p style={{ fontSize: '1.3rem', fontWeight: 600 }}>Odgovor poslat!</p>
-      <p style={{ color: 'var(--text-secondary)' }}>Čekamo rezultate...</p>
+      <p className="display" style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0 }}>
+        Odgovor poslat!
+      </p>
+      <p style={{ color: 'var(--text-secondary)', fontWeight: 700, margin: 0 }}>
+        Čekamo rezultate...
+      </p>
     </div>
   );
 }
