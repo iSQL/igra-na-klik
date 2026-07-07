@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import { createHash, timingSafeEqual } from 'crypto';
 import { mkdir, rename, writeFile } from 'fs/promises';
 
 /**
@@ -20,7 +21,15 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     });
     return;
   }
-  if (req.header('x-admin-token') !== configured) {
+  // Constant-time comparison via fixed-length digests: a plain !== leaks
+  // how many leading characters matched through response timing, and
+  // timingSafeEqual alone throws on length mismatch (which itself leaks
+  // the token's length).
+  const provided = createHash('sha256')
+    .update(req.header('x-admin-token') ?? '')
+    .digest();
+  const expected = createHash('sha256').update(configured).digest();
+  if (!timingSafeEqual(provided, expected)) {
     res.status(401).json({ error: 'Pogrešan admin token.' });
     return;
   }

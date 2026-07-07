@@ -7,6 +7,7 @@ import type {
 } from '@igra/shared';
 import { GameManager } from '../../game/GameManager.js';
 import { RoomManager } from '../../room/RoomManager.js';
+import { createRateLimiter, createThrottle } from '../rate-limit.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -27,6 +28,13 @@ export function registerGameHandlers(
   gameManager: GameManager,
   roomManager: RoomManager
 ) {
+  // Drawing batches arrive at ~20/s per drawer — 60/s leaves headroom for
+  // that plus normal gameplay, while capping what a flooding client costs.
+  // Rejected events are dropped silently (no feedback to tune against).
+  const playerActionLimiter = createRateLimiter(60);
+  const hostActionLimiter = createRateLimiter(20);
+  const startStopThrottle = createThrottle(500);
+
   const canControl = (): boolean => {
     const { roomCode, isHost, playerId } = socket.data;
     if (!roomCode) return false;
@@ -36,6 +44,7 @@ export function registerGameHandlers(
   };
 
   socket.on('host:start-game', (data) => {
+    if (!startStopThrottle()) return;
     const { roomCode } = socket.data;
     if (!roomCode || !canControl()) {
       socket.emit('error', {
@@ -64,6 +73,7 @@ export function registerGameHandlers(
   });
 
   socket.on('host:stop-game', () => {
+    if (!startStopThrottle()) return;
     const { roomCode } = socket.data;
     if (!roomCode || !canControl()) {
       socket.emit('error', {
@@ -80,6 +90,7 @@ export function registerGameHandlers(
   });
 
   socket.on('game:player-action', (data) => {
+    if (!playerActionLimiter()) return;
     const { roomCode, playerId } = socket.data;
     if (!roomCode || !playerId) return;
 
@@ -87,6 +98,7 @@ export function registerGameHandlers(
   });
 
   socket.on('host:game-action', (data) => {
+    if (!hostActionLimiter()) return;
     const { roomCode } = socket.data;
     if (!roomCode || !canControl()) return;
     gameManager.handleHostAction(roomCode, data.action, data.data ?? {});

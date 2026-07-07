@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { ROOM_CODE_LENGTH } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { LanguageSwitch } from '../components/LanguageSwitch';
@@ -100,7 +101,7 @@ export function JoinScreen() {
   const handleCodeChange = (raw: string) => {
     const cleaned = raw.toUpperCase().replace(/[^A-Z]/g, '');
     setRoomCode(cleaned);
-    if (cleaned.length !== 2 || joining || creating) return;
+    if (cleaned.length !== ROOM_CODE_LENGTH || joining || creating) return;
     // Code just completed: join right away if the name is ready, otherwise
     // hop the focus over so the player types their name next.
     if (playerName.trim()) {
@@ -176,7 +177,7 @@ export function JoinScreen() {
           <label style={labelStyle}>{t('join.roomCode')}</label>
           <input
             type="text"
-            maxLength={2}
+            maxLength={ROOM_CODE_LENGTH}
             autoFocus={!roomCode}
             value={roomCode}
             onChange={(e) => handleCodeChange(e.target.value)}
@@ -192,8 +193,8 @@ export function JoinScreen() {
               fontWeight: 700,
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
-              border: roomCode.length === 2 ? '2px solid var(--pink)' : '2px solid var(--line2)',
-              boxShadow: roomCode.length === 2 ? '0 0 0 4px rgba(217,123,108,.15)' : 'none',
+              border: roomCode.length === ROOM_CODE_LENGTH ? '2px solid var(--pink)' : '2px solid var(--line2)',
+              boxShadow: roomCode.length === ROOM_CODE_LENGTH ? '0 0 0 4px rgba(217,123,108,.15)' : 'none',
               borderRadius: '16px',
             }}
           />

@@ -1,7 +1,14 @@
 export const ROOM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ';
-export const ROOM_CODE_LENGTH = 2;
+export const ROOM_CODE_LENGTH = 3;
 export const MAX_PLAYERS_DEFAULT = 8;
 export const RECONNECT_GRACE_MS = 5 * 60_000;
+
+// Server-side caps for public deployments. MAX_ROOMS keeps the room-code
+// space from ever being exhausted (23^3 ≈ 12k codes, so 200 concurrent
+// rooms leaves code generation collision-free); player names are clamped
+// server-side regardless of what the client sends.
+export const MAX_ROOMS = 200;
+export const MAX_PLAYER_NAME_LENGTH = 20;
 
 // Lobby chat limits (pre-game chat only).
 export const CHAT_MAX_LENGTH = 200;
