@@ -18,6 +18,8 @@ import { TestGameModule } from '../game/games/test-game/TestGameModule.js';
 import { QuizGameModule } from '../game/games/quiz/QuizGameModule.js';
 import { DrawGuessModule } from '../game/games/draw-guess/DrawGuessModule.js';
 import { FakeArtistModule } from '../game/games/fake-artist/FakeArtistModule.js';
+import { KoBiPreModule } from '../game/games/ko-bi-pre/KoBiPreModule.js';
+import { DveIstineModule } from '../game/games/dve-istine-i-laz/DveIstineModule.js';
 import { FibbageModule } from '../game/games/fibbage/FibbageModule.js';
 import { SlepiTelefoniModule } from '../game/games/slepi-telefoni/SlepiTelefoniModule.js';
 import { GeoGuessModule } from '../game/games/geo-pogodi/GeoGuessModule.js';
@@ -69,6 +71,8 @@ export function setupSocket(
   gameRegistry.register(() => new QuizGameModule());
   gameRegistry.register(() => new DrawGuessModule());
   gameRegistry.register(() => new FakeArtistModule());
+  gameRegistry.register(() => new KoBiPreModule());
+  gameRegistry.register(() => new DveIstineModule());
   gameRegistry.register(() => new FibbageModule());
   gameRegistry.register(() => new SlepiTelefoniModule());
   gameRegistry.register(() => new GeoGuessModule(geoPacksDir));

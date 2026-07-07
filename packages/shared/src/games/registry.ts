@@ -34,6 +34,24 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
     supportsHostless: true,
   },
+  'ko-bi-pre': {
+    id: 'ko-bi-pre',
+    name: 'Ko bi pre?',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Glasajte ko bi pre uradio nešto — poeni onima koji pogode većinu!',
+    supportsHostless: true,
+  },
+  'dve-istine-i-laz': {
+    id: 'dve-istine-i-laz',
+    name: 'Dve istine i laž',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
+    supportsHostless: true,
+  },
   'slepi-telefoni': {
     id: 'slepi-telefoni',
     name: 'Slepi telefoni',

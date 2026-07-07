@@ -252,6 +252,12 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.fibbage.name': 'Lažov',
     'game.fibbage.description':
       'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
+    'game.ko-bi-pre.name': 'Ko bi pre?',
+    'game.ko-bi-pre.description':
+      'Glasajte ko bi pre uradio nešto — poeni onima koji pogode većinu!',
+    'game.dve-istine-i-laz.name': 'Dve istine i laž',
+    'game.dve-istine-i-laz.description':
+      'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
     'game.slepi-telefoni.name': 'Slepi telefoni',
     'game.slepi-telefoni.description':
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
@@ -508,6 +514,12 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.draw-guess.name': 'Draw & Guess',
     'game.draw-guess.description':
       'Take turns drawing — everyone else guesses the word!',
+    'game.ko-bi-pre.name': 'Who Would...?',
+    'game.ko-bi-pre.description':
+      'Vote for who would do something — points for matching the crowd!',
+    'game.dve-istine-i-laz.name': 'Two Truths & a Lie',
+    'game.dve-istine-i-laz.description':
+      'Everyone writes two truths and one lie about themselves — the rest guess the lie!',
     'game.fibbage.name': 'Liar',
     'game.fibbage.description':
       'Write a fake answer, find the real one, fool everyone else!',
