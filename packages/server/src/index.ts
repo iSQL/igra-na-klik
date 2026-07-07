@@ -515,8 +515,10 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 .room-row.busy .room-code{color:#8B8578}
 .room-meta{font-size:0.9rem;font-weight:500;color:#6E6A5E}
 .room-badge{font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:0.4rem;background:#E6DCD2;color:#4A4438;white-space:nowrap}
-.site{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.9rem;letter-spacing:0.06em;color:#1D3557;margin-top:0.4rem}
+.site{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.9rem;letter-spacing:0.06em;color:#1D3557;margin-top:0.4rem;text-decoration:none;transition:color 0.15s}
+.site:hover{color:#C29B47}
 .site span{color:#C29B47}
+.site:hover span{color:#1D3557}
 </style>
 </head>
 <body>
@@ -560,7 +562,7 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 <div id="rooms-list"></div>
 </div>
 <a class="host-link" id="host-link" href="/host/">Kreiraj novu sobu →</a>
-<div class="site">zabari<span>.net</span></div>
+<a class="site" href="https://zabari.net" target="_blank" rel="noopener">zabari<span>.net</span></a>
 </div>
 <script>
 (function(){
