@@ -9,6 +9,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'fake-artist': () => import('./fake-artist/FakeArtistController'),
   'ko-bi-pre': () => import('./ko-bi-pre/KoBiPreController'),
   'dve-istine-i-laz': () => import('./dve-istine-i-laz/DveIstineController'),
+  'pogodi-godinu': () => import('./pogodi-godinu/PogodiGodinuController'),
   fibbage: () => import('./fibbage/FibbageController'),
   'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniController'),
   'geo-pogodi': () => import('./geo-pogodi/GeoGuessController'),

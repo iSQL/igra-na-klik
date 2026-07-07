@@ -258,6 +258,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.dve-istine-i-laz.name': 'Dve istine i laž',
     'game.dve-istine-i-laz.description':
       'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
+    'game.pogodi-godinu.name': 'Pogodi godinu',
+    'game.pogodi-godinu.description':
+      'Kada se to desilo? Pomeri klizač na godinu — bliži pogodak, više poena!',
     'game.slepi-telefoni.name': 'Slepi telefoni',
     'game.slepi-telefoni.description':
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
@@ -520,6 +523,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.dve-istine-i-laz.name': 'Two Truths & a Lie',
     'game.dve-istine-i-laz.description':
       'Everyone writes two truths and one lie about themselves — the rest guess the lie!',
+    'game.pogodi-godinu.name': 'Guess the Year',
+    'game.pogodi-godinu.description':
+      'When did it happen? Slide to a year — the closer you are, the more points!',
     'game.fibbage.name': 'Liar',
     'game.fibbage.description':
       'Write a fake answer, find the real one, fool everyone else!',

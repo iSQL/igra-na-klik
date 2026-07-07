@@ -21,6 +21,8 @@ export * from './types/fake-artist.js';
 export * from './games/ko-bi-pre-prompts.js';
 export * from './types/ko-bi-pre.js';
 export * from './types/dve-istine-i-laz.js';
+export * from './games/pogodi-godinu-events.js';
+export * from './types/pogodi-godinu.js';
 export * from './games/flood-fill.js';
 export * from './games/fibbage-questions.js';
 export * from './games/quiz-import.js';

@@ -9,6 +9,7 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'fake-artist': () => import('./fake-artist/FakeArtistHost'),
   'ko-bi-pre': () => import('./ko-bi-pre/KoBiPreHost'),
   'dve-istine-i-laz': () => import('./dve-istine-i-laz/DveIstineHost'),
+  'pogodi-godinu': () => import('./pogodi-godinu/PogodiGodinuHost'),
   fibbage: () => import('./fibbage/FibbageHost'),
   'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniHost'),
   'geo-pogodi': () => import('./geo-pogodi/GeoGuessHost'),

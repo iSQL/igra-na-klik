@@ -52,6 +52,15 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
       'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
     supportsHostless: true,
   },
+  'pogodi-godinu': {
+    id: 'pogodi-godinu',
+    name: 'Pogodi godinu',
+    minPlayers: 1,
+    maxPlayers: 8,
+    description:
+      'Kada se to desilo? Pomeri klizač na godinu — bliži pogodak, više poena!',
+    supportsHostless: true,
+  },
   'slepi-telefoni': {
     id: 'slepi-telefoni',
     name: 'Slepi telefoni',
