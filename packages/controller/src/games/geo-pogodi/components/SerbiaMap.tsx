@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { GeoPin } from '@igra/shared';
-import serbiaSvgUrl from '../assets/serbia.svg';
+import serbiaMapUrl from '../assets/serbia-map.png';
 
 /** Extra read-only pin for the hostless reveal map (players + truth). */
 export interface MapMarker {
@@ -27,9 +27,9 @@ interface SerbiaMapProps {
   markers?: MapMarker[];
 }
 
-const SVG_W = 724.531;
-const SVG_H = 1036.962;
-const SVG_RATIO = SVG_W / SVG_H; // ≈ 0.699 (taller than wide)
+const SVG_W = 1901;
+const SVG_H = 2386;
+const SVG_RATIO = SVG_W / SVG_H; // ≈ 0.797 (taller than wide)
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -277,7 +277,7 @@ export function SerbiaMap({
         }}
       >
         <img
-          src={serbiaSvgUrl}
+          src={serbiaMapUrl}
           alt="Mapa Srbije"
           draggable={false}
           style={{

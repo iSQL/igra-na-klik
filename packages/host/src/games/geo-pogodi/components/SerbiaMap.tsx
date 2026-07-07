@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import type { GeoPin, GeoRevealPin } from '@igra/shared';
-import serbiaSvgUrl from '../assets/serbia.svg';
+import serbiaMapUrl from '../assets/serbia-map.png';
 
-const SVG_W = 724.531;
-const SVG_H = 1036.962;
+const SVG_W = 1901;
+const SVG_H = 2386;
 const SVG_RATIO = SVG_W / SVG_H;
 
 interface SerbiaMapProps {
@@ -47,7 +47,7 @@ export function SerbiaMap({
   return (
     <div style={wrapperStyle}>
       <img
-        src={serbiaSvgUrl}
+        src={serbiaMapUrl}
         alt="Mapa Srbije"
         draggable={false}
         style={{
