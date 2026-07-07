@@ -6,6 +6,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'test-game': () => import('./test-game/TestGameController'),
   quiz: () => import('./quiz/QuizGameController'),
   'draw-guess': () => import('./draw-guess/DrawGuessController'),
+  'fake-artist': () => import('./fake-artist/FakeArtistController'),
   fibbage: () => import('./fibbage/FibbageController'),
   'slepi-telefoni': () => import('./slepi-telefoni/SlepiTelefoniController'),
   'geo-pogodi': () => import('./geo-pogodi/GeoGuessController'),

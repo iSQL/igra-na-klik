@@ -16,6 +16,8 @@ export * from './types/ko-sam-ja.js';
 export * from './types/tajni-agenti.js';
 export * from './games/index.js';
 export * from './games/draw-words.js';
+export * from './games/fake-artist-words.js';
+export * from './types/fake-artist.js';
 export * from './games/flood-fill.js';
 export * from './games/fibbage-questions.js';
 export * from './games/quiz-import.js';

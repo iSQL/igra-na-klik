@@ -246,6 +246,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Pitanja na vreme — najbrži tačan odgovor nosi najviše poena!',
     'game.draw-guess.name': 'Crtaj i pogodi',
     'game.draw-guess.description': 'Crtajte redom — ostali pogađaju reč!',
+    'game.fake-artist.name': 'Lažni umetnik',
+    'game.fake-artist.description':
+      'Svi crtaju istu reč po jedan potez — osim uljeza koji je ne zna. Pronađite lažnjaka!',
     'game.fibbage.name': 'Lažov',
     'game.fibbage.description':
       'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
@@ -499,6 +502,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.quiz.name': 'Quiz',
     'game.quiz.description':
       'Timed questions — the fastest correct answer scores the most!',
+    'game.fake-artist.name': 'Fake Artist',
+    'game.fake-artist.description':
+      'Everyone draws the same word one stroke at a time — except the impostor who does not know it. Find the fake!',
     'game.draw-guess.name': 'Draw & Guess',
     'game.draw-guess.description':
       'Take turns drawing — everyone else guesses the word!',

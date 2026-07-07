@@ -17,6 +17,15 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description: 'Crtajte redom — ostali pogađaju reč!',
     supportsHostless: true,
   },
+  'fake-artist': {
+    id: 'fake-artist',
+    name: 'Lažni umetnik',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Svi crtaju istu reč po jedan potez — osim uljeza koji je ne zna. Pronađite lažnjaka!',
+    supportsHostless: true,
+  },
   fibbage: {
     id: 'fibbage',
     name: 'Lažov',
