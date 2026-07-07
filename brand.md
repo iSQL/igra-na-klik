@@ -74,6 +74,18 @@ Navy is the voice of the brand; gold is the sunrise — used as accent, never as
 
 ## 4. Typography
 
+The **Igra Na Klik** party-game app uses a friendlier, rounded pairing than the
+classical brand default — the serifs read too stiff and narrow at play sizes, so
+the app ships with:
+
+- **Fredoka** — display, headlines, wordmark, eyebrows and labels. Rounded and
+  warm; carries the playful "vibe" of the game. Weights 500/600/700.
+- **Manrope** — body copy, buttons and inputs. Clean, wide, highly legible on
+  phones and TVs. Weights 400/500/700/800.
+
+For static, print, or civic-brand contexts outside the game the original
+classical pairing still applies:
+
 - **Marcellus** — display & headlines. Calm, classical, the name itself.
 - **Marcellus SC** (small caps) — eyebrows and labels; uppercase with wide letter-spacing (~0.28em).
 - **Cormorant Garamond** — body copy and the motto; 500/600 weights.

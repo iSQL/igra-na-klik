@@ -9,9 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/cormorant-garamond": "^5.2.5",
-    "@fontsource/marcellus": "^5.2.5",
-    "@fontsource/marcellus-sc": "^5.2.5",
+    "@fontsource/fredoka": "^5.2.5",
+    "@fontsource/manrope": "^5.2.5",
     "@igra/shared": "*",
     "framer-motion": "^12.6.3",
     "howler": "^2.2.4",

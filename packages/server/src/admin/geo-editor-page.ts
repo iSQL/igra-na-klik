@@ -30,7 +30,7 @@ const PAGE_HTML = `<!DOCTYPE html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Marcellus+SC&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -45,16 +45,16 @@ const PAGE_HTML = `<!DOCTYPE html>
 }
 html,body{min-height:100%}
 body{
-  font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;font-weight:500;
+  font-family:'Manrope','Segoe UI',system-ui,sans-serif;font-weight:500;
   background:
     radial-gradient(1100px 600px at 50% -10%, rgba(194,155,71,.16), transparent 60%),
     var(--bg);
   color:var(--ink);-webkit-text-size-adjust:100%;
 }
 .wrap{max-width:1100px;margin:0 auto;padding:1.2rem 1rem 4rem}
-h1{font-family:'Marcellus',Georgia,serif;font-size:1.5rem;font-weight:400;color:#1D3557;margin-bottom:0.2rem}
+h1{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.5rem;font-weight:400;color:#1D3557;margin-bottom:0.2rem}
 h1 .grad{color:var(--gold)}
-h2{font-family:'Marcellus',Georgia,serif;font-size:1.1rem;font-weight:400;color:#1D3557;margin:1.4rem 0 0.7rem}
+h2{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.1rem;font-weight:400;color:#1D3557;margin:1.4rem 0 0.7rem}
 .sub{color:var(--muted);font-size:0.95rem;margin-bottom:1.2rem}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:1rem}
 button{font:inherit;cursor:pointer;border:none;min-height:42px}
@@ -69,7 +69,7 @@ input[type=text],textarea,select{
   border:1.5px solid var(--line2);border-radius:11px;padding:0.55rem 0.75rem;min-height:42px;
 }
 input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(194,155,71,.22)}
-label{display:block;font-family:'Marcellus SC','Marcellus',Georgia,serif;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin:0.8rem 0 0.35rem}
+label{display:block;font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin:0.8rem 0 0.35rem}
 .err{background:rgba(176,74,66,.1);border:1px solid rgba(176,74,66,.4);color:var(--red);border-radius:11px;padding:0.55rem 0.8rem;font-size:0.9rem;font-weight:600;margin:0.8rem 0;display:none}
 .ok-msg{background:rgba(62,125,87,.12);border:1px solid rgba(62,125,87,.4);color:var(--green);border-radius:11px;padding:0.55rem 0.8rem;font-size:0.9rem;font-weight:600;margin:0.8rem 0;display:none}
 .row{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap}

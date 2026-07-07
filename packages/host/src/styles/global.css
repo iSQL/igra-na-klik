@@ -28,16 +28,15 @@
   --danger: #e06a5e;
   --blue: #6d9bd1;
   --grad: linear-gradient(125deg, #c0964a, #8f6e2c);
-  --font-display: 'Marcellus', 'Cormorant Garamond', Georgia, serif;
-  --font-caps: 'Marcellus SC', 'Marcellus', Georgia, serif;
+  --font-display: 'Fredoka', 'Manrope', system-ui, sans-serif;
+  --font-caps: 'Fredoka', 'Manrope', system-ui, sans-serif;
   --shadow-cta: 0 10px 26px rgba(194, 155, 71, 0.32);
 }
 
 html,
 body {
   height: 100%;
-  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
-  font-weight: 500;
+  font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-primary);
   background-image:
     radial-gradient(1400px 800px at 50% -12%, rgba(194, 155, 71, 0.14), transparent 60%),
@@ -63,8 +62,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: 0.01em;
+  font-weight: 600;
 }
 
 button {
