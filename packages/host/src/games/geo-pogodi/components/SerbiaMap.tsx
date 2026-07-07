@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { GeoPin, GeoRevealPin } from '@igra/shared';
 import serbiaMapUrl from '../assets/serbia-map.png';
 
@@ -19,11 +19,17 @@ interface SerbiaMapProps {
   maxHeightCss?: string;
   /** Optional CSS width bound. Defaults to 100% of parent. */
   maxWidthCss?: string;
+  /**
+   * Custom pack map image (host data `mapImageUrl`). When set, it replaces
+   * the bundled Serbia map; the aspect ratio is measured from the loaded
+   * image so pin percentages keep lining up.
+   */
+  mapImageUrl?: string;
 }
 
 /**
- * Map of Serbia with overlaid pins. Used by the host on `placing` (no pins
- * shown — guesses stay private) and `reveal` (everyone's pin + the truth).
+ * Map of Serbia (or a pack's custom map) with overlaid pins. Used by the
+ * host on `reveal` (everyone's pin + the truth).
  */
 export function SerbiaMap({
   pins,
@@ -31,24 +37,37 @@ export function SerbiaMap({
   showLines,
   maxHeightCss = '70vh',
   maxWidthCss = '100%',
+  mapImageUrl,
 }: SerbiaMapProps) {
+  // Custom maps arrive with unknown dimensions — measure on load. Until
+  // then fall back to the Serbia ratio (brief reflow at most).
+  const [customRatio, setCustomRatio] = useState<number | null>(null);
+  const ratio = mapImageUrl ? (customRatio ?? SVG_RATIO) : SVG_RATIO;
+
   const wrapperStyle = useMemo<React.CSSProperties>(() => ({
     position: 'relative',
     // Pick the binding constraint between height-derived width and the
     // available width — whichever is smaller.
-    width: `min(${maxWidthCss}, calc(${maxHeightCss} * ${SVG_RATIO}))`,
-    aspectRatio: `${SVG_W} / ${SVG_H}`,
+    width: `min(${maxWidthCss}, calc(${maxHeightCss} * ${ratio}))`,
+    aspectRatio: `${ratio}`,
     margin: '0 auto',
     background: '#0e1424',
     borderRadius: '12px',
     overflow: 'hidden',
-  }), [maxHeightCss, maxWidthCss]);
+  }), [maxHeightCss, maxWidthCss, ratio]);
 
   return (
     <div style={wrapperStyle}>
       <img
-        src={serbiaMapUrl}
-        alt="Mapa Srbije"
+        src={mapImageUrl ?? serbiaMapUrl}
+        onLoad={(e) => {
+          if (!mapImageUrl) return;
+          const img = e.currentTarget;
+          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            setCustomRatio(img.naturalWidth / img.naturalHeight);
+          }
+        }}
+        alt="Mapa"
         draggable={false}
         style={{
           position: 'absolute',

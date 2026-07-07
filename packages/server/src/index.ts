@@ -74,7 +74,18 @@ const app = express();
 // would loop).
 app.set('strict routing', true);
 app.use(cors({ origin: corsOrigins }));
-app.use(express.json());
+// Admin routers parse their own bodies with a much larger limit (images ride
+// inside JSON as base64). The app-wide parser must SKIP those paths — being
+// registered first, it would otherwise reject any upload over its default
+// 100 kb with a 413 before the admin router's parser ever runs.
+const defaultJsonParser = express.json();
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/admin')) {
+    next();
+    return;
+  }
+  defaultJsonParser(req, res, next);
+});
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

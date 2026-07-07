@@ -6,11 +6,16 @@ import { mkdir, readdir, readFile, rm, unlink, writeFile } from 'fs/promises';
 import type { Dirent } from 'fs';
 import {
   parseGeoPackImport,
-  latLngToSvg,
-  svgToLatLng,
+  packLatLngToPin,
+  packPinToLatLng,
   SERBIAN_DISTRICTS,
 } from '@igra/shared';
-import type { GeoPackManifest, SerbianDistrict } from '@igra/shared';
+import type {
+  GeoMapBBox,
+  GeoPackManifest,
+  GeoPackMapDef,
+  SerbianDistrict,
+} from '@igra/shared';
 import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './admin-common.js';
 
 /**
@@ -44,6 +49,8 @@ interface AdminPack {
   id: string;
   name: string;
   description?: string;
+  /** Custom map (image + geographic bbox), if the pack defines one. */
+  map?: { imageFile: string; imageUrl: string; bbox: GeoMapBBox };
   locations: AdminLocation[];
 }
 
@@ -91,21 +98,32 @@ export function createGeoAdminRouter(geoPacksDir: string): Router {
       id,
       name: manifest.name,
       description: manifest.description,
+      map: manifest.map
+        ? {
+            imageFile: manifest.map.imageFile,
+            imageUrl: `/geo-images/${id}/${manifest.map.imageFile}`,
+            bbox: manifest.map.bbox,
+          }
+        : undefined,
       locations: manifest.locations.map((loc) => ({
         imageFile: loc.imageFile,
         imageUrl: `/geo-images/${id}/${loc.imageFile}`,
         lat: loc.lat,
         lng: loc.lng,
-        pin: latLngToSvg(loc.lat, loc.lng),
+        pin: packLatLngToPin(manifest.map, loc.lat, loc.lng),
         district: loc.district,
         caption: loc.caption,
       })),
     };
   }
 
-  /** Parse {pin:{x,y}} from a request body into lat/lng, or report why not. */
+  /**
+   * Parse {pin:{x,y}} from a request body into lat/lng through the pack's
+   * active map (custom bbox or the Serbia projection), or report why not.
+   */
   function pinToLatLng(
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
+    map: GeoPackMapDef | undefined
   ): { ok: true; lat: number; lng: number } | { ok: false; error: string } {
     const pin = body.pin as { x?: unknown; y?: unknown } | undefined;
     if (
@@ -120,8 +138,27 @@ export function createGeoAdminRouter(geoPacksDir: string): Router {
     if (pin.x < 0 || pin.x > 1 || pin.y < 0 || pin.y > 1) {
       return { ok: false, error: 'Pin je van mape.' };
     }
-    const { lat, lng } = svgToLatLng(pin.x, pin.y);
+    const { lat, lng } = packPinToLatLng(map, pin.x, pin.y);
     return { ok: true, lat, lng };
+  }
+
+  /** Coerce a {minLat,maxLat,minLng,maxLng} body field into a GeoMapBBox. */
+  function parseBBox(
+    raw: unknown
+  ): { ok: true; bbox: GeoMapBBox } | { ok: false; error: string } {
+    const obj = raw as Record<string, unknown> | undefined;
+    if (!obj || typeof obj !== 'object') {
+      return { ok: false, error: 'Nedostaje bbox.' };
+    }
+    const out: Partial<GeoMapBBox> = {};
+    for (const key of ['minLat', 'maxLat', 'minLng', 'maxLng'] as const) {
+      const v = Number(obj[key]);
+      if (!Number.isFinite(v)) {
+        return { ok: false, error: `bbox: nedostaje broj "${key}".` };
+      }
+      out[key] = v;
+    }
+    return { ok: true, bbox: out as GeoMapBBox };
   }
 
   function parseCaption(
@@ -302,6 +339,87 @@ export function createGeoAdminRouter(geoPacksDir: string): Router {
     res.json({ ok: true });
   });
 
+  // ---- Set / replace custom map ---------------------------------------------
+  // PUT with { bbox, imageBase64? }. The image is required the first time;
+  // afterwards bbox can be adjusted without re-uploading. Existing locations
+  // must fall inside the new bbox or the manifest validation rejects the
+  // change with a per-location error.
+
+  router.put('/geo-packs/:id/map', async (req, res) => {
+    const id = req.params.id;
+    if (!PACK_ID_RE.test(id)) {
+      badId(res);
+      return;
+    }
+    const manifest = await readManifestLax(id);
+    if (!manifest) {
+      res.status(404).json({ error: 'Pack ne postoji.' });
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const bbox = parseBBox(body.bbox);
+    if (!bbox.ok) {
+      res.status(400).json({ error: bbox.error });
+      return;
+    }
+
+    let newImage: string | null = null;
+    if (body.imageBase64 !== undefined) {
+      const image = await saveImage(id, body.imageBase64);
+      if (!image.ok) {
+        res.status(400).json({ error: image.error });
+        return;
+      }
+      newImage = image.fileName;
+    } else if (!manifest.map) {
+      res.status(400).json({ error: 'Izaberi sliku mape.' });
+      return;
+    }
+
+    const previousImage = manifest.map?.imageFile;
+    manifest.map = {
+      imageFile: newImage ?? (manifest.map as GeoPackMapDef).imageFile,
+      bbox: bbox.bbox,
+    };
+    const written = await writeManifest(id, manifest);
+    if (!written.ok) {
+      if (newImage) await deleteImageQuiet(id, newImage);
+      res.status(400).json({ error: written.error });
+      return;
+    }
+    if (newImage && previousImage) await deleteImageQuiet(id, previousImage);
+    res.json({ pack: toAdminPack(id, manifest) });
+  });
+
+  // ---- Remove custom map (back to the bundled Serbia map) --------------------
+
+  router.delete('/geo-packs/:id/map', async (req, res) => {
+    const id = req.params.id;
+    if (!PACK_ID_RE.test(id)) {
+      badId(res);
+      return;
+    }
+    const manifest = await readManifestLax(id);
+    if (!manifest) {
+      res.status(404).json({ error: 'Pack ne postoji.' });
+      return;
+    }
+    if (!manifest.map) {
+      res.status(400).json({ error: 'Pack nema custom mapu.' });
+      return;
+    }
+    const removedImage = manifest.map.imageFile;
+    manifest.map = undefined;
+    const written = await writeManifest(id, manifest);
+    if (!written.ok) {
+      // Locations fall outside Serbia's bounds without the custom map.
+      res.status(400).json({ error: written.error });
+      return;
+    }
+    await deleteImageQuiet(id, removedImage);
+    res.json({ pack: toAdminPack(id, manifest) });
+  });
+
   // ---- Add location ----------------------------------------------------------
 
   router.post('/geo-packs/:id/locations', async (req, res) => {
@@ -317,7 +435,7 @@ export function createGeoAdminRouter(geoPacksDir: string): Router {
     }
     const body = (req.body ?? {}) as Record<string, unknown>;
 
-    const coords = pinToLatLng(body);
+    const coords = pinToLatLng(body, manifest.map);
     if (!coords.ok) {
       res.status(400).json({ error: coords.error });
       return;
@@ -376,7 +494,7 @@ export function createGeoAdminRouter(geoPacksDir: string): Router {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     if (body.pin !== undefined) {
-      const coords = pinToLatLng(body);
+      const coords = pinToLatLng(body, manifest.map);
       if (!coords.ok) {
         res.status(400).json({ error: coords.error });
         return;

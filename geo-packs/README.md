@@ -46,6 +46,36 @@ geo-packs/
 | `lng`         | broj           | ✓        | 18.5 ≤ lng ≤ 23.5                                                                              |
 | `district`    | enum           |          | Vidi listu okruga niže. Trenutno samo metadata; v2 može da daje bonus za pogađanje okruga.     |
 | `caption`     | string ≤ 200   |          | Prikazuje se nakon otkrivanja.                                                                 |
+| `map`         | objekat        |          | Custom mapa paketa (vidi niže). Bez nje paket igra na ugrađenoj mapi Srbije.                   |
+
+## Custom mapa paketa (nivo grada/opštine)
+
+Paket može da nosi sopstvenu mapu umesto mape Srbije — npr. mapu opštine za
+pogađanje na lokalnom nivou:
+
+```json
+{
+  "name": "Žabari",
+  "map": {
+    "imageFile": "map.png",
+    "bbox": { "minLat": 44.2572, "maxLat": 44.5188, "minLng": 21.1161, "maxLng": 21.3186 }
+  },
+  "locations": [ ... ]
+}
+```
+
+- `imageFile` je slika u folderu paketa (pored fotki lokacija). Mora biti
+  **sever-gore Web Mercator** izvoz — najlakše sa OSM export servera:
+  `https://render.openstreetmap.org/cgi-bin/export?bbox=MINLNG,MINLAT,MAXLNG,MAXLAT&scale=50000&format=png`.
+- `bbox` su tačne geografske ivice slike (isti brojevi kao u export URL-u).
+  **Ne seci sliku posle izvoza** — bbox više ne bi važio.
+- Sa custom mapom, `lat`/`lng` lokacija moraju biti unutar bbox-a (umesto
+  granica Srbije).
+- Bodovanje se automatski skalira na veličinu mape (ista kriva, decay =
+  dijagonala/3), a TV i telefoni renderuju custom sliku.
+- Najlakši način pravljenja: admin editor na `/admin/geo` → otvori paket →
+  "Mapa packa" (upload + 4 bbox broja), pa klikći lokacije po novoj mapi.
+- Zadrži OSM atribuciju na slici (uslov licence).
 
 ### Validni okruzi (`district`)
 

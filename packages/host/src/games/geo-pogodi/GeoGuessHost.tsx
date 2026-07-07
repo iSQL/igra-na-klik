@@ -85,6 +85,7 @@ export default function GeoGuessHost() {
         caption={host.currentRound.location.caption}
         revealPins={host.revealPins ?? []}
         truePin={host.truePinSvg}
+        mapImageUrl={host.mapImageUrl}
       />
     );
   }
@@ -315,10 +316,12 @@ function RevealScreen({
   caption,
   revealPins,
   truePin,
+  mapImageUrl,
 }: {
   caption?: string;
   revealPins: import('@igra/shared').GeoRevealPin[];
   truePin?: import('@igra/shared').GeoPin;
+  mapImageUrl?: string;
 }) {
   return (
     <div
@@ -360,6 +363,7 @@ function RevealScreen({
           showLines
           maxHeightCss="calc(100dvh - 140px)"
           maxWidthCss="80vw"
+          mapImageUrl={mapImageUrl}
         />
       </div>
     </div>

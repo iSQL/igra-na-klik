@@ -1,5 +1,5 @@
 import { SERBIAN_DISTRICTS } from '../types/geo-guess.js';
-import type { SerbianDistrict } from '../types/geo-guess.js';
+import type { GeoMapBBox, GeoPackMapDef, SerbianDistrict } from '../types/geo-guess.js';
 
 /**
  * Wire format for an entry inside a geo-pack manifest JSON file.
@@ -16,6 +16,12 @@ export interface GeoLocationImport {
 export interface GeoPackManifest {
   name: string;
   description?: string;
+  /**
+   * Optional custom map (north-up mercator image + its geographic bbox).
+   * When present, locations must fall inside the bbox; without it they must
+   * fall inside Serbia's bounds and play on the bundled Serbia map.
+   */
+  map?: GeoPackMapDef;
   locations: GeoLocationImport[];
 }
 
@@ -38,6 +44,58 @@ function isNonEmptyString(v: unknown): v is string {
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
+}
+
+// Custom-map bbox sanity limits: must sit on the (mercator-safe) globe and
+// span something real but not continental — these maps are city/region scale.
+const BBOX_ABS_LAT = 85;
+const MAX_BBOX_SPAN_DEG = 20;
+const MIN_BBOX_SPAN_DEG = 0.001;
+
+type MapParse =
+  | { ok: true; map?: GeoPackMapDef }
+  | { ok: false; error: string };
+
+function parseMapDef(raw: unknown): MapParse {
+  if (raw === undefined || raw === null) return { ok: true, map: undefined };
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: '"map" mora biti objekat.' };
+  }
+  const obj = raw as Record<string, unknown>;
+  if (!isNonEmptyString(obj.imageFile)) {
+    return { ok: false, error: '"map": nedostaje "imageFile".' };
+  }
+  const imageFile = (obj.imageFile as string).trim();
+  if (imageFile.includes('..') || imageFile.includes('/') || imageFile.includes('\\')) {
+    return { ok: false, error: '"map": nevažeća putanja slike.' };
+  }
+  const bboxRaw = obj.bbox as Record<string, unknown> | undefined;
+  if (!bboxRaw || typeof bboxRaw !== 'object') {
+    return { ok: false, error: '"map": nedostaje "bbox".' };
+  }
+  const nums: Partial<GeoMapBBox> = {};
+  for (const key of ['minLat', 'maxLat', 'minLng', 'maxLng'] as const) {
+    if (!isFiniteNumber(bboxRaw[key])) {
+      return { ok: false, error: `"map.bbox": nedostaje broj "${key}".` };
+    }
+    nums[key] = bboxRaw[key] as number;
+  }
+  const bbox = nums as GeoMapBBox;
+  if (Math.abs(bbox.minLat) > BBOX_ABS_LAT || Math.abs(bbox.maxLat) > BBOX_ABS_LAT) {
+    return { ok: false, error: `"map.bbox": lat mora biti između -${BBOX_ABS_LAT} i ${BBOX_ABS_LAT}.` };
+  }
+  if (bbox.minLng < -180 || bbox.maxLng > 180) {
+    return { ok: false, error: '"map.bbox": lng mora biti između -180 i 180.' };
+  }
+  const latSpan = bbox.maxLat - bbox.minLat;
+  const lngSpan = bbox.maxLng - bbox.minLng;
+  if (latSpan < MIN_BBOX_SPAN_DEG || lngSpan < MIN_BBOX_SPAN_DEG) {
+    return { ok: false, error: '"map.bbox": min mora biti manji od max.' };
+  }
+  if (latSpan > MAX_BBOX_SPAN_DEG || lngSpan > MAX_BBOX_SPAN_DEG) {
+    return { ok: false, error: `"map.bbox": raspon ne sme preći ${MAX_BBOX_SPAN_DEG}°.` };
+  }
+  return { ok: true, map: { imageFile, bbox } };
 }
 
 /**
@@ -63,6 +121,18 @@ export function parseGeoPackImport(
   if (raw.description !== undefined && typeof raw.description !== 'string') {
     return { ok: false, error: '"description" mora biti string.' };
   }
+  const mapParsed = parseMapDef(raw.map);
+  if (!mapParsed.ok) {
+    return { ok: false, error: mapParsed.error };
+  }
+  const map = mapParsed.map;
+  // With a custom map, locations must land on that map; otherwise they must
+  // land on the bundled map of Serbia.
+  const latMin = map ? map.bbox.minLat : MIN_LAT;
+  const latMax = map ? map.bbox.maxLat : MAX_LAT;
+  const lngMin = map ? map.bbox.minLng : MIN_LNG;
+  const lngMax = map ? map.bbox.maxLng : MAX_LNG;
+
   if (!Array.isArray(raw.locations)) {
     return { ok: false, error: '"locations" mora biti niz.' };
   }
@@ -91,16 +161,16 @@ export function parseGeoPackImport(
     if ((entry.imageFile as string).includes('..')) {
       return { ok: false, error: `${label}: putanja ne sme sadržati "..".` };
     }
-    if (!isFiniteNumber(entry.lat) || entry.lat < MIN_LAT || entry.lat > MAX_LAT) {
+    if (!isFiniteNumber(entry.lat) || entry.lat < latMin || entry.lat > latMax) {
       return {
         ok: false,
-        error: `${label}: "lat" mora biti broj između ${MIN_LAT} i ${MAX_LAT}.`,
+        error: `${label}: "lat" mora biti broj između ${latMin} i ${latMax}${map ? ' (bbox mape)' : ''}.`,
       };
     }
-    if (!isFiniteNumber(entry.lng) || entry.lng < MIN_LNG || entry.lng > MAX_LNG) {
+    if (!isFiniteNumber(entry.lng) || entry.lng < lngMin || entry.lng > lngMax) {
       return {
         ok: false,
-        error: `${label}: "lng" mora biti broj između ${MIN_LNG} i ${MAX_LNG}.`,
+        error: `${label}: "lng" mora biti broj između ${lngMin} i ${lngMax}${map ? ' (bbox mape)' : ''}.`,
       };
     }
     let district: SerbianDistrict | undefined;
@@ -142,6 +212,7 @@ export function parseGeoPackImport(
       name: (raw.name as string).trim(),
       description:
         typeof raw.description === 'string' ? raw.description.trim() : undefined,
+      map,
       locations,
     },
   };

@@ -13,6 +13,8 @@ interface MapPinPickerProps {
    * expands full-screen on tap (there is no TV keeping it visible).
    */
   photoUrl?: string;
+  /** Custom pack map image — undefined = bundled Serbia map. */
+  mapImageUrl?: string;
 }
 
 // Vertical chrome around the map: header (~30px) + button (~60px) + outer
@@ -39,6 +41,7 @@ export function MapPinPicker({
   ownPin,
   ownColor,
   photoUrl,
+  mapImageUrl,
 }: MapPinPickerProps) {
   const [draftPin, setDraftPin] = useState<GeoPin | null>(ownPin ?? null);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -145,6 +148,7 @@ export function MapPinPicker({
           disabled
           pinColor={ownColor}
           maxHeightCss={MAP_MAX_HEIGHT_CSS}
+          mapImageUrl={mapImageUrl}
         />
         <p
           style={{
@@ -194,6 +198,7 @@ export function MapPinPicker({
         onPinChange={setDraftPin}
         pinColor={ownColor}
         maxHeightCss={MAP_MAX_HEIGHT_CSS}
+        mapImageUrl={mapImageUrl}
       />
       <div style={rowPad}>
         <button

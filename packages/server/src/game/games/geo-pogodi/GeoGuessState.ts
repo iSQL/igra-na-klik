@@ -2,6 +2,7 @@ import type {
   GeoGuessMode,
   GeoGuessPhase,
   GeoLocation,
+  GeoPackMapDef,
   GeoPin,
   GeoPlayerRoundResult,
 } from '@igra/shared';
@@ -38,6 +39,12 @@ export interface GeoGuessInternalState {
   phaseTimeRemaining: number;
   mode: GeoGuessMode;
   packName?: string;
+
+  /** Custom pack map (predefined mode only) — undefined = bundled Serbia map. */
+  map?: GeoPackMapDef;
+  mapImageUrl?: string;
+  /** Distance-scoring decay, scaled to the active map's size. */
+  decayKm: number;
 
   /** Final, ordered list of rounds (each entry = one location to guess). */
   locations: GeoLocation[];

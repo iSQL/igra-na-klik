@@ -153,6 +153,45 @@ __NAV_CSS__
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:1rem">
+      <div class="row">
+        <strong style="font-size:0.95rem">Mapa packa</strong>
+        <span class="hint" id="map-status" style="margin-top:0"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost btn-sm" id="toggle-map-form-btn">Podesi custom mapu</button>
+        <button class="btn btn-danger btn-sm" id="remove-map-btn" style="display:none">Vrati mapu Srbije</button>
+      </div>
+      <div id="map-form" style="display:none">
+        <p class="hint" style="margin-top:0.6rem">Sever-gore mercator slika (npr. OSM Export → render URL). Bbox brojevi su tačne geografske ivice slike — igra iz njih računa lokacije, pa sliku posle izvoza ne seci.</p>
+        <div class="row" style="margin-top:0.4rem">
+          <button class="btn btn-ghost btn-sm" id="map-file-btn">📷 Izaberi sliku mape</button>
+          <span class="hint" id="map-file-label" style="margin-top:0"></span>
+        </div>
+        <input type="file" id="map-file-input" accept="image/*" style="display:none">
+        <div class="row">
+          <div style="flex:1;min-width:120px">
+            <label for="bbox-minlat">min lat (jug)</label>
+            <input type="text" id="bbox-minlat" inputmode="decimal" placeholder="44.2572">
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label for="bbox-maxlat">max lat (sever)</label>
+            <input type="text" id="bbox-maxlat" inputmode="decimal" placeholder="44.5188">
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label for="bbox-minlng">min lng (zapad)</label>
+            <input type="text" id="bbox-minlng" inputmode="decimal" placeholder="21.1161">
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label for="bbox-maxlng">max lng (istok)</label>
+            <input type="text" id="bbox-maxlng" inputmode="decimal" placeholder="21.3186">
+          </div>
+        </div>
+        <div class="row" style="margin-top:0.9rem">
+          <button class="btn btn-primary" id="save-map-btn">Sačuvaj mapu</button>
+        </div>
+      </div>
+    </div>
+
     <h2 id="editor-title">Nova lokacija</h2>
     <div class="editor-cols">
       <div>
@@ -177,7 +216,7 @@ __NAV_CSS__
       <div>
         <div id="map-wrap">
           <div id="map-content">
-            <img src="/admin/serbia-map.png" alt="Mapa Srbije" draggable="false">
+            <img id="base-map-img" src="/admin/serbia-map.png" alt="Mapa" draggable="false">
             <div id="map-dots"></div>
             <div id="map-pin">📍</div>
           </div>
@@ -206,6 +245,7 @@ __NAV_CSS__
   var currentId = null;      // open pack id
   var editIndex = null;      // location index being edited, or null = new
   var pendingImage = null;   // base64 of a newly chosen image
+  var pendingMapImage = null; // base64 of a newly chosen CUSTOM MAP image
   var pin = null;            // {x, y} normalized
   // map view state
   var zoom = 1, panX = 0, panY = 0;
@@ -300,9 +340,34 @@ __NAV_CSS__
   function openPack(id){
     currentId = id;
     resetLocForm();
+    pendingMapImage = null;
+    $('map-form').style.display = 'none';
+    $('map-file-label').textContent = '';
     renderPack();
     show('pack');
     window.scrollTo(0, 0);
+  }
+
+  // ---------- pack map (custom vs Serbia) ----------
+  function applyPackMap(){
+    var p = currentPack();
+    var img = $('base-map-img');
+    var url = (p && p.map) ? p.map.imageUrl : '/admin/serbia-map.png';
+    if (img.getAttribute('src') !== url){
+      img.setAttribute('src', url);
+      // Reset the view — pan/zoom from the previous image make no sense.
+      zoom = 1; panX = 0; panY = 0; applyView();
+    }
+    $('map-status').textContent = (p && p.map)
+      ? 'custom (' + p.map.bbox.minLat + '…' + p.map.bbox.maxLat + ', ' + p.map.bbox.minLng + '…' + p.map.bbox.maxLng + ')'
+      : 'Srbija (podrazumevana)';
+    $('remove-map-btn').style.display = (p && p.map) ? '' : 'none';
+    if (p && p.map){
+      $('bbox-minlat').value = String(p.map.bbox.minLat);
+      $('bbox-maxlat').value = String(p.map.bbox.maxLat);
+      $('bbox-minlng').value = String(p.map.bbox.minLng);
+      $('bbox-maxlng').value = String(p.map.bbox.maxLng);
+    }
   }
 
   function renderPack(){
@@ -310,6 +375,7 @@ __NAV_CSS__
     if (!p) return;
     $('pack-name').value = p.name;
     $('pack-desc').value = p.description || '';
+    applyPackMap();
     $('loc-count').textContent = String(p.locations.length);
     var grid = $('loc-grid');
     grid.innerHTML = '';
@@ -425,7 +491,50 @@ __NAV_CSS__
     });
   }
 
-  function downscale(file, maxDim, quality){
+  // Map images get special treatment: OSM exports are palette PNGs that a
+  // canvas re-encode blows up 10-20× (8-bit palette → 32-bit RGBA). If the
+  // file is already small enough, upload the ORIGINAL bytes untouched;
+  // only genuinely oversized maps go through the canvas, and then we keep
+  // whichever encoding (PNG vs JPEG) comes out smaller.
+  var MAP_MAX_DIM = 2400;
+  var MAP_MAX_ORIGINAL_BYTES = 4 * 1024 * 1024;
+  function prepareMapImage(file){
+    return new Promise(function(resolve){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        var smallEnough = Math.max(w, h) <= MAP_MAX_DIM
+          && file.size <= MAP_MAX_ORIGINAL_BYTES
+          && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/webp');
+        if (smallEnough){
+          URL.revokeObjectURL(url);
+          var reader = new FileReader();
+          reader.onload = function(){ resolve(reader.result); };
+          reader.onerror = function(){ resolve(null); };
+          reader.readAsDataURL(file);
+          return;
+        }
+        try {
+          var scale = Math.min(1, MAP_MAX_DIM / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          URL.revokeObjectURL(url);
+          var png = canvas.toDataURL('image/png');
+          var jpg = canvas.toDataURL('image/jpeg', 0.9);
+          resolve(png.length <= jpg.length ? png : jpg);
+        } catch (e){ URL.revokeObjectURL(url); resolve(null); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  function downscale(file, maxDim, quality, mime){
     return new Promise(function(resolve){
       var url = URL.createObjectURL(file);
       var img = new Image();
@@ -439,7 +548,7 @@ __NAV_CSS__
           var ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
           URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/jpeg', quality));
+          resolve(canvas.toDataURL(mime || 'image/jpeg', quality));
         } catch (e){ URL.revokeObjectURL(url); resolve(null); }
       };
       img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
@@ -620,6 +729,73 @@ __NAV_CSS__
 
     $('save-loc-btn').onclick = saveLocation;
     $('cancel-edit-btn').onclick = resetLocForm;
+
+    // ---- custom pack map ----
+    // Keep the pin overlay aligned: the wrapper's aspect ratio must follow
+    // whichever image is loaded (Serbia default vs a pack's custom map).
+    $('base-map-img').addEventListener('load', function(){
+      var img = $('base-map-img');
+      if (img.naturalWidth > 0 && img.naturalHeight > 0){
+        $('map-wrap').style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight;
+      }
+    });
+
+    $('toggle-map-form-btn').onclick = function(){
+      var form = $('map-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    };
+
+    $('map-file-btn').onclick = function(){ $('map-file-input').click(); };
+    $('map-file-input').onchange = function(){
+      var file = this.files && this.files[0];
+      this.value = '';
+      if (!file || file.type.indexOf('image/') !== 0){ showErr('Izaberi sliku.'); return; }
+      prepareMapImage(file).then(function(base64){
+        if (!base64){ showErr('Ne mogu da pročitam sliku.'); return; }
+        if (base64.length > 7500000){
+          showErr('Slika mape je prevelika i posle kompresije — izvezi je sa većim scale brojem.');
+          return;
+        }
+        pendingMapImage = base64;
+        var kb = Math.round(base64.length * 0.75 / 1024);
+        $('map-file-label').textContent = '✓ ' + file.name + ' (~' + kb + ' KB)';
+      });
+    };
+
+    $('save-map-btn').onclick = function(){
+      if (!currentId) return;
+      var bbox = {
+        minLat: parseFloat($('bbox-minlat').value),
+        maxLat: parseFloat($('bbox-maxlat').value),
+        minLng: parseFloat($('bbox-minlng').value),
+        maxLng: parseFloat($('bbox-maxlng').value)
+      };
+      if (isNaN(bbox.minLat) || isNaN(bbox.maxLat) || isNaN(bbox.minLng) || isNaN(bbox.maxLng)){
+        showErr('Popuni sva 4 bbox broja.');
+        return;
+      }
+      var body = { bbox: bbox };
+      if (pendingMapImage) body.imageBase64 = pendingMapImage;
+      $('save-map-btn').disabled = true;
+      api('PUT', '/api/admin/geo-packs/' + currentId + '/map', body)
+        .then(function(data){
+          pendingMapImage = null;
+          $('map-file-label').textContent = '';
+          $('map-form').style.display = 'none';
+          replacePack(data.pack);
+          showOk('Mapa sačuvana.');
+        })
+        .catch(function(e){ showErr(e.message); })
+        .then(function(){ $('save-map-btn').disabled = false; });
+    };
+
+    $('remove-map-btn').onclick = function(){
+      if (!currentId) return;
+      if (!confirm('Ukloniti custom mapu i vratiti mapu Srbije? Postojeće lokacije moraju biti unutar Srbije.')) return;
+      api('DELETE', '/api/admin/geo-packs/' + currentId + '/map')
+        .then(function(data){ replacePack(data.pack); showOk('Vraćena mapa Srbije.'); })
+        .catch(function(e){ showErr(e.message); });
+    };
 
     initMap();
 

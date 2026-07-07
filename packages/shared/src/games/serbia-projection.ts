@@ -91,6 +91,82 @@ export function svgToLatLng(
   return { lat, lng: (x * MAP_W - a) / b };
 }
 
+// ---------------------------------------------------------------------------
+// Custom pack maps (north-up Web Mercator exports, e.g. openstreetmap.org).
+//
+// A pack may carry its own map image + geographic bbox. OSM exports use Web
+// Mercator: longitude is linear in x, latitude maps through the mercator
+// y-function — exact inverse below, so pins land precisely even though the
+// bbox spans are tiny (city scale).
+// ---------------------------------------------------------------------------
+
+import type { GeoMapBBox, GeoPackMapDef } from '../types/geo-guess.js';
+
+function mercatorY(latDeg: number): number {
+  const phi = toRad(latDeg);
+  return Math.log(Math.tan(Math.PI / 4 + phi / 2));
+}
+
+function inverseMercatorY(y: number): number {
+  return ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI;
+}
+
+/** lat/lng → normalized [0, 1] on a mercator map image framed by bbox. */
+export function bboxLatLngToXY(
+  bbox: GeoMapBBox,
+  lat: number,
+  lng: number
+): { x: number; y: number } {
+  const yTop = mercatorY(bbox.maxLat);
+  const yBot = mercatorY(bbox.minLat);
+  return {
+    x: (lng - bbox.minLng) / (bbox.maxLng - bbox.minLng),
+    y: (yTop - mercatorY(lat)) / (yTop - yBot),
+  };
+}
+
+/** Inverse of bboxLatLngToXY. */
+export function bboxXYToLatLng(
+  bbox: GeoMapBBox,
+  x: number,
+  y: number
+): { lat: number; lng: number } {
+  const yTop = mercatorY(bbox.maxLat);
+  const yBot = mercatorY(bbox.minLat);
+  return {
+    lat: inverseMercatorY(yTop - y * (yTop - yBot)),
+    lng: bbox.minLng + x * (bbox.maxLng - bbox.minLng),
+  };
+}
+
+/**
+ * Pack-aware pin conversions: custom map → mercator bbox math, no map →
+ * the calibrated Serbia projection. Use these anywhere a pin meets a pack.
+ */
+export function packLatLngToPin(
+  map: GeoPackMapDef | undefined,
+  lat: number,
+  lng: number
+): { x: number; y: number } {
+  return map ? bboxLatLngToXY(map.bbox, lat, lng) : latLngToSvg(lat, lng);
+}
+
+export function packPinToLatLng(
+  map: GeoPackMapDef | undefined,
+  x: number,
+  y: number
+): { lat: number; lng: number } {
+  return map ? bboxXYToLatLng(map.bbox, x, y) : svgToLatLng(x, y);
+}
+
+/** Corner-to-corner distance of a bbox — used to scale distance scoring. */
+export function bboxDiagonalKm(bbox: GeoMapBBox): number {
+  return haversineKm(
+    { lat: bbox.minLat, lng: bbox.minLng },
+    { lat: bbox.maxLat, lng: bbox.maxLng }
+  );
+}
+
 const EARTH_RADIUS_KM = 6371;
 
 /** Great-circle distance in kilometers. */

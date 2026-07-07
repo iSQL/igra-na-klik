@@ -12,8 +12,10 @@ import type {
   GeoSubmissionProgress,
 } from '@igra/shared';
 import {
+  bboxDiagonalKm,
   haversineKm,
-  latLngToSvg,
+  packLatLngToPin,
+  packPinToLatLng,
   parseCustomPhotoSubmission,
   shuffleInPlace,
   svgToLatLng,
@@ -36,7 +38,11 @@ import type {
   GeoGuessInternalState,
 } from './GeoGuessState.js';
 import { resolveGeoPack } from './geo-pack-resolver.js';
-import { pointsForDistanceKm } from './scoring.js';
+import {
+  decayKmForMapDiagonal,
+  pointsForDistanceKm,
+  SERBIA_DECAY_KM,
+} from './scoring.js';
 import {
   clearRoomPhotos,
   deleteCustomPhotoByUrl,
@@ -94,6 +100,9 @@ export class GeoGuessModule extends BaseGameModule {
       phaseTimeRemaining: INTRO_DURATION,
       mode,
       packName: undefined,
+      map: undefined,
+      mapImageUrl: undefined,
+      decayKm: SERBIA_DECAY_KM,
       locations: [],
       currentRoundIndex: 0,
       totalRounds: 0,
@@ -207,6 +216,11 @@ export class GeoGuessModule extends BaseGameModule {
     this.state.locations = sliced;
     this.state.totalRounds = sliced.length;
     this.state.packName = resolved.name;
+    this.state.map = resolved.map;
+    this.state.mapImageUrl = resolved.mapImageUrl;
+    this.state.decayKm = resolved.map
+      ? decayKmForMapDiagonal(bboxDiagonalKm(resolved.map.bbox))
+      : SERBIA_DECAY_KM;
     this.state.currentRoundIndex = 0;
     this.state.phase = 'intro';
     this.state.phaseTimeRemaining = INTRO_DURATION;
@@ -443,9 +457,9 @@ export class GeoGuessModule extends BaseGameModule {
         continue;
       }
 
-      const projected = svgToLatLng(pin.x, pin.y);
+      const projected = packPinToLatLng(this.state.map, pin.x, pin.y);
       const km = haversineKm(truth, projected);
-      const points = pointsForDistanceKm(km);
+      const points = pointsForDistanceKm(km, this.state.decayKm);
       results.push({
         playerId: player.id,
         name: player.name,
@@ -487,6 +501,7 @@ export class GeoGuessModule extends BaseGameModule {
       mode: this.state.mode,
       totalRounds: this.state.totalRounds,
       packName: this.state.packName,
+      mapImageUrl: this.state.mapImageUrl,
       customPhotosPerPlayer: this.state.customPhotosPerPlayer,
     };
 
@@ -560,7 +575,11 @@ export class GeoGuessModule extends BaseGameModule {
           }));
         const current = this.currentLocation();
         if (current) {
-          hostData.truePinSvg = latLngToSvg(current.lat, current.lng);
+          hostData.truePinSvg = packLatLngToPin(
+            this.state.map,
+            current.lat,
+            current.lng
+          );
         }
       }
     }

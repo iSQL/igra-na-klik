@@ -112,6 +112,29 @@ export const DISTRICT_LABELS: Record<SerbianDistrict, string> = {
   beograd: 'Beograd',
 };
 
+/**
+ * Geographic bounding box of a custom map image (north-up Web Mercator
+ * export, e.g. from openstreetmap.org). Pins on such maps convert to
+ * lat/lng through the mercator bbox math in serbia-projection.ts instead
+ * of the calibrated Serbia projection.
+ */
+export interface GeoMapBBox {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+/**
+ * Optional per-pack custom map. `imageFile` lives inside the pack's image
+ * folder (like location photos) and is served at /geo-images/<pack>/<file>.
+ * When absent, the pack plays on the bundled map of Serbia.
+ */
+export interface GeoPackMapDef {
+  imageFile: string;
+  bbox: GeoMapBBox;
+}
+
 export interface GeoLocation {
   id: string;
   /** Either /geo-images/<pack>/<file> or data:image/jpeg;base64,... for custom mode. */
@@ -174,6 +197,12 @@ export interface GeoHostData {
   mode: GeoGuessMode;
   totalRounds: number;
   packName?: string;
+  /**
+   * Custom map image for this pack (/geo-images/<pack>/<file>), if any.
+   * Undefined = bundled Serbia map. Clients render this image and measure
+   * its aspect ratio on load; all pins stay normalized [0, 1] regardless.
+   */
+  mapImageUrl?: string;
   /** Set in intro/viewing/placing/reveal. Image url + caption are public; lat/lng leak only after reveal. */
   currentRound?: GeoRound;
   /** placing — how many of the eligible guessers have locked in. */

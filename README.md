@@ -192,6 +192,13 @@ files the game reads, so changes are live immediately:
 - **`/admin/geo`** — geo-packs for Pogodi gde je / Foto kviz: upload photos
   (downscaled in the browser to ≤1920px JPEG), click the location on the map
   of Serbia, add a caption/district. Writes `geo-packs/<id>.json` + images.
+  A pack can also carry a **custom map** (city/region scale instead of the
+  whole country): in the pack detail open "Mapa packa", upload a north-up
+  OSM export image and enter its exact bbox (min/max lat/lng — the numbers
+  from the OSM Export panel). Pins are then placed on that image, distance
+  scoring automatically rescales to the map size, and the game's TV + phone
+  screens render the custom map. Don't crop the image after export — the
+  bbox must match the image edges exactly. Example: `geo-packs/zabari.json`.
 - **`/admin/kviz`** — quiz question packs: 2–4 answers, one correct, optional
   time limit. Writes `question-packs/<id>.json`.
 - **`/admin/ko-sam-ja`** — Ko sam ja packs: all four question shapes
