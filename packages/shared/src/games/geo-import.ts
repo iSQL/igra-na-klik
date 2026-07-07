@@ -43,9 +43,15 @@ function isFiniteNumber(v: unknown): v is number {
 /**
  * Validates and normalizes a geo-pack manifest. Used by:
  *  - server `/api/geo-packs` listing endpoint (reject malformed packs);
- *  - server `geo-pack-resolver` on game start (authoritative re-check).
+ *  - server `geo-pack-resolver` on game start (authoritative re-check);
+ *  - server admin editor, with `allowEmpty` so a freshly created pack can
+ *    exist with zero locations (the strict game-side callers keep rejecting
+ *    it, which is what keeps unfinished packs out of the in-game list).
  */
-export function parseGeoPackImport(input: unknown): GeoPackParseResult {
+export function parseGeoPackImport(
+  input: unknown,
+  opts?: { allowEmpty?: boolean }
+): GeoPackParseResult {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return { ok: false, error: 'Manifest mora biti objekat.' };
   }
@@ -60,13 +66,14 @@ export function parseGeoPackImport(input: unknown): GeoPackParseResult {
   if (!Array.isArray(raw.locations)) {
     return { ok: false, error: '"locations" mora biti niz.' };
   }
+  const minLocations = opts?.allowEmpty ? 0 : MIN_LOCATIONS;
   if (
-    raw.locations.length < MIN_LOCATIONS ||
+    raw.locations.length < minLocations ||
     raw.locations.length > MAX_LOCATIONS
   ) {
     return {
       ok: false,
-      error: `"locations" mora imati između ${MIN_LOCATIONS} i ${MAX_LOCATIONS} stavki.`,
+      error: `"locations" mora imati između ${minLocations} i ${MAX_LOCATIONS} stavki.`,
     };
   }
 

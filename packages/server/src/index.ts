@@ -1,9 +1,18 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// Load the repo-root .env explicitly. `npm run dev -w @igra/server` sets
+// cwd to packages/server, so the bare `import 'dotenv/config'` (which reads
+// .env from cwd) silently missed the documented root .env file. cwd is
+// still consulted first so a package-local .env can override in odd setups
+// (dotenv never overwrites variables that are already set).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../..', '.env') });
 import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -12,11 +21,19 @@ import {
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseTajniAgentiScenarioImport,
+  SERBIAN_DISTRICTS,
 } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
 import { getCustomPhoto } from './game/customPhotoStore.js';
+import { createGeoAdminRouter } from './admin/geo-admin.js';
+import { renderGeoEditorPage } from './admin/geo-editor-page.js';
+import { createContentAdminRouter } from './admin/content-admin.js';
+import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
+import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
+import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
+import { renderTajniAgentiScenarioEditorPage } from './admin/tajni-agenti-scenario-editor-page.js';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:5173';
@@ -28,7 +45,6 @@ const SINGLE_ROOM_MODE = process.env.SINGLE_ROOM_MODE === 'true';
 // works regardless of where `npm run dev` is invoked from. Both `src/` and
 // `dist/` sit at packages/server/<dir>/index.<ext>, so the repo root is three
 // levels up. Override with QUESTION_PACKS_DIR if you keep packs elsewhere.
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
   ? path.resolve(process.env.QUESTION_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'question-packs');
@@ -301,13 +317,55 @@ app.get('/api/custom-photos/:roomCode/:photoId', (req, res) => {
 
 // Serve pack image folders so the host (and any browser) can render them.
 // We mount the entire packs dir under /geo-images; manifests are public anyway.
-if (existsSync(GEO_PACKS_DIR)) {
-  app.use(
-    '/geo-images',
-    cors({ origin: corsOrigins }),
-    express.static(GEO_PACKS_DIR, { maxAge: '7d', etag: true })
-  );
+// Mounted unconditionally: express.static tolerates a missing root, and the
+// admin editor may create GEO_PACKS_DIR after the server has started.
+app.use(
+  '/geo-images',
+  cors({ origin: corsOrigins }),
+  express.static(GEO_PACKS_DIR, { maxAge: '7d', etag: true })
+);
+
+// ---- Admin editors ----------------------------------------------------------
+// Token-protected CRUD APIs + standalone editor pages for every content type
+// (geo, kviz, ko-sam-ja, tajni-agenti packs + scenarios). See ADMIN_TOKEN in
+// the environment; without it the APIs answer 403 and the pages can't login.
+app.use('/api/admin', createGeoAdminRouter(GEO_PACKS_DIR));
+app.use(
+  '/api/admin',
+  createContentAdminRouter({
+    questionPacksDir: QUESTION_PACKS_DIR,
+    koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
+    tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
+    tajniAgentiScenariosDir: TAJNI_AGENTI_SCENARIOS_DIR,
+  })
+);
+
+const GEO_EDITOR_HTML = renderGeoEditorPage(SERBIAN_DISTRICTS);
+app.get('/admin/geo', (_req, res) => {
+  res.type('html').send(GEO_EDITOR_HTML);
+});
+
+const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
+  ['/admin/kviz', renderQuizEditorPage()],
+  ['/admin/ko-sam-ja', renderKoSamJaEditorPage()],
+  ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
+  ['/admin/tajni-agenti-scenariji', renderTajniAgentiScenarioEditorPage()],
+];
+for (const [route, html] of ADMIN_EDITOR_PAGES) {
+  app.get(route, (_req, res) => {
+    res.type('html').send(html);
+  });
 }
+// Bare /admin lands on the geo editor (each page carries the full nav).
+app.get('/admin', (_req, res) => res.redirect(302, '/admin/geo'));
+app.get('/admin/', (_req, res) => res.redirect(302, '/admin/geo'));
+
+// The editor's map image. Served from the server package's own assets copy
+// so it exists in both dev (src/) and prod (dist/) layouts.
+const ADMIN_MAP_PATH = path.resolve(__dirname, '..', 'assets', 'serbia-map.png');
+app.get('/admin/serbia-map.png', (_req, res) => {
+  res.sendFile(ADMIN_MAP_PATH, { maxAge: '7d' });
+});
 
 const httpServer = createServer(app);
 const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
@@ -564,4 +622,9 @@ httpServer.listen(PORT, () => {
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }
+  console.log(
+    process.env.ADMIN_TOKEN
+      ? 'Admin editors enabled at /admin (geo, kviz, ko-sam-ja, tajni-agenti, scenariji)'
+      : 'Admin editors disabled (set ADMIN_TOKEN to enable)'
+  );
 });
