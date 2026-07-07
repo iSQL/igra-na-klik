@@ -128,7 +128,7 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
             background: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
             border: '1.5px solid var(--cyan)',
-            boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
+            boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
             borderRadius: '14px',
             fontSize: '1rem',
             fontWeight: 700,

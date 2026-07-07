@@ -13,15 +13,17 @@ export const CHAT_THROTTLE_MS = 750;
 export const IDLE_ROOM_TTL_MS = 5 * 60_000;
 export const IDLE_SWEEP_INTERVAL_MS = 30_000;
 
+// Warm, storybook-muted hues tuned to the zabari.net navy/gold/cream brand —
+// still eight clearly distinct player identities on a navy canvas.
 export const AVATAR_COLORS = [
-  '#e74c3c',
-  '#3498db',
-  '#2ecc71',
-  '#f39c12',
-  '#9b59b6',
-  '#1abc9c',
-  '#e67e22',
-  '#ec407a',
+  '#c75146',
+  '#4f80b8',
+  '#5fa173',
+  '#c29b47',
+  '#8b6bae',
+  '#4f9e96',
+  '#ce7c3a',
+  '#c26588',
 ] as const;
 
 // Single-character emoji set used as the avatar symbol. Default seeded by

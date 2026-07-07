@@ -193,7 +193,7 @@ export function JoinScreen() {
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
               border: roomCode.length === 2 ? '2px solid var(--pink)' : '2px solid var(--line2)',
-              boxShadow: roomCode.length === 2 ? '0 0 0 4px rgba(255,46,136,.15)' : 'none',
+              boxShadow: roomCode.length === 2 ? '0 0 0 4px rgba(217,123,108,.15)' : 'none',
               borderRadius: '16px',
             }}
           />

@@ -423,7 +423,7 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
             fontSize: '0.78rem',
             fontWeight: 800,
             color: 'var(--cyan)',
-            background: 'rgba(34,222,230,.12)',
+            background: 'rgba(111,194,187,.12)',
             padding: '5px 11px',
             borderRadius: '9px',
           }}
@@ -456,7 +456,7 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
           fontWeight: 700,
           borderRadius: '16px',
           border: '1.5px solid var(--cyan)',
-          boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
+          boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           resize: 'none',
@@ -515,8 +515,8 @@ function DrawingRound({
         style={{
           margin: '0.3rem 0.3rem 0',
           padding: '0.55rem 0.85rem',
-          background: 'rgba(255,46,136,.12)',
-          border: '1px solid rgba(255,46,136,.4)',
+          background: 'rgba(217,123,108,.12)',
+          border: '1px solid rgba(217,123,108,.4)',
           borderRadius: '12px',
           textAlign: 'center',
         }}
@@ -596,7 +596,7 @@ function GuessRound({
             fontSize: '0.78rem',
             fontWeight: 800,
             color: 'var(--cyan)',
-            background: 'rgba(34,222,230,.12)',
+            background: 'rgba(111,194,187,.12)',
             padding: '5px 11px',
             borderRadius: '9px',
           }}
@@ -626,7 +626,7 @@ function GuessRound({
           fontWeight: 700,
           borderRadius: '14px',
           border: '1.5px solid var(--cyan)',
-          boxShadow: '0 0 0 4px rgba(34,222,230,.12)',
+          boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
           background: 'var(--bg-secondary)',
           color: 'var(--text-primary)',
           fontFamily: 'inherit',

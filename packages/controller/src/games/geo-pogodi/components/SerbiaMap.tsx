@@ -268,7 +268,7 @@ export function SerbiaMap({
         width: `min(100%, calc(${maxHeightCss} * ${ratio}))`,
         aspectRatio: `${ratio}`,
         margin: '0 auto',
-        background: '#0e1424',
+        background: '#0B1728',
         borderRadius: '12px',
         overflow: 'hidden',
         touchAction: 'none',

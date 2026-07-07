@@ -75,7 +75,7 @@ export function VoteOptions({
               style={{
                 minHeight: '56px',
                 background: isSelected
-                  ? 'rgba(255,46,136,.14)'
+                  ? 'rgba(217,123,108,.14)'
                   : 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 border: isSelected

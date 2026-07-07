@@ -77,7 +77,7 @@ export function RoundResult({
               display: 'grid',
               placeItems: 'center',
               fontSize: '2.8rem',
-              boxShadow: '0 0 40px rgba(139,65,242,.55)',
+              boxShadow: '0 0 40px rgba(194,155,71,.55)',
               animation: 'igra-pop .5s',
             }}
           >

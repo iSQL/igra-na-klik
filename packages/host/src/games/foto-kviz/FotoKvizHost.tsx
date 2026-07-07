@@ -160,7 +160,7 @@ function SubmissionScreen({
         {' '}sa svog telefona i upisuje opis lokacije.
       </p>
       {allDone && (
-        <p style={{ color: '#7be37b', fontSize: '1.2rem', fontWeight: 700 }}>
+        <p style={{ color: 'var(--success)', fontSize: '1.2rem', fontWeight: 700 }}>
           Sve slike poslate — počinjemo!
         </p>
       )}
@@ -201,7 +201,7 @@ function SubmissionScreen({
                 <span
                   style={{
                     fontSize: '0.85rem',
-                    color: done ? '#7be37b' : 'var(--text-secondary)',
+                    color: done ? 'var(--success)' : 'var(--text-secondary)',
                   }}
                 >
                   {p.submitted}/{p.total}
@@ -219,7 +219,7 @@ function SubmissionScreen({
                   style={{
                     width: `${pct}%`,
                     height: '100%',
-                    background: done ? '#7be37b' : p.avatarColor,
+                    background: done ? 'var(--success)' : p.avatarColor,
                     transition: 'width 0.3s',
                   }}
                 />
@@ -327,7 +327,7 @@ function PhotoLayout({
         <span
           style={{
             fontWeight: 700,
-            color: timerHighlight ? '#e74c3c' : 'var(--text-primary)',
+            color: timerHighlight ? 'var(--danger)' : 'var(--text-primary)',
             fontSize: timerHighlight ? '1.6rem' : '1.2rem',
           }}
         >
@@ -409,7 +409,7 @@ function OptionGrid({
               justifyContent: 'space-between',
               gap: '0.75rem',
               opacity: isWrong ? 0.45 : 1,
-              outline: isCorrect ? '3px solid #7be37b' : 'none',
+              outline: isCorrect ? '3px solid var(--success)' : 'none',
               outlineOffset: isCorrect ? '2px' : '0',
               boxShadow: isCorrect ? '0 0 16px rgba(123, 227, 123, 0.6)' : 'none',
             }}
@@ -480,7 +480,7 @@ function ResultsLayout({
         <span>
           Runda <strong>{roundNumber}</strong> / {totalRounds}
         </span>
-        <span style={{ fontWeight: 700, color: '#7be37b' }}>
+        <span style={{ fontWeight: 700, color: 'var(--success)' }}>
           Tačan odgovor: {result.question.options[result.question.correctIndex].text}
         </span>
         <span />

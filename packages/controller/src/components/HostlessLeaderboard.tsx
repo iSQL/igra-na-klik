@@ -61,16 +61,16 @@ export function HostlessLeaderboard({
               padding: '0.65rem 0.85rem',
               background:
                 entry.rank === 1
-                  ? 'linear-gradient(90deg, rgba(255,182,39,.16), var(--bg-secondary))'
+                  ? 'linear-gradient(90deg, rgba(227,180,94,.16), var(--bg-secondary))'
                   : isMe
-                    ? 'linear-gradient(90deg, rgba(255,46,136,.14), var(--bg-secondary))'
+                    ? 'linear-gradient(90deg, rgba(217,123,108,.14), var(--bg-secondary))'
                     : 'var(--bg-secondary)',
               borderRadius: '14px',
               border:
                 entry.rank === 1
-                  ? '1px solid rgba(255,182,39,.4)'
+                  ? '1px solid rgba(227,180,94,.4)'
                   : isMe
-                    ? '1px solid rgba(255,46,136,.4)'
+                    ? '1px solid rgba(217,123,108,.4)'
                     : '1px solid var(--line)',
             }}
           >

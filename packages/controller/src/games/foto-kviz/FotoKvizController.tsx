@@ -334,7 +334,7 @@ function ResultsStatus({ myData }: { myData: FotoKvizControllerData }) {
       {correct ? (
         <>
           <p style={{ fontSize: '2.2rem' }}>✓</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: 700, color: '#7be37b' }}>
+          <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success)' }}>
             +{points} poena
           </p>
         </>

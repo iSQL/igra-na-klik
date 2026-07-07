@@ -99,7 +99,7 @@ export function CloseRoomButton() {
                   fontSize: '1rem',
                   fontWeight: 700,
                   borderRadius: '0.6rem',
-                  background: '#e74c3c',
+                  background: 'var(--danger)',
                   color: '#fff',
                   border: 'none',
                 }}

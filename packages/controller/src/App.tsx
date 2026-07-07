@@ -66,7 +66,7 @@ function GameEndedOverlay({
         position: 'fixed',
         inset: 0,
         background:
-          'radial-gradient(600px 400px at 50% 30%, rgba(139,65,242,.35), rgba(11,10,23,.96))',
+          'radial-gradient(600px 400px at 50% 30%, rgba(194,155,71,.35), rgba(11,23,40,.96))',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

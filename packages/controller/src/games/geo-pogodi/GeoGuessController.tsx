@@ -185,7 +185,7 @@ function HostlessReveal({
       color: p.color,
     })),
     ...(host.truePinSvg
-      ? [{ ...host.truePinSvg, color: '#ffd700', isTrue: true }]
+      ? [{ ...host.truePinSvg, color: '#E3B45E', isTrue: true }]
       : []),
   ];
   const results = host.roundResults ?? [];

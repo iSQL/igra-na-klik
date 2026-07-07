@@ -321,24 +321,24 @@ function GpsFeedback({
 
   if (status === 'found') {
     bg = 'rgba(46, 204, 113, 0.18)';
-    color = '#7be37b';
+    color = 'var(--success)';
     icon = '✓';
     text = pinPlaced
       ? 'Lokacija učitana iz fotografije. Možeš je prepraviti tapom.'
       : 'Lokacija pročitana, ali nije postavljena. Tapni mapu.';
   } else if (status === 'no-gps') {
     bg = 'rgba(241, 196, 15, 0.18)';
-    color = '#f1c40f';
+    color = 'var(--amber)';
     icon = '⚠';
     text = 'Slika nema GPS podatke — postavi pin ručno.';
   } else if (status === 'outside-serbia') {
     bg = 'rgba(241, 196, 15, 0.18)';
-    color = '#f1c40f';
+    color = 'var(--amber)';
     icon = '⚠';
     text = 'GPS van Srbije — postavi pin ručno na mapi.';
   } else if (status === 'error') {
     bg = 'rgba(231, 76, 60, 0.18)';
-    color = '#ff8585';
+    color = 'var(--danger)';
     icon = '⚠';
     text = 'Nisam mogao da pročitam GPS — postavi pin ručno.';
   }

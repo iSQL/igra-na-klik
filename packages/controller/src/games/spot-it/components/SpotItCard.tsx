@@ -57,7 +57,7 @@ export function SpotItCard({
         borderRadius: '50%',
         background: '#fff',
         boxShadow:
-          '0 6px 24px rgba(0,0,0,0.35), inset 0 0 0 4px #f1f5f9, inset 0 0 0 6px #cbd5e1',
+          '0 6px 24px rgba(0,0,0,0.35), inset 0 0 0 4px #FAF6F0, inset 0 0 0 6px #E6DCD2',
         flexShrink: 0,
         touchAction: 'manipulation',
         clipPath: 'circle(50%)',
@@ -100,7 +100,7 @@ export function SpotItCard({
         const glow: React.CSSProperties = isMatch
           ? {
               filter:
-                'drop-shadow(0 0 10px #facc15) drop-shadow(0 0 20px #f59e0b)',
+                'drop-shadow(0 0 10px #E9C36A) drop-shadow(0 0 20px #C29B47)',
             }
           : {};
 

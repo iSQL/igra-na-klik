@@ -131,7 +131,7 @@ function SubmissionScreen({
         i označi gde je slikana na mapi.
       </p>
       {allDone && (
-        <p style={{ color: '#7be37b', fontSize: '1.2rem', fontWeight: 700 }}>
+        <p style={{ color: 'var(--success)', fontSize: '1.2rem', fontWeight: 700 }}>
           Sve slike poslate — počinjemo!
         </p>
       )}
@@ -172,7 +172,7 @@ function SubmissionScreen({
                 <span
                   style={{
                     fontSize: '0.85rem',
-                    color: done ? '#7be37b' : 'var(--text-secondary)',
+                    color: done ? 'var(--success)' : 'var(--text-secondary)',
                   }}
                 >
                   {p.submitted}/{p.total}
@@ -190,7 +190,7 @@ function SubmissionScreen({
                   style={{
                     width: `${pct}%`,
                     height: '100%',
-                    background: done ? '#7be37b' : p.avatarColor,
+                    background: done ? 'var(--success)' : p.avatarColor,
                     transition: 'width 0.3s',
                   }}
                 />
@@ -295,7 +295,7 @@ function PlacingScreen({
           <span
             style={{
               fontWeight: 700,
-              color: lowTime ? '#e74c3c' : 'var(--text-primary)',
+              color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
               fontSize: lowTime ? '1.6rem' : '1.2rem',
             }}
           >

@@ -9,13 +9,13 @@ interface AnswerButtonsProps {
 }
 
 // Fixed per-slot shape + text color so muscle memory builds across games —
-// cyan and amber are bright enough to need dark text.
+// teal and amber are bright enough to need dark text.
 export const OPTION_SHAPES = ['▲', '◆', '●', '■'] as const;
 export const OPTION_TEXT_COLORS: Record<string, string> = {
-  '#FF2E88': '#fff',
-  '#22DEE6': '#04222a',
-  '#FFB627': '#2b1c00',
-  '#8B41F2': '#fff',
+  '#C75146': '#fff',
+  '#6FC2BB': '#0d2b28',
+  '#E3B45E': '#2c2007',
+  '#7C5FA8': '#fff',
 };
 
 export function AnswerButtons({ options, hasAnswered, selectedIndex }: AnswerButtonsProps) {

@@ -82,7 +82,7 @@ export function LobbyScreen() {
           background: 'var(--grad)',
           padding: '1rem 1.2rem',
           textAlign: 'center',
-          boxShadow: '0 14px 34px rgba(139,65,242,.4)',
+          boxShadow: '0 14px 34px rgba(194,155,71,.4)',
         }}
       >
         <div
@@ -246,7 +246,7 @@ export function LobbyScreen() {
                     fontSize: '0.68rem',
                     fontWeight: 800,
                     color: 'var(--amber)',
-                    background: 'rgba(255,182,39,.14)',
+                    background: 'rgba(227,180,94,.14)',
                     padding: '3px 8px',
                     borderRadius: '7px',
                   }}

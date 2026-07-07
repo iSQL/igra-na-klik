@@ -183,7 +183,7 @@ export function QuizImportButton() {
         <p
           style={{
             fontSize: '0.75rem',
-            color: '#e74c3c',
+            color: 'var(--danger)',
             margin: 0,
             maxWidth: '200px',
           }}

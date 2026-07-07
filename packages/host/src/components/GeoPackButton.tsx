@@ -84,7 +84,7 @@ export function GeoPackButton() {
               {t('config.loadingPacks')}
             </span>
           ) : packs.length === 0 ? (
-            <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>
               {t('config.noPacks')}
             </span>
           ) : (

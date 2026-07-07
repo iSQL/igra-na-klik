@@ -20,8 +20,8 @@ export function renderTajniAgentiScenarioEditorPage(): string {
 .cell{border-radius:10px;padding:4px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--line)}
 .cell input{min-height:34px;font-size:0.78rem;padding:0.3rem 0.4rem;border-radius:7px;border-width:1px}
 .cell-type{min-height:24px;font-size:0.6rem;font-weight:800;border-radius:7px;text-transform:uppercase;letter-spacing:0.05em;color:#fff}
-.cell.t-red{background:rgba(255,77,94,.2)} .cell.t-red .cell-type{background:var(--red)}
-.cell.t-blue{background:rgba(59,130,246,.2)} .cell.t-blue .cell-type{background:var(--blue)}
+.cell.t-red{background:rgba(176,74,66,.16)} .cell.t-red .cell-type{background:var(--red)}
+.cell.t-blue{background:rgba(61,99,155,.18)} .cell.t-blue .cell-type{background:var(--blue)}
 .cell.t-neutral{background:rgba(201,184,150,.14)} .cell.t-neutral .cell-type{background:#c9b896;color:#2b2416}
 .cell.t-assassin{background:rgba(0,0,0,.5)} .cell.t-assassin .cell-type{background:#111319;border:1px solid var(--line2)}
 #counts{display:flex;gap:0.9rem;flex-wrap:wrap;font-size:0.82rem;font-weight:800;margin-top:0.6rem}

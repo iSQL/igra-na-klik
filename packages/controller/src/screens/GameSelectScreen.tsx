@@ -233,7 +233,7 @@ export function GameSelectScreen() {
               fontSize: '0.68rem',
               fontWeight: 800,
               color: 'var(--pink)',
-              background: 'rgba(255,46,136,.14)',
+              background: 'rgba(217,123,108,.14)',
               padding: '4px 9px',
               borderRadius: '8px',
               textTransform: 'uppercase',
@@ -319,10 +319,10 @@ export function GameSelectScreen() {
                 gridColumn: expanded ? '1 / -1' : 'auto',
                 borderRadius: '16px',
                 background: expanded
-                  ? 'linear-gradient(150deg, rgba(255,46,136,.22), var(--bg-secondary))'
+                  ? 'linear-gradient(150deg, rgba(217,123,108,.22), var(--bg-secondary))'
                   : 'var(--bg-secondary)',
                 border: expanded
-                  ? '1px solid rgba(255,46,136,.4)'
+                  ? '1px solid rgba(217,123,108,.4)'
                   : '1px solid var(--line)',
                 padding: '0.75rem',
                 opacity: disabled ? 0.55 : 1,

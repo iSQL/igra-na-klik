@@ -90,7 +90,7 @@ export function RoundResult({
             fontSize: '1rem',
             fontWeight: 800,
             color: 'var(--pink)',
-            background: 'rgba(255,46,136,.14)',
+            background: 'rgba(217,123,108,.14)',
             padding: '0.45rem 1rem',
             borderRadius: '12px',
             margin: 0,

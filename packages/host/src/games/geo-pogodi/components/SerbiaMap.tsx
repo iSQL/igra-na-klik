@@ -51,7 +51,7 @@ export function SerbiaMap({
     width: `min(${maxWidthCss}, calc(${maxHeightCss} * ${ratio}))`,
     aspectRatio: `${ratio}`,
     margin: '0 auto',
-    background: '#0e1424',
+    background: '#0B1728',
     borderRadius: '12px',
     overflow: 'hidden',
   }), [maxHeightCss, maxWidthCss, ratio]);
@@ -170,7 +170,7 @@ export function SerbiaMap({
               width: '24px',
               height: '24px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, #ffd84a 0%, #ff8a00 100%)',
+              background: 'radial-gradient(circle, #F2CE74 0%, #C29B47 100%)',
               border: '3px solid #fff',
               boxShadow: '0 0 12px rgba(255, 200, 0, 0.85)',
             }}

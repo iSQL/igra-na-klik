@@ -14,7 +14,7 @@ export function renderQuizEditorPage(): string {
     active: 'kviz',
     extraCss: `
 .opt-row{display:flex;gap:0.5rem;align-items:center;margin-bottom:0.45rem}
-.opt-row input[type=radio]{width:20px;height:20px;accent-color:#2fe08a;flex:none}
+.opt-row input[type=radio]{width:20px;height:20px;accent-color:#3E7D57;flex:none}
 .q-opts{color:var(--muted);font-size:0.8rem;margin-top:0.25rem}
 .q-opts .correct{color:var(--green);font-weight:800}
 `,

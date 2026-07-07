@@ -54,8 +54,8 @@ export interface KoSamJaLeaderboardEntry {
 }
 
 export const KO_SAM_JA_FIXED_OPTION_COLORS = [
-  '#FF2E88',
-  '#22DEE6',
-  '#FFB627',
-  '#8B41F2',
+  '#C75146',
+  '#6FC2BB',
+  '#E3B45E',
+  '#7C5FA8',
 ] as const;

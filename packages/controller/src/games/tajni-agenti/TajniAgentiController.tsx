@@ -14,10 +14,10 @@ import type {
   TajniAgentiEndedData,
 } from '@igra/shared';
 
-const TEAM_RED = '#FF4D5E';
-const TEAM_BLUE = '#3B82F6';
-const NEUTRAL = '#c9b896';
-const ASSASSIN = '#111319';
+const TEAM_RED = '#C75146';
+const TEAM_BLUE = '#4F80B8';
+const NEUTRAL = '#C9B896';
+const ASSASSIN = '#0B1728';
 
 const typeColor = (t: TajniAgentiCardType): string => {
   if (t === 'red') return TEAM_RED;

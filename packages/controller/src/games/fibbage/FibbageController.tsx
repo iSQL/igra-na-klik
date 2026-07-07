@@ -272,11 +272,11 @@ function FibbageMergedResults({
                 gap: '0.55rem',
                 padding: '0.55rem 0.75rem',
                 background: isMe
-                  ? 'linear-gradient(90deg, rgba(255,46,136,.14), var(--bg-secondary))'
+                  ? 'linear-gradient(90deg, rgba(217,123,108,.14), var(--bg-secondary))'
                   : 'var(--bg-secondary)',
                 borderRadius: '12px',
                 border: isMe
-                  ? '1px solid rgba(255,46,136,.4)'
+                  ? '1px solid rgba(217,123,108,.4)'
                   : '1px solid var(--line)',
                 fontSize: '0.9rem',
               }}
@@ -356,7 +356,7 @@ function FibbageMergedResults({
                 style={{
                   fontWeight: 800,
                   color: 'var(--pink)',
-                  background: 'rgba(255,46,136,.14)',
+                  background: 'rgba(217,123,108,.14)',
                   padding: '2px 8px',
                   borderRadius: '7px',
                   fontSize: '0.78rem',
