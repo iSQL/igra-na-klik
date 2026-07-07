@@ -31,10 +31,11 @@ export function HostlessLeaderboard({
       }}
     >
       <p
+        className="display"
         style={{
           textAlign: 'center',
-          fontSize: '1.1rem',
-          fontWeight: 700,
+          fontSize: '1.25rem',
+          fontWeight: 600,
           margin: 0,
         }}
       >
@@ -42,33 +43,62 @@ export function HostlessLeaderboard({
       </p>
       {entries.map((entry) => {
         const isMe = entry.playerId === myPlayerId;
+        const rankColor =
+          entry.rank === 1
+            ? 'var(--amber)'
+            : entry.rank === 2
+              ? '#C9CCE0'
+              : entry.rank === 3
+                ? '#D8916A'
+                : 'var(--dim)';
         return (
           <div
             key={entry.playerId}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.55rem 0.8rem',
-              background: isMe ? 'var(--bg-card)' : 'var(--bg-secondary)',
-              borderRadius: '0.6rem',
-              borderLeft: `4px solid ${entry.avatarColor}`,
-              outline: isMe ? '1px solid var(--accent)' : undefined,
+              gap: '0.7rem',
+              padding: '0.65rem 0.85rem',
+              background:
+                entry.rank === 1
+                  ? 'linear-gradient(90deg, rgba(227,180,94,.16), var(--bg-secondary))'
+                  : isMe
+                    ? 'linear-gradient(90deg, rgba(217,123,108,.14), var(--bg-secondary))'
+                    : 'var(--bg-secondary)',
+              borderRadius: '14px',
+              border:
+                entry.rank === 1
+                  ? '1px solid rgba(227,180,94,.4)'
+                  : isMe
+                    ? '1px solid rgba(217,123,108,.4)'
+                    : '1px solid var(--line)',
             }}
           >
             <span
+              className="display"
               style={{
-                fontWeight: 800,
-                color: 'var(--accent)',
-                minWidth: '2rem',
+                fontWeight: 700,
+                fontSize: '1.15rem',
+                color: rankColor,
+                minWidth: '1.4rem',
+                textAlign: 'center',
               }}
             >
-              #{entry.rank}
+              {entry.rank}
             </span>
+            <span
+              className="avatar-tile"
+              style={{
+                width: '30px',
+                height: '30px',
+                backgroundColor: entry.avatarColor,
+              }}
+            />
             <span
               style={{
                 flex: 1,
-                fontWeight: isMe ? 700 : 500,
+                fontWeight: 800,
+                fontSize: '0.92rem',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -76,7 +106,10 @@ export function HostlessLeaderboard({
             >
               {entry.name}
             </span>
-            <span style={{ fontWeight: 600 }}>
+            <span
+              className="display"
+              style={{ fontWeight: 700, fontSize: '1.1rem' }}
+            >
               {entry.score.toLocaleString()}
             </span>
           </div>

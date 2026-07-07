@@ -142,9 +142,9 @@ export function GameSelectScreen() {
             width: '100%',
             padding: '0.75rem 1rem',
             background: 'rgba(231, 76, 60, 0.15)',
-            border: '1px solid #e74c3c',
+            border: '1px solid var(--danger)',
             borderRadius: '0.5rem',
-            color: '#ffb1ab',
+            color: '#F0B1A6',
             fontSize: '0.95rem',
             textAlign: 'center',
           }}
@@ -207,7 +207,7 @@ export function GameSelectScreen() {
               style={{
                 fontSize: '0.8rem',
                 marginTop: '0.5rem',
-                color: lacking ? '#e07070' : 'var(--text-secondary)',
+                color: lacking ? 'var(--danger)' : 'var(--text-secondary)',
               }}
             >
               {lacking

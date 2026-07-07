@@ -289,7 +289,7 @@ export function TajniAgentiImportButton() {
         <p
           style={{
             fontSize: '0.75rem',
-            color: '#e74c3c',
+            color: 'var(--danger)',
             margin: 0,
             maxWidth: '220px',
           }}
@@ -367,8 +367,8 @@ export function TajniAgentiImportButton() {
                 scenarioDraft.length === 0
                   ? 'var(--text-secondary)'
                   : matchedScenario
-                    ? '#2ecc71'
-                    : '#e74c3c'
+                    ? 'var(--success)'
+                    : 'var(--danger)'
               }`,
               textTransform: 'uppercase',
               letterSpacing: '0.1em',
@@ -381,7 +381,7 @@ export function TajniAgentiImportButton() {
               style={{
                 margin: 0,
                 fontSize: '0.7rem',
-                color: matchedScenario ? '#2ecc71' : '#e74c3c',
+                color: matchedScenario ? 'var(--success)' : 'var(--danger)',
                 textAlign: 'center',
               }}
             >
@@ -469,7 +469,7 @@ export function TajniAgentiImportButton() {
               style={{
                 margin: 0,
                 fontSize: '0.7rem',
-                color: '#e74c3c',
+                color: 'var(--danger)',
                 textAlign: 'center',
               }}
             >

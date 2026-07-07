@@ -1,6 +1,6 @@
 import path from 'path';
 import { readFile, readdir } from 'fs/promises';
-import type { GeoLocation } from '@igra/shared';
+import type { GeoLocation, GeoPackMapDef } from '@igra/shared';
 import { parseGeoPackImport } from '@igra/shared';
 
 export interface ResolvedGeoPackSummary {
@@ -15,6 +15,9 @@ export interface ResolvedGeoPack {
   id: string;
   name: string;
   description?: string;
+  /** Custom map, if the pack defines one (image resolved to a public URL). */
+  map?: GeoPackMapDef;
+  mapImageUrl?: string;
   locations: GeoLocation[];
 }
 
@@ -100,6 +103,10 @@ export async function resolveGeoPack(
     id: packId,
     name: parsed.manifest.name,
     description: parsed.manifest.description,
+    map: parsed.manifest.map,
+    mapImageUrl: parsed.manifest.map
+      ? `/geo-images/${packId}/${parsed.manifest.map.imageFile}`
+      : undefined,
     locations,
   };
 }

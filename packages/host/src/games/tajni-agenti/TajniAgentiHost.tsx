@@ -14,10 +14,10 @@ import type {
   TajniAgentiEndedData,
 } from '@igra/shared';
 
-const TEAM_RED = '#e74c3c';
-const TEAM_BLUE = '#3498db';
-const NEUTRAL = '#cdc7b8';
-const ASSASSIN = '#1a1a2e';
+const TEAM_RED = '#C75146';
+const TEAM_BLUE = '#4F80B8';
+const NEUTRAL = '#C9B896';
+const ASSASSIN = '#0B1728';
 
 const teamColor = (t: TajniAgentiCardType): string => {
   if (t === 'red') return TEAM_RED;
@@ -282,7 +282,7 @@ function BoardCard({ card }: { card: TajniAgentiPublicCard }) {
         fontWeight: 700,
         color: card.revealed
           ? isAssassin
-            ? '#e74c3c'
+            ? 'var(--danger)'
             : '#fff'
           : '#2b2412',
         fontSize: '1.1rem',

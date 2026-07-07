@@ -75,7 +75,7 @@ export function OptionGrid({
                   height: '2.4rem',
                   borderRadius: '50%',
                   background: '#fff',
-                  color: 'var(--success, #2ecc71)',
+                  color: 'var(--success)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

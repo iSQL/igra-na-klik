@@ -13,6 +13,8 @@ interface MapPinPickerProps {
    * expands full-screen on tap (there is no TV keeping it visible).
    */
   photoUrl?: string;
+  /** Custom pack map image — undefined = bundled Serbia map. */
+  mapImageUrl?: string;
 }
 
 // Vertical chrome around the map: header (~30px) + button (~60px) + outer
@@ -39,6 +41,7 @@ export function MapPinPicker({
   ownPin,
   ownColor,
   photoUrl,
+  mapImageUrl,
 }: MapPinPickerProps) {
   const [draftPin, setDraftPin] = useState<GeoPin | null>(ownPin ?? null);
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -124,7 +127,7 @@ export function MapPinPicker({
             alignItems: 'center',
           }}
         >
-          <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#7be37b' }}>
+          <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--success)' }}>
             ✓ Pin zaključan
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -145,6 +148,7 @@ export function MapPinPicker({
           disabled
           pinColor={ownColor}
           maxHeightCss={MAP_MAX_HEIGHT_CSS}
+          mapImageUrl={mapImageUrl}
         />
         <p
           style={{
@@ -172,19 +176,20 @@ export function MapPinPicker({
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>
+        <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>
           Tapni gde je slikana
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           {photoThumb}
           <span
+            className="display"
             style={{
-              fontSize: lowTime ? '1.4rem' : '1.05rem',
+              fontSize: lowTime ? '1.4rem' : '1.15rem',
               fontWeight: 700,
-              color: lowTime ? 'var(--danger)' : 'var(--text-primary)',
+              color: lowTime ? 'var(--danger)' : 'var(--amber)',
             }}
           >
-            {timeRemaining}s
+            {timeRemaining}
           </span>
         </div>
       </div>
@@ -193,23 +198,16 @@ export function MapPinPicker({
         onPinChange={setDraftPin}
         pinColor={ownColor}
         maxHeightCss={MAP_MAX_HEIGHT_CSS}
+        mapImageUrl={mapImageUrl}
       />
       <div style={rowPad}>
         <button
+          className="btn-primary"
           onClick={handleLock}
           disabled={!draftPin}
-          style={{
-            width: '100%',
-            padding: '0.9rem 1rem',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            borderRadius: '12px',
-            background: draftPin ? 'var(--accent)' : 'var(--bg-card)',
-            color: draftPin ? '#fff' : 'var(--text-secondary)',
-            border: 'none',
-          }}
+          style={{ width: '100%' }}
         >
-          Potvrdi pin
+          Potvrdi lokaciju 📍
         </button>
       </div>
       {photoOverlay}

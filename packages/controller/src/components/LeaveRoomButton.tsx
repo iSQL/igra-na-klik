@@ -25,21 +25,22 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
       ? {
           padding: '0.4rem 0.7rem',
           fontSize: '0.8rem',
-          fontWeight: 600,
-          borderRadius: '0.5rem',
-          background: 'rgba(0, 0, 0, 0.55)',
+          fontWeight: 800,
+          borderRadius: '12px',
+          background: 'rgba(11, 10, 23, 0.55)',
           color: 'var(--text-secondary)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          border: '1px solid var(--line2)',
           backdropFilter: 'blur(4px)',
+          minHeight: '40px',
         }
       : {
           padding: '0.6rem 1.5rem',
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          borderRadius: '0.75rem',
+          fontSize: '0.9rem',
+          fontWeight: 800,
+          borderRadius: '14px',
           background: 'transparent',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--bg-card)',
+          color: 'var(--text-primary)',
+          border: '1.5px solid var(--line2)',
         };
 
   return (
@@ -65,8 +66,9 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
         >
           <div
             style={{
-              background: 'var(--bg-card)',
-              borderRadius: '0.9rem',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              borderRadius: '18px',
               padding: '1.4rem',
               maxWidth: '22rem',
               width: '100%',
@@ -74,15 +76,19 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
               flexDirection: 'column',
               gap: '1rem',
               textAlign: 'center',
+              animation: 'igra-pop .25s',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{t('leave.confirmTitle')}</h2>
+            <h2 className="display" style={{ margin: 0, fontSize: '1.25rem' }}>
+              {t('leave.confirmTitle')}
+            </h2>
             <p
               style={{
                 margin: 0,
-                fontSize: '0.95rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
                 color: 'var(--text-secondary)',
-                lineHeight: 1.4,
+                lineHeight: 1.45,
               }}
             >
               {iAmRemoteHost
@@ -91,18 +97,18 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                   : t('leave.confirmBodyRemoteHost')
                 : t('leave.confirmBody')}
             </p>
-            <div style={{ display: 'flex', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', gap: '0.65rem' }}>
               <button
                 onClick={() => setConfirming(false)}
                 style={{
                   flex: 1,
                   padding: '0.7rem',
                   fontSize: '0.95rem',
-                  fontWeight: 600,
-                  borderRadius: '0.6rem',
-                  background: 'var(--bg-secondary)',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'transparent',
                   color: 'var(--text-primary)',
-                  border: '1px solid var(--bg-card)',
+                  border: '1.5px solid var(--line2)',
                 }}
               >
                 {t('common.cancel')}
@@ -113,9 +119,9 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
                   flex: 1,
                   padding: '0.7rem',
                   fontSize: '0.95rem',
-                  fontWeight: 700,
-                  borderRadius: '0.6rem',
-                  background: '#e74c3c',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'var(--danger)',
                   color: '#fff',
                   border: 'none',
                 }}

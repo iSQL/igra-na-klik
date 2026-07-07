@@ -112,6 +112,7 @@ export default function GeoGuessController() {
         ownPin={myData.ownPin}
         ownColor={ownColor}
         photoUrl={hostless ? host?.currentRound?.location.imageUrl : undefined}
+        mapImageUrl={host?.mapImageUrl}
       />
     );
   }
@@ -184,7 +185,7 @@ function HostlessReveal({
       color: p.color,
     })),
     ...(host.truePinSvg
-      ? [{ ...host.truePinSvg, color: '#ffd700', isTrue: true }]
+      ? [{ ...host.truePinSvg, color: '#E3B45E', isTrue: true }]
       : []),
   ];
   const results = host.roundResults ?? [];
@@ -214,7 +215,12 @@ function HostlessReveal({
           {timeRemaining}s
         </span>
       </div>
-      <SerbiaMap disabled markers={markers} maxHeightCss="46dvh" />
+      <SerbiaMap
+        disabled
+        markers={markers}
+        maxHeightCss="46dvh"
+        mapImageUrl={host.mapImageUrl}
+      />
       <div
         style={{
           flex: 1,

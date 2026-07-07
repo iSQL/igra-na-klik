@@ -75,7 +75,7 @@ export function PlayerList({ players, onKick }: PlayerListProps) {
                 borderRadius: '50%',
                 border: 'none',
                 background: 'rgba(231, 76, 60, 0.15)',
-                color: '#e74c3c',
+                color: 'var(--danger)',
                 fontSize: '1rem',
                 fontWeight: 700,
                 lineHeight: 1,

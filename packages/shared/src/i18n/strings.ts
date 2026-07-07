@@ -37,6 +37,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 
     // --- lobby -----------------------------------------------------------
     'lobby.players': 'Igrači',
+    'lobby.you': 'TI',
     'lobby.waitingForPlayers': 'Čekamo igrače da se pridruže...',
     'lobby.holdsControlFromPhone': 'drži kontrolu sa telefona',
     'lobby.chooseGame': 'Izaberi igru',
@@ -291,6 +292,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 
     // --- lobby -----------------------------------------------------------
     'lobby.players': 'Players',
+    'lobby.you': 'YOU',
     'lobby.waitingForPlayers': 'Waiting for players to join...',
     'lobby.holdsControlFromPhone': 'is in control from their phone',
     'lobby.chooseGame': 'Choose a game',

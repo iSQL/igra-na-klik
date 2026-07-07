@@ -178,7 +178,42 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 | `GEO_PACKS_DIR` | `./geo-packs` | Override location of geo-pack manifests + image folders |
 | `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Override location of Ko sam ja JSON question packs |
 | `TAJNI_AGENTI_PACKS_DIR` | `./tajni-agenti-packs` | Override location of Tajni agenti JSON word packs |
+| `ADMIN_TOKEN` | unset (editors disabled) | Enables the content admin editors under `/admin` (geo, kviz, ko-sam-ja, tajni-agenti, scenariji) |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
+
+### Content admin editors
+
+Set `ADMIN_TOKEN=<secret>` in `.env` and open `http://<server>:3001/admin`
+(redirects to the geo editor; every page carries a nav across all five
+editors). After entering the token once (stored in the browser) you can
+create, edit and delete content for every game — the editors write the same
+files the game reads, so changes are live immediately:
+
+- **`/admin/geo`** — geo-packs for Pogodi gde je / Foto kviz: upload photos
+  (downscaled in the browser to ≤1920px JPEG), click the location on the map
+  of Serbia, add a caption/district. Writes `geo-packs/<id>.json` + images.
+  A pack can also carry a **custom map** (city/region scale instead of the
+  whole country): in the pack detail open "Mapa packa", upload a north-up
+  OSM export image and enter its exact bbox (min/max lat/lng — the numbers
+  from the OSM Export panel). Pins are then placed on that image, distance
+  scoring automatically rescales to the map size, and the game's TV + phone
+  screens render the custom map. Don't crop the image after export — the
+  bbox must match the image edges exactly. Example: `geo-packs/zabari.json`.
+- **`/admin/kviz`** — quiz question packs: 2–4 answers, one correct, optional
+  time limit. Writes `question-packs/<id>.json`.
+- **`/admin/ko-sam-ja`** — Ko sam ja packs: all four question shapes
+  (fixed / peer / free / pickN) with per-shape form fields and placeholder
+  hints. Writes `ko-sam-ja-packs/<id>.json`.
+- **`/admin/tajni-agenti`** — Tajni agenti word packs: one word per line with
+  a live unique-word counter. Writes `tajni-agenti-packs/<id>.json`.
+- **`/admin/tajni-agenti-scenariji`** — pre-built Tajni agenti boards: a 5×5
+  grid where clicking a card's color strip cycles its type, with live
+  9/8/7/1 distribution counts. Writes `tajni-agenti-scenarios/<id>.json`.
+
+Drafts are always saveable: packs/scenarios that don't yet pass the in-game
+validation (empty quiz pack, fewer than 25 words, incomplete board…) stay
+visible in the editor with a "nevidljiv u igri" badge and simply don't appear
+in the game until they validate.
 
 ## Current Status
 

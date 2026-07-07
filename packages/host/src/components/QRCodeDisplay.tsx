@@ -30,9 +30,10 @@ export function QRCodeDisplay({ roomCode }: QRCodeDisplayProps) {
       <QRCodeSVG
         value={joinUrl}
         size={200}
-        bgColor="#1a1a2e"
-        fgColor="#e0e0e0"
+        bgColor="#F5EBE0"
+        fgColor="#1D3557"
         level="M"
+        style={{ borderRadius: '12px', padding: '10px', background: '#F5EBE0' }}
       />
       <p
         style={{

@@ -1,0 +1,21 @@
+{
+  "name": "Žabari",
+  "description": "Opština Žabari — pogodi gde je slikano",
+  "map": {
+    "imageFile": "map.png",
+    "bbox": {
+      "minLat": 44.2572,
+      "maxLat": 44.5188,
+      "minLng": 21.1161,
+      "maxLng": 21.3186
+    }
+  },
+  "locations": [
+    {
+      "imageFile": "f253a1d3-b41c-4aaf-9eb8-b0d7fed6e2da.jpg",
+      "lat": 44.431211,
+      "lng": 21.226975,
+      "caption": "Test"
+    }
+  ]
+}

@@ -26,93 +26,117 @@ export function LobbyScreen() {
     ? room.players.find((p) => p.id === remoteHostId)
     : null;
 
+  const connectedCount = room.players.filter((p) => p.isConnected).length;
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        gap: '1.5rem',
-        textAlign: 'center',
+        gap: '1rem',
+        width: '100%',
+        maxWidth: '400px',
+        alignSelf: 'stretch',
       }}
     >
-      <LanguageSwitch />
-
-      <button
-        onClick={() => setPickerOpen(true)}
-        aria-label={t('lobby.changeAvatar')}
-        style={{
-          width: '5rem',
-          height: '5rem',
-          borderRadius: '50%',
-          backgroundColor: player.avatarColor,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '2.4rem',
-          border: '3px solid rgba(255,255,255,0.2)',
-          cursor: 'pointer',
-          padding: 0,
-        }}
-      >
-        {player.avatarEmoji}
-      </button>
-
-      <h1 style={{ fontSize: '1.5rem' }}>{player.name}</h1>
-
       <div
         style={{
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '0.75rem',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
         }}
       >
-        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', margin: 0 }}>
-          {t('lobby.room')} <strong style={{ color: 'var(--accent)' }}>{room.code}</strong>
-        </p>
-        {room.hostless && <CopyRoomLinkButton code={room.code} />}
+        <button
+          onClick={() => setPickerOpen(true)}
+          aria-label={t('lobby.changeAvatar')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--line)',
+            borderRadius: '14px',
+            padding: '0.35rem 0.8rem 0.35rem 0.35rem',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <span
+            className="avatar-tile"
+            style={{
+              width: '42px',
+              height: '42px',
+              backgroundColor: player.avatarColor,
+              fontSize: '1.4rem',
+            }}
+          >
+            {player.avatarEmoji}
+          </span>
+          <span style={{ fontWeight: 800, fontSize: '1rem' }}>{player.name}</span>
+        </button>
+        <LanguageSwitch />
+      </div>
+
+      <div
+        style={{
+          borderRadius: '20px',
+          background: 'var(--grad)',
+          padding: '1rem 1.2rem',
+          textAlign: 'center',
+          boxShadow: '0 14px 34px rgba(194,155,71,.4)',
+        }}
+      >
+        <div
+          style={{
+            color: 'rgba(255,255,255,.8)',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.14em',
+          }}
+        >
+          {t('lobby.room')}
+        </div>
+        <div
+          className="display"
+          style={{
+            fontWeight: 700,
+            fontSize: '3.2rem',
+            lineHeight: 1,
+            letterSpacing: '0.12em',
+            color: '#fff',
+          }}
+        >
+          {room.code}
+        </div>
+        {room.hostless && (
+          <div style={{ marginTop: '0.4rem' }}>
+            <CopyRoomLinkButton code={room.code} />
+          </div>
+        )}
       </div>
 
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.6rem',
+          gap: '0.5rem',
           alignItems: 'center',
         }}
       >
         {iAmRemoteHost ? (
           <>
             <button
+              className="btn-primary"
               onClick={() => setScreen('game-select')}
-              style={{
-                padding: '0.85rem 1.6rem',
-                fontSize: '1.05rem',
-                fontWeight: 700,
-                borderRadius: '0.75rem',
-                background: 'var(--accent)',
-                color: '#fff',
-                border: 'none',
-              }}
+              style={{ width: '100%' }}
             >
               {t('lobby.chooseGameArrow')}
             </button>
             {lastStartPayload && (
               <button
-                onClick={() =>
-                  socket.emit('host:start-game', lastStartPayload)
-                }
-                style={{
-                  padding: '0.6rem 1.2rem',
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  borderRadius: '0.6rem',
-                  background: 'transparent',
-                  color: 'var(--text-primary)',
-                  border: '2px solid var(--accent)',
-                }}
+                className="btn-ghost"
+                onClick={() => socket.emit('host:start-game', lastStartPayload)}
+                style={{ width: '100%' }}
               >
                 {t('lobby.playAgain', {
                   name: t(`game.${lastStartPayload.gameId}.name`),
@@ -123,37 +147,47 @@ export function LobbyScreen() {
               onClick={() => socket.emit('player:release-remote-host')}
               style={{
                 padding: '0.4rem 0.9rem',
-                fontSize: '0.85rem',
-                borderRadius: '0.5rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                borderRadius: '10px',
                 background: 'transparent',
                 color: 'var(--text-secondary)',
-                border: '1px solid var(--bg-card)',
+                border: '1px solid var(--line)',
+                minHeight: '40px',
               }}
             >
               {t('lobby.releaseControl')}
             </button>
           </>
         ) : holder ? (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-            🎮 <strong>{holder.name}</strong> {t('lobby.holdsControl')}
+          <p
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              margin: 0,
+            }}
+          >
+            🎮 <strong style={{ color: 'var(--text-primary)' }}>{holder.name}</strong>{' '}
+            {t('lobby.holdsControl')}
           </p>
         ) : (
           <button
+            className="btn-primary"
             onClick={() => socket.emit('player:claim-remote-host')}
-            style={{
-              padding: '0.7rem 1.3rem',
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              borderRadius: '0.6rem',
-              background: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-            }}
+            style={{ width: '100%' }}
           >
             {t('lobby.claimControl')}
           </button>
         )}
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+        <p
+          style={{
+            color: 'var(--dim)',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            margin: 0,
+          }}
+        >
           {iAmRemoteHost
             ? t('lobby.canStartFromPhone')
             : t('lobby.waitingForHost')}
@@ -163,31 +197,75 @@ export function LobbyScreen() {
       <div
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
         }}
       >
+        <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>
+          {t('lobby.players')}{' '}
+          <span style={{ color: 'var(--text-secondary)' }}>
+            {connectedCount}/{room.players.length}
+          </span>
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
         {room.players
           .filter((p) => 'name' in p)
           .map((p) => (
-            <span
+            <div
               key={p.id}
+              className="card"
               style={{
-                background: 'var(--bg-card)',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '0.5rem',
-                fontSize: '0.9rem',
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                borderLeft: `3px solid ${p.avatarColor}`,
+                gap: '0.75rem',
+                padding: '0.65rem 0.85rem',
+                borderRadius: '14px',
+                opacity: p.isConnected ? 1 : 0.5,
               }}
             >
-              <span style={{ fontSize: '1.1rem' }}>{p.avatarEmoji}</span>
-              {p.name}
-              {p.id === remoteHostId && ' 🎮'}
-            </span>
+              <span
+                className="avatar-tile"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  backgroundColor: p.avatarColor,
+                  fontSize: '1.3rem',
+                  filter: p.isConnected ? 'none' : 'grayscale(.6)',
+                }}
+              >
+                {p.avatarEmoji}
+              </span>
+              <span style={{ flex: 1, fontWeight: 800, fontSize: '0.95rem', textAlign: 'left' }}>
+                {p.name}
+              </span>
+              {p.id === player.id && (
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    color: 'var(--amber)',
+                    background: 'rgba(227,180,94,.14)',
+                    padding: '3px 8px',
+                    borderRadius: '7px',
+                  }}
+                >
+                  {t('lobby.you')}
+                </span>
+              )}
+              {p.id === remoteHostId && <span style={{ fontSize: '0.9rem' }}>🎮</span>}
+              <span
+                style={{
+                  width: '9px',
+                  height: '9px',
+                  borderRadius: '50%',
+                  background: p.isConnected ? 'var(--success)' : 'var(--amber)',
+                  boxShadow: p.isConnected ? '0 0 8px var(--success)' : 'none',
+                  flexShrink: 0,
+                }}
+              />
+            </div>
           ))}
       </div>
 
@@ -195,10 +273,11 @@ export function LobbyScreen() {
 
       <div
         style={{
-          marginTop: '0.5rem',
+          marginTop: '0.25rem',
           display: 'flex',
           gap: '0.6rem',
           alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <LeaveRoomButton />

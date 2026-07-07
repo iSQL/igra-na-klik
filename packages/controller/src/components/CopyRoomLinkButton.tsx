@@ -46,13 +46,14 @@ export function CopyRoomLinkButton({ code }: { code: string }) {
       onClick={copy}
       style={{
         padding: '0.45rem 0.9rem',
-        fontSize: '0.85rem',
-        fontWeight: 600,
-        borderRadius: '0.5rem',
-        background: 'transparent',
-        color: copied ? 'var(--success)' : 'var(--accent)',
-        border: `1px solid ${copied ? 'var(--success)' : 'var(--accent)'}`,
+        fontSize: '0.8rem',
+        fontWeight: 800,
+        borderRadius: '10px',
+        background: 'rgba(255,255,255,.14)',
+        color: copied ? 'var(--success)' : '#fff',
+        border: `1px solid ${copied ? 'var(--success)' : 'rgba(255,255,255,.35)'}`,
         cursor: 'pointer',
+        minHeight: '40px',
       }}
     >
       {copied ? t('room.copied') : t('room.copyLink')}

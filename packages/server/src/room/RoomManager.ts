@@ -10,6 +10,8 @@ import {
   AVATAR_COLORS,
   AVATAR_EMOJIS,
   CHAT_HISTORY_LIMIT,
+  MAX_ROOMS,
+  MAX_PLAYER_NAME_LENGTH,
   generateRoomCode,
 } from '@igra/shared';
 import { generateId, generateReconnectToken } from '../utils/id.js';
@@ -17,8 +19,12 @@ import { generateId, generateReconnectToken } from '../utils/id.js';
 export class RoomManager {
   private rooms = new Map<string, Room>();
 
-  createRoom(hostSocketId: string, settings?: Partial<RoomSettings>): Room {
+  createRoom(
+    hostSocketId: string,
+    settings?: Partial<RoomSettings>
+  ): Room | null {
     const code = this.generateUniqueCode();
+    if (!code) return null;
     const room: Room = {
       code,
       hostSocketId,
@@ -42,8 +48,9 @@ export class RoomManager {
    * false forever, so the idle sweeper judges the room purely by whether
    * any player is still connected.
    */
-  createHostlessRoom(settings?: Partial<RoomSettings>): Room {
+  createHostlessRoom(settings?: Partial<RoomSettings>): Room | null {
     const code = this.generateUniqueCode();
+    if (!code) return null;
     const room: Room = {
       code,
       hostSocketId: null,
@@ -83,6 +90,11 @@ export class RoomManager {
     const room = this.rooms.get(roomCode.toUpperCase());
     if (!room) return { error: 'Room not found' };
     if (room.status !== 'lobby') return { error: 'Game already in progress' };
+
+    // Clamp the name server-side — the client's maxLength is advisory and
+    // a hand-rolled client can send anything up to the socket message cap.
+    playerName = playerName.trim().slice(0, MAX_PLAYER_NAME_LENGTH);
+    if (!playerName) return { error: 'Name required' };
 
     // If a disconnected player with this name still exists, treat the
     // fresh join as them reclaiming their slot — common for phones that
@@ -324,11 +336,18 @@ export class RoomManager {
     return null;
   }
 
-  private generateUniqueCode(): string {
-    let code: string;
-    do {
-      code = generateRoomCode();
-    } while (this.rooms.has(code));
-    return code;
+  /**
+   * Bounded code generation: null when the server is at MAX_ROOMS or the
+   * random draw keeps colliding. The old unbounded do/while would spin the
+   * event loop forever once the code space filled up — a trivially
+   * reachable full-server hang on a public deployment.
+   */
+  private generateUniqueCode(): string | null {
+    if (this.rooms.size >= MAX_ROOMS) return null;
+    for (let i = 0; i < 100; i++) {
+      const code = generateRoomCode();
+      if (!this.rooms.has(code)) return code;
+    }
+    return null;
   }
 }

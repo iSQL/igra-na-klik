@@ -8,6 +8,7 @@ import type {
 import { CHAT_MAX_LENGTH, CHAT_THROTTLE_MS } from '@igra/shared';
 import { RoomManager } from '../../room/RoomManager.js';
 import { hostRoom, playerRoom } from '../rooms.js';
+import { createThrottle } from '../rate-limit.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -26,13 +27,54 @@ export function registerRoomHandlers(
   io: IoServer,
   socket: IoSocket,
   roomManager: RoomManager,
-  cancelGraceTimer: (playerId: string) => void
+  cancelGraceTimer: (playerId: string) => void,
+  destroyRoom: (
+    roomCode: string,
+    reason: string,
+    silentHostSocketId?: string
+  ) => void
 ) {
   // Per-socket chat throttle timestamp.
   let lastChatAt = 0;
+  // One room-lifecycle attempt (create/join) per second per socket. These
+  // paths allocate rooms and scan rosters — cheap once, expensive flooded.
+  const roomOpThrottle = createThrottle(1000);
+  const avatarThrottle = createThrottle(250);
+
+  const emitRateLimited = (code: 'CREATE_ERROR' | 'JOIN_ERROR') => {
+    socket.emit('error', {
+      code,
+      message: 'Previše pokušaja — sačekaj sekund pa pokušaj ponovo.',
+    });
+  };
 
   socket.on('host:create-room', (data) => {
+    if (!roomOpThrottle()) {
+      emitRateLimited('CREATE_ERROR');
+      return;
+    }
+    // A socket that's in a room as a *player* must not become a host too.
+    if (socket.data.roomCode && !socket.data.isHost) {
+      socket.emit('error', { code: 'CREATE_ERROR', message: 'Already in a room' });
+      return;
+    }
+    // A host re-creating (e.g. client-side retry) tears its old room down
+    // first — otherwise every call would leak a room with hostConnected
+    // stuck true, which the idle sweeper never reaps. Silent for this
+    // socket so its own room:destroyed doesn't trigger an auto-recreate
+    // loop on the host client.
+    if (socket.data.roomCode && socket.data.isHost) {
+      destroyRoom(socket.data.roomCode, 'Soba je zamenjena novom.', socket.id);
+    }
+
     const room = roomManager.createRoom(socket.id, data.settings);
+    if (!room) {
+      socket.emit('error', {
+        code: 'CREATE_ERROR',
+        message: 'Server je trenutno pun. Pokušaj ponovo kasnije.',
+      });
+      return;
+    }
     socket.data.roomCode = room.code;
     socket.data.isHost = true;
     socket.join(room.code);
@@ -44,6 +86,10 @@ export function registerRoomHandlers(
   });
 
   socket.on('player:create-room', (data) => {
+    if (!roomOpThrottle()) {
+      emitRateLimited('CREATE_ERROR');
+      return;
+    }
     const playerName = (data.playerName ?? '').trim();
     if (!playerName) {
       socket.emit('error', { code: 'CREATE_ERROR', message: 'Name required' });
@@ -55,6 +101,13 @@ export function registerRoomHandlers(
     }
 
     const room = roomManager.createHostlessRoom();
+    if (!room) {
+      socket.emit('error', {
+        code: 'CREATE_ERROR',
+        message: 'Server je trenutno pun. Pokušaj ponovo kasnije.',
+      });
+      return;
+    }
     const result = roomManager.joinRoom(room.code, playerName);
     if ('error' in result) {
       roomManager.deleteRoom(room.code);
@@ -76,6 +129,10 @@ export function registerRoomHandlers(
   });
 
   socket.on('player:join-room', (data) => {
+    if (!roomOpThrottle()) {
+      emitRateLimited('JOIN_ERROR');
+      return;
+    }
     const { roomCode, playerName, reconnectToken } = data;
 
     // Try reconnection first
@@ -179,6 +236,7 @@ export function registerRoomHandlers(
   });
 
   socket.on('player:set-avatar', (data) => {
+    if (!avatarThrottle()) return;
     const { roomCode, playerId } = socket.data;
     if (!roomCode || !playerId) return;
     const result = roomManager.setPlayerAvatar(roomCode, playerId, data);
@@ -191,18 +249,7 @@ export function registerRoomHandlers(
     });
   });
 
-  socket.on('disconnect', () => {
-    const { roomCode, playerId, isHost } = socket.data;
-    if (!roomCode) return;
-
-    if (isHost) {
-      // For now, just leave the room intact — players see host disconnected
-      return;
-    }
-
-    if (playerId) {
-      roomManager.setPlayerConnected(roomCode, playerId, false);
-      io.to(roomCode).emit('room:player-left', { playerId });
-    }
-  });
+  // Note: the 'disconnect' handling (grey-out, grace timer, host flag)
+  // lives in setup.ts — a duplicate handler here used to double-emit
+  // room:player-left on every disconnect.
 }

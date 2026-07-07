@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { GeoPin } from '@igra/shared';
-import serbiaSvgUrl from '../assets/serbia.svg';
+import serbiaMapUrl from '../assets/serbia-map.png';
 
 /** Extra read-only pin for the hostless reveal map (players + truth). */
 export interface MapMarker {
@@ -25,11 +25,17 @@ interface SerbiaMapProps {
   pinColor?: string;
   /** Read-only markers rendered on top of the map (hostless reveal). */
   markers?: MapMarker[];
+  /**
+   * Custom pack map image (host data `mapImageUrl`). When set, it replaces
+   * the bundled Serbia map; the aspect ratio is measured from the loaded
+   * image so pin percentages keep lining up.
+   */
+  mapImageUrl?: string;
 }
 
-const SVG_W = 724.531;
-const SVG_H = 1036.962;
-const SVG_RATIO = SVG_W / SVG_H; // ≈ 0.699 (taller than wide)
+const SVG_W = 1901;
+const SVG_H = 2386;
+const SVG_RATIO = SVG_W / SVG_H; // ≈ 0.797 (taller than wide)
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -68,12 +74,17 @@ export function SerbiaMap({
   maxHeightCss = '60dvh',
   pinColor = '#ff3b3b',
   markers,
+  mapImageUrl,
 }: SerbiaMapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  // Custom maps arrive with unknown dimensions — measure on load. Until
+  // then fall back to the Serbia ratio (brief reflow at most).
+  const [customRatio, setCustomRatio] = useState<number | null>(null);
+  const ratio = mapImageUrl ? (customRatio ?? SVG_RATIO) : SVG_RATIO;
 
   // Track active pointers so we can distinguish single-finger drag from
   // two-finger pinch.
@@ -254,10 +265,10 @@ export function SerbiaMap({
         // Fit-to-screen sizing: stay as wide as possible while keeping the
         // map's height ≤ maxHeightCss. The min() picks whichever dimension
         // is the binding constraint on the current device.
-        width: `min(100%, calc(${maxHeightCss} * ${SVG_RATIO}))`,
-        aspectRatio: `${SVG_W} / ${SVG_H}`,
+        width: `min(100%, calc(${maxHeightCss} * ${ratio}))`,
+        aspectRatio: `${ratio}`,
         margin: '0 auto',
-        background: '#0e1424',
+        background: '#0B1728',
         borderRadius: '12px',
         overflow: 'hidden',
         touchAction: 'none',
@@ -277,8 +288,15 @@ export function SerbiaMap({
         }}
       >
         <img
-          src={serbiaSvgUrl}
-          alt="Mapa Srbije"
+          src={mapImageUrl ?? serbiaMapUrl}
+          onLoad={(e) => {
+            if (!mapImageUrl) return;
+            const img = e.currentTarget;
+            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+              setCustomRatio(img.naturalWidth / img.naturalHeight);
+            }
+          }}
+          alt="Mapa"
           draggable={false}
           style={{
             position: 'absolute',

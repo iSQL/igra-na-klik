@@ -41,10 +41,13 @@ export function VoteOptions({
     >
       <p
         style={{
-          fontSize: '1.1rem',
-          fontWeight: 600,
+          fontSize: '0.8rem',
+          fontWeight: 800,
           textAlign: 'center',
-          color: 'var(--text-secondary)',
+          color: 'var(--pink)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          margin: 0,
         }}
       >
         Koji je pravi odgovor?
@@ -71,31 +74,42 @@ export function VoteOptions({
               disabled={disabled}
               style={{
                 minHeight: '56px',
-                background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
-                color: isSelected ? '#fff' : 'var(--text-primary)',
+                background: isSelected
+                  ? 'rgba(217,123,108,.14)'
+                  : 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
                 border: isSelected
-                  ? '3px solid #fff'
-                  : '3px solid transparent',
-                borderRadius: '0.75rem',
+                  ? '2px solid var(--pink)'
+                  : '1.5px solid var(--line2)',
+                borderRadius: '14px',
                 padding: '0.9rem 1.1rem',
-                fontSize: '1.1rem',
-                fontWeight: 600,
+                fontSize: '1rem',
+                fontWeight: 800,
                 textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
                 opacity: isMine ? 0.4 : hasVoted && !isSelected ? 0.5 : 1,
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {opt.text}
+              <span>{opt.text}</span>
+              {isSelected && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--pink)', flexShrink: 0 }}>
+                  ✓ tvoj glas
+                </span>
+              )}
               {isMine && (
                 <span
                   style={{
-                    marginLeft: '0.5rem',
-                    fontSize: '0.8rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
                     color: 'var(--text-secondary)',
-                    fontStyle: 'italic',
+                    flexShrink: 0,
                   }}
                 >
-                  (tvoja laž)
+                  (tvoja laž 🤥)
                 </span>
               )}
             </button>

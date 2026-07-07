@@ -38,8 +38,8 @@ export interface QuizLeaderboardEntry {
 }
 
 export const QUIZ_OPTION_COLORS = [
-  '#e74c3c',
-  '#3498db',
-  '#2ecc71',
-  '#f39c12',
+  '#C75146',
+  '#6FC2BB',
+  '#E3B45E',
+  '#7C5FA8',
 ] as const;

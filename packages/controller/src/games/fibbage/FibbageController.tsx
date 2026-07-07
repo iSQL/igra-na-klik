@@ -230,7 +230,10 @@ function FibbageMergedResults({
       <p
         style={{
           textAlign: 'center',
-          fontSize: '0.85rem',
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
           color: 'var(--text-secondary)',
           margin: 0,
         }}
@@ -238,16 +241,22 @@ function FibbageMergedResults({
         {isFinal ? 'Konačni poredak · Pravi odgovor' : 'Pravi odgovor'}
       </p>
       <p
+        className="display"
         style={{
-          textAlign: 'center',
-          fontSize: '1.4rem',
-          fontWeight: 800,
+          alignSelf: 'center',
+          fontSize: '1.35rem',
+          fontWeight: 700,
           color: 'var(--success)',
+          background: 'rgba(47,224,138,.14)',
+          border: '1px solid var(--success)',
+          padding: '0.55rem 1.1rem',
+          borderRadius: '14px',
           margin: 0,
           lineHeight: 1.3,
+          animation: 'igra-pop .4s',
         }}
       >
-        {results.realAnswer}
+        ✓ {results.realAnswer}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -260,22 +269,44 @@ function FibbageMergedResults({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 0.7rem',
-                background: isMe ? 'var(--bg-card)' : 'var(--bg-secondary)',
-                borderRadius: '0.5rem',
-                borderLeft: `4px solid ${entry.avatarColor}`,
-                outline: isMe ? '1px solid var(--accent)' : undefined,
+                gap: '0.55rem',
+                padding: '0.55rem 0.75rem',
+                background: isMe
+                  ? 'linear-gradient(90deg, rgba(217,123,108,.14), var(--bg-secondary))'
+                  : 'var(--bg-secondary)',
+                borderRadius: '12px',
+                border: isMe
+                  ? '1px solid rgba(217,123,108,.4)'
+                  : '1px solid var(--line)',
                 fontSize: '0.9rem',
               }}
             >
-              <span style={{ fontWeight: 800, color: 'var(--accent)', minWidth: '1.8rem' }}>
-                #{entry.rank}
+              <span
+                className="display"
+                style={{
+                  fontWeight: 700,
+                  color:
+                    entry.rank === 1
+                      ? 'var(--amber)'
+                      : entry.rank === 2
+                        ? '#C9CCE0'
+                        : entry.rank === 3
+                          ? '#D8916A'
+                          : 'var(--dim)',
+                  minWidth: '1.4rem',
+                  textAlign: 'center',
+                }}
+              >
+                {entry.rank}
               </span>
+              <span
+                className="avatar-tile"
+                style={{ width: '26px', height: '26px', backgroundColor: entry.avatarColor }}
+              />
               <span
                 style={{
                   flex: 1,
-                  fontWeight: isMe ? 700 : 500,
+                  fontWeight: 800,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -285,13 +316,21 @@ function FibbageMergedResults({
               </span>
               <span
                 style={{
-                  fontWeight: 700,
-                  color: delta > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  color: delta > 0 ? 'var(--success)' : 'var(--dim)',
+                  background:
+                    delta > 0 ? 'rgba(47,224,138,.15)' : 'rgba(255,255,255,.05)',
+                  padding: '2px 7px',
+                  borderRadius: '7px',
                 }}
               >
                 +{delta}
               </span>
-              <span style={{ fontWeight: 600, minWidth: '3.2rem', textAlign: 'right' }}>
+              <span
+                className="display"
+                style={{ fontWeight: 700, minWidth: '3.2rem', textAlign: 'right' }}
+              >
                 {entry.score.toLocaleString()}
               </span>
             </div>
@@ -305,18 +344,30 @@ function FibbageMergedResults({
             <div
               key={f.optionId}
               style={{
-                padding: '0.5rem 0.7rem',
-                background: 'var(--bg-card)',
-                borderRadius: '0.5rem',
+                padding: '0.6rem 0.8rem',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--line)',
+                borderRadius: '12px',
                 fontSize: '0.85rem',
-                lineHeight: 1.4,
+                lineHeight: 1.45,
               }}
             >
-              <strong>{f.fakerNames.join(', ')}</strong>{' '}
-              <span style={{ color: 'var(--text-secondary)' }}>
-                „{f.optionText}" prevario/la:
+              <span
+                style={{
+                  fontWeight: 800,
+                  color: 'var(--pink)',
+                  background: 'rgba(217,123,108,.14)',
+                  padding: '2px 8px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                }}
+              >
+                {f.fakerNames.join(', ')} 🤥
               </span>{' '}
-              {f.fooledPlayerNames.join(', ')}
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                „{f.optionText}" nasamario/la:
+              </span>{' '}
+              <strong>{f.fooledPlayerNames.join(', ')}</strong>
             </div>
           ))}
         </div>

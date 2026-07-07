@@ -34,11 +34,30 @@ export default function QuizGameController() {
           textAlign: 'center',
         }}
       >
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+        <p
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            margin: 0,
+          }}
+        >
           Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
         </p>
         {questionText && (
-          <p style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1.3, margin: 0 }}>
+          <p
+            className="display card"
+            style={{
+              fontSize: '1.3rem',
+              fontWeight: 600,
+              lineHeight: 1.25,
+              margin: 0,
+              padding: '1.1rem 1.2rem',
+              borderRadius: '18px',
+            }}
+          >
             {questionText}
           </p>
         )}
@@ -87,10 +106,13 @@ export default function QuizGameController() {
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
           <p
             style={{
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
+              fontWeight: 800,
               color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
               margin: 0,
-              marginBottom: '0.2rem',
+              marginBottom: '0.35rem',
             }}
           >
             Pitanje {(data.questionIndex as number) + 1}/
@@ -98,11 +120,14 @@ export default function QuizGameController() {
           </p>
           {questionText && (
             <p
+              className="display card"
               style={{
-                fontSize: '1.05rem',
+                fontSize: '1.1rem',
                 fontWeight: 600,
                 lineHeight: 1.25,
                 margin: 0,
+                padding: '0.8rem 1rem',
+                borderRadius: '16px',
               }}
             >
               {questionText}
@@ -148,14 +173,26 @@ export default function QuizGameController() {
       >
         {myEntry && (
           <>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+            <p
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+              }}
+            >
               {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
-            <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
+            <p
+              className="display text-grad"
+              style={{ fontSize: '4rem', fontWeight: 700, animation: 'igra-pop .5s' }}
+            >
               #{myEntry.rank}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-              {myEntry.score.toLocaleString()} poena
+            <p className="display" style={{ fontSize: '1.6rem', fontWeight: 600 }}>
+              {myEntry.score.toLocaleString()}{' '}
+              <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>poena</span>
             </p>
           </>
         )}

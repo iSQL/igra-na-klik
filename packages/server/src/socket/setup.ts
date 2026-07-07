@@ -52,6 +52,11 @@ export function setupSocket(
     // logic.
     pingInterval: 25_000,
     pingTimeout: 60_000,
+    // Cap incoming socket messages well below socket.io's 1MB default.
+    // The largest legitimate payload is a downscaled custom-photo upload
+    // (~1280px JPEG q=0.7 as base64, typically 200-400KB); everything else
+    // is tiny. Keeps message floods cheap to reject.
+    maxHttpBufferSize: 512 * 1024,
   });
 
   const roomManager = new RoomManager();
@@ -86,7 +91,14 @@ export function setupSocket(
   // Full room teardown: stop any active game, cancel grace timers, bounce
   // every socket out (host gets room:destroyed and auto-creates a fresh
   // room; players get room:kicked + disconnect), then delete the room.
-  const destroyRoom = (roomCode: string, reason: string) => {
+  // `silentHostSocketId` suppresses the room:destroyed emit for that host
+  // socket — used when the same socket is re-creating a room, where the
+  // notification would trigger the host client's auto-recreate and loop.
+  const destroyRoom = (
+    roomCode: string,
+    reason: string,
+    silentHostSocketId?: string
+  ) => {
     const room = roomManager.getRoom(roomCode);
     if (!room) return;
 
@@ -101,7 +113,9 @@ export function setupSocket(
     for (const [, sock] of io.sockets.sockets) {
       if (sock.data.roomCode !== roomCode) continue;
       if (sock.data.isHost) {
-        sock.emit('room:destroyed', { reason });
+        if (sock.id !== silentHostSocketId) {
+          sock.emit('room:destroyed', { reason });
+        }
         sock.data.roomCode = undefined;
         sock.leave(roomCode);
         sock.leave(hostRoom(roomCode));
@@ -184,7 +198,7 @@ export function setupSocket(
       }
     }
 
-    registerRoomHandlers(io, socket, roomManager, cancelGraceTimer);
+    registerRoomHandlers(io, socket, roomManager, cancelGraceTimer, destroyRoom);
     registerGameHandlers(io, socket, gameManager, roomManager);
 
     socket.on('host:kick-player', ({ playerId }) => {

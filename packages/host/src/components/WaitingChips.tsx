@@ -52,7 +52,7 @@ export function WaitingChips({ expectedIds, answeredIds }: WaitingChipsProps) {
           >
             <span style={{ fontSize: '1.05rem' }}>{p.avatarEmoji}</span>
             {p.name}
-            {done && <span style={{ color: 'var(--success, #7be37b)' }}>✓</span>}
+            {done && <span style={{ color: 'var(--success)' }}>✓</span>}
           </span>
         );
       })}

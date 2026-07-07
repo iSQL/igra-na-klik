@@ -39,10 +39,32 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
           padding: '1rem',
         }}
       >
-        <p style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
+        <div
+          style={{
+            width: '90px',
+            height: '90px',
+            borderRadius: '50%',
+            background: 'var(--success)',
+            color: '#04120b',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: '2.6rem',
+            fontWeight: 800,
+            boxShadow: '0 0 34px rgba(47,224,138,.5)',
+            animation: 'igra-pop .4s',
+          }}
+        >
+          ✓
+        </div>
+        <p
+          className="display"
+          style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--success)', margin: 0 }}
+        >
           {t('drawGuess.correct')}
         </p>
-        <p style={{ color: 'var(--text-secondary)' }}>{t('common.waitingForOthers')}</p>
+        <p style={{ color: 'var(--text-secondary)', fontWeight: 700, margin: 0 }}>
+          {t('common.waitingForOthers')}
+        </p>
       </div>
     );
   }
@@ -60,24 +82,27 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
     >
       <div style={{ textAlign: 'center' }}>
         <p
+          className="display"
           style={{
-            fontSize: '1.5rem',
+            fontSize: '1.6rem',
             fontWeight: 700,
-            letterSpacing: '0.2rem',
-            fontFamily: 'monospace',
+            letterSpacing: '0.25rem',
+            color: 'var(--lime)',
+            margin: 0,
           }}
         >
           {hint}
         </p>
         <p
+          className="display"
           style={{
-            fontSize: '1.8rem',
-            fontWeight: 800,
-            marginTop: '1rem',
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--text-primary)',
+            fontSize: '1.6rem',
+            fontWeight: 700,
+            marginTop: '0.8rem',
+            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
           }}
         >
-          {timeRemaining}s
+          {timeRemaining}
         </p>
       </div>
 
@@ -100,11 +125,13 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
           style={{
             flex: 1,
             padding: '0.75rem 1rem',
-            background: 'var(--bg-card)',
+            background: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
-            border: '2px solid var(--accent)',
-            borderRadius: '12px',
+            border: '1.5px solid var(--cyan)',
+            boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
+            borderRadius: '14px',
             fontSize: '1rem',
+            fontWeight: 700,
           }}
         />
         <button
@@ -112,11 +139,12 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
           disabled={!text.trim()}
           style={{
             padding: '0.75rem 1.5rem',
-            background: text.trim() ? 'var(--accent)' : 'var(--bg-card)',
-            color: '#fff',
-            borderRadius: '12px',
+            background: text.trim() ? 'var(--grad)' : 'var(--bg-card)',
+            color: text.trim() ? '#fff' : 'var(--dim)',
+            borderRadius: '14px',
             fontSize: '1rem',
-            fontWeight: 600,
+            fontWeight: 800,
+            boxShadow: text.trim() ? 'var(--shadow-cta)' : 'none',
           }}
         >
           {t('drawGuess.guess')}

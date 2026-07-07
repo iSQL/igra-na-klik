@@ -7,15 +7,30 @@
 }
 
 :root {
-  --bg-primary: #0f0f23;
-  --bg-secondary: #1a1a2e;
-  --bg-card: #16213e;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0b0;
-  --accent: #6c63ff;
-  --accent-hover: #5a52d5;
-  --success: #2ecc71;
-  --danger: #e74c3c;
+  /* zabari.net brand — "Sunrise Hill": navy canvas, gold sun, cream ink.
+     Navy is the voice, gold is the light (sparingly), cream is the text. */
+  --bg-primary: #162e4e; /* Navy Deep */
+  --bg-secondary: #1d3557; /* Navy */
+  --bg-card: #274469;
+  --text-primary: #faf6f0; /* Cream Hi */
+  --text-secondary: #c9c2b3;
+  --dim: #8a91a2;
+  --line: rgba(245, 235, 224, 0.1);
+  --line2: rgba(245, 235, 224, 0.2);
+  --accent: #c29b47; /* Gold */
+  --accent-hover: #b89040; /* Gold Deep */
+  --pink: #d97b6c;
+  --violet: #8fa3d9;
+  --cyan: #6fc2bb;
+  --lime: #a9c46c;
+  --amber: #e3b45e;
+  --success: #57b380;
+  --danger: #e06a5e;
+  --blue: #6d9bd1;
+  --grad: linear-gradient(125deg, #c0964a, #8f6e2c);
+  --font-display: 'Fredoka', 'Manrope', system-ui, sans-serif;
+  --font-caps: 'Fredoka', 'Manrope', system-ui, sans-serif;
+  --shadow-cta: 0 10px 26px rgba(194, 155, 71, 0.32);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -25,8 +40,12 @@
 html,
 body {
   height: 100%;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-primary);
+  background-image:
+    radial-gradient(1200px 700px at 50% -12%, rgba(194, 155, 71, 0.16), transparent 60%),
+    radial-gradient(900px 540px at 50% 112%, rgba(9, 20, 36, 0.55), transparent 65%);
+  background-attachment: fixed;
   color: var(--text-primary);
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -35,12 +54,24 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+::selection {
+  background: var(--accent);
+  color: #162e4e;
+}
+
 #root {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: calc(1rem + var(--safe-top)) calc(1rem + var(--safe-right)) calc(1rem + var(--safe-bottom)) calc(1rem + var(--safe-left));
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 button {
@@ -54,7 +85,8 @@ button {
   -webkit-user-select: none;
 }
 
-input {
+input,
+textarea {
   font-family: inherit;
   font-size: 1rem;
   min-height: 48px;
@@ -63,8 +95,9 @@ input {
 }
 
 /* Prevent zoom on input focus (iOS) */
-input[type="text"],
-input[type="number"] {
+input[type='text'],
+input[type='number'],
+textarea {
   font-size: 16px;
 }
 
@@ -75,8 +108,110 @@ input[type="number"] {
   -webkit-user-select: none;
 }
 
+/* ---- Shared component classes ---- */
+
+.btn-primary {
+  min-height: 56px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--grad);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.06rem;
+  box-shadow: var(--shadow-cta);
+}
+
+.btn-primary:disabled {
+  background: var(--bg-card);
+  color: var(--dim);
+  box-shadow: none;
+}
+
+.btn-ghost {
+  min-height: 52px;
+  border: 1.5px solid var(--line2);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.btn-ghost:disabled {
+  color: var(--dim);
+}
+
+.card {
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+}
+
+.display {
+  font-family: var(--font-display);
+}
+
+.text-grad {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.avatar-tile {
+  border-radius: 30%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+/* ---- Keyframes ---- */
+
 @keyframes igra-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes igra-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.09);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes igra-floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes igra-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(194, 155, 71, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 20px rgba(194, 155, 71, 0);
+  }
+}
+
+@keyframes igra-wiggle {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
   }
 }

@@ -14,10 +14,10 @@ export function LanguageSwitch() {
       aria-label="Language"
       style={{
         display: 'inline-flex',
-        gap: '0.2rem',
-        padding: '0.2rem',
+        padding: '3px',
         background: 'var(--bg-secondary)',
-        borderRadius: '0.6rem',
+        border: '1px solid var(--line)',
+        borderRadius: '10px',
       }}
     >
       {LANGUAGES.map((lang) => {
@@ -31,14 +31,16 @@ export function LanguageSwitch() {
             }}
             aria-pressed={active}
             style={{
-              padding: '0.3rem 0.6rem',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              borderRadius: '0.45rem',
+              padding: '0.35rem 0.7rem',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              borderRadius: '7px',
               border: 'none',
               cursor: 'pointer',
-              background: active ? 'var(--accent)' : 'transparent',
+              background: active ? 'var(--grad)' : 'transparent',
               color: active ? '#fff' : 'var(--text-secondary)',
+              minHeight: 'unset',
+              minWidth: 'unset',
             }}
           >
             {LABELS[lang]}

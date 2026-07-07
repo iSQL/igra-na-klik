@@ -260,7 +260,7 @@ export function FotoKvizPhotoSubmitter({
         <p
           style={{
             fontSize: '0.85rem',
-            color: '#e74c3c',
+            color: 'var(--danger)',
             textAlign: 'center',
             margin: 0,
           }}
