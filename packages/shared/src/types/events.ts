@@ -73,6 +73,15 @@ export interface ClientToServerEvents {
     customTajniAgentiPack?: TajniAgentiImportPack;
     tajniAgentiScenarioCode?: string;
     customTajniAgentiScenario?: TajniAgentiScenario;
+    // Round / stroke counts for the newer games (host-configurable).
+    fakeArtistRounds?: number;
+    fakeArtistStrokes?: number;
+    koBiPreRounds?: number;
+    pogodiGodinuRounds?: number;
+    // Generic round count for games in GAME_ROUND_CONFIG (quiz, draw-guess,
+    // fibbage, geo-pogodi, foto-kviz, ko-sam-ja, spot-it). Each module
+    // clamps it to its own range.
+    roundCount?: number;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

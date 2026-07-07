@@ -7,6 +7,13 @@ export interface QuizOption {
 export interface QuizQuestion {
   id: string;
   text: string;
+  /**
+   * Optional image shown above the question ("Koji pevač je na slici?").
+   * A server-hosted path (`/quiz-images/...`, `/geo-images/...`), a remote
+   * http(s) URL, or a small inline `data:image/...` URL. Always safe to
+   * broadcast — it's part of the prompt, not the answer.
+   */
+  imageUrl?: string;
   options: QuizOption[];
   timeLimit: number;
 }

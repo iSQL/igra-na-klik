@@ -13,6 +13,7 @@ import {
   parseKoSamJaImport,
   KO_SAM_JA_DEFAULT_BANK,
   KO_SAM_JA_FREE_FALLBACK,
+  clampGameRounds,
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -23,7 +24,6 @@ import {
   GUESSING_DURATION,
   SHOWING_RESULTS_DURATION,
   LEADERBOARD_DURATION,
-  NUM_ROUNDS,
   SUBJECT_BONUS_PER_WRONG,
 } from './KoSamJaState.js';
 import type {
@@ -35,6 +35,7 @@ import type {
 interface KoSamJaCustomContent {
   koSamJaCategory?: KoSamJaCategory;
   customKoSamJaQuestions?: unknown;
+  roundCount?: number;
 }
 
 export class KoSamJaModule extends BaseGameModule {
@@ -80,10 +81,11 @@ export class KoSamJaModule extends BaseGameModule {
       extraOptions: q.shape === 'pickN' ? q.extraOptions : undefined,
     }));
 
+    const rounds = clampGameRounds(this.gameId, cc?.roundCount);
     const shuffledPool = shuffled(pool);
     const selectedQuestions = shuffledPool.slice(
       0,
-      Math.min(NUM_ROUNDS, shuffledPool.length)
+      Math.min(rounds, shuffledPool.length)
     );
 
     const connectedPlayers = room.players.filter((p) => p.isConnected);

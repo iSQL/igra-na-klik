@@ -61,6 +61,7 @@ export function QuizImportButton() {
             options: q.options.map((o) => o.text),
             correctIndex: q.correctIndex,
             timeLimit: q.timeLimit,
+            imageUrl: q.imageUrl,
           })),
           file.name
         );

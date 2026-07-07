@@ -48,6 +48,7 @@ export default function QuizGameHost() {
   const questionIndex = data.questionIndex as number;
   const totalQuestions = data.totalQuestions as number;
   const questionText = data.questionText as string | undefined;
+  const imageUrl = data.imageUrl as string | undefined;
   const options = data.options as QuizOption[] | undefined;
   const timeLimit = (data.timeLimit as number) || 15;
   const previewDuration = (data.previewDuration as number) || 5;
@@ -72,6 +73,7 @@ export default function QuizGameHost() {
             totalQuestions={totalQuestions}
             timeRemaining={timeRemaining}
             timeLimit={previewDuration}
+            imageUrl={imageUrl}
           />
           <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
             Spremi se...
@@ -87,6 +89,7 @@ export default function QuizGameHost() {
             totalQuestions={totalQuestions}
             timeRemaining={timeRemaining}
             timeLimit={timeLimit}
+            imageUrl={imageUrl}
           />
           <OptionGrid options={options} showResults={false} />
           <AnswerCounter
@@ -173,6 +176,7 @@ function ResultsInPlace({
         totalQuestions={totalQuestions}
         timeRemaining={timeRemaining}
         timeLimit={SHOWING_RESULTS_DURATION}
+        imageUrl={question.imageUrl}
       />
       <OptionGrid
         options={question.options}

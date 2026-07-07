@@ -12,7 +12,9 @@ import type {
   GeoSubmissionProgress,
 } from '@igra/shared';
 import {
+  GAME_ROUND_CONFIG,
   bboxDiagonalKm,
+  clampGameRounds,
   haversineKm,
   packLatLngToPin,
   packPinToLatLng,
@@ -26,7 +28,6 @@ import {
   FINAL_LEADERBOARD_DURATION,
   INTRO_DURATION,
   MAX_PHOTOS_PER_PLAYER,
-  MAX_PREDEFINED_ROUNDS,
   MIN_PHOTOS_PER_PLAYER,
   PLACING_DURATION,
   REVEAL_DURATION,
@@ -53,6 +54,7 @@ interface GeoCustomContent {
   geoPackId?: string;
   geoMode?: GeoGuessMode;
   customPhotosPerPlayer?: number;
+  roundCount?: number;
   /** Internally injected — the configured GEO_PACKS_DIR (resolved when registering the module). */
   geoPacksDir?: string;
 }
@@ -77,6 +79,8 @@ export class GeoGuessModule extends BaseGameModule {
   }
 
   private state!: GeoGuessInternalState;
+  // Round cap for predefined mode (custom mode uses every uploaded photo).
+  private desiredRounds = GAME_ROUND_CONFIG['geo-pogodi'].default;
 
   // -- Lifecycle ----------------------------------------------------------
 
@@ -94,6 +98,7 @@ export class GeoGuessModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     const cc = (customContent as GeoCustomContent | undefined) ?? {};
     const mode: GeoGuessMode = cc.geoMode === 'custom' ? 'custom' : 'predefined';
+    this.desiredRounds = clampGameRounds(this.gameId, cc.roundCount);
 
     this.state = {
       phase: 'intro',
@@ -210,7 +215,7 @@ export class GeoGuessModule extends BaseGameModule {
     const shuffled = shuffleInPlace([...resolved.locations]);
     const sliced = shuffled.slice(
       0,
-      Math.min(MAX_PREDEFINED_ROUNDS, shuffled.length)
+      Math.min(this.desiredRounds, shuffled.length)
     );
 
     this.state.locations = sliced;

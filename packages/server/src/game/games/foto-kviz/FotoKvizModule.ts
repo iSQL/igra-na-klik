@@ -14,7 +14,7 @@ import type {
   GeoSubmissionProgress,
   QuizOption,
 } from '@igra/shared';
-import { QUIZ_OPTION_COLORS, shuffleInPlace } from '@igra/shared';
+import { QUIZ_OPTION_COLORS, clampGameRounds, shuffleInPlace } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { resolveGeoPack } from '../geo-pogodi/geo-pack-resolver.js';
 import {
@@ -48,6 +48,7 @@ interface FotoKvizCustomContent {
   geoPackId?: string;
   geoMode?: FotoKvizMode;
   customPhotosPerPlayer?: number;
+  roundCount?: number;
 }
 
 function clampPhotosPerPlayer(raw: unknown): number {
@@ -84,6 +85,8 @@ export class FotoKvizModule extends BaseGameModule {
   }
 
   private state!: FotoKvizInternalState;
+  // Round cap for predefined mode (custom mode uses every uploaded photo).
+  private desiredRounds = MAX_ROUNDS;
 
   // -- Lifecycle ----------------------------------------------------------
 
@@ -105,6 +108,7 @@ export class FotoKvizModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     const cc = (customContent as FotoKvizCustomContent | undefined) ?? {};
     const mode: FotoKvizMode = cc.geoMode === 'custom' ? 'custom' : 'predefined';
+    this.desiredRounds = clampGameRounds(this.gameId, cc.roundCount);
 
     this.state = {
       phase: 'intro',
@@ -209,7 +213,10 @@ export class FotoKvizModule extends BaseGameModule {
       return;
     }
     this.state.packName = resolved.name;
-    this.state.questions = this.buildQuestions(resolved.locations);
+    this.state.questions = this.buildQuestions(
+      resolved.locations,
+      this.desiredRounds
+    );
     this.state.totalRounds = this.state.questions.length;
     this.state.currentQuestionIndex = 0;
     this.state.phase = 'intro';
@@ -312,7 +319,10 @@ export class FotoKvizModule extends BaseGameModule {
 
   // -- Question construction ---------------------------------------------
 
-  private buildQuestions(locations: GeoLocation[]): FotoKvizFullQuestion[] {
+  private buildQuestions(
+    locations: GeoLocation[],
+    maxRounds: number = MAX_ROUNDS
+  ): FotoKvizFullQuestion[] {
     // Captions are required per round. Fall back to "Lokacija {i}" if the
     // pack author left some empty so the game still runs.
     const labeled = locations.map((loc, i) => ({
@@ -322,7 +332,7 @@ export class FotoKvizModule extends BaseGameModule {
 
     const order = labeled.map((_, i) => i);
     shuffleInPlace(order);
-    const roundIndexes = order.slice(0, Math.min(MAX_ROUNDS, labeled.length));
+    const roundIndexes = order.slice(0, Math.min(maxRounds, labeled.length));
 
     // With N captions available we render min(N, 4) options per round —
     // 4 is the visual ceiling, but a 2-photo custom game still gets a

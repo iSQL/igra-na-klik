@@ -10,6 +10,8 @@ export interface QuizImportQuestion {
   options: string[];
   correctIndex: number;
   timeLimit?: number;
+  /** Optional image URL/path shown above the question — see QuizQuestion.imageUrl. */
+  imageUrl?: string;
 }
 
 export type QuizImportResult =
@@ -21,9 +23,39 @@ const MIN_TIME_LIMIT = 5;
 const MAX_TIME_LIMIT = 60;
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = QUIZ_OPTION_COLORS.length; // 4
+// Cap the image field so a rogue data: URL can't blow past the 512 KB socket
+// message limit on host:start-game. Server-hosted images are short paths;
+// small inline data URLs still fit comfortably under this.
+const MAX_IMAGE_URL_LENGTH = 400_000;
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
+}
+
+/** Validate the optional per-question image URL/path. */
+function parseImageUrl(
+  raw: unknown,
+  label: string
+): { ok: true; imageUrl?: string } | { ok: false; error: string } {
+  if (raw === undefined || raw === null || raw === '') return { ok: true };
+  if (typeof raw !== 'string')
+    return { ok: false, error: `${label}: imageUrl mora biti tekst.` };
+  const url = raw.trim();
+  if (url.length === 0) return { ok: true };
+  if (url.length > MAX_IMAGE_URL_LENGTH)
+    return { ok: false, error: `${label}: slika je prevelika.` };
+  const allowed =
+    url.startsWith('/quiz-images/') ||
+    url.startsWith('/geo-images/') ||
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('data:image/');
+  if (!allowed)
+    return {
+      ok: false,
+      error: `${label}: imageUrl mora biti putanja (/quiz-images/…), http(s) URL ili data:image URL.`,
+    };
+  return { ok: true, imageUrl: url };
 }
 
 /**
@@ -94,9 +126,15 @@ export function parseQuizImport(input: unknown): QuizImportResult {
       timeLimit = raw.timeLimit;
     }
 
+    const image = parseImageUrl(raw.imageUrl, label);
+    if (!image.ok) {
+      return { ok: false, error: image.error };
+    }
+
     questions.push({
       id: `custom-${i + 1}`,
       text: (raw.text as string).trim(),
+      imageUrl: image.imageUrl,
       options: (raw.options as string[]).map((t, idx) => ({
         index: idx,
         text: t.trim(),

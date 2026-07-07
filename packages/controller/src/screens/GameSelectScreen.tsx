@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   GAME_DEFINITIONS,
+  GAME_ROUND_CONFIG,
   parseKoSamJaImport,
   parseQuizImport,
 } from '@igra/shared';
@@ -43,6 +44,10 @@ interface KoSamJaPackSummary {
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 const PHOTO_OPTIONS = [1, 2, 3, 4];
+const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
+const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
+const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
+const POGODI_GODINU_ROUND_OPTIONS = [5, 8, 10, 15];
 
 const GAME_ICONS: Record<string, string> = {
   quiz: '🧠',
@@ -83,6 +88,13 @@ export function GameSelectScreen() {
     useState<KoSamJaCategory>('family');
   const [photosPerPlayer, setPhotosPerPlayer] = useState(2);
   const [slepiRounds, setSlepiRounds] = useState(2);
+  const [fakeArtistRounds, setFakeArtistRounds] = useState(3);
+  const [fakeArtistStrokes, setFakeArtistStrokes] = useState(2);
+  const [koBiPreRounds, setKoBiPreRounds] = useState(8);
+  const [pogodiGodinuRounds, setPogodiGodinuRounds] = useState(10);
+  // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
+  // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
+  const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -155,6 +167,20 @@ export function GameSelectScreen() {
     }
     if (game.id === 'slepi-telefoni') {
       payload.slepiRounds = slepiRounds;
+    }
+    if (game.id === 'fake-artist') {
+      payload.fakeArtistRounds = fakeArtistRounds;
+      payload.fakeArtistStrokes = fakeArtistStrokes;
+    }
+    if (game.id === 'ko-bi-pre') {
+      payload.koBiPreRounds = koBiPreRounds;
+    }
+    if (game.id === 'pogodi-godinu') {
+      payload.pogodiGodinuRounds = pogodiGodinuRounds;
+    }
+    if (GAME_ROUND_CONFIG[game.id]) {
+      payload.roundCount =
+        roundCounts[game.id] ?? GAME_ROUND_CONFIG[game.id].default;
     }
     if (game.id === 'quiz' && quizImport) {
       payload.customQuestions = quizImport.questions;
@@ -450,6 +476,51 @@ export function GameSelectScreen() {
                       setCategory={setKoSamJaCategory}
                       error={koSamJaImportError}
                       setError={setKoSamJaImportError}
+                    />
+                  )}
+                  {game.id === 'fake-artist' && (
+                    <>
+                      <RoundsConfig
+                        label={t('config.rounds')}
+                        value={fakeArtistRounds}
+                        options={FAKE_ARTIST_ROUND_OPTIONS}
+                        onSelect={setFakeArtistRounds}
+                      />
+                      <RoundsConfig
+                        label={t('config.strokes')}
+                        value={fakeArtistStrokes}
+                        options={FAKE_ARTIST_STROKE_OPTIONS}
+                        onSelect={setFakeArtistStrokes}
+                      />
+                    </>
+                  )}
+                  {game.id === 'ko-bi-pre' && (
+                    <RoundsConfig
+                      label={t('config.rounds')}
+                      value={koBiPreRounds}
+                      options={KO_BI_PRE_ROUND_OPTIONS}
+                      onSelect={setKoBiPreRounds}
+                    />
+                  )}
+                  {game.id === 'pogodi-godinu' && (
+                    <RoundsConfig
+                      label={t('config.rounds')}
+                      value={pogodiGodinuRounds}
+                      options={POGODI_GODINU_ROUND_OPTIONS}
+                      onSelect={setPogodiGodinuRounds}
+                    />
+                  )}
+                  {GAME_ROUND_CONFIG[game.id] && (
+                    <RoundsConfig
+                      label={t('config.rounds')}
+                      value={
+                        roundCounts[game.id] ??
+                        GAME_ROUND_CONFIG[game.id].default
+                      }
+                      options={GAME_ROUND_CONFIG[game.id].options}
+                      onSelect={(n) =>
+                        setRoundCounts((prev) => ({ ...prev, [game.id]: n }))
+                      }
                     />
                   )}
                   <button className="btn-primary" onClick={() => handleStart(game)}>
@@ -865,6 +936,35 @@ function KoSamJaConfig({
       {error && (
         <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{error}</span>
       )}
+    </div>
+  );
+}
+
+// Generic labeled pill row for round / stroke config (Lažni umetnik,
+// Ko bi pre, Pogodi godinu).
+function RoundsConfig({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: number;
+  options: number[];
+  onSelect: (n: number) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        {label}
+      </span>
+      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+        {options.map((n) => (
+          <Pill key={n} active={n === value} onClick={() => onSelect(n)}>
+            {n}
+          </Pill>
+        ))}
+      </div>
     </div>
   );
 }

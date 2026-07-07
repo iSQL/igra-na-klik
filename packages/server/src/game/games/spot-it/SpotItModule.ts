@@ -1,5 +1,10 @@
 import type { Room, GameState } from '@igra/shared';
-import { generateDobbleDeck, dealRound, findMatch } from '@igra/shared';
+import {
+  clampGameRounds,
+  generateDobbleDeck,
+  dealRound,
+  findMatch,
+} from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { SpotItInternalState, SpotItRoundState } from './SpotItState.js';
 
@@ -8,21 +13,23 @@ const RACING_DURATION = 30;
 const ROUND_RESULTS_DURATION = 4;
 const LEADERBOARD_DURATION = 8;
 const LOCKOUT_MS = 5000;
-const NUM_ROUNDS = 10;
 
 export class SpotItModule extends BaseGameModule {
   readonly gameId = 'spot-it';
 
   private state!: SpotItInternalState;
 
-  onStart(room: Room): GameState {
+  onStart(room: Room, customContent?: unknown): GameState {
     const deck = generateDobbleDeck();
     this.state = {
       deck,
       phase: 'card-reveal',
       phaseTimeRemaining: CARD_REVEAL_DURATION,
       currentRound: 1,
-      totalRounds: NUM_ROUNDS,
+      totalRounds: clampGameRounds(
+        this.gameId,
+        (customContent as { roundCount?: unknown } | undefined)?.roundCount
+      ),
       round: this.dealNewRound(room, deck),
     };
     return this.buildGameState(room);

@@ -14,6 +14,7 @@ import {
   appendEraseOp,
   undoLast,
   clearOps,
+  clampGameRounds,
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -45,12 +46,15 @@ export class DrawGuessModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
-    const opts = customContent as { language?: Language } | undefined;
+    const opts = customContent as
+      | { language?: Language; roundCount?: number }
+      | undefined;
     this.language = opts?.language ?? 'sr';
     const connectedPlayers = room.players.filter((p) => p.isConnected);
     const turnOrder = shuffled(connectedPlayers.map((p) => p.id));
 
-    const totalRounds = Math.min(room.settings.roundCount, 3);
+    // A "round" here is a full pass where every player draws once.
+    const totalRounds = clampGameRounds(this.gameId, opts?.roundCount);
 
     this.state = {
       phase: 'choosing-word',

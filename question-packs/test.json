@@ -1,0 +1,13 @@
+[
+  {
+    "text": "Koja biljka je na slici?",
+    "options": [
+      "Meda",
+      "Ruza",
+      "Pinot"
+    ],
+    "correctIndex": 0,
+    "timeLimit": 15,
+    "imageUrl": "/quiz-images/bdffee93-aaa8-4c6d-ad7e-27581e391f07.jpg"
+  }
+]

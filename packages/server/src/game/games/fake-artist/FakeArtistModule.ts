@@ -18,14 +18,16 @@ import type { FakeArtistInternalState } from './FakeArtistState.js';
 import {
   CORRECT_VOTE_POINTS,
   DEFAULT_ROUNDS,
+  DEFAULT_STROKES,
   FAKE_ESCAPE_POINTS,
   FAKE_GUESS_DURATION,
   FAKE_REDEMPTION_POINTS,
   MAX_ROUNDS,
+  MAX_STROKES,
   MIN_ROUNDS,
+  MIN_STROKES,
   RESULTS_DURATION,
   REVEAL_ROLE_DURATION,
-  STROKES_PER_PLAYER,
   STROKE_WIDTH,
   TURN_DURATION,
   VOTING_DURATION,
@@ -34,6 +36,7 @@ import {
 interface FakeArtistCustomContent {
   language?: Language;
   fakeArtistRounds?: number;
+  fakeArtistStrokes?: number;
 }
 
 function clampRounds(raw: unknown): number {
@@ -41,6 +44,14 @@ function clampRounds(raw: unknown): number {
   const n = Math.floor(raw);
   if (n < MIN_ROUNDS) return MIN_ROUNDS;
   if (n > MAX_ROUNDS) return MAX_ROUNDS;
+  return n;
+}
+
+function clampStrokes(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_STROKES;
+  const n = Math.floor(raw);
+  if (n < MIN_STROKES) return MIN_STROKES;
+  if (n > MAX_STROKES) return MAX_STROKES;
   return n;
 }
 
@@ -65,6 +76,7 @@ export class FakeArtistModule extends BaseGameModule {
       phaseTimeRemaining: REVEAL_ROLE_DURATION,
       totalRounds: clampRounds(opts.fakeArtistRounds),
       currentRound: 1,
+      strokesPerPlayer: clampStrokes(opts.fakeArtistStrokes),
       turnOrder: [],
       currentTurnIndex: 0,
       word: null,
@@ -375,7 +387,7 @@ export class FakeArtistModule extends BaseGameModule {
   // --- Helpers -----------------------------------------------------------
 
   private totalTurns(): number {
-    return this.state.turnOrder.length * STROKES_PER_PLAYER;
+    return this.state.turnOrder.length * this.state.strokesPerPlayer;
   }
 
   private currentDrawerId(): string {
@@ -462,7 +474,7 @@ export class FakeArtistModule extends BaseGameModule {
       category: this.state.category,
       operations: this.state.operations,
       turnOrder,
-      strokesPerPlayer: STROKES_PER_PLAYER,
+      strokesPerPlayer: this.state.strokesPerPlayer,
     };
 
     if (this.state.phase === 'drawing') {

@@ -13,6 +13,7 @@ import type {
 import {
   FIBBAGE_QUESTION_BANK,
   FIBBAGE_MAX_ANSWER_LENGTH,
+  clampGameRounds,
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -27,7 +28,6 @@ import {
   VOTING_DURATION,
   SHOWING_RESULTS_DURATION,
   LEADERBOARD_DURATION,
-  NUM_QUESTIONS,
   TRUTH_POINTS,
   FOOL_POINTS_PER_VOTER,
 } from './FibbageState.js';
@@ -37,8 +37,15 @@ export class FibbageModule extends BaseGameModule {
 
   private state!: FibbageInternalState;
 
-  onStart(room: Room): GameState {
-    const questions = shuffled(FIBBAGE_QUESTION_BANK).slice(0, NUM_QUESTIONS);
+  onStart(room: Room, customContent?: unknown): GameState {
+    const rounds = clampGameRounds(
+      this.gameId,
+      (customContent as { roundCount?: unknown } | undefined)?.roundCount
+    );
+    const questions = shuffled(FIBBAGE_QUESTION_BANK).slice(
+      0,
+      Math.min(rounds, FIBBAGE_QUESTION_BANK.length)
+    );
 
     this.state = {
       questions,

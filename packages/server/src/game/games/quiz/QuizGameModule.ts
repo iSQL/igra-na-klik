@@ -1,12 +1,16 @@
 import type { Room, GameState, QuizQuestionFull, QuizResultData, QuizLeaderboardEntry } from '@igra/shared';
-import { QUIZ_QUESTION_BANK, parseQuizImport, shuffled } from '@igra/shared';
+import {
+  QUIZ_QUESTION_BANK,
+  clampGameRounds,
+  parseQuizImport,
+  shuffled,
+} from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { QuizInternalState, QuizPhase, QuizPlayerAnswer } from './QuizState.js';
 
 const SHOWING_QUESTION_DURATION = 5;
 const SHOWING_RESULTS_DURATION = 5;
 const LEADERBOARD_DURATION = 4;
-const NUM_QUESTIONS = 10;
 
 export class QuizGameModule extends BaseGameModule {
   readonly gameId = 'quiz';
@@ -27,9 +31,13 @@ export class QuizGameModule extends BaseGameModule {
       // On failure: silent fallback to default bank. Host already validated.
     }
 
+    const rounds = clampGameRounds(
+      this.gameId,
+      (customContent as { roundCount?: unknown } | undefined)?.roundCount
+    );
     const questions = shuffled(sourceBank).slice(
       0,
-      Math.min(NUM_QUESTIONS, sourceBank.length)
+      Math.min(rounds, sourceBank.length)
     );
 
     this.state = {
@@ -176,11 +184,13 @@ export class QuizGameModule extends BaseGameModule {
     switch (this.state.phase) {
       case 'showing-question':
         data.questionText = question.text;
+        if (question.imageUrl) data.imageUrl = question.imageUrl;
         data.previewDuration = SHOWING_QUESTION_DURATION;
         break;
 
       case 'answering':
         data.questionText = question.text;
+        if (question.imageUrl) data.imageUrl = question.imageUrl;
         data.options = question.options;
         data.timeLimit = question.timeLimit;
         data.answeredCount = this.state.answers.size;

@@ -12,18 +12,31 @@ import { BaseGameModule } from '../../BaseGameModule.js';
 import type { KoBiPreInternalState } from './KoBiPreState.js';
 import {
   CORRECT_CROWD_POINTS,
-  NUM_ROUNDS,
+  DEFAULT_ROUNDS,
+  MAX_ROUNDS,
+  MIN_ROUNDS,
   SHOWING_RESULTS_DURATION,
   VOTING_DURATION,
 } from './KoBiPreState.js';
+
+function clampRounds(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_ROUNDS;
+  const n = Math.floor(raw);
+  if (n < MIN_ROUNDS) return MIN_ROUNDS;
+  if (n > MAX_ROUNDS) return MAX_ROUNDS;
+  return n;
+}
 
 export class KoBiPreModule extends BaseGameModule {
   readonly gameId = 'ko-bi-pre';
 
   private state!: KoBiPreInternalState;
 
-  onStart(room: Room): GameState {
-    const prompts = shuffled(KO_BI_PRE_PROMPTS).slice(0, NUM_ROUNDS);
+  onStart(room: Room, customContent?: unknown): GameState {
+    const rounds = clampRounds(
+      (customContent as { koBiPreRounds?: unknown } | undefined)?.koBiPreRounds
+    );
+    const prompts = shuffled(KO_BI_PRE_PROMPTS).slice(0, rounds);
     this.state = {
       phase: 'voting',
       phaseTimeRemaining: VOTING_DURATION,

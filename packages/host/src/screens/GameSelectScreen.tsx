@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GAME_DEFINITIONS } from '@igra/shared';
+import { GAME_DEFINITIONS, GAME_ROUND_CONFIG } from '@igra/shared';
 import type { HostStartGamePayload } from '@igra/shared';
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
@@ -10,6 +10,13 @@ import { useGeoConfigStore } from '../store/geoConfigStore';
 import { useKoSamJaImportStore } from '../store/koSamJaImportStore';
 import { useKoSamJaConfigStore } from '../store/koSamJaConfigStore';
 import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
+import {
+  useNewGamesConfigStore,
+  POGODI_GODINU_ROUND_OPTIONS,
+  KO_BI_PRE_ROUND_OPTIONS,
+  FAKE_ARTIST_ROUND_OPTIONS,
+  FAKE_ARTIST_STROKE_OPTIONS,
+} from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
@@ -30,6 +37,7 @@ export function GameSelectScreen() {
   const setKoSamJaCategory = useKoSamJaConfigStore(
     (s) => s.setSelectedCategory
   );
+  const newGamesConfig = useNewGamesConfigStore();
   const connectedCount = players.filter((p) => p.isConnected).length;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const t = useT();
@@ -109,6 +117,20 @@ export function GameSelectScreen() {
       customTajniAgentiPack,
       tajniAgentiScenarioCode,
       customTajniAgentiScenario,
+      fakeArtistRounds:
+        gameId === 'fake-artist' ? newGamesConfig.fakeArtistRounds : undefined,
+      fakeArtistStrokes:
+        gameId === 'fake-artist' ? newGamesConfig.fakeArtistStrokes : undefined,
+      koBiPreRounds:
+        gameId === 'ko-bi-pre' ? newGamesConfig.koBiPreRounds : undefined,
+      pogodiGodinuRounds:
+        gameId === 'pogodi-godinu'
+          ? newGamesConfig.pogodiGodinuRounds
+          : undefined,
+      roundCount: GAME_ROUND_CONFIG[gameId]
+        ? newGamesConfig.roundCounts[gameId] ??
+          GAME_ROUND_CONFIG[gameId].default
+        : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -304,6 +326,49 @@ export function GameSelectScreen() {
                 })}
               </div>
             )}
+            {game.id === 'pogodi-godinu' && (
+              <PillRow
+                label={t('config.rounds')}
+                value={newGamesConfig.pogodiGodinuRounds}
+                options={POGODI_GODINU_ROUND_OPTIONS}
+                onSelect={newGamesConfig.setPogodiGodinuRounds}
+              />
+            )}
+            {game.id === 'ko-bi-pre' && (
+              <PillRow
+                label={t('config.rounds')}
+                value={newGamesConfig.koBiPreRounds}
+                options={KO_BI_PRE_ROUND_OPTIONS}
+                onSelect={newGamesConfig.setKoBiPreRounds}
+              />
+            )}
+            {game.id === 'fake-artist' && (
+              <>
+                <PillRow
+                  label={t('config.rounds')}
+                  value={newGamesConfig.fakeArtistRounds}
+                  options={FAKE_ARTIST_ROUND_OPTIONS}
+                  onSelect={newGamesConfig.setFakeArtistRounds}
+                />
+                <PillRow
+                  label={t('config.strokes')}
+                  value={newGamesConfig.fakeArtistStrokes}
+                  options={FAKE_ARTIST_STROKE_OPTIONS}
+                  onSelect={newGamesConfig.setFakeArtistStrokes}
+                />
+              </>
+            )}
+            {GAME_ROUND_CONFIG[game.id] && (
+              <PillRow
+                label={t('config.rounds')}
+                value={
+                  newGamesConfig.roundCounts[game.id] ??
+                  GAME_ROUND_CONFIG[game.id].default
+                }
+                options={GAME_ROUND_CONFIG[game.id].options}
+                onSelect={(n) => newGamesConfig.setRoundCount(game.id, n)}
+              />
+            )}
           </div>
           );
         })}
@@ -321,6 +386,69 @@ export function GameSelectScreen() {
       >
         {t('gameSelect.backToLobby')}
       </button>
+    </div>
+  );
+}
+
+// Labeled row of number pills for a game card's round / stroke config.
+// stopPropagation keeps taps from bubbling up to the card's start handler.
+function PillRow({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: number;
+  options: number[];
+  onSelect: (n: number) => void;
+}) {
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{ marginTop: '0.75rem' }}
+    >
+      <div
+        style={{
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.3rem',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '0.35rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        {options.map((n) => {
+          const active = n === value;
+          return (
+            <button
+              key={n}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(n);
+              }}
+              style={{
+                padding: '0.3rem 0.65rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: active ? 'var(--accent)' : 'var(--bg-secondary)',
+                color: active ? '#fff' : 'var(--text-primary)',
+                minWidth: '36px',
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

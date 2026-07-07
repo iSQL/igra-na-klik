@@ -48,6 +48,10 @@ const SINGLE_ROOM_MODE = process.env.SINGLE_ROOM_MODE === 'true';
 const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
   ? path.resolve(process.env.QUESTION_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'question-packs');
+// Quiz question images (uploaded via the admin editor) live in a flat folder
+// inside the packs dir, served at /quiz-images/<file>. Packs reference them by
+// that short path so the socket payload stays tiny.
+const QUIZ_IMAGES_DIR = path.join(QUESTION_PACKS_DIR, '_images');
 const GEO_PACKS_DIR = process.env.GEO_PACKS_DIR
   ? path.resolve(process.env.GEO_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'geo-packs');
@@ -107,6 +111,7 @@ app.get('/api/question-packs', async (_req, res) => {
         options: string[];
         correctIndex: number;
         timeLimit: number;
+        imageUrl?: string;
       }>;
     }> = [];
 
@@ -127,6 +132,7 @@ app.get('/api/question-packs', async (_req, res) => {
             options: q.options.map((o) => o.text),
             correctIndex: q.correctIndex,
             timeLimit: q.timeLimit,
+            imageUrl: q.imageUrl,
           })),
         });
       } catch {
@@ -336,6 +342,15 @@ app.use(
   express.static(GEO_PACKS_DIR, { maxAge: '7d', etag: true })
 );
 
+// Quiz question images uploaded through the admin editor. Same rationale as
+// /geo-images: mounted unconditionally (express.static tolerates a missing
+// root, and the folder is created lazily on the first upload).
+app.use(
+  '/quiz-images',
+  cors({ origin: corsOrigins }),
+  express.static(QUIZ_IMAGES_DIR, { maxAge: '7d', etag: true })
+);
+
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
 // (geo, kviz, ko-sam-ja, tajni-agenti packs + scenarios). See ADMIN_TOKEN in
@@ -345,6 +360,7 @@ app.use(
   '/api/admin',
   createContentAdminRouter({
     questionPacksDir: QUESTION_PACKS_DIR,
+    quizImagesDir: QUIZ_IMAGES_DIR,
     koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     tajniAgentiScenariosDir: TAJNI_AGENTI_SCENARIOS_DIR,

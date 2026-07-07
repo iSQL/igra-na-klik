@@ -11,23 +11,37 @@ import { POGODI_GODINU_EVENTS, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { PogodiGodinuInternalState } from './PogodiGodinuState.js';
 import {
+  DEFAULT_ROUNDS,
   FINAL_LEADERBOARD_DURATION,
   GUESSING_DURATION,
   INTRO_DURATION,
-  NUM_ROUNDS,
+  MAX_ROUNDS,
+  MIN_ROUNDS,
   REVEAL_DURATION,
   YEAR_MAX,
   YEAR_MIN,
 } from './PogodiGodinuState.js';
 import { pointsForYearDistance } from './scoring.js';
 
+function clampRounds(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_ROUNDS;
+  const n = Math.floor(raw);
+  if (n < MIN_ROUNDS) return MIN_ROUNDS;
+  if (n > MAX_ROUNDS) return MAX_ROUNDS;
+  return n;
+}
+
 export class PogodiGodinuModule extends BaseGameModule {
   readonly gameId = 'pogodi-godinu';
 
   private state!: PogodiGodinuInternalState;
 
-  onStart(room: Room): GameState {
-    const events = shuffled(POGODI_GODINU_EVENTS).slice(0, NUM_ROUNDS);
+  onStart(room: Room, customContent?: unknown): GameState {
+    const rounds = clampRounds(
+      (customContent as { pogodiGodinuRounds?: unknown } | undefined)
+        ?.pogodiGodinuRounds
+    );
+    const events = shuffled(POGODI_GODINU_EVENTS).slice(0, rounds);
     this.state = {
       phase: 'intro',
       phaseTimeRemaining: INTRO_DURATION,

@@ -166,6 +166,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.loadingPacks': 'Učitavanje paketa…',
     'config.photosPerPlayer': 'Slika po igraču',
     'config.rounds': 'Broj rundi',
+    'config.strokes': 'Poteza po igraču',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -433,6 +434,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.loadingPacks': 'Loading packs…',
     'config.photosPerPlayer': 'Photos per player',
     'config.rounds': 'Number of rounds',
+    'config.strokes': 'Strokes per player',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',

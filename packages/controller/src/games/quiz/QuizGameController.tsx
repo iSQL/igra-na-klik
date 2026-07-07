@@ -20,6 +20,7 @@ export default function QuizGameController() {
 
   if (phase === 'showing-question') {
     const questionText = data.questionText as string | undefined;
+    const imageUrl = data.imageUrl as string | undefined;
     const previewDuration = (data.previewDuration as number) || 5;
     return (
       <div
@@ -61,6 +62,7 @@ export default function QuizGameController() {
             {questionText}
           </p>
         )}
+        {imageUrl && <QuestionImage src={imageUrl} />}
         <CountdownRing timeRemaining={timeRemaining} duration={previewDuration} />
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
           Odgovori se pojavljuju za...
@@ -72,6 +74,7 @@ export default function QuizGameController() {
   if (phase === 'answering') {
     const options = data.options as QuizOption[];
     const questionText = data.questionText as string | undefined;
+    const imageUrl = data.imageUrl as string | undefined;
     const hasAnswered = myData?.hasAnswered ?? false;
     const selectedIndex = myData?.selectedIndex ?? null;
 
@@ -133,6 +136,7 @@ export default function QuizGameController() {
               {questionText}
             </p>
           )}
+          {imageUrl && <QuestionImage src={imageUrl} compact />}
         </div>
         <div style={{ flex: 1, minHeight: 0 }}>{body}</div>
       </div>
@@ -201,6 +205,28 @@ export default function QuizGameController() {
   }
 
   return null;
+}
+
+// Question image shown above the answer buttons. `compact` caps the height
+// harder during the answering phase so the option grid still fits the screen.
+function QuestionImage({ src, compact }: { src: string; compact?: boolean }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{
+        display: 'block',
+        margin: '0 auto',
+        maxWidth: '100%',
+        maxHeight: compact ? '26vh' : '38vh',
+        width: 'auto',
+        height: 'auto',
+        objectFit: 'contain',
+        borderRadius: '14px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+      }}
+    />
+  );
 }
 
 function CountdownRing({

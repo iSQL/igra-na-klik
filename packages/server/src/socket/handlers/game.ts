@@ -65,6 +65,11 @@ export function registerGameHandlers(
       customTajniAgentiPack: data.customTajniAgentiPack,
       tajniAgentiScenarioCode: data.tajniAgentiScenarioCode,
       customTajniAgentiScenario: data.customTajniAgentiScenario,
+      fakeArtistRounds: data.fakeArtistRounds,
+      fakeArtistStrokes: data.fakeArtistStrokes,
+      koBiPreRounds: data.koBiPreRounds,
+      pogodiGodinuRounds: data.pogodiGodinuRounds,
+      roundCount: data.roundCount,
       language: data.language,
     });
     if (result.error) {

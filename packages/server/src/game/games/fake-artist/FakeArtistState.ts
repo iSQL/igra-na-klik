@@ -7,7 +7,9 @@ export const VOTING_DURATION = 40;
 export const FAKE_GUESS_DURATION = 20;
 export const RESULTS_DURATION = 12;
 
-export const STROKES_PER_PLAYER = 2;
+export const DEFAULT_STROKES = 2;
+export const MIN_STROKES = 1;
+export const MAX_STROKES = 3;
 export const DEFAULT_ROUNDS = 3;
 export const MIN_ROUNDS = 1;
 export const MAX_ROUNDS = 8;
@@ -27,6 +29,7 @@ export interface FakeArtistInternalState {
 
   totalRounds: number;
   currentRound: number; // 1-based
+  strokesPerPlayer: number;
 
   // Per-round.
   turnOrder: string[]; // shuffled connected player ids at round start

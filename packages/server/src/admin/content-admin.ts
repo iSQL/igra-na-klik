@@ -1,7 +1,8 @@
 import { Router, type Response } from 'express';
 import express from 'express';
 import path from 'path';
-import { readdir, readFile, unlink } from 'fs/promises';
+import { randomUUID } from 'crypto';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises';
 import type { Dirent } from 'fs';
 import {
   parseQuizImport,
@@ -33,10 +34,14 @@ import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './adm
 
 interface ContentDirs {
   questionPacksDir: string;
+  /** Flat folder for uploaded quiz images, served at /quiz-images/<file>. */
+  quizImagesDir: string;
   koSamJaPacksDir: string;
   tajniAgentiPacksDir: string;
   tajniAgentiScenariosDir: string;
 }
+
+const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
 
 type CardType = 'red' | 'blue' | 'neutral' | 'assassin';
 const CARD_TYPES = new Set<CardType>(['red', 'blue', 'neutral', 'assassin']);
@@ -46,7 +51,8 @@ const MAX_NAME_LENGTH = 80;
 
 export function createContentAdminRouter(dirs: ContentDirs): Router {
   const router = Router();
-  router.use(express.json({ limit: '2mb' }));
+  // Quiz image uploads ride inside JSON as base64, so allow a large body.
+  router.use(express.json({ limit: '10mb' }));
   router.use(requireAdmin);
 
   // ---------- generic helpers ------------------------------------------------
@@ -228,6 +234,8 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
         options: q.options.map((o) => o.text),
         correctIndex: q.correctIndex,
         timeLimit: q.timeLimit,
+        // Only persist the field when set — keeps text-only packs unchanged.
+        ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
       })),
     };
   }
@@ -257,6 +265,52 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
         return { ok: false, error: 'Polje "questions" mora biti niz.' };
       return quizQuestionsToFile(body.questions);
     },
+  });
+
+  // ---------- quiz image upload -------------------------------------------------
+  // POST { imageBase64 } → writes a downscaled JPEG/PNG into quizImagesDir and
+  // returns { imageUrl: '/quiz-images/<uuid>.<ext>' }. The editor then stores
+  // that short path on the question and saves the pack via the whole-file PUT.
+  // Images are shared across packs (flat store); deleting a pack leaves its
+  // images behind — harmless for a self-hosted tool.
+  router.post('/quiz-image', async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const imageBase64 = body.imageBase64;
+    if (typeof imageBase64 !== 'string' || imageBase64.length === 0) {
+      res.status(400).json({ error: 'Nedostaje slika.' });
+      return;
+    }
+    if (imageBase64.length > MAX_IMAGE_BASE64) {
+      res.status(400).json({ error: 'Slika je prevelika (max ~6 MB).' });
+      return;
+    }
+    const match = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/.exec(imageBase64);
+    if (!match) {
+      res.status(400).json({ error: 'Nevažeći format slike.' });
+      return;
+    }
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    let data: Buffer;
+    try {
+      data = Buffer.from(match[2], 'base64');
+    } catch {
+      res.status(400).json({ error: 'Neispravan base64 sadržaj.' });
+      return;
+    }
+    if (data.length === 0) {
+      res.status(400).json({ error: 'Prazna slika.' });
+      return;
+    }
+    const fileName = `${randomUUID()}.${ext}`;
+    try {
+      await mkdir(dirs.quizImagesDir, { recursive: true });
+      await writeFile(path.join(dirs.quizImagesDir, fileName), data);
+    } catch (err) {
+      console.error('content-admin: failed to write quiz image:', err);
+      res.status(500).json({ error: 'Ne mogu da sačuvam sliku.' });
+      return;
+    }
+    res.status(201).json({ imageUrl: `/quiz-images/${fileName}` });
   });
 
   // ---------- ko sam ja packs ---------------------------------------------------

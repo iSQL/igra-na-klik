@@ -23,6 +23,7 @@ export * from './types/ko-bi-pre.js';
 export * from './types/dve-istine-i-laz.js';
 export * from './games/pogodi-godinu-events.js';
 export * from './types/pogodi-godinu.js';
+export * from './games/round-config.js';
 export * from './games/flood-fill.js';
 export * from './games/fibbage-questions.js';
 export * from './games/quiz-import.js';

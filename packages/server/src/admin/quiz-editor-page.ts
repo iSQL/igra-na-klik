@@ -10,13 +10,16 @@ export function renderQuizEditorPage(): string {
   return renderAdminPage({
     title: 'Kviz editor',
     subtitle:
-      'Packovi pitanja za „Kviz" — 2 do 4 odgovora po pitanju, jedan tačan, opciono vreme (5–60 s).',
+      'Packovi pitanja za „Kviz" — 2 do 4 odgovora po pitanju, jedan tačan, opciono slika i vreme (5–60 s).',
     active: 'kviz',
     extraCss: `
 .opt-row{display:flex;gap:0.5rem;align-items:center;margin-bottom:0.45rem}
 .opt-row input[type=radio]{width:20px;height:20px;accent-color:#3E7D57;flex:none}
 .q-opts{color:var(--muted);font-size:0.8rem;margin-top:0.25rem}
 .q-opts .correct{color:var(--green);font-weight:800}
+.img-zone{border:1px dashed var(--border,#cbb);border-radius:10px;padding:0.7rem;margin-top:0.3rem}
+.img-zone img{display:block;max-width:100%;max-height:190px;border-radius:8px;margin-bottom:0.5rem}
+.q-thumb{max-width:120px;max-height:90px;border-radius:8px;margin-top:0.4rem;display:block}
 `,
     body: `
     <!-- PACK LIST -->
@@ -52,7 +55,17 @@ export function renderQuizEditorPage(): string {
         <div class="opt-row"><input type="radio" name="correct" value="1"><input type="text" id="q-opt1" placeholder="Odgovor 2"></div>
         <div class="opt-row"><input type="radio" name="correct" value="2"><input type="text" id="q-opt2" placeholder="Odgovor 3 (opciono)"></div>
         <div class="opt-row"><input type="radio" name="correct" value="3"><input type="text" id="q-opt3" placeholder="Odgovor 4 (opciono)"></div>
-        <label for="q-time">Vreme u sekundama (opciono, 5–60; podrazumevano 15)</label>
+        <label>Slika (opciono) — npr. „Koji pevač je na slici?"</label>
+        <div class="img-zone" id="img-zone">
+          <img id="q-img-preview" style="display:none" alt="">
+          <div id="q-img-empty" class="hint" style="margin:0">Nema slike.</div>
+          <input type="file" id="q-img-file" accept="image/*" style="display:none">
+          <div class="row" style="margin-top:0.5rem">
+            <button type="button" class="btn btn-ghost btn-sm" id="q-img-pick">Dodaj sliku</button>
+            <button type="button" class="btn btn-danger btn-sm" id="q-img-remove" style="display:none">Ukloni sliku</button>
+          </div>
+        </div>
+        <label for="q-time" style="margin-top:0.8rem">Vreme u sekundama (opciono, 5–60; podrazumevano 15)</label>
         <input type="number" id="q-time" min="5" max="60" step="1" placeholder="15" style="max-width:140px">
         <div class="row" style="margin-top:1rem">
           <button class="btn btn-primary" id="save-q-btn">Sačuvaj pitanje</button>
@@ -73,6 +86,9 @@ export function renderQuizEditorPage(): string {
   var packs = [];
   var currentId = null;
   var editIndex = null;
+  // Server path (/quiz-images/...) of the image on the question being edited,
+  // or null. Set by a successful upload, cleared by "Ukloni sliku" / reset.
+  var pendingImageUrl = null;
 
   function show(view){
     $('view-list').style.display = view === 'list' ? 'block' : 'none';
@@ -137,7 +153,9 @@ export function renderQuizEditorPage(): string {
         if (j === q.correctIndex) opts += '<span class="correct">✓ ' + esc(qOpts[j]) + '</span>';
         else opts += esc(qOpts[j]);
       }
-      row.innerHTML = '<div class="txt">' + (i + 1) + '. ' + esc(q.text || '(bez teksta)') + '</div>'
+      var thumb = q.imageUrl ? '<img class="q-thumb" src="' + esc(q.imageUrl) + '" alt="">' : '';
+      row.innerHTML = '<div class="txt">' + (i + 1) + '. ' + (q.imageUrl ? '🖼 ' : '') + esc(q.text || '(bez teksta)') + '</div>'
+        + thumb
         + '<div class="q-opts">' + opts + (q.timeLimit ? ' · ⏱ ' + esc(q.timeLimit) + 's' : '') + '</div>';
       var btns = document.createElement('div');
       btns.className = 'row';
@@ -177,8 +195,62 @@ export function renderQuizEditorPage(): string {
     for (var i = 0; i < 4; i++) $('q-opt' + i).value = '';
     document.querySelector('input[name=correct][value="0"]').checked = true;
     $('q-time').value = '';
+    setImage(null);
     $('cancel-edit-btn').style.display = 'none';
     $('save-q-btn').textContent = 'Sačuvaj pitanje';
+  }
+
+  // Reflect the current image (or its absence) in the editor form.
+  function setImage(url){
+    pendingImageUrl = url || null;
+    var prev = $('q-img-preview');
+    if (pendingImageUrl){
+      prev.src = pendingImageUrl;
+      prev.style.display = 'block';
+      $('q-img-empty').style.display = 'none';
+      $('q-img-remove').style.display = '';
+      $('q-img-pick').textContent = 'Promeni sliku';
+    } else {
+      prev.removeAttribute('src');
+      prev.style.display = 'none';
+      $('q-img-empty').style.display = '';
+      $('q-img-remove').style.display = 'none';
+      $('q-img-pick').textContent = 'Dodaj sliku';
+    }
+  }
+
+  // Downscale a picked file to a small JPEG and upload it; the server stores
+  // it and returns a short /quiz-images/... path we keep on the question.
+  function handleImgFile(file){
+    if (!file || file.type.indexOf('image/') !== 0){ showErr('Izaberi sliku.'); return; }
+    $('q-img-pick').disabled = true;
+    downscale(file, 1280, 0.75).then(function(base64){
+      if (!base64){ showErr('Ne mogu da pročitam sliku.'); $('q-img-pick').disabled = false; return; }
+      return api('POST', '/api/admin/quiz-image', { imageBase64: base64 })
+        .then(function(data){ setImage(data.imageUrl); showOk('Slika dodata.'); })
+        .catch(function(e){ showErr(e.message); });
+    }).then(function(){ $('q-img-pick').disabled = false; });
+  }
+
+  function downscale(file, maxDim, quality){
+    return new Promise(function(resolve){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        try {
+          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (e){ URL.revokeObjectURL(url); resolve(null); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
   }
 
   function startEdit(i){
@@ -194,6 +266,7 @@ export function renderQuizEditorPage(): string {
     var radio = document.querySelector('input[name=correct][value="' + ci + '"]');
     if (radio) radio.checked = true;
     $('q-time').value = q.timeLimit ? String(q.timeLimit) : '';
+    setImage(q.imageUrl || null);
     $('cancel-edit-btn').style.display = '';
     $('save-q-btn').textContent = 'Sačuvaj izmene';
     window.scrollTo(0, 0);
@@ -221,6 +294,7 @@ export function renderQuizEditorPage(): string {
       if (isNaN(n) || n < 5 || n > 60){ showErr('Vreme mora biti između 5 i 60 sekundi.'); return null; }
       q.timeLimit = n;
     }
+    if (pendingImageUrl) q.imageUrl = pendingImageUrl;
     return q;
   }
 
@@ -275,6 +349,14 @@ export function renderQuizEditorPage(): string {
 
   $('save-q-btn').onclick = saveQuestion;
   $('cancel-edit-btn').onclick = resetForm;
+
+  $('q-img-pick').onclick = function(){ $('q-img-file').click(); };
+  $('q-img-file').onchange = function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (f) handleImgFile(f);
+  };
+  $('q-img-remove').onclick = function(){ setImage(null); };
 
   Admin.start(API, function(data){
     packs = data.packs || [];
