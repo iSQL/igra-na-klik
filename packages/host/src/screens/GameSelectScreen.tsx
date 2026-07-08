@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { GAME_DEFINITIONS, GAME_ROUND_CONFIG } from '@igra/shared';
-import type { HostStartGamePayload } from '@igra/shared';
+import type { HostStartGamePayload, GluvoDobaPack } from '@igra/shared';
+
+interface GluvoDobaPackSummary extends GluvoDobaPack {
+  id: string;
+}
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
 import { useGameStore } from '../store/gameStore';
@@ -42,7 +46,23 @@ export function GameSelectScreen() {
   const newGamesConfig = useNewGamesConfigStore();
   const connectedCount = players.filter((p) => p.isConnected).length;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const t = useT();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/gluvo-doba-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: GluvoDobaPackSummary[] }) => {
+        if (!cancelled) setGluvoPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setGluvoPacks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const onError = ({ message }: { message: string }) => {
@@ -63,6 +83,13 @@ export function GameSelectScreen() {
   const handleSelect = (gameId: string) => {
     const def = GAME_DEFINITIONS[gameId];
     if (def && connectedCount < def.minPlayers) return;
+
+    // The chosen Gluvo doba pack (if any) — a missing/deleted id falls back
+    // to the built-in bands.
+    const gluvoPack =
+      gameId === 'gluvo-doba'
+        ? gluvoPacks.find((p) => p.id === newGamesConfig.gluvoDobaPackId)
+        : undefined;
 
     const customQuestions =
       gameId === 'quiz'
@@ -136,11 +163,23 @@ export function GameSelectScreen() {
           ? newGamesConfig.gluvoDobaFirstNightPeace
           : undefined,
       gluvoDobaNeutral:
-        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaNeutral : undefined,
+        gameId === 'gluvo-doba' && !gluvoPack
+          ? newGamesConfig.gluvoDobaNeutral
+          : undefined,
+      // Toggles only apply to the built-in bands; when a pack is chosen its
+      // roster wins, so don't also send the toggles.
       gluvoDobaVila:
-        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaVila : undefined,
+        gameId === 'gluvo-doba' && !gluvoPack
+          ? newGamesConfig.gluvoDobaVila
+          : undefined,
       gluvoDobaBajacica:
-        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaBajacica : undefined,
+        gameId === 'gluvo-doba' && !gluvoPack
+          ? newGamesConfig.gluvoDobaBajacica
+          : undefined,
+      gluvoDobaPack:
+        gameId === 'gluvo-doba' && gluvoPack
+          ? { name: gluvoPack.name, wolves: gluvoPack.wolves, roles: gluvoPack.roles }
+          : undefined,
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
@@ -385,6 +424,18 @@ export function GameSelectScreen() {
                   onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
                 />
                 <TextPillRow
+                  label={t('config.gluvoMode')}
+                  value={newGamesConfig.gluvoDobaPackId}
+                  options={[
+                    { value: '', label: t('config.gluvoModeClassic') },
+                    ...gluvoPacks.map((p) => ({
+                      value: p.id,
+                      label: p.name || p.id,
+                    })),
+                  ]}
+                  onSelect={newGamesConfig.setGluvoDobaPackId}
+                />
+                <TextPillRow
                   label={t('config.gluvoDeathReveal')}
                   value={newGamesConfig.gluvoDobaDeathReveal}
                   options={GLUVO_DOBA_DEATH_REVEAL_OPTIONS.map((v) => ({
@@ -412,22 +463,38 @@ export function GameSelectScreen() {
                     checked={newGamesConfig.gluvoDobaFirstNightPeace}
                     onToggle={newGamesConfig.setGluvoDobaFirstNightPeace}
                   />
-                  <TogglePill
-                    label={`🌲 ${t('config.gluvoNeutral')}`}
-                    checked={newGamesConfig.gluvoDobaNeutral}
-                    onToggle={newGamesConfig.setGluvoDobaNeutral}
-                  />
-                  <TogglePill
-                    label={`🧚 ${t('config.gluvoVila')}`}
-                    checked={newGamesConfig.gluvoDobaVila}
-                    onToggle={newGamesConfig.setGluvoDobaVila}
-                  />
-                  <TogglePill
-                    label={`🕯️ ${t('config.gluvoBajacica')}`}
-                    checked={newGamesConfig.gluvoDobaBajacica}
-                    onToggle={newGamesConfig.setGluvoDobaBajacica}
-                  />
+                  {newGamesConfig.gluvoDobaPackId === '' && (
+                    <>
+                      <TogglePill
+                        label={`🌲 ${t('config.gluvoNeutral')}`}
+                        checked={newGamesConfig.gluvoDobaNeutral}
+                        onToggle={newGamesConfig.setGluvoDobaNeutral}
+                      />
+                      <TogglePill
+                        label={`🧚 ${t('config.gluvoVila')}`}
+                        checked={newGamesConfig.gluvoDobaVila}
+                        onToggle={newGamesConfig.setGluvoDobaVila}
+                      />
+                      <TogglePill
+                        label={`🕯️ ${t('config.gluvoBajacica')}`}
+                        checked={newGamesConfig.gluvoDobaBajacica}
+                        onToggle={newGamesConfig.setGluvoDobaBajacica}
+                      />
+                    </>
+                  )}
                 </div>
+                {newGamesConfig.gluvoDobaPackId !== '' && (
+                  <p
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      textAlign: 'center',
+                      marginTop: '0.35rem',
+                    }}
+                  >
+                    {t('config.gluvoModeNote')}
+                  </p>
+                )}
               </>
             )}
             {GAME_ROUND_CONFIG[game.id] && (

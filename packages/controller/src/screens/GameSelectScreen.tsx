@@ -8,6 +8,7 @@ import {
 import type {
   GameDefinition,
   GluvoDobaDeathReveal,
+  GluvoDobaPack,
   QuizImportQuestion,
   KoSamJaImportQuestion,
   KoSamJaCategory,
@@ -41,6 +42,10 @@ interface KoSamJaPackSummary {
   fileName: string;
   count: number;
   questions: KoSamJaImportQuestion[];
+}
+
+interface GluvoDobaPackSummary extends GluvoDobaPack {
+  id: string;
 }
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
@@ -101,6 +106,8 @@ export function GameSelectScreen() {
   const [gluvoNeutral, setGluvoNeutral] = useState(false);
   const [gluvoVila, setGluvoVila] = useState(false);
   const [gluvoBajacica, setGluvoBajacica] = useState(false);
+  const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
+  const [gluvoPackId, setGluvoPackId] = useState('');
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -134,6 +141,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setKoSamJaPacks([]);
+      });
+    fetch('/api/gluvo-doba-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: GluvoDobaPackSummary[] }) => {
+        if (!cancelled) setGluvoPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setGluvoPacks([]);
       });
     return () => {
       cancelled = true;
@@ -191,9 +206,19 @@ export function GameSelectScreen() {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
       payload.gluvoDobaDeathReveal = gluvoDeathReveal;
       payload.gluvoDobaFirstNightPeace = gluvoFirstNight;
-      payload.gluvoDobaNeutral = gluvoNeutral;
-      payload.gluvoDobaVila = gluvoVila;
-      payload.gluvoDobaBajacica = gluvoBajacica;
+      const pack = gluvoPacks.find((p) => p.id === gluvoPackId);
+      if (pack) {
+        // The pack's roster wins — don't also send the roster toggles.
+        payload.gluvoDobaPack = {
+          name: pack.name,
+          wolves: pack.wolves,
+          roles: pack.roles,
+        };
+      } else {
+        payload.gluvoDobaNeutral = gluvoNeutral;
+        payload.gluvoDobaVila = gluvoVila;
+        payload.gluvoDobaBajacica = gluvoBajacica;
+      }
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -548,6 +573,32 @@ export function GameSelectScreen() {
                             color: 'var(--text-secondary)',
                           }}
                         >
+                          {t('config.gluvoMode')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill
+                            active={gluvoPackId === ''}
+                            onClick={() => setGluvoPackId('')}
+                          >
+                            {t('config.gluvoModeClassic')}
+                          </Pill>
+                          {gluvoPacks.map((p) => (
+                            <Pill
+                              key={p.id}
+                              active={gluvoPackId === p.id}
+                              onClick={() => setGluvoPackId(p.id)}
+                            >
+                              {p.name || p.id}
+                            </Pill>
+                          ))}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            marginTop: '0.3rem',
+                          }}
+                        >
                           {t('config.gluvoDeathReveal')}
                         </span>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
@@ -568,25 +619,39 @@ export function GameSelectScreen() {
                           >
                             🕊️ {t('config.gluvoFirstNight')}
                           </Pill>
-                          <Pill
-                            active={gluvoNeutral}
-                            onClick={() => setGluvoNeutral(!gluvoNeutral)}
-                          >
-                            🌲 {t('config.gluvoNeutral')}
-                          </Pill>
-                          <Pill
-                            active={gluvoVila}
-                            onClick={() => setGluvoVila(!gluvoVila)}
-                          >
-                            🧚 {t('config.gluvoVila')}
-                          </Pill>
-                          <Pill
-                            active={gluvoBajacica}
-                            onClick={() => setGluvoBajacica(!gluvoBajacica)}
-                          >
-                            🕯️ {t('config.gluvoBajacica')}
-                          </Pill>
+                          {gluvoPackId === '' && (
+                            <>
+                              <Pill
+                                active={gluvoNeutral}
+                                onClick={() => setGluvoNeutral(!gluvoNeutral)}
+                              >
+                                🌲 {t('config.gluvoNeutral')}
+                              </Pill>
+                              <Pill
+                                active={gluvoVila}
+                                onClick={() => setGluvoVila(!gluvoVila)}
+                              >
+                                🧚 {t('config.gluvoVila')}
+                              </Pill>
+                              <Pill
+                                active={gluvoBajacica}
+                                onClick={() => setGluvoBajacica(!gluvoBajacica)}
+                              >
+                                🕯️ {t('config.gluvoBajacica')}
+                              </Pill>
+                            </>
+                          )}
                         </div>
+                        {gluvoPackId !== '' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {t('config.gluvoModeNote')}
+                          </span>
+                        )}
                       </div>
                     </>
                   )}

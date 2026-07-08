@@ -16,7 +16,13 @@ export interface AdminPageOptions {
   title: string;
   subtitle: string;
   /** Which nav link to highlight. */
-  active: 'geo' | 'kviz' | 'ko-sam-ja' | 'tajni-agenti' | 'scenariji';
+  active:
+    | 'geo'
+    | 'kviz'
+    | 'ko-sam-ja'
+    | 'tajni-agenti'
+    | 'scenariji'
+    | 'gluvo-doba';
   /** Page-specific CSS appended after the base styles. */
   extraCss?: string;
   /** HTML rendered inside #view-main (hidden until the token unlocks). */
@@ -31,6 +37,7 @@ export const ADMIN_NAV_LINKS: ReadonlyArray<[key: string, href: string, label: s
   ['ko-sam-ja', '/admin/ko-sam-ja', 'Ko sam ja'],
   ['tajni-agenti', '/admin/tajni-agenti', 'Tajni agenti'],
   ['scenariji', '/admin/tajni-agenti-scenariji', 'Scenariji'],
+  ['gluvo-doba', '/admin/gluvo-doba', 'Gluvo doba'],
 ];
 
 export function renderAdminNav(active: string): string {

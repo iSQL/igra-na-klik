@@ -35,6 +35,8 @@ import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
 import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
 import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
 import { renderTajniAgentiScenarioEditorPage } from './admin/tajni-agenti-scenario-editor-page.js';
+import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
+import { parseGluvoDobaPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:5173';
@@ -65,6 +67,9 @@ const TAJNI_AGENTI_PACKS_DIR = process.env.TAJNI_AGENTI_PACKS_DIR
 const TAJNI_AGENTI_SCENARIOS_DIR = process.env.TAJNI_AGENTI_SCENARIOS_DIR
   ? path.resolve(process.env.TAJNI_AGENTI_SCENARIOS_DIR)
   : path.resolve(__dirname, '../../..', 'tajni-agenti-scenarios');
+const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
+  ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -150,6 +155,48 @@ app.get('/api/question-packs', async (_req, res) => {
     }
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
+  }
+});
+
+app.get('/api/gluvo-doba-packs', async (_req, res) => {
+  try {
+    const entries = await readdir(GLUVO_DOBA_PACKS_DIR, { withFileTypes: true });
+    const jsonFiles = entries.filter(
+      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
+    );
+    const packs: Array<{
+      id: string;
+      name?: string;
+      wolves: number;
+      roles: string[];
+    }> = [];
+    for (const entry of jsonFiles) {
+      try {
+        const raw = await readFile(
+          path.join(GLUVO_DOBA_PACKS_DIR, entry.name),
+          'utf-8'
+        );
+        const parsed = parseGluvoDobaPack(JSON.parse(raw));
+        if (!parsed.ok) continue;
+        packs.push({
+          id: entry.name.replace(/\.json$/i, ''),
+          name: parsed.pack.name,
+          wolves: parsed.pack.wolves,
+          roles: parsed.pack.roles,
+        });
+      } catch {
+        // Skip unreadable / malformed files; the rest still loads.
+      }
+    }
+    packs.sort((a, b) => a.id.localeCompare(b.id));
+    res.json({ packs });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      res.json({ packs: [] });
+      return;
+    }
+    console.error('Failed to read gluvo-doba packs directory:', err);
+    res.status(500).json({ error: 'Failed to read gluvo-doba packs' });
   }
 });
 
@@ -365,6 +412,7 @@ app.use(
     koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     tajniAgentiScenariosDir: TAJNI_AGENTI_SCENARIOS_DIR,
+    gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
   })
 );
 
@@ -378,6 +426,7 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/ko-sam-ja', renderKoSamJaEditorPage()],
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
   ['/admin/tajni-agenti-scenariji', renderTajniAgentiScenarioEditorPage()],
+  ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
 ];
 for (const [route, html] of ADMIN_EDITOR_PAGES) {
   app.get(route, (_req, res) => {
@@ -704,6 +753,7 @@ httpServer.listen(PORT, () => {
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
   console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
   console.log(`Ko sam ja packs dir: ${KO_SAM_JA_PACKS_DIR}`);
+  console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   console.log(`Tajni agenti scenarios dir: ${TAJNI_AGENTI_SCENARIOS_DIR}`);
   if (SINGLE_ROOM_MODE) {

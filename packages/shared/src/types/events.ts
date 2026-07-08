@@ -14,6 +14,7 @@ import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
 import type { TajniAgentiScenario } from '../games/tajni-agenti-scenarios.js';
 import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
+import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -83,6 +84,9 @@ export interface ClientToServerEvents {
     gluvoDobaNeutral?: boolean;
     gluvoDobaVila?: boolean;
     gluvoDobaBajacica?: boolean;
+    // A selected role pack fully defines the roster (overrides the bands +
+    // neutral/vila/bajačica toggles). Re-validated server-side.
+    gluvoDobaPack?: GluvoDobaPack;
     // Round / stroke counts for the newer games (host-configurable).
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;

@@ -176,6 +176,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoNeutral': 'Neutralac (Lesnik/Morana)',
     'config.gluvoVila': 'Vila u igri',
     'config.gluvoBajacica': 'Bajačica u igri',
+    'config.gluvoMode': 'Mod (uloge)',
+    'config.gluvoModeClassic': 'Klasik (ugrađeni balans)',
+    'config.gluvoModeNote': 'Uloge dolaze iz izabranog moda — ostala pravila i dalje važe.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -456,6 +459,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoNeutral': 'Neutral (Lesnik/Morana)',
     'config.gluvoVila': 'Vila in play',
     'config.gluvoBajacica': 'Bajačica in play',
+    'config.gluvoMode': 'Mode (roles)',
+    'config.gluvoModeClassic': 'Classic (built-in balance)',
+    'config.gluvoModeNote': 'Roles come from the selected mode — other rules still apply.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',

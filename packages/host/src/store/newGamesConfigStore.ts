@@ -16,6 +16,8 @@ interface NewGamesConfigStore {
   gluvoDobaNeutral: boolean;
   gluvoDobaVila: boolean;
   gluvoDobaBajacica: boolean;
+  // Selected role pack id ('' = built-in balance bands + the toggles above).
+  gluvoDobaPackId: string;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
   // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -29,6 +31,7 @@ interface NewGamesConfigStore {
   setGluvoDobaNeutral: (v: boolean) => void;
   setGluvoDobaVila: (v: boolean) => void;
   setGluvoDobaBajacica: (v: boolean) => void;
+  setGluvoDobaPackId: (id: string) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -45,6 +48,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaNeutral: false,
       gluvoDobaVila: false,
       gluvoDobaBajacica: false,
+      gluvoDobaPackId: '',
       roundCounts: {},
       setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
@@ -57,6 +61,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaNeutral: (v) => set({ gluvoDobaNeutral: v }),
       setGluvoDobaVila: (v) => set({ gluvoDobaVila: v }),
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
+      setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

@@ -75,6 +75,7 @@ export function registerGameHandlers(
       gluvoDobaNeutral: data.gluvoDobaNeutral,
       gluvoDobaVila: data.gluvoDobaVila,
       gluvoDobaBajacica: data.gluvoDobaBajacica,
+      gluvoDobaPack: data.gluvoDobaPack,
       roundCount: data.roundCount,
       language: data.language,
     });

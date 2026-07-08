@@ -10,7 +10,13 @@ import type {
   GluvoDobaRoleId,
   GluvoDobaTargetOption,
 } from '@igra/shared';
-import { GLUVO_DOBA_ROLES, assignRoles } from '@igra/shared';
+import {
+  GLUVO_DOBA_ROLES,
+  assignRoles,
+  dealRolesFromPack,
+  parseGluvoDobaPack,
+} from '@igra/shared';
+import type { GluvoDobaPack } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type {
   GluvoDobaDeathRecord,
@@ -37,6 +43,7 @@ interface GluvoDobaCustomContent {
   gluvoDobaNeutral?: boolean;
   gluvoDobaVila?: boolean;
   gluvoDobaBajacica?: boolean;
+  gluvoDobaPack?: GluvoDobaPack;
 }
 
 const DAY_PHASES = new Set(['zora', 'diskusija', 'glasanje', 'presuda']);
@@ -96,14 +103,22 @@ export class GluvoDobaModule extends BaseGameModule {
       ])
     );
 
-    const roles = assignRoles(
-      participants.map((p) => p.id),
-      {
-        neutral: opts.gluvoDobaNeutral === true,
-        vila: opts.gluvoDobaVila === true,
-        bajacica: opts.gluvoDobaBajacica === true,
-      }
-    );
+    // A selected pack fully defines the roster; otherwise fall back to the
+    // built-in player-count bands + the individual role toggles. The client
+    // may send an untrusted pack object, so re-validate it here.
+    const ids = participants.map((p) => p.id);
+    const parsedPack =
+      opts.gluvoDobaPack !== undefined
+        ? parseGluvoDobaPack(opts.gluvoDobaPack)
+        : null;
+    const roles =
+      parsedPack && parsedPack.ok
+        ? dealRolesFromPack(ids, parsedPack.pack)
+        : assignRoles(ids, {
+            neutral: opts.gluvoDobaNeutral === true,
+            vila: opts.gluvoDobaVila === true,
+            bajacica: opts.gluvoDobaBajacica === true,
+          });
 
     this.state = {
       phase: 'podela-uloga',

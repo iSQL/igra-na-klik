@@ -9,6 +9,7 @@ import {
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseTajniAgentiScenarioImport,
+  parseGluvoDobaPack,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
   TAJNI_AGENTI_MAX_WORD_LENGTH,
@@ -39,6 +40,7 @@ interface ContentDirs {
   koSamJaPacksDir: string;
   tajniAgentiPacksDir: string;
   tajniAgentiScenariosDir: string;
+  gluvoDobaPacksDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
@@ -501,6 +503,45 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     types.push('assassin');
     return types.map((type) => ({ word: '', type }));
   }
+
+  // ---------- gluvo doba role packs ---------------------------------------------
+  // File on disk: { name?, wolves, roles: GluvoDobaRoleId[] }. A pack curates
+  // which roles are in play; strict validation (valid wolf count + role ids)
+  // gates visibility in the game.
+
+  mountPackRoutes({
+    route: 'gluvo-doba-packs',
+    dir: dirs.gluvoDobaPacksDir,
+    listKey: 'packs',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const parsed = parseGluvoDobaPack(raw);
+      const obj = (raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? raw
+        : {}) as Record<string, unknown>;
+      const name = typeof obj.name === 'string' ? obj.name : undefined;
+      const wolves = typeof obj.wolves === 'number' ? obj.wolves : 2;
+      const roles = Array.isArray(obj.roles) ? obj.roles : [];
+      return {
+        id,
+        name: parsed.ok ? parsed.pack.name : name,
+        wolves: parsed.ok ? parsed.pack.wolves : wolves,
+        roles: parsed.ok ? parsed.pack.roles : roles,
+        count: parsed.ok ? parsed.pack.roles.length : roles.length,
+        visibleInGame: parsed.ok,
+        error: parsed.ok ? undefined : parsed.error,
+      };
+    },
+    create: (_body, name) => ({
+      ok: true,
+      data: { name, wolves: 2, roles: ['vidovnjak', 'zmaj'] },
+    }),
+    replace: (body) => {
+      const parsed = parseGluvoDobaPack(body);
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      return { ok: true, data: parsed.pack };
+    },
+  });
 
   mountPackRoutes({
     route: 'tajni-agenti-scenarios',
