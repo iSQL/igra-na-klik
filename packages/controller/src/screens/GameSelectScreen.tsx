@@ -100,6 +100,7 @@ export function GameSelectScreen() {
   const [gluvoFirstNight, setGluvoFirstNight] = useState(true);
   const [gluvoNeutral, setGluvoNeutral] = useState(false);
   const [gluvoVila, setGluvoVila] = useState(false);
+  const [gluvoBajacica, setGluvoBajacica] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -192,6 +193,7 @@ export function GameSelectScreen() {
       payload.gluvoDobaFirstNightPeace = gluvoFirstNight;
       payload.gluvoDobaNeutral = gluvoNeutral;
       payload.gluvoDobaVila = gluvoVila;
+      payload.gluvoDobaBajacica = gluvoBajacica;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -577,6 +579,12 @@ export function GameSelectScreen() {
                             onClick={() => setGluvoVila(!gluvoVila)}
                           >
                             🧚 {t('config.gluvoVila')}
+                          </Pill>
+                          <Pill
+                            active={gluvoBajacica}
+                            onClick={() => setGluvoBajacica(!gluvoBajacica)}
+                          >
+                            🕯️ {t('config.gluvoBajacica')}
                           </Pill>
                         </div>
                       </div>

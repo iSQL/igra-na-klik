@@ -139,6 +139,8 @@ export function GameSelectScreen() {
         gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaNeutral : undefined,
       gluvoDobaVila:
         gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaVila : undefined,
+      gluvoDobaBajacica:
+        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaBajacica : undefined,
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
@@ -419,6 +421,11 @@ export function GameSelectScreen() {
                     label={`🧚 ${t('config.gluvoVila')}`}
                     checked={newGamesConfig.gluvoDobaVila}
                     onToggle={newGamesConfig.setGluvoDobaVila}
+                  />
+                  <TogglePill
+                    label={`🕯️ ${t('config.gluvoBajacica')}`}
+                    checked={newGamesConfig.gluvoDobaBajacica}
+                    onToggle={newGamesConfig.setGluvoDobaBajacica}
                   />
                 </div>
               </>

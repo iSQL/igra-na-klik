@@ -46,6 +46,10 @@ export interface NightResolutionInput {
   moranaKillNight: boolean;
   /** The Zduhać already spent his one-time intercept. */
   zduhacSaveUsed: boolean;
+  /** The living player the Bajačica asked the dead about (null if none). */
+  bajacicaTargetId: string | null;
+  /** Ghosts' anonymous yes/no answers to the Bajačica this night. */
+  ghostVotes: Map<string, 'da' | 'ne'>;
   nameOf: (playerId: string) => string;
 }
 
@@ -61,6 +65,14 @@ export interface NightResolutionOutcome {
   enchantedTonightId: string | null;
   newLastProtectedId: string | null;
   seerEntry: { night: number; targetName: string; hintText: string } | null;
+  /** The Bajačica's private reading from the dead (null if not in play). */
+  bajacicaEntry: {
+    night: number;
+    targetName: string;
+    da: number;
+    ne: number;
+    blocked?: boolean;
+  } | null;
   /** The Zduhać spent his intercept tonight (public reveal at dawn). */
   zduhacSavedBy: string | null;
   /** Bauk's victim — cannot vote on the following day. */
@@ -211,6 +223,36 @@ export function resolveNight(
     }
   }
 
+  // 8b. Bajačica's reading from the dead. The ghosts were asked live during
+  // the night about her RAW target, so this is exempt from the enchant
+  // redirect — but a Todorac block still severs her call to the other side.
+  let bajacicaEntry: NightResolutionOutcome['bajacicaEntry'] = null;
+  const bajacicaId = actorWith('ask-dead');
+  if (bajacicaId !== null && input.bajacicaTargetId !== null) {
+    if (isBlocked(bajacicaId)) {
+      bajacicaEntry = {
+        night: input.night,
+        targetName: nameOf(input.bajacicaTargetId),
+        da: 0,
+        ne: 0,
+        blocked: true,
+      };
+    } else {
+      let da = 0;
+      let ne = 0;
+      for (const v of input.ghostVotes.values()) {
+        if (v === 'da') da += 1;
+        else ne += 1;
+      }
+      bajacicaEntry = {
+        night: input.night,
+        targetName: nameOf(input.bajacicaTargetId),
+        da,
+        ne,
+      };
+    }
+  }
+
   // 9. Bauk scares his target out of tomorrow's vote.
   let mutedTodayId: string | null = null;
   const baukId = actorWith('fear');
@@ -248,6 +290,7 @@ export function resolveNight(
     enchantedTonightId,
     newLastProtectedId: protectedId,
     seerEntry,
+    bajacicaEntry,
     zduhacSavedBy,
     mutedTodayId,
     whisperTop,

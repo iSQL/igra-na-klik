@@ -36,6 +36,7 @@ interface GluvoDobaCustomContent {
   gluvoDobaFirstNightPeace?: boolean;
   gluvoDobaNeutral?: boolean;
   gluvoDobaVila?: boolean;
+  gluvoDobaBajacica?: boolean;
 }
 
 const DAY_PHASES = new Set(['zora', 'diskusija', 'glasanje', 'presuda']);
@@ -100,6 +101,7 @@ export class GluvoDobaModule extends BaseGameModule {
       {
         neutral: opts.gluvoDobaNeutral === true,
         vila: opts.gluvoDobaVila === true,
+        bajacica: opts.gluvoDobaBajacica === true,
       }
     );
 
@@ -122,6 +124,9 @@ export class GluvoDobaModule extends BaseGameModule {
       zduhacSavedAnnouncement: null,
       mutedTodayId: null,
       announcePeacefulFirstNight: false,
+      bajacicaTargetId: null,
+      ghostVotes: new Map(),
+      expectedGhostIds: new Set(),
       pendingDeaths: [],
       whisperTop: [],
       osvetaContext: null,
@@ -134,6 +139,7 @@ export class GluvoDobaModule extends BaseGameModule {
       lastVoteTally: [],
       lastSkipVotes: 0,
       seerHistory: [],
+      bajacicaHistory: [],
       winner: null,
       moranaWon: false,
     };
@@ -172,6 +178,8 @@ export class GluvoDobaModule extends BaseGameModule {
         return this.handleVote(room, playerId, data);
       case 'gluvo:osveta':
         return this.handleOsveta(room, playerId, data);
+      case 'gluvo:ghost-vote':
+        return this.handleGhostVote(room, playerId, data);
       case 'gluvo:knez-reveal':
         return this.handleKnezReveal(room, playerId);
       default:
@@ -242,6 +250,12 @@ export class GluvoDobaModule extends BaseGameModule {
       } else if (this.state.phase === 'glasanje' && this.allVoted(room)) {
         this.finishVoting(room);
       }
+    } else {
+      // A ghost left — don't let the Bajačica's question wait on them.
+      this.state.expectedGhostIds.delete(playerId);
+      if (this.state.phase === 'noc' && this.nightComplete(room)) {
+        this.finishNight(room);
+      }
     }
 
     return this.buildGameState(room);
@@ -264,6 +278,34 @@ export class GluvoDobaModule extends BaseGameModule {
 
     this.state.nightActions.set(playerId, targetId);
 
+    // The Bajačica's submission is what pushes her yes/no question to the
+    // ghosts — until then their phones show only the role list.
+    if (this.roleOf(playerId) === 'bajacica') {
+      this.state.bajacicaTargetId = targetId;
+    }
+
+    if (this.nightComplete(room)) this.finishNight(room);
+    return this.buildGameState(room);
+  }
+
+  private handleGhostVote(
+    room: Room,
+    playerId: string,
+    data: Record<string, unknown>
+  ): GameState | null {
+    if (this.state.phase !== 'noc') return null;
+    if (this.state.bajacicaTargetId === null) return null;
+    if (!this.state.roles.has(playerId)) return null;
+    // Only the dead answer the Bajačica.
+    if (this.state.alive.has(playerId)) return null;
+    // Not gated on expectedGhostIds: a ghost who reconnected after the
+    // night started may still answer — they just don't block early-exit.
+    if (this.state.ghostVotes.has(playerId)) return null;
+
+    const vote = data.vote;
+    if (vote !== 'da' && vote !== 'ne') return null;
+
+    this.state.ghostVotes.set(playerId, vote);
     if (this.nightComplete(room)) this.finishNight(room);
     return this.buildGameState(room);
   }
@@ -361,10 +403,18 @@ export class GluvoDobaModule extends BaseGameModule {
     this.state.mutedTodayId = null;
     this.state.zduhacSavedAnnouncement = null;
     this.state.announcePeacefulFirstNight = false;
+    this.state.bajacicaTargetId = null;
+    this.state.ghostVotes = new Map();
     // Snapshot every living player — a mid-grace disconnected phone keeps
     // its slot until the timer or its permanent removal, so a screen going
     // dark can't shrink the "did everyone act?" denominator.
     this.state.expectedActorIds = new Set(this.state.alive);
+    // Ghosts eligible to answer the Bajačica: everyone already dead at
+    // night's start. Players who die THIS night join only from the next
+    // one. The phase timer bounds the wait if a dead phone never answers.
+    this.state.expectedGhostIds = new Set(
+      [...this.state.roles.keys()].filter((id) => !this.state.alive.has(id))
+    );
     this.state.phase = 'noc';
     this.state.phaseTimeRemaining = NOC_DURATION;
   }
@@ -375,6 +425,15 @@ export class GluvoDobaModule extends BaseGameModule {
       if (this.state.nightActions.has(id)) continue;
       if (!room.players.some((p) => p.id === id)) continue;
       return false;
+    }
+    // Once the Bajačica has asked, hold the night open for the ghosts to
+    // answer (bounded by the phase timer either way).
+    if (this.state.bajacicaTargetId !== null) {
+      for (const id of this.state.expectedGhostIds) {
+        if (this.state.ghostVotes.has(id)) continue;
+        if (!room.players.some((p) => p.id === id)) continue;
+        return false;
+      }
     }
     return true;
   }
@@ -398,6 +457,8 @@ export class GluvoDobaModule extends BaseGameModule {
       peacefulNight: this.isPeacefulNight(night),
       moranaKillNight: this.isMoranaKillNight(night),
       zduhacSaveUsed: this.state.zduhacSaveUsed,
+      bajacicaTargetId: this.state.bajacicaTargetId,
+      ghostVotes: this.state.ghostVotes,
       nameOf: (id) => this.nameOf(id),
     });
 
@@ -408,6 +469,9 @@ export class GluvoDobaModule extends BaseGameModule {
     this.state.mutedTodayId = outcome.mutedTodayId;
     this.state.announcePeacefulFirstNight = this.isPeacefulNight(night);
     if (outcome.seerEntry) this.state.seerHistory.push(outcome.seerEntry);
+    if (outcome.bajacicaEntry) {
+      this.state.bajacicaHistory.push(outcome.bajacicaEntry);
+    }
     if (outcome.zduhacSavedBy) {
       this.state.zduhacSaveUsed = true;
       this.state.zduhacSavedAnnouncement = { playerId: outcome.zduhacSavedBy };
@@ -875,6 +939,7 @@ export class GluvoDobaModule extends BaseGameModule {
     }
 
     if (roleId === 'vidovnjak') pd.seerHistory = this.state.seerHistory;
+    if (roleId === 'bajacica') pd.bajacicaHistory = this.state.bajacicaHistory;
     if (roleId === 'zduhac') {
       pd.zduhacSaveAvailable = !this.state.zduhacSaveUsed;
     }
@@ -895,11 +960,18 @@ export class GluvoDobaModule extends BaseGameModule {
 
     if (!alive) {
       // The dead see everything — spectating with full knowledge is the
-      // ghosts' consolation prize.
+      // ghosts' consolation prize (and lets them answer the Bajačica
+      // truthfully or, if dark-aligned, lie).
       pd.allRoles = [...this.state.roles.entries()].map(([id, r]) => ({
         name: this.nameOf(id),
         roleId: r,
       }));
+      if (this.state.phase === 'noc') {
+        pd.ghostQuestion = this.state.bajacicaTargetId
+          ? { targetName: this.nameOf(this.state.bajacicaTargetId) }
+          : null;
+        pd.hasGhostVoted = this.state.ghostVotes.has(playerId);
+      }
     }
 
     if (DAY_PHASES.has(this.state.phase)) {

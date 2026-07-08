@@ -175,6 +175,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoFirstNight': 'Mirna prva noć',
     'config.gluvoNeutral': 'Neutralac (Lesnik/Morana)',
     'config.gluvoVila': 'Vila u igri',
+    'config.gluvoBajacica': 'Bajačica u igri',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -454,6 +455,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoFirstNight': 'Peaceful first night',
     'config.gluvoNeutral': 'Neutral (Lesnik/Morana)',
     'config.gluvoVila': 'Vila in play',
+    'config.gluvoBajacica': 'Bajačica in play',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',

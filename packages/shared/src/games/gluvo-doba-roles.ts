@@ -17,6 +17,7 @@ export type GluvoDobaNightActionType =
   | 'kill-solo'
   | 'protect'
   | 'investigate'
+  | 'ask-dead'
   | 'block'
   | 'unblock'
   | 'fear'
@@ -155,6 +156,17 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
     noRepeatTarget: false,
     hintGroupId: 'sudbina',
   },
+  bajacica: {
+    id: 'bajacica',
+    name: 'Bajačica',
+    team: 'selo',
+    description:
+      'Bajanjem prizivaš duhove. Svake noći pitaš mrtve za jednog igrača „da li je vukodlak?" — oni ti šapuću zbir odgovora. Ali pazi: mrtvi vukodlaci umeju da lažu.',
+    nightPrompt: 'Za koga bajačica pita mrtve?',
+    nightActionType: 'ask-dead',
+    noRepeatTarget: false,
+    hintGroupId: 'strah',
+  },
   vila: {
     id: 'vila',
     name: 'Vila',
@@ -212,7 +224,7 @@ export const GLUVO_DOBA_HINT_GROUPS: Record<string, { text: string }> = {
     text: 'Dodiruje tuđe sudbine… Vila, Suđaja, Raskovnik ili Morana.',
   },
   mirno: { text: 'Spava mirno… Zmaj, Vračara, Knez ili Domaćin.' },
-  strah: { text: 'Vazduh oko njega treperi… Bauk ili Zduhać.' },
+  strah: { text: 'Vazduh oko njega treperi… Bauk, Zduhać ili Bajačica.' },
 };
 
 export interface GluvoDobaCompositionOpts {
@@ -220,6 +232,8 @@ export interface GluvoDobaCompositionOpts {
   neutral?: boolean;
   /** Vila replaces one Domaćin (9+ only). */
   vila?: boolean;
+  /** Bajačica (medium) replaces one Domaćin (9+ only). */
+  bajacica?: boolean;
 }
 
 /**
@@ -254,6 +268,7 @@ export function compositionFor(
   }
 
   if (opts.vila && playerCount >= 9) deck.push('vila');
+  if (opts.bajacica && playerCount >= 9) deck.push('bajacica');
 
   while (deck.length < playerCount) deck.push('domacin');
   // Defensive: never deal more cards than players (toggles at the low end

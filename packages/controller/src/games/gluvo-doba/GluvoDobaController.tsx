@@ -46,6 +46,7 @@ export const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   sudjaja: '🧵',
   knez: '👑',
   raskovnik: '🌿',
+  bajacica: '🕯️',
   vila: '🧚',
   domacin: '🌾',
   lesnik: '🌲',
@@ -345,6 +346,74 @@ function GhostView({ my }: { my: GluvoDobaControllerData }) {
       <p style={{ fontSize: '1.1rem', fontWeight: 800, textAlign: 'center', margin: 0 }}>
         👻 Mrtav si — ali vidiš sve
       </p>
+      {my.ghostQuestion && (
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '12px',
+            padding: '0.85rem',
+            textAlign: 'center',
+            border: '2px solid #c29b47',
+          }}
+        >
+          <p style={{ margin: 0, fontSize: '0.95rem' }}>
+            🕯️ Bajačica pita mrtve: da li je{' '}
+            <strong>{my.ghostQuestion.targetName}</strong> vukodlak?
+          </p>
+          {my.hasGhostVoted ? (
+            <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)' }}>
+              Odgovorio si mrtvima.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.5rem',
+                marginTop: '0.6rem',
+                justifyContent: 'center',
+              }}
+            >
+              <button
+                onClick={() => emit('gluvo:ghost-vote', { vote: 'da' })}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'var(--danger)',
+                  color: '#fff',
+                  fontWeight: 800,
+                }}
+              >
+                DA
+              </button>
+              <button
+                onClick={() => emit('gluvo:ghost-vote', { vote: 'ne' })}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'var(--success)',
+                  color: '#fff',
+                  fontWeight: 800,
+                }}
+              >
+                NE
+              </button>
+            </div>
+          )}
+          <p
+            style={{
+              margin: '0.5rem 0 0',
+              fontSize: '0.78rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            Mrtvi vukodlaci smeju da lažu…
+          </p>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         {my.allRoles?.map((r, i) => (
           <div
@@ -375,8 +444,9 @@ function GhostView({ my }: { my: GluvoDobaControllerData }) {
 }
 
 function HistoryPanel({ my }: { my: GluvoDobaControllerData }) {
-  const seer = my.seerHistory;
-  if (!seer || seer.length === 0) return null;
+  const seer = my.seerHistory ?? [];
+  const bajanja = my.bajacicaHistory ?? [];
+  if (seer.length === 0 && bajanja.length === 0) return null;
   return (
     <div
       style={{
@@ -390,7 +460,7 @@ function HistoryPanel({ my }: { my: GluvoDobaControllerData }) {
     >
       {seer.map((e, i) => (
         <div
-          key={i}
+          key={`s${i}`}
           style={{
             background: 'var(--bg-card)',
             borderRadius: '10px',
@@ -400,6 +470,25 @@ function HistoryPanel({ my }: { my: GluvoDobaControllerData }) {
           }}
         >
           🔮 Noć {e.night} — {e.targetName}: {e.hintText}
+        </div>
+      ))}
+      {bajanja.map((e, i) => (
+        <div
+          key={`b${i}`}
+          style={{
+            background: 'var(--bg-card)',
+            borderRadius: '10px',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.85rem',
+            textAlign: 'left',
+          }}
+        >
+          🕯️ Noć {e.night} — {e.targetName}:{' '}
+          {e.blocked
+            ? 'mrtvi su ćutali (pregažena si)'
+            : e.da + e.ne === 0
+              ? 'mrtvi još ćute — nema duhova'
+              : `DA ${e.da} / NE ${e.ne}`}
         </div>
       ))}
     </div>

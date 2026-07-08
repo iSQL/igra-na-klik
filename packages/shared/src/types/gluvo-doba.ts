@@ -20,6 +20,7 @@ export type GluvoDobaRoleId =
   | 'sudjaja'
   | 'knez'
   | 'raskovnik'
+  | 'bajacica'
   | 'vila'
   | 'domacin'
   | 'lesnik'
@@ -164,9 +165,21 @@ export interface GluvoDobaControllerData {
   // Private investigation history — self-contained so a reconnect replays
   // everything the Vračara has learned so far.
   seerHistory?: { night: number; targetName: string; hintText: string }[];
+  // Bajačica's private readings from the dead (da/ne tally per night;
+  // blocked = the Todorac trampled her before she reached the other side).
+  bajacicaHistory?: {
+    night: number;
+    targetName: string;
+    da: number;
+    ne: number;
+    blocked?: boolean;
+  }[];
 
   // Ghosts: the dead see everything.
   allRoles?: { name: string; roleId: GluvoDobaRoleId }[];
+  // Ghosts answer the Bajačica's yes/no question about a living player.
+  ghostQuestion?: { targetName: string } | null;
+  hasGhostVoted?: boolean;
 
   // glasanje
   voteOptions?: GluvoDobaTargetOption[];

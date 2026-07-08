@@ -22,6 +22,7 @@ const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   sudjaja: '🧵',
   knez: '👑',
   raskovnik: '🌿',
+  bajacica: '🕯️',
   vila: '🧚',
   domacin: '🌾',
   lesnik: '🌲',

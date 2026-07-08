@@ -23,6 +23,7 @@ const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   sudjaja: '🧵',
   knez: '👑',
   raskovnik: '🌿',
+  bajacica: '🕯️',
   vila: '🧚',
   domacin: '🌾',
   lesnik: '🌲',
@@ -88,11 +89,6 @@ const PLANNED_ROLES: { name: string; team: string; desc: string }[] = [
     name: '🕊️ Suđenica Lada',
     team: 'Selo',
     desc: 'Boginja ljubavi i sloge. Jednom u igri može da prekine glasanje i proglasi primirje — tog dana niko ne biva obešen.',
-  },
-  {
-    name: '🕯️ Medijum',
-    team: 'Selo',
-    desc: 'Noću razgovara sa mrtvima: pita ih za jednog igrača, duhovi anonimno odgovaraju — ali mrtvi pripadnici Mraka smeju da lažu.',
   },
 ];
 

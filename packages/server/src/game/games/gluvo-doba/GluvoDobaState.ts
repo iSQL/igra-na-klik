@@ -63,6 +63,15 @@ export interface GluvoDobaInternalState {
   // Zora flavour for a bloodless configured first night.
   announcePeacefulFirstNight: boolean;
 
+  // --- Bajačica / the dead's answer ---
+  // The living player the Bajačica asked about tonight — set when she
+  // submits, which is what pushes the yes/no question to the ghosts.
+  bajacicaTargetId: string | null;
+  ghostVotes: Map<string, 'da' | 'ne'>;
+  // Snapshot of connected dead at noc entry — only gates early-exit while a
+  // Bajačica question is pending.
+  expectedGhostIds: Set<string>;
+
   // --- deaths / dawn ---
   pendingDeaths: GluvoDobaDeathRecord[];
   whisperTop: { name: string; count: number }[];
@@ -82,6 +91,13 @@ export interface GluvoDobaInternalState {
 
   // --- private histories (survive reconnect via playerData) ---
   seerHistory: { night: number; targetName: string; hintText: string }[];
+  bajacicaHistory: {
+    night: number;
+    targetName: string;
+    da: number;
+    ne: number;
+    blocked?: boolean;
+  }[];
 
   winner: GluvoDobaTeam | null;
   moranaWon: boolean;

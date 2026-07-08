@@ -82,6 +82,7 @@ export interface ClientToServerEvents {
     gluvoDobaFirstNightPeace?: boolean;
     gluvoDobaNeutral?: boolean;
     gluvoDobaVila?: boolean;
+    gluvoDobaBajacica?: boolean;
     // Round / stroke counts for the newer games (host-configurable).
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;
