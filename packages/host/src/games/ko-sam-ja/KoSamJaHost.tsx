@@ -127,14 +127,15 @@ export default function KoSamJaHost() {
       )}
 
       {phase === 'showing-results' && data.results != null && (
-        <ResultsReveal results={data.results as KoSamJaResultData} />
-      )}
-
-      {phase === 'leaderboard' && data.leaderboard != null && (
-        <Leaderboard
-          entries={data.leaderboard as KoSamJaLeaderboardEntry[]}
-          isFinal={roundIndex === totalRounds - 1}
-        />
+        <>
+          <ResultsReveal results={data.results as KoSamJaResultData} />
+          {data.leaderboard != null && (
+            <Leaderboard
+              entries={data.leaderboard as KoSamJaLeaderboardEntry[]}
+              isFinal={roundIndex === totalRounds - 1}
+            />
+          )}
+        </>
       )}
 
       {phase === 'ended' && data.leaderboard != null && (

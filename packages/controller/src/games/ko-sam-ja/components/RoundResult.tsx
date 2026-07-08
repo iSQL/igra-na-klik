@@ -6,6 +6,8 @@ interface RoundResultProps {
   subjectBonus?: number;
   wrongGuessCount?: number;
   skipped?: boolean;
+  rank?: number;
+  totalPlayers?: number;
 }
 
 export function RoundResult({
@@ -16,7 +18,22 @@ export function RoundResult({
   subjectBonus,
   wrongGuessCount,
   skipped,
+  rank,
+  totalPlayers,
 }: RoundResultProps) {
+  const rankLine =
+    rank && rank > 0 ? (
+      <p
+        style={{
+          fontSize: '0.9rem',
+          fontWeight: 700,
+          color: 'var(--text-secondary)',
+          margin: 0,
+        }}
+      >
+        📊 {rank}. mesto{totalPlayers ? ` / ${totalPlayers}` : ''}
+      </p>
+    ) : null;
   if (skipped) {
     return (
       <div
@@ -43,6 +60,7 @@ export function RoundResult({
         >
           Ukupno: {totalScore.toLocaleString()} poena
         </p>
+        {rankLine}
       </div>
     );
   }
@@ -171,6 +189,7 @@ export function RoundResult({
       >
         🏆 Ukupno: {totalScore.toLocaleString()} poena
       </p>
+      {rankLine}
     </div>
   );
 }

@@ -70,7 +70,9 @@ export const COLLECTING_UPFRONT_DURATION = 120;
 export const SHOWING_QUESTION_DURATION = 4;
 export const SUBJECT_PICKING_DURATION = 15;
 export const GUESSING_DURATION = 15;
-export const SHOWING_RESULTS_DURATION = 6;
+// Reveal + standings are shown together on one screen, so this spans what
+// used to be SHOWING_RESULTS_DURATION (6) + the old LEADERBOARD_DURATION (4).
+export const SHOWING_RESULTS_DURATION = 10;
 export const LEADERBOARD_DURATION = 4;
 export const NUM_ROUNDS = 8;
 export const SUBJECT_BONUS_PER_WRONG = 200;

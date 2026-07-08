@@ -23,7 +23,6 @@ import {
   SUBJECT_PICKING_DURATION,
   GUESSING_DURATION,
   SHOWING_RESULTS_DURATION,
-  LEADERBOARD_DURATION,
   SUBJECT_BONUS_PER_WRONG,
 } from './KoSamJaState.js';
 import type {
@@ -344,12 +343,10 @@ export class KoSamJaModule extends BaseGameModule {
         this.transitionToResults(room);
         break;
 
+      // Reveal + standings share one screen now, so advance straight to the
+      // next round (or the end) once the results screen expires — there is no
+      // longer a separate `leaderboard` phase.
       case 'showing-results':
-        this.state.phase = 'leaderboard';
-        this.state.phaseTimeRemaining = LEADERBOARD_DURATION;
-        break;
-
-      case 'leaderboard':
         if (this.state.currentRoundIndex < this.state.selectedRounds.length - 1) {
           this.state.currentRoundIndex++;
           this.resetRoundState();
@@ -396,9 +393,9 @@ export class KoSamJaModule extends BaseGameModule {
     const round = this.currentRound();
     const question = this.currentQuestion();
     if (!round || !question) {
-      // Defensive: skip to leaderboard
-      this.state.phase = 'leaderboard';
-      this.state.phaseTimeRemaining = LEADERBOARD_DURATION;
+      // Defensive: nothing to show — end the game.
+      this.state.phase = 'ended';
+      this.state.phaseTimeRemaining = 0;
       return;
     }
 
@@ -726,6 +723,19 @@ export class KoSamJaModule extends BaseGameModule {
       .join(peer2Name ?? '?');
   }
 
+  private buildLeaderboard(room: Room): KoSamJaLeaderboardEntry[] {
+    return room.players
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        avatarColor: p.avatarColor,
+        score: p.score,
+        rank: 0,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((e, i) => ({ ...e, rank: i + 1 }));
+  }
+
   private buildGameState(room: Room): GameState {
     const data: Record<string, unknown> = {
       phase: this.state.phase,
@@ -895,6 +905,13 @@ export class KoSamJaModule extends BaseGameModule {
           (o) => ({ id: o.id, text: o.text })
         );
 
+        // Reveal and standings now share one screen — attach the current
+        // leaderboard so the host can render it beneath the reveal, and stamp
+        // each player's rank into their private slice for the phone.
+        const leaderboard = this.buildLeaderboard(room);
+        data.leaderboard = leaderboard;
+        const rankById = new Map(leaderboard.map((e) => [e.playerId, e.rank]));
+
         if (this.state.roundSubjectSkipped) {
           // Skipped round — render minimal results with skipped flag.
           const results: KoSamJaResultData = {
@@ -918,6 +935,8 @@ export class KoSamJaModule extends BaseGameModule {
               wasCorrect: false,
               roundScore: 0,
               totalScore: p.score,
+              rank: rankById.get(p.id) ?? 0,
+              totalPlayers: leaderboard.length,
               myGuess: null,
               skipped: true,
             };
@@ -962,6 +981,8 @@ export class KoSamJaModule extends BaseGameModule {
                 wrongGuessCount: this.state.roundWrongGuessCount,
                 roundScore: this.state.roundScores.get(p.id) ?? 0,
                 totalScore: p.score,
+                rank: rankById.get(p.id) ?? 0,
+                totalPlayers: leaderboard.length,
                 myGuess: null,
               };
             } else {
@@ -972,27 +993,16 @@ export class KoSamJaModule extends BaseGameModule {
                 wasCorrect: optionId === correctId,
                 roundScore: this.state.roundScores.get(p.id) ?? 0,
                 totalScore: p.score,
+                rank: rankById.get(p.id) ?? 0,
+                totalPlayers: leaderboard.length,
                 myGuess: optionId,
               };
             }
           }
         }
       }
-    } else if (
-      this.state.phase === 'leaderboard' ||
-      this.state.phase === 'ended'
-    ) {
-      const leaderboard: KoSamJaLeaderboardEntry[] = room.players
-        .map((p) => ({
-          playerId: p.id,
-          name: p.name,
-          avatarColor: p.avatarColor,
-          score: p.score,
-          rank: 0,
-        }))
-        .sort((a, b) => b.score - a.score)
-        .map((e, i) => ({ ...e, rank: i + 1 }));
-      data.leaderboard = leaderboard;
+    } else if (this.state.phase === 'ended') {
+      data.leaderboard = this.buildLeaderboard(room);
     }
 
     return {

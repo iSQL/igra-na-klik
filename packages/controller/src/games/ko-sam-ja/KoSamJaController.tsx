@@ -231,6 +231,8 @@ export default function KoSamJaController() {
           subjectBonus?: number;
           wrongGuessCount?: number;
           skipped?: boolean;
+          rank?: number;
+          totalPlayers?: number;
         }
       | undefined;
     if (!myData) return null;
@@ -357,6 +359,13 @@ export default function KoSamJaController() {
               })}
             </div>
           )}
+          {data.leaderboard != null && (
+            <HostlessLeaderboard
+              title="Rang lista"
+              entries={data.leaderboard as KoSamJaLeaderboardEntry[]}
+              myPlayerId={playerId}
+            />
+          )}
         </div>
       );
     }
@@ -370,6 +379,8 @@ export default function KoSamJaController() {
         subjectBonus={myData.subjectBonus}
         wrongGuessCount={myData.wrongGuessCount}
         skipped={myData.skipped}
+        rank={myData.rank}
+        totalPlayers={myData.totalPlayers}
       />
     );
   }
