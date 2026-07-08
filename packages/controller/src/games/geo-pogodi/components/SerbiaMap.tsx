@@ -242,6 +242,19 @@ export function SerbiaMap({
     if (pointersRef.current.size < 2) {
       pinchStartRef.current = null;
     }
+    // Pinch → single-finger handoff: rebase the single-pointer anchor on the
+    // finger that's still down + the current pan, otherwise the next move is
+    // measured from the *original* first-finger position with the pre-zoom
+    // pan and the map jumps sideways.
+    if (pointersRef.current.size === 1) {
+      const [remaining] = Array.from(pointersRef.current.values());
+      singleStartRef.current = {
+        x: remaining.x,
+        y: remaining.y,
+        panAtStart: { ...pan },
+        moved: true, // a pan continuation, not a fresh tap
+      };
+    }
     if (pointersRef.current.size === 0) {
       singleStartRef.current = null;
     }
@@ -250,6 +263,15 @@ export function SerbiaMap({
   const handlePointerCancel = (e: React.PointerEvent) => {
     pointersRef.current.delete(e.pointerId);
     if (pointersRef.current.size < 2) pinchStartRef.current = null;
+    if (pointersRef.current.size === 1) {
+      const [remaining] = Array.from(pointersRef.current.values());
+      singleStartRef.current = {
+        x: remaining.x,
+        y: remaining.y,
+        panAtStart: { ...pan },
+        moved: true,
+      };
+    }
     if (pointersRef.current.size === 0) singleStartRef.current = null;
   };
 
