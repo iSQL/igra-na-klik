@@ -89,9 +89,12 @@ body{
   color:var(--ink);-webkit-text-size-adjust:100%;
 }
 .wrap{max-width:1100px;margin:0 auto;padding:1.2rem 1rem 4rem}
-h1{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.5rem;font-weight:400;color:#1D3557;margin-bottom:0.2rem}
+/* Headings/labels use Manrope, not the display Fredoka: Fredoka's Google
+   Fonts build lacks some Serbian Latin glyphs (č/ć…), which fell back to a
+   system font mid-word and "jumped". Manrope covers the full set. */
+h1{font-family:'Manrope',system-ui,sans-serif;font-size:1.5rem;font-weight:800;color:#1D3557;margin-bottom:0.2rem}
 h1 .grad{color:var(--gold)}
-h2{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.1rem;font-weight:400;color:#1D3557;margin:1.4rem 0 0.7rem}
+h2{font-family:'Manrope',system-ui,sans-serif;font-size:1.1rem;font-weight:700;color:#1D3557;margin:1.4rem 0 0.7rem}
 .sub{color:var(--muted);font-size:0.95rem;margin-bottom:1.2rem}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:1rem}
 button{font:inherit;cursor:pointer;border:none;min-height:42px}
@@ -107,7 +110,7 @@ input[type=text],input[type=number],textarea,select{
 }
 textarea{resize:vertical;line-height:1.45}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(194,155,71,.22)}
-label{display:block;font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin:0.8rem 0 0.35rem}
+label{display:block;font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin:0.8rem 0 0.35rem}
 .err{background:rgba(176,74,66,.1);border:1px solid rgba(176,74,66,.4);color:var(--red);border-radius:11px;padding:0.55rem 0.8rem;font-size:0.9rem;font-weight:600;margin:0.8rem 0;display:none}
 .ok-msg{background:rgba(62,125,87,.12);border:1px solid rgba(62,125,87,.4);color:var(--green);border-radius:11px;padding:0.55rem 0.8rem;font-size:0.9rem;font-weight:600;margin:0.8rem 0;display:none}
 .row{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap}

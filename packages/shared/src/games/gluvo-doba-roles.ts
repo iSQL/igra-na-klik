@@ -239,10 +239,6 @@ export const GLUVO_DOBA_HINT_GROUPS: Record<string, { text: string }> = {
 };
 
 export interface GluvoDobaCompositionOpts {
-  /** Adds a solo player: Lesnik at 9–12, Morana at 13+. */
-  neutral?: boolean;
-  /** Vila replaces one Domaćin (9+ only). */
-  vila?: boolean;
   /** Bajačica (medium) replaces one Domaćin (9+ only). */
   bajacica?: boolean;
 }
@@ -275,14 +271,14 @@ export function compositionFor(
   if (playerCount >= 13) {
     deck.push('todorac', 'drekavac');
     deck.push('sudjaja', 'knez', 'zduhac', 'raskovnik');
-    if (opts.neutral) deck.push('morana');
   } else if (playerCount >= 9) {
     deck.push(Math.random() < 0.5 ? 'todorac' : 'bauk');
     deck.push('sudjaja', 'knez');
-    if (opts.neutral) deck.push('lesnik');
   }
 
-  if (opts.vila && playerCount >= 9) deck.push('vila');
+  // Lesnik, Morana and Vila are deliberately NOT part of the built-in
+  // bands — they're available only through custom role packs. The Bajačica
+  // remains a simple host toggle.
   if (opts.bajacica && playerCount >= 9) deck.push('bajacica');
 
   while (deck.length < playerCount) deck.push('domacin');

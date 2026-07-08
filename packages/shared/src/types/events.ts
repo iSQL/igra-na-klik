@@ -81,8 +81,6 @@ export interface ClientToServerEvents {
     gluvoDobaDiscussionSeconds?: number;
     gluvoDobaDeathReveal?: GluvoDobaDeathReveal;
     gluvoDobaFirstNightPeace?: boolean;
-    gluvoDobaNeutral?: boolean;
-    gluvoDobaVila?: boolean;
     gluvoDobaBajacica?: boolean;
     // A selected role pack fully defines the roster (overrides the bands +
     // neutral/vila/bajačica toggles). Re-validated server-side.

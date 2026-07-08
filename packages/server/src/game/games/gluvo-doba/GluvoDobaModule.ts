@@ -40,8 +40,6 @@ interface GluvoDobaCustomContent {
   gluvoDobaDiscussionSeconds?: number;
   gluvoDobaDeathReveal?: GluvoDobaDeathReveal;
   gluvoDobaFirstNightPeace?: boolean;
-  gluvoDobaNeutral?: boolean;
-  gluvoDobaVila?: boolean;
   gluvoDobaBajacica?: boolean;
   gluvoDobaPack?: GluvoDobaPack;
 }
@@ -115,8 +113,6 @@ export class GluvoDobaModule extends BaseGameModule {
       parsedPack && parsedPack.ok
         ? dealRolesFromPack(ids, parsedPack.pack)
         : assignRoles(ids, {
-            neutral: opts.gluvoDobaNeutral === true,
-            vila: opts.gluvoDobaVila === true,
             bajacica: opts.gluvoDobaBajacica === true,
           });
 

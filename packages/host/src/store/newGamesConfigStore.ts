@@ -13,8 +13,6 @@ interface NewGamesConfigStore {
   gluvoDobaDiscussionSeconds: number;
   gluvoDobaDeathReveal: GluvoDobaDeathReveal;
   gluvoDobaFirstNightPeace: boolean;
-  gluvoDobaNeutral: boolean;
-  gluvoDobaVila: boolean;
   gluvoDobaBajacica: boolean;
   // Selected role pack id ('' = built-in balance bands + the toggles above).
   gluvoDobaPackId: string;
@@ -28,8 +26,6 @@ interface NewGamesConfigStore {
   setGluvoDobaDiscussionSeconds: (n: number) => void;
   setGluvoDobaDeathReveal: (v: GluvoDobaDeathReveal) => void;
   setGluvoDobaFirstNightPeace: (v: boolean) => void;
-  setGluvoDobaNeutral: (v: boolean) => void;
-  setGluvoDobaVila: (v: boolean) => void;
   setGluvoDobaBajacica: (v: boolean) => void;
   setGluvoDobaPackId: (id: string) => void;
   setRoundCount: (gameId: string, n: number) => void;
@@ -45,8 +41,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaDiscussionSeconds: 180,
       gluvoDobaDeathReveal: 'team',
       gluvoDobaFirstNightPeace: true,
-      gluvoDobaNeutral: false,
-      gluvoDobaVila: false,
       gluvoDobaBajacica: false,
       gluvoDobaPackId: '',
       roundCounts: {},
@@ -58,8 +52,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
         set({ gluvoDobaDiscussionSeconds: n }),
       setGluvoDobaDeathReveal: (v) => set({ gluvoDobaDeathReveal: v }),
       setGluvoDobaFirstNightPeace: (v) => set({ gluvoDobaFirstNightPeace: v }),
-      setGluvoDobaNeutral: (v) => set({ gluvoDobaNeutral: v }),
-      setGluvoDobaVila: (v) => set({ gluvoDobaVila: v }),
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
       setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
       setRoundCount: (gameId, n) =>

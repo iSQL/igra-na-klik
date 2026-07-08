@@ -103,8 +103,6 @@ export function GameSelectScreen() {
   const [gluvoDeathReveal, setGluvoDeathReveal] =
     useState<GluvoDobaDeathReveal>('team');
   const [gluvoFirstNight, setGluvoFirstNight] = useState(true);
-  const [gluvoNeutral, setGluvoNeutral] = useState(false);
-  const [gluvoVila, setGluvoVila] = useState(false);
   const [gluvoBajacica, setGluvoBajacica] = useState(false);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [gluvoPackId, setGluvoPackId] = useState('');
@@ -215,8 +213,6 @@ export function GameSelectScreen() {
           roles: pack.roles,
         };
       } else {
-        payload.gluvoDobaNeutral = gluvoNeutral;
-        payload.gluvoDobaVila = gluvoVila;
         payload.gluvoDobaBajacica = gluvoBajacica;
       }
     }
@@ -620,26 +616,12 @@ export function GameSelectScreen() {
                             🕊️ {t('config.gluvoFirstNight')}
                           </Pill>
                           {gluvoPackId === '' && (
-                            <>
-                              <Pill
-                                active={gluvoNeutral}
-                                onClick={() => setGluvoNeutral(!gluvoNeutral)}
-                              >
-                                🌲 {t('config.gluvoNeutral')}
-                              </Pill>
-                              <Pill
-                                active={gluvoVila}
-                                onClick={() => setGluvoVila(!gluvoVila)}
-                              >
-                                🧚 {t('config.gluvoVila')}
-                              </Pill>
-                              <Pill
-                                active={gluvoBajacica}
-                                onClick={() => setGluvoBajacica(!gluvoBajacica)}
-                              >
-                                🕯️ {t('config.gluvoBajacica')}
-                              </Pill>
-                            </>
+                            <Pill
+                              active={gluvoBajacica}
+                              onClick={() => setGluvoBajacica(!gluvoBajacica)}
+                            >
+                              🕯️ {t('config.gluvoBajacica')}
+                            </Pill>
                           )}
                         </div>
                         {gluvoPackId !== '' && (

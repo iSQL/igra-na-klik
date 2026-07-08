@@ -72,8 +72,6 @@ export function registerGameHandlers(
       gluvoDobaDiscussionSeconds: data.gluvoDobaDiscussionSeconds,
       gluvoDobaDeathReveal: data.gluvoDobaDeathReveal,
       gluvoDobaFirstNightPeace: data.gluvoDobaFirstNightPeace,
-      gluvoDobaNeutral: data.gluvoDobaNeutral,
-      gluvoDobaVila: data.gluvoDobaVila,
       gluvoDobaBajacica: data.gluvoDobaBajacica,
       gluvoDobaPack: data.gluvoDobaPack,
       roundCount: data.roundCount,

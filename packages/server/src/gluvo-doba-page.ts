@@ -188,9 +188,9 @@ Noć se završava kad svi odigraju ili kad istekne vreme.</li>
 <h2>Sastav po broju igrača</h2>
 <table>
 <tr><th>Grupa</th><th>Sile Mraka</th><th>Selo</th></tr>
-<tr><td><strong>6–8</strong><br>Mala družina</td><td>2 Vukodlaka</td><td>Vračara, Zmaj + Domaćini<br><em>Čist duel — bez treće strane.</em></td></tr>
-<tr><td><strong>9–12</strong><br>Srednja ekipa</td><td>2 Vukodlaka + Todorac <em>ili</em> Bauk</td><td>Vračara, Zmaj, Suđaja, Knez + Domaćini</td></tr>
-<tr><td><strong>13–15</strong><br>Veliko selo</td><td>2 Vukodlaka + Todorac + Drekavac</td><td>Vračara, Zmaj, Suđaja, Knez, Zduhać, Raskovnik + Domaćini</td></tr>
+<tr><td><strong>6–8</strong><br>Mala družina</td><td>Vukodlak + Vampir</td><td>Vračara, Zmaj + Domaćini<br><em>Čist duel — bez treće strane.</em></td></tr>
+<tr><td><strong>9–12</strong><br>Srednja ekipa</td><td>Vukodlak, Vampir + Todorac <em>ili</em> Bauk</td><td>Vračara, Zmaj, Suđaja, Knez + Domaćini</td></tr>
+<tr><td><strong>13–15</strong><br>Veliko selo</td><td>Vukodlak, Vampir + Todorac + Drekavac</td><td>Vračara, Zmaj, Suđaja, Knez, Zduhać, Raskovnik + Domaćini</td></tr>
 </table>
 <h3>Opciona pravila (bira domaćin igre pre početka)</h3>
 <ul>
@@ -198,9 +198,11 @@ Noć se završava kad svi odigraju ili kad istekne vreme.</li>
 Ostale uloge normalno koriste moći. Niko ne ispada pre nego što progovori!</li>
 <li><strong>Otkrivanje pri smrti</strong> — šta selo saznaje o mrtvom igraču: punu <em>ulogu</em>,
 samo <em>stranu</em> (Mrak / Selo / Neutralan) ili <em>ništa</em>.</li>
-<li><strong>🌲 Neutralac</strong> — dodaje Lesnika (9–12) ili Moranu (13–15) umesto jednog Domaćina.</li>
-<li><strong>🧚 Vila</strong> — zbunjivačica ulazi u igru umesto jednog Domaćina (9+).</li>
+<li><strong>🕯️ Bajačica</strong> — medijum ulazi u igru umesto jednog Domaćina (9+).</li>
 </ul>
+<div class="note">🎭 <strong>Custom modovi</strong> — dodatne uloge (Vila, Lesnik, Morana i druge) ne ulaze
+u ugrađeni balans; dostupne su isključivo kroz prilagođene modove koje domaćin pravi u
+admin editoru i bira pre početka igre.</div>
 </section>
 
 <section>

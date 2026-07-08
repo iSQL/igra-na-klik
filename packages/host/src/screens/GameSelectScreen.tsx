@@ -162,16 +162,8 @@ export function GameSelectScreen() {
         gameId === 'gluvo-doba'
           ? newGamesConfig.gluvoDobaFirstNightPeace
           : undefined,
-      gluvoDobaNeutral:
-        gameId === 'gluvo-doba' && !gluvoPack
-          ? newGamesConfig.gluvoDobaNeutral
-          : undefined,
-      // Toggles only apply to the built-in bands; when a pack is chosen its
-      // roster wins, so don't also send the toggles.
-      gluvoDobaVila:
-        gameId === 'gluvo-doba' && !gluvoPack
-          ? newGamesConfig.gluvoDobaVila
-          : undefined,
+      // The Bajačica toggle only applies to the built-in bands; when a pack
+      // is chosen its roster wins, so don't also send it.
       gluvoDobaBajacica:
         gameId === 'gluvo-doba' && !gluvoPack
           ? newGamesConfig.gluvoDobaBajacica
@@ -464,23 +456,11 @@ export function GameSelectScreen() {
                     onToggle={newGamesConfig.setGluvoDobaFirstNightPeace}
                   />
                   {newGamesConfig.gluvoDobaPackId === '' && (
-                    <>
-                      <TogglePill
-                        label={`🌲 ${t('config.gluvoNeutral')}`}
-                        checked={newGamesConfig.gluvoDobaNeutral}
-                        onToggle={newGamesConfig.setGluvoDobaNeutral}
-                      />
-                      <TogglePill
-                        label={`🧚 ${t('config.gluvoVila')}`}
-                        checked={newGamesConfig.gluvoDobaVila}
-                        onToggle={newGamesConfig.setGluvoDobaVila}
-                      />
-                      <TogglePill
-                        label={`🕯️ ${t('config.gluvoBajacica')}`}
-                        checked={newGamesConfig.gluvoDobaBajacica}
-                        onToggle={newGamesConfig.setGluvoDobaBajacica}
-                      />
-                    </>
+                    <TogglePill
+                      label={`🕯️ ${t('config.gluvoBajacica')}`}
+                      checked={newGamesConfig.gluvoDobaBajacica}
+                      onToggle={newGamesConfig.setGluvoDobaBajacica}
+                    />
                   )}
                 </div>
                 {newGamesConfig.gluvoDobaPackId !== '' && (
