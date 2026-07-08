@@ -461,7 +461,10 @@ __NAV_CSS__
     $('cancel-edit-btn').style.display = '';
     $('save-loc-btn').textContent = 'Sačuvaj izmene';
     updatePinUi();
-    window.scrollTo(0, 0);
+    // Bring the editor form (with the map) into view instead of jumping to
+    // the very top of the page — the location grid sits below it, and the
+    // form is a full-width two-column block that can't be relocated inline.
+    $('editor-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function saveLocation(){

@@ -46,7 +46,8 @@ export function renderKoSamJaEditorPage(): string {
       <h2 id="pack-title"></h2>
       <div id="pack-status" class="hint" style="margin-bottom:0.8rem"></div>
 
-      <div class="card" style="max-width:640px">
+      <div id="editor-home"></div>
+      <div class="card" id="q-editor-card" style="max-width:640px">
         <strong id="editor-title" style="font-size:0.95rem">Novo pitanje</strong>
         <div class="row">
           <div style="flex:1;min-width:160px">
@@ -151,6 +152,16 @@ export function renderKoSamJaEditorPage(): string {
     return null;
   }
 
+  // The single editor form is moved inline (right under the question being
+  // edited) during startEdit; this returns it to its home slot above the
+  // list. Must run before any q-list rebuild, since rebuilding wipes the
+  // list's innerHTML and would otherwise destroy the relocated form.
+  function parkEditorHome(){
+    var card = $('q-editor-card');
+    var home = $('editor-home');
+    if (card && home) home.insertAdjacentElement('afterend', card);
+  }
+
   function renderList(){
     var box = $('pack-list');
     box.innerHTML = '';
@@ -198,6 +209,7 @@ export function renderKoSamJaEditorPage(): string {
   function renderPack(){
     var p = currentPack();
     if (!p) return;
+    parkEditorHome();
     $('pack-title').textContent = 'Pack: ' + p.id;
     $('pack-status').textContent = p.visibleInGame
       ? '✓ Pack je ispravan i vidljiv u igri.'
@@ -281,12 +293,16 @@ export function renderKoSamJaEditorPage(): string {
     $('q-maxpeers').value = '';
     $('cancel-edit-btn').style.display = 'none';
     $('save-q-btn').textContent = 'Sačuvaj pitanje';
+    parkEditorHome();
     applyShape();
   }
 
   function startEdit(i){
     var p = currentPack();
     if (!p || !p.questions[i]) return;
+    // If the form is already inline from a previous edit, return it home so
+    // it isn't counted among q-list's children when we index the target row.
+    parkEditorHome();
     var q = p.questions[i];
     editIndex = i;
     $('editor-title').textContent = 'Izmena pitanja #' + (i + 1);
@@ -303,7 +319,16 @@ export function renderKoSamJaEditorPage(): string {
     $('cancel-edit-btn').style.display = '';
     $('save-q-btn').textContent = 'Sačuvaj izmene';
     applyShape();
-    window.scrollTo(0, 0);
+    // Open the editor inline, right under the question being edited, instead
+    // of jumping to the top of the page.
+    var row = $('q-list').children[i];
+    var card = $('q-editor-card');
+    if (row && card){
+      row.insertAdjacentElement('afterend', card);
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      window.scrollTo(0, 0);
+    }
   }
 
   function collect(prefix){

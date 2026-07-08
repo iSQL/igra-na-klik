@@ -3,87 +3,156 @@
     "shape": "fixed",
     "category": "family",
     "text": "Omiljena boja igrača {subject}?",
-    "options": ["crvena", "plava", "zelena", "žuta"]
+    "options": [
+      "crvena",
+      "plava",
+      "zelena",
+      "žuta"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} bi pre na odmor išao u…",
-    "options": ["planinu", "more", "grad", "selo"]
+    "options": [
+      "planinu",
+      "more",
+      "grad",
+      "selo"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Omiljeno doba dana igrača {subject}?",
-    "options": ["jutro", "podne", "veče", "noć"]
+    "options": [
+      "jutro",
+      "podne",
+      "veče",
+      "noć"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} radije pije…",
-    "options": ["kafu", "čaj", "sok", "vodu"]
+    "options": [
+      "kafu",
+      "čaj",
+      "sok",
+      "vodu"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} radije sluša…",
-    "options": ["pop", "rok", "narodnjake", "klasiku"]
+    "options": [
+      "pop",
+      "rok",
+      "narodnjake",
+      "klasiku"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Omiljeni žanr filmova igrača {subject}?",
-    "options": ["akcija", "komedija", "drama", "horor"]
+    "options": [
+      "akcija",
+      "komedija",
+      "drama",
+      "horor"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} radije jede…",
-    "options": ["pizzu", "burger", "sushi", "domaću kuhinju"]
+    "options": [
+      "pizzu",
+      "burger",
+      "sushi",
+      "domaću kuhinju"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Koju životinju bi {subject} pre imao za ljubimca?",
-    "options": ["psa", "mačku", "papagaja", "hrčka"]
+    "options": [
+      "psa",
+      "mačku",
+      "papagaja",
+      "hrčka"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} se prvo seti kada čuje reč 'odmor':",
-    "options": ["plaža", "planina", "pasoš", "spavanje"]
+    "options": [
+      "plaža",
+      "planina",
+      "pasoš",
+      "spavanje"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Najveća strast igrača {subject}?",
-    "options": ["putovanja", "hrana", "muzika", "sport"]
+    "options": [
+      "putovanja",
+      "hrana",
+      "muzika",
+      "sport"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} radije provodi vreme…",
-    "options": ["napolju", "kod kuće", "u kafiću", "u prirodi"]
+    "options": [
+      "napolju",
+      "kod kuće",
+      "u kafiću",
+      "u prirodi"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Šta {subject} prvo uradi ujutru?",
-    "options": ["proveri telefon", "popije kafu", "tušira se", "vrati se u krevet"]
+    "options": [
+      "proveri telefon",
+      "popije kafu",
+      "tušira se",
+      "vrati se u krevet"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "Omiljeno godišnje doba igrača {subject}?",
-    "options": ["proleće", "leto", "jesen", "zima"]
+    "options": [
+      "proleće",
+      "leto",
+      "jesen",
+      "zima"
+    ]
   },
   {
     "shape": "fixed",
     "category": "family",
     "text": "{subject} radije gleda…",
-    "options": ["filmove", "serije", "sport", "dokumentarce"]
+    "options": [
+      "filmove",
+      "serije",
+      "sport",
+      "dokumentarce"
+    ]
   },
-
   {
     "shape": "peer",
     "category": "family",
@@ -139,123 +208,215 @@
     "category": "family",
     "text": "Sa kim bi {subject} pre išao u bioskop, sa {peer1} ili {peer2}?"
   },
-
   {
     "shape": "free",
     "category": "family",
     "text": "Posao iz snova igrača {subject}?",
-    "maxLength": 50
+    "maxLength": 50,
+    "options": [
+      "Pekar",
+      "Drvorezbar",
+      "Briga o {peer1}"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Najveći talenat igrača {subject} u jednoj reči?",
-    "maxLength": 30
+    "maxLength": 30,
+    "options": [
+      "Pivopija",
+      "Spavalica",
+      "Igracka za {peer1}"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Šta {subject} jede svaki dan?",
-    "maxLength": 40
+    "maxLength": 40,
+    "options": [
+      "Užinu od {peer1}",
+      "Kukuruz",
+      "Piletinu"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Koju super moć bi {subject} izabrao?",
-    "maxLength": 40
+    "maxLength": 40,
+    "options": [
+      "Nevidljivost",
+      "Nepostojanje gladi",
+      "Supersluh"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Šta bi {subject} poneo na pusto ostrvo?",
-    "maxLength": 40
+    "maxLength": 40,
+    "options": [
+      "Cigarete",
+      "{peer1}",
+      "{peer2}"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Najomiljenije mesto u svetu za {subject}?",
-    "maxLength": 50
+    "maxLength": 50,
+    "options": [
+      "Mamina kuhinja",
+      "Kuhinja od {peer1}",
+      "WC solja"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "U jednoj reči — kakav je {subject}?",
-    "maxLength": 25
+    "maxLength": 25,
+    "options": [
+      "Lenj",
+      "Pametan",
+      "Prava mačka"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Šta je {subject} oduvek hteo da nauči?",
-    "maxLength": 50
+    "maxLength": 50,
+    "options": [
+      "Da igra kolo",
+      "Da plete",
+      "Španski jezik"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Najsmešniji nadimak igrača {subject}?",
-    "maxLength": 30
+    "maxLength": 30,
+    "options": [
+      "Krmak",
+      "Kockalone",
+      "Puž"
+    ]
   },
   {
     "shape": "free",
     "category": "family",
     "text": "Šta bi {subject} radio kada bi dobio milion evra?",
-    "maxLength": 60
+    "maxLength": 60,
+    "options": [
+      "Uložio bi u nekretnine",
+      "Potrošio na pivo",
+      "Poklonio sirotištu"
+    ]
   },
-
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} bi pre…",
-    "options": ["javno priznao laž", "ćutao zauvek"]
+    "options": [
+      "javno priznao laž",
+      "ćutao zauvek",
+      "smestio {peer1}",
+      "slagao samo ako {peer2} zatraži"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} ima više iskustva sa…",
-    "options": ["zabavom", "obavezama", "ljubavlju", "haosom"]
+    "options": [
+      "zabavom",
+      "obavezama",
+      "ljubavlju",
+      "haosom"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "Najgori porok igrača {subject}?",
-    "options": ["lenjost", "sebičnost", "nestrpljivost", "drama"]
+    "options": [
+      "lenjost",
+      "sebičnost",
+      "nestrpljivost",
+      "drama"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} češće laže kada…",
-    "options": ["pita ga partner", "pita ga šef", "pita ga roditelj", "pita ga prijatelj"]
+    "options": [
+      "pita ga partner",
+      "pita ga šef",
+      "pita ga roditelj",
+      "pita ga prijatelj"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} bi radije ostao bez…",
-    "options": ["telefona", "interneta", "novca", "prijatelja"]
+    "options": [
+      "telefona",
+      "interneta",
+      "novca",
+      "prijatelja"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} se najviše stidi…",
-    "options": ["fotografija iz srednje", "starih izjava", "starih frizura", "tinejdžerske faze"]
+    "options": [
+      "fotografija iz srednje",
+      "starih izjava",
+      "starih frizura",
+      "tinejdžerske faze"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "Posle žurke, {subject} obično…",
-    "options": ["spava do podne", "ide odmah na posao", "pravi doručak za sve", "ne ustaje iz kreveta"]
+    "options": [
+      "spava do podne",
+      "ide odmah na posao",
+      "pravi doručak za sve",
+      "ne ustaje iz kreveta"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "Šta {subject} radije bira u dilemi?",
-    "options": ["lakši put", "teži put", "kratak put", "neki treći put"]
+    "options": [
+      "lakši put",
+      "teži put",
+      "kratak put",
+      "neki treći put"
+    ]
   },
   {
     "shape": "fixed",
     "category": "nsfw",
     "text": "{subject} je u srednjoj školi bio…",
-    "options": ["štreber", "buntovnik", "klovn", "nevidljiv"]
+    "options": [
+      "štreber",
+      "buntovnik",
+      "klovn",
+      "nevidljiv"
+    ]
   },
-
   {
     "shape": "peer",
     "category": "nsfw",
@@ -300,43 +461,68 @@
     "shape": "peer",
     "category": "nsfw",
     "text": "{subject} bi pre…",
-    "options": ["javno priznao laž", "ćutao zauvek", "optužio {peer1}", "smestio {peer2}"]
+    "options": [
+      "javno priznao laž",
+      "ćutao zauvek",
+      "optužio {peer1}",
+      "smestio {peer2}"
+    ]
   },
   {
     "shape": "peer",
     "category": "nsfw",
     "text": "Da bira između večere i kaznene partije, {subject} bira…",
-    "options": ["večeru sa {peer1}", "večeru sa {peer2}", "kaznenu partiju sa {peer1}", "kaznenu partiju sa {peer2}"]
+    "options": [
+      "večeru sa {peer1}",
+      "večeru sa {peer2}",
+      "kaznenu partiju sa {peer1}",
+      "kaznenu partiju sa {peer2}"
+    ]
   },
   {
     "shape": "peer",
     "category": "family",
     "text": "{subject} bi za vikend pre…",
-    "options": ["spavao do podne", "išao na izlet sa {peer1}", "gledao filmove sa {peer2}", "radio nešto sasvim treće"]
+    "options": [
+      "spavao do podne",
+      "išao na izlet sa {peer1}",
+      "gledao filmove sa {peer2}",
+      "radio nešto sasvim treće"
+    ]
   },
   {
     "shape": "pickN",
     "category": "family",
-    "text": "Koga bi {subject} pre pozvao da planira mu rođendan?"
+    "text": "Koga bi {subject} pre pozvao da planira mu rođendan?",
+    "maxPeers": 4
   },
   {
     "shape": "pickN",
     "category": "family",
     "text": "Sa kim bi {subject} otvorio kafić?",
     "optionTemplate": "sa {peer}",
-    "extraOptions": ["radije bi sam", "ne bi otvarao kafić"]
+    "maxPeers": 4,
+    "extraOptions": [
+      "radije bi sam",
+      "ne bi otvarao kafić"
+    ]
   },
   {
     "shape": "pickN",
     "category": "nsfw",
     "text": "Ko bi prvi otkrio tajnu igrača {subject}?",
-    "optionTemplate": "{peer} bi prvi otkrio"
+    "optionTemplate": "{peer} bi prvi otkrio",
+    "maxPeers": 4
   },
   {
     "shape": "pickN",
     "category": "nsfw",
     "text": "Kome bi {subject} pre pozajmio kola na vikend?",
-    "extraOptions": ["nikome", "samo svojima"]
+    "maxPeers": 4,
+    "extraOptions": [
+      "nikome",
+      "samo svojima"
+    ]
   },
   {
     "shape": "pickN",
@@ -344,55 +530,94 @@
     "text": "{subject} bi pre delio poslednji deo torte sa…",
     "optionTemplate": "sa {peer}",
     "maxPeers": 3,
-    "extraOptions": ["niko, sam pojede"]
+    "extraOptions": [
+      "niko, sam pojede"
+    ]
   },
-
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najgora navika igrača {subject}?",
-    "maxLength": 40
+    "maxLength": 40,
+    "options": [
+      "Hrkanje",
+      "Pušenje",
+      "Čačkanje nosa"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najveća tajna koju {subject} (verovatno) krije?",
-    "maxLength": 60
+    "maxLength": 60,
+    "options": [
+      "da sam usvojen",
+      "Svoj nadimak",
+      "Svoj stomak"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najsmešnija laž koju je {subject} ikada izgovorio?",
-    "maxLength": 60
+    "maxLength": 60,
+    "options": [
+      "Nisam ja",
+      "Nisam ništa jeo",
+      "Krenuo sam"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Šta {subject} apsolutno ne podnosi kod ljudi?",
-    "maxLength": 50
+    "maxLength": 50,
+    "options": [
+      "Pivo",
+      "Laž",
+      "Istinu"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najgori savet koji je {subject} primio?",
-    "maxLength": 60
+    "maxLength": 60,
+    "options": [
+      "Veruj mi brate",
+      "Samo još jedno pivo"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najveće žaljenje igrača {subject} u jednoj reči?",
-    "maxLength": 30
+    "maxLength": 30,
+    "options": [
+      "Nikad nisam upisao balet",
+      "Uzeo sam pogrešan auto"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najgluplja stvar koju je {subject} kupio?",
-    "maxLength": 50
+    "maxLength": 50,
+    "options": [
+      "Lutku na naduvavanje",
+      "Otvarač konzerve",
+      "Diplomu"
+    ]
   },
   {
     "shape": "free",
     "category": "nsfw",
     "text": "Najgora ideja koju je {subject} ikada imao?",
-    "maxLength": 60
+    "maxLength": 60,
+    "options": [
+      "Hajdemo još samo jednom",
+      "Veruj mi brate",
+      "Bungie jump"
+    ]
   }
 ]
