@@ -71,11 +71,11 @@ export function renderKoSamJaEditorPage(): string {
         <p class="hint" id="text-hint"></p>
 
         <div class="shape-blk" id="blk-options">
-          <label>Opcije</label>
+          <label id="options-label">Opcije</label>
           <div class="opt-mini"><input type="text" id="q-opt0" placeholder="Opcija 1"></div>
           <div class="opt-mini"><input type="text" id="q-opt1" placeholder="Opcija 2"></div>
           <div class="opt-mini"><input type="text" id="q-opt2" placeholder="Opcija 3 (opciono)"></div>
-          <div class="opt-mini"><input type="text" id="q-opt3" placeholder="Opcija 4 (opciono)"></div>
+          <div class="opt-mini" id="opt3-wrap"><input type="text" id="q-opt3" placeholder="Opcija 4 (opciono)"></div>
           <p class="hint" id="options-hint"></p>
         </div>
 
@@ -90,11 +90,12 @@ export function renderKoSamJaEditorPage(): string {
           <p class="hint">Mora sadržati &#123;peer} tačno jednom; sme i &#123;subject}. Prazno = samo ime igrača.</p>
           <label for="q-maxpeers">Max broj igrača-dugmadi (2–8; podrazumevano 4)</label>
           <input type="number" id="q-maxpeers" min="2" max="8" step="1" placeholder="4" style="max-width:140px">
-          <label>Dodatne opcije (opciono, do 4; nisu vezane za igrača)</label>
+          <label>Dodatne opcije (opciono, do 4)</label>
           <div class="opt-mini"><input type="text" id="q-extra0" placeholder="npr. niko"></div>
           <div class="opt-mini"><input type="text" id="q-extra1" placeholder=""></div>
           <div class="opt-mini"><input type="text" id="q-extra2" placeholder=""></div>
           <div class="opt-mini"><input type="text" id="q-extra3" placeholder=""></div>
+          <p class="hint" id="extra-hint"></p>
         </div>
 
         <div class="row" style="margin-top:1rem">
@@ -131,8 +132,15 @@ export function renderKoSamJaEditorPage(): string {
   };
   var OPT_HINTS = {
     fixed: '2–4 različite opcije; smeju sadržati ' + PH_SUBJECT + '.',
-    peer: 'OPCIONO: ostavi prazno za automatska dva dugmeta sa imenima. Ako popuniš (2–4), opcije smeju sadržati ' + PH_PEER1 + '/' + PH_PEER2 + '/' + PH_SUBJECT + '.'
+    peer: 'OPCIONO: ostavi prazno za automatska dva dugmeta sa imenima. Ako popuniš (2–4), opcije smeju sadržati ' + PH_PEER1 + '/' + PH_PEER2 + '/' + PH_SUBJECT + '.',
+    free: 'OPCIONO: ponuđeni netačni odgovori (do 3). Ako popuniš, zamenjuju nasumične — prikazuju se uz odgovor subjekta. Smeju sadržati ' + PH_SUBJECT + ', ' + PH_PEER1 + ' i ' + PH_PEER2 + ' (nasumični igrači).'
   };
+  var OPT_LABELS = {
+    fixed: 'Opcije',
+    peer: 'Opcije',
+    free: 'Ponuđeni odgovori (opciono)'
+  };
+  var EXTRA_HINT = 'Smeju sadržati ' + PH_SUBJECT + ', ' + PH_PEER1 + ' i ' + PH_PEER2 + ' (prva dva izabrana igrača). Bez ' + PH_PEER + '.';
 
   function show(view){
     $('view-list').style.display = view === 'list' ? 'block' : 'none';
@@ -241,11 +249,24 @@ export function renderKoSamJaEditorPage(): string {
 
   function applyShape(){
     var shape = $('q-shape').value;
-    $('blk-options').style.display = (shape === 'fixed' || shape === 'peer') ? 'block' : 'none';
+    var showOpts = (shape === 'fixed' || shape === 'peer' || shape === 'free');
+    $('blk-options').style.display = showOpts ? 'block' : 'none';
     $('blk-free').style.display = shape === 'free' ? 'block' : 'none';
     $('blk-pickn').style.display = shape === 'pickN' ? 'block' : 'none';
     $('text-hint').textContent = TEXT_HINTS[shape] || '';
-    if (shape === 'fixed' || shape === 'peer') $('options-hint').textContent = OPT_HINTS[shape];
+    if (showOpts){
+      $('options-hint').textContent = OPT_HINTS[shape] || '';
+      $('options-label').textContent = OPT_LABELS[shape] || 'Opcije';
+    }
+    // free allows at most 3 offered answers (the subject's typed answer is
+    // the 4th button) — hide and clear the 4th input.
+    if (shape === 'free'){
+      $('opt3-wrap').style.display = 'none';
+      $('q-opt3').value = '';
+    } else {
+      $('opt3-wrap').style.display = '';
+    }
+    $('extra-hint').textContent = EXTRA_HINT;
   }
 
   function resetForm(){
@@ -311,6 +332,8 @@ export function renderKoSamJaEditorPage(): string {
         if (isNaN(n)){ showErr('Max dužina mora biti broj.'); return null; }
         q.maxLength = n;
       }
+      var freeOpts = collect('q-opt');
+      if (freeOpts.length > 0) q.options = freeOpts;
     } else if (shape === 'pickN'){
       var tpl = $('q-tpl').value.trim();
       if (tpl) q.optionTemplate = tpl;

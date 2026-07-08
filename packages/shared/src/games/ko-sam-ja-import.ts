@@ -26,6 +26,17 @@ export interface KoSamJaImportFreeQuestion {
   category: KoSamJaCategory;
   text: string;
   maxLength?: number;
+  /**
+   * Optional author-provided offered answers, shown as distractors
+   * alongside the subject's typed answer. 1–3 entries; each may contain
+   * `{subject}` and optionally `{peer1}`/`{peer2}` (which bind to up to two
+   * random co-players at round time, like peer shape) but not the bare
+   * `{peer}` placeholder. When present they FULLY define the distractor set
+   * — the server no longer samples from other players' free-text answers.
+   * A round is skipped if an option needs more peers than are present.
+   * When omitted, the original sampling behavior is used.
+   */
+  options?: string[];
 }
 
 /**
@@ -44,11 +55,12 @@ export interface KoSamJaImportPickNQuestion {
   optionTemplate?: string;
   maxPeers?: number;
   /**
-   * Extra literal buttons to mix in alongside the peer-expanded ones.
-   * Each entry may contain `{subject}` (interpolated at round time) but
-   * not `{peer}`/`{peer1}`/`{peer2}` — extras are not peer-bound. After
-   * the peer buttons are built, extras are appended and the full list
-   * is shuffled so literals don't always land at the same position.
+   * Extra buttons to mix in alongside the peer-expanded ones. Each entry
+   * may contain `{subject}`, `{peer1}` and `{peer2}` (all interpolated at
+   * round time — `{peer1}`/`{peer2}` bind to the first two of the chosen
+   * peers) but not the bare `{peer}` template placeholder. After the peer
+   * buttons are built, extras are appended and the full list is shuffled
+   * so they don't always land at the same position.
    */
   extraOptions?: string[];
 }
@@ -68,6 +80,10 @@ export const KO_SAM_JA_MIN_FREE_MAX_LENGTH = 10;
 export const KO_SAM_JA_MAX_FREE_MAX_LENGTH = 120;
 export const KO_SAM_JA_MIN_FIXED_OPTIONS = 2;
 export const KO_SAM_JA_MAX_FIXED_OPTIONS = 4;
+// free author-supplied distractors (the subject's typed answer is added on
+// top, so 3 distractors → 4 buttons total, matching the fixed cap).
+export const KO_SAM_JA_MIN_FREE_OPTIONS = 1;
+export const KO_SAM_JA_MAX_FREE_OPTIONS = 3;
 export const KO_SAM_JA_DEFAULT_MAX_PEERS = 4;
 export const KO_SAM_JA_MIN_MAX_PEERS = 2;
 export const KO_SAM_JA_MAX_MAX_PEERS = 8;
@@ -312,14 +328,10 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
             };
           }
           const t = (v as string).trim();
-          if (
-            t.includes('{peer}') ||
-            t.includes('{peer1}') ||
-            t.includes('{peer2}')
-          ) {
+          if (t.includes('{peer}')) {
             return {
               ok: false,
-              error: `${label}: extraOptions ne smeju sadržati {peer}/{peer1}/{peer2} (nisu vezani za igrača).`,
+              error: `${label}: extraOptions ne smeju sadržati {peer} (koristi {peer1}/{peer2} za konkretne igrače).`,
             };
           }
           trimmedExtras.push(t);
@@ -349,17 +361,50 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
     }
 
     // shape === 'free'
-    if ('options' in raw && raw.options !== undefined) {
-      return {
-        ok: false,
-        error: `${label}: free pitanja ne smeju imati "options".`,
-      };
-    }
     if (text.includes('{peer1}') || text.includes('{peer2}')) {
       return {
         ok: false,
         error: `${label}: free pitanja ne smeju sadržati {peer1} ili {peer2}.`,
       };
+    }
+    let freeOptions: string[] | undefined;
+    if ('options' in raw && raw.options !== undefined) {
+      if (!Array.isArray(raw.options)) {
+        return { ok: false, error: `${label}: "options" mora biti niz.` };
+      }
+      if (
+        raw.options.length < KO_SAM_JA_MIN_FREE_OPTIONS ||
+        raw.options.length > KO_SAM_JA_MAX_FREE_OPTIONS
+      ) {
+        return {
+          ok: false,
+          error: `${label}: free "options" mora imati između ${KO_SAM_JA_MIN_FREE_OPTIONS} i ${KO_SAM_JA_MAX_FREE_OPTIONS} ponuđenih odgovora.`,
+        };
+      }
+      const trimmedFree: string[] = [];
+      for (let j = 0; j < raw.options.length; j++) {
+        const v = raw.options[j];
+        if (!isNonEmptyString(v)) {
+          return { ok: false, error: `${label}: opcija ${j + 1} je prazna.` };
+        }
+        const t = (v as string).trim();
+        if (t.includes('{peer}')) {
+          return {
+            ok: false,
+            error: `${label}: free opcije ne smeju sadržati {peer} (koristi {peer1}/{peer2} za konkretne igrače).`,
+          };
+        }
+        trimmedFree.push(t);
+      }
+      const seenFree = new Set<string>();
+      for (const t of trimmedFree) {
+        const key = t.toLowerCase();
+        if (seenFree.has(key)) {
+          return { ok: false, error: `${label}: opcije moraju biti različite.` };
+        }
+        seenFree.add(key);
+      }
+      freeOptions = trimmedFree;
     }
     let maxLength = KO_SAM_JA_DEFAULT_FREE_MAX_LENGTH;
     if (raw.maxLength !== undefined) {
@@ -380,7 +425,7 @@ export function parseKoSamJaImport(input: unknown): KoSamJaImportResult {
       }
       maxLength = raw.maxLength;
     }
-    questions.push({ shape: 'free', category, text, maxLength });
+    questions.push({ shape: 'free', category, text, maxLength, options: freeOptions });
   }
 
   return { ok: true, questions };

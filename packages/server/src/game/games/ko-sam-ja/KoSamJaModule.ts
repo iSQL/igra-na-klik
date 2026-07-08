@@ -73,7 +73,9 @@ export class KoSamJaModule extends BaseGameModule {
           ? q.options
           : q.shape === 'peer'
             ? q.options
-            : undefined,
+            : q.shape === 'free'
+              ? q.options
+              : undefined,
       maxLength: q.shape === 'free' ? q.maxLength ?? 60 : undefined,
       optionTemplate: q.shape === 'pickN' ? q.optionTemplate : undefined,
       maxPeers: q.shape === 'pickN' ? q.maxPeers : undefined,
@@ -434,7 +436,14 @@ export class KoSamJaModule extends BaseGameModule {
     }
 
     // shape === 'fixed' or 'free'
-    this.setupNonPeerOptions(round, question);
+    const ok = this.setupNonPeerOptions(room, round, question);
+    if (!ok) {
+      // free question whose options reference more peers than are present.
+      this.markRoundSkipped();
+      this.state.phase = 'showing-results';
+      this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+      return;
+    }
     this.transitionToGuessing(room);
   }
 
@@ -592,10 +601,15 @@ export class KoSamJaModule extends BaseGameModule {
     }));
 
     if (question.extraOptions && question.extraOptions.length > 0) {
+      // Extras may reference {subject} and {peer1}/{peer2} — the latter bind
+      // to the first two of the chosen peers (guaranteed to exist: we require
+      // ≥2 candidates above).
+      const peer1Name = chosen[0]?.name ?? '?';
+      const peer2Name = chosen[1]?.name ?? '?';
       question.extraOptions.forEach((rawText, i) => {
         opts.push({
           id: `pickn-extra-${i}`,
-          text: rawText.split('{subject}').join(subjectName),
+          text: this.interpolateText(rawText, subjectName, peer1Name, peer2Name),
         });
       });
       // Shuffle merged list so literal extras don't always trail peers
@@ -612,10 +626,16 @@ export class KoSamJaModule extends BaseGameModule {
     return true;
   }
 
+  /**
+   * Builds the guessing options for fixed/free rounds. Returns false only
+   * when a free question's author options reference more peers than are
+   * currently present (caller then skips the round); fixed always succeeds.
+   */
   private setupNonPeerOptions(
+    room: Room,
     round: KoSamJaSelectedRound,
     question: KoSamJaQuestion
-  ): void {
+  ): boolean {
     if (question.shape === 'fixed') {
       const subjectAnswer = this.state.upfrontAnswers
         .get(round.subjectPlayerId)
@@ -627,7 +647,7 @@ export class KoSamJaModule extends BaseGameModule {
       }));
       this.state.roundCorrectOptionId = `fixed-${optionIndex}`;
       this.state.roundPeerOptionPlayerIds = null;
-      return;
+      return true;
     }
 
     // shape === 'free'
@@ -636,6 +656,59 @@ export class KoSamJaModule extends BaseGameModule {
       ?.get(question.id);
     const correctText = (subjectAnswer?.text ?? '').trim() || 'tajna';
     const correctNorm = this.normalize(correctText);
+
+    // Author-provided offered answers fully define the distractor set — no
+    // sampling from other players. {subject} is interpolated, and optional
+    // {peer1}/{peer2} bind to up to two random co-players (like peer shape).
+    // Duplicates of the subject's typed answer are dropped.
+    if (question.options && question.options.length > 0) {
+      const subjectName =
+        room.players.find((p) => p.id === round.subjectPlayerId)?.name ?? '?';
+
+      const needsPeer1 = question.options.some((o) => o.includes('{peer1}'));
+      const needsPeer2 = question.options.some((o) => o.includes('{peer2}'));
+      let peer1Name: string | undefined;
+      let peer2Name: string | undefined;
+      if (needsPeer1 || needsPeer2) {
+        const peers = room.players.filter(
+          (p) => p.isConnected && p.id !== round.subjectPlayerId
+        );
+        for (let i = peers.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [peers[i], peers[j]] = [peers[j], peers[i]];
+        }
+        peer1Name = peers[0]?.name;
+        peer2Name = peers[1]?.name;
+        if ((needsPeer1 && !peer1Name) || (needsPeer2 && !peer2Name)) {
+          return false; // not enough co-players to fill the placeholders
+        }
+      }
+
+      const seenAuthored = new Set<string>([correctNorm]);
+      const opts: { id: string; text: string }[] = [
+        { id: 'free-real', text: correctText },
+      ];
+      question.options.forEach((raw, i) => {
+        const text = this.interpolateText(
+          raw,
+          subjectName,
+          peer1Name,
+          peer2Name
+        );
+        const norm = this.normalize(text);
+        if (seenAuthored.has(norm)) return;
+        seenAuthored.add(norm);
+        opts.push({ id: `free-fake-${i}`, text });
+      });
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      this.state.roundOptions = opts;
+      this.state.roundCorrectOptionId = 'free-real';
+      this.state.roundPeerOptionPlayerIds = null;
+      return true;
+    }
 
     const distractorTexts: string[] = [];
     const seen = new Set<string>([correctNorm]);
@@ -685,6 +758,7 @@ export class KoSamJaModule extends BaseGameModule {
     this.state.roundOptions = opts;
     this.state.roundCorrectOptionId = 'free-real';
     this.state.roundPeerOptionPlayerIds = null;
+    return true;
   }
 
   private markRoundSkipped(): void {
