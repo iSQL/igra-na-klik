@@ -33,3 +33,5 @@ export * from './games/ko-sam-ja-import.js';
 export * from './games/spot-it-deck.js';
 export * from './games/tajni-agenti-import.js';
 export * from './games/tajni-agenti-scenarios.js';
+export * from './types/gluvo-doba.js';
+export * from './games/gluvo-doba-roles.js';

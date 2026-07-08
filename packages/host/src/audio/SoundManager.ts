@@ -1,6 +1,14 @@
 import { Howl } from 'howler';
 
-type SoundName = 'tick' | 'correct' | 'wrong' | 'reveal' | 'victory' | 'join';
+type SoundName =
+  | 'tick'
+  | 'correct'
+  | 'wrong'
+  | 'reveal'
+  | 'victory'
+  | 'join'
+  | 'night'
+  | 'dawn';
 
 class SoundManagerImpl {
   private sounds = new Map<SoundName, Howl>();
@@ -35,6 +43,16 @@ class SoundManagerImpl {
     this.sounds.set(
       'join',
       new Howl({ src: [this.generateToneDataUri(1000, 0.1, 'sine')], volume: 0.3 })
+    );
+    // Gluvo doba atmosphere: a low falling drone for nightfall and a soft
+    // rising tone for dawn.
+    this.sounds.set(
+      'night',
+      new Howl({ src: [this.generateToneDataUri(220, 1.2, 'sine', 110)], volume: 0.35 })
+    );
+    this.sounds.set(
+      'dawn',
+      new Howl({ src: [this.generateToneDataUri(392, 0.8, 'sine', 659)], volume: 0.35 })
     );
   }
 

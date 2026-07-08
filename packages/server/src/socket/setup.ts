@@ -28,6 +28,7 @@ import { FotoKvizModule } from '../game/games/foto-kviz/FotoKvizModule.js';
 import { KoSamJaModule } from '../game/games/ko-sam-ja/KoSamJaModule.js';
 import { SpotItModule } from '../game/games/spot-it/SpotItModule.js';
 import { TajniAgentiModule } from '../game/games/tajni-agenti/TajniAgentiModule.js';
+import { GluvoDobaModule } from '../game/games/gluvo-doba/GluvoDobaModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -82,6 +83,7 @@ export function setupSocket(
   gameRegistry.register(() => new KoSamJaModule());
   gameRegistry.register(() => new SpotItModule());
   gameRegistry.register(() => new TajniAgentiModule());
+  gameRegistry.register(() => new GluvoDobaModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

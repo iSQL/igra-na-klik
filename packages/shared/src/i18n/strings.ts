@@ -167,6 +167,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.photosPerPlayer': 'Slika po igraču',
     'config.rounds': 'Broj rundi',
     'config.strokes': 'Poteza po igraču',
+    'config.discussionSeconds': 'Rasprava (sekunde)',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -280,6 +281,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.tajni-agenti.name': 'Tajni agenti',
     'game.tajni-agenti.description':
       'Špijun daje šifru tima — saigrači pogađaju reči, ali pazi na ubicu!',
+    'game.gluvo-doba.name': 'Gluvo doba',
+    'game.gluvo-doba.description':
+      'Vukodlaci noću haraju selom — otkrijte ih pre nego što vas nestane!',
   },
 
   en: {
@@ -435,6 +439,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.photosPerPlayer': 'Photos per player',
     'config.rounds': 'Number of rounds',
     'config.strokes': 'Strokes per player',
+    'config.discussionSeconds': 'Discussion (seconds)',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',
@@ -549,6 +554,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.tajni-agenti.name': 'Secret Agents',
     'game.tajni-agenti.description':
       'The spy gives the team a clue — teammates guess the words, but watch out for the assassin!',
+    'game.gluvo-doba.name': 'Dead of Night',
+    'game.gluvo-doba.description':
+      'Werewolves prowl the village at night — unmask them before no one is left!',
   },
 };
 

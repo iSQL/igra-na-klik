@@ -73,6 +73,8 @@ export interface ClientToServerEvents {
     customTajniAgentiPack?: TajniAgentiImportPack;
     tajniAgentiScenarioCode?: string;
     customTajniAgentiScenario?: TajniAgentiScenario;
+    // Gluvo doba: day-discussion timer length in seconds (host-configurable).
+    gluvoDobaDiscussionSeconds?: number;
     // Round / stroke counts for the newer games (host-configurable).
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;

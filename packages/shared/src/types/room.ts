@@ -62,7 +62,9 @@ export interface RoomSummary {
   status: RoomStatus;
 }
 
+// Room cap must fit the biggest game (Gluvo doba plays up to 15) — the
+// per-game min/max in GAME_DEFINITIONS gates game starts, not room joins.
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
-  maxPlayers: 8,
+  maxPlayers: 15,
   roundCount: 3,
 };

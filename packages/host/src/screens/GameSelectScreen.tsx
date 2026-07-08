@@ -16,6 +16,7 @@ import {
   KO_BI_PRE_ROUND_OPTIONS,
   FAKE_ARTIST_ROUND_OPTIONS,
   FAKE_ARTIST_STROKE_OPTIONS,
+  GLUVO_DOBA_DISCUSSION_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
@@ -123,6 +124,10 @@ export function GameSelectScreen() {
         gameId === 'fake-artist' ? newGamesConfig.fakeArtistStrokes : undefined,
       koBiPreRounds:
         gameId === 'ko-bi-pre' ? newGamesConfig.koBiPreRounds : undefined,
+      gluvoDobaDiscussionSeconds:
+        gameId === 'gluvo-doba'
+          ? newGamesConfig.gluvoDobaDiscussionSeconds
+          : undefined,
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
@@ -357,6 +362,14 @@ export function GameSelectScreen() {
                   onSelect={newGamesConfig.setFakeArtistStrokes}
                 />
               </>
+            )}
+            {game.id === 'gluvo-doba' && (
+              <PillRow
+                label={t('config.discussionSeconds')}
+                value={newGamesConfig.gluvoDobaDiscussionSeconds}
+                options={GLUVO_DOBA_DISCUSSION_OPTIONS}
+                onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
+              />
             )}
             {GAME_ROUND_CONFIG[game.id] && (
               <PillRow

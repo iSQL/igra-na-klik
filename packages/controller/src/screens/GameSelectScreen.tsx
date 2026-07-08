@@ -48,6 +48,7 @@ const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
 const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
 const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 const POGODI_GODINU_ROUND_OPTIONS = [5, 8, 10, 15];
+const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
 
 const GAME_ICONS: Record<string, string> = {
   quiz: '🧠',
@@ -92,6 +93,7 @@ export function GameSelectScreen() {
   const [fakeArtistStrokes, setFakeArtistStrokes] = useState(2);
   const [koBiPreRounds, setKoBiPreRounds] = useState(8);
   const [pogodiGodinuRounds, setPogodiGodinuRounds] = useState(10);
+  const [gluvoDobaDiscussion, setGluvoDobaDiscussion] = useState(180);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -177,6 +179,9 @@ export function GameSelectScreen() {
     }
     if (game.id === 'pogodi-godinu') {
       payload.pogodiGodinuRounds = pogodiGodinuRounds;
+    }
+    if (game.id === 'gluvo-doba') {
+      payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -508,6 +513,14 @@ export function GameSelectScreen() {
                       value={pogodiGodinuRounds}
                       options={POGODI_GODINU_ROUND_OPTIONS}
                       onSelect={setPogodiGodinuRounds}
+                    />
+                  )}
+                  {game.id === 'gluvo-doba' && (
+                    <RoundsConfig
+                      label={t('config.discussionSeconds')}
+                      value={gluvoDobaDiscussion}
+                      options={GLUVO_DOBA_DISCUSSION_OPTIONS}
+                      onSelect={setGluvoDobaDiscussion}
                     />
                   )}
                   {GAME_ROUND_CONFIG[game.id] && (

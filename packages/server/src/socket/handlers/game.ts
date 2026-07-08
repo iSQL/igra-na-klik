@@ -69,6 +69,7 @@ export function registerGameHandlers(
       fakeArtistStrokes: data.fakeArtistStrokes,
       koBiPreRounds: data.koBiPreRounds,
       pogodiGodinuRounds: data.pogodiGodinuRounds,
+      gluvoDobaDiscussionSeconds: data.gluvoDobaDiscussionSeconds,
       roundCount: data.roundCount,
       language: data.language,
     });

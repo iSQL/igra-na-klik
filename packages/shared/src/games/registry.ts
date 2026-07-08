@@ -105,6 +105,15 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     description:
       'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
   },
+  'gluvo-doba': {
+    id: 'gluvo-doba',
+    name: 'Gluvo doba',
+    minPlayers: 6,
+    maxPlayers: 15,
+    description:
+      'Vukodlaci noću haraju selom — otkrijte ih pre nego što vas nestane!',
+    supportsHostless: true,
+  },
   'tajni-agenti': {
     id: 'tajni-agenti',
     name: 'Tajni agenti',
