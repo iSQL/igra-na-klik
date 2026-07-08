@@ -14,6 +14,7 @@ import type { GluvoDobaRoleId, GluvoDobaTeam } from '@igra/shared';
 
 const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
+  vampir: '🧛',
   todorac: '🐎',
   drekavac: '😱',
   bauk: '👹',
@@ -90,6 +91,11 @@ const PLANNED_ROLES: { name: string; team: string; desc: string }[] = [
     team: 'Selo',
     desc: 'Boginja ljubavi i sloge. Jednom u igri može da prekine glasanje i proglasi primirje — tog dana niko ne biva obešen.',
   },
+  {
+    name: '🔒 Tamničar',
+    team: 'Selo',
+    desc: 'Preko dana bira jednog igrača i baca ga u tamnicu: uhapšeni je sledeće noći zaštićen od napada Mraka (iza rešetaka je), ali su mu i noćne moći blokirane (vukodlak ne ubija, Vračara ne skenira). Ako uhapsi Vukodlaka, Vampir te noći sme da ubije koga hoće. Zasad Tamničar automatski pita uhapšenog „koja je tvoja uloga?", a uhapšeni bira automatski odgovor iz trenutno živih uloga. Kasnije možda pravi chat između Tamničara i uhapšenog.',
+  },
 ];
 
 function plannedCards(): string {
@@ -121,26 +127,29 @@ export const GLUVO_DOBA_PAGE_HTML: string = `<!DOCTYPE html>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+/* Headings use Manrope (not the display Fredoka): Fredoka's Google Fonts
+   build lacks some Serbian Latin glyphs (č/ć…), so those letters fell back
+   to a system font and "jumped". Manrope covers the full set uniformly. */
 body{font-family:'Manrope','Segoe UI',system-ui,sans-serif;background:#F5EBE0;background-image:radial-gradient(760px 460px at 50% -8%,rgba(194,155,71,.18),transparent 62%);color:#2B2B2B;line-height:1.55;padding:2rem 1.25rem 4rem}
 main{max-width:46rem;margin:0 auto;display:flex;flex-direction:column;gap:2rem}
-h1{font-family:'Fredoka',sans-serif;font-weight:500;font-size:2.2rem;color:#1D3557}
-h2{font-family:'Fredoka',sans-serif;font-weight:500;font-size:1.4rem;color:#1D3557;border-bottom:2px solid #C29B47;padding-bottom:0.3rem;margin-bottom:0.8rem}
-h3{font-family:'Fredoka',sans-serif;font-weight:500;font-size:1.1rem;color:#8a6a23;margin:1rem 0 0.5rem}
+h1{font-family:'Manrope',system-ui,sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.01em;color:#1D3557}
+h2{font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:1.4rem;color:#1D3557;border-bottom:2px solid #C29B47;padding-bottom:0.3rem;margin-bottom:0.8rem}
+h3{font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:1.1rem;color:#8a6a23;margin:1rem 0 0.5rem}
 p{margin-bottom:0.5rem}
 .back{font-weight:700;color:#B89040;text-decoration:none}
 .back:hover{color:#1D3557}
-.eyebrow{font-family:'Fredoka',sans-serif;font-size:0.72rem;letter-spacing:0.28em;color:#B89040;text-transform:uppercase}
+.eyebrow{font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:0.28em;color:#B89040;text-transform:uppercase}
 ol,ul{padding-left:1.4rem;margin-bottom:0.5rem}
 li{margin-bottom:0.35rem}
 table{width:100%;border-collapse:collapse;font-size:0.92rem}
 th,td{text-align:left;padding:0.5rem 0.6rem;border:1px solid rgba(29,53,87,.18);vertical-align:top}
-th{background:#EDE2D2;font-family:'Fredoka',sans-serif;font-weight:500;color:#1D3557}
+th{background:#EDE2D2;font-family:'Manrope',system-ui,sans-serif;font-weight:700;color:#1D3557}
 .role{background:#FAF6F0;border:1px solid rgba(29,53,87,.14);border-radius:0.8rem;padding:0.8rem 1rem;margin-bottom:0.6rem}
 .role p{margin:0.25rem 0 0;font-size:0.92rem;color:#4A4438}
-.role-name{font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.05rem}
+.role-name{font-family:'Manrope',system-ui,sans-serif;font-weight:800;font-size:1.05rem}
 .role.planned{opacity:0.85;border-style:dashed}
 .tag{font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#E6DCD2;border-radius:0.4rem;padding:0.1rem 0.45rem;color:#4A4438;vertical-align:middle}
 .note{background:#EDE2D2;border-left:4px solid #C29B47;border-radius:0 0.6rem 0.6rem 0;padding:0.7rem 1rem;font-size:0.92rem}

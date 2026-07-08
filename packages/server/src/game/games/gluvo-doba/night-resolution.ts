@@ -147,18 +147,32 @@ export function resolveNight(
     }
   }
 
-  // 4. Wolves pick their victim by majority — unless tonight is bloodless.
+  // 4. The pack's victim — unless tonight is bloodless. The "kum" leads:
+  // among the living killers who acted, the highest-ranked one decides
+  // (Vukodlak over Vampir over any other kill-vote role). If the Vukodlak
+  // is dead or blocked, the Vampir inherits the choice; a pack with several
+  // same-rank killers falls back to a majority vote among that top tier.
+  const KILL_PRIORITY: GluvoDobaRoleId[] = ['vukodlak', 'vampir'];
+  const killRank = (playerId: string): number => {
+    const role = roles.get(playerId);
+    const i = role ? KILL_PRIORITY.indexOf(role) : -1;
+    return i === -1 ? KILL_PRIORITY.length : i;
+  };
   let wolfVictimId: string | null = null;
   if (!input.peacefulNight) {
-    const wolfCounts = new Map<string, number>();
-    for (const [actorId, targetId] of finalTargets) {
-      if (actionTypeOf(actorId) === 'kill-vote') {
-        wolfCounts.set(targetId, (wolfCounts.get(targetId) ?? 0) + 1);
+    const killers = [...finalTargets.keys()].filter(
+      (id) => actionTypeOf(id) === 'kill-vote'
+    );
+    if (killers.length > 0) {
+      const topRank = Math.min(...killers.map(killRank));
+      const counts = new Map<string, number>();
+      for (const actorId of killers) {
+        if (killRank(actorId) !== topRank) continue;
+        const targetId = finalTargets.get(actorId)!;
+        counts.set(targetId, (counts.get(targetId) ?? 0) + 1);
       }
-    }
-    if (wolfCounts.size > 0) {
-      const top = Math.max(...wolfCounts.values());
-      const tied = [...wolfCounts.entries()]
+      const top = Math.max(...counts.values());
+      const tied = [...counts.entries()]
         .filter(([, c]) => c === top)
         .map(([id]) => id);
       wolfVictimId = pickRandom(tied);

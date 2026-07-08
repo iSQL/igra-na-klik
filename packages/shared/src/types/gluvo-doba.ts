@@ -11,6 +11,7 @@ export type GluvoDobaPhase =
 
 export type GluvoDobaRoleId =
   | 'vukodlak'
+  | 'vampir'
   | 'todorac'
   | 'drekavac'
   | 'bauk'
@@ -143,6 +144,9 @@ export interface GluvoDobaControllerData {
   // wolves' submitted kill votes tonight (live coordination).
   packMates?: { playerId: string; name: string }[];
   packPicks?: { name: string; targetName: string }[];
+  // Vampir only: true once no Vukodlak is left alive — the Vampir has
+  // inherited the pack and his own pick now decides the kill.
+  vampirLeader?: boolean;
 
   // noc (living players)
   canAct?: boolean;

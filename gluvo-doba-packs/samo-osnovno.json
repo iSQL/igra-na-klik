@@ -1,7 +1,8 @@
 {
   "name": "Samo osnovno",
-  "wolves": 2,
+  "wolves": 1,
   "roles": [
+    "vampir",
     "vidovnjak",
     "zmaj"
   ]

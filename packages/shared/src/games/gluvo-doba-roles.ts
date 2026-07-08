@@ -57,6 +57,17 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
     noRepeatTarget: false,
     hintGroupId: 'luta',
   },
+  vampir: {
+    id: 'vampir',
+    name: 'Vampir',
+    team: 'vukodlaci',
+    description:
+      'Krvopija koji sluša kuma. Vukodlak bira žrtvu, a ti je noću daviš. Ako Vukodlak strada, ti preuzimaš čopor i sam biraš metu. Igraš za Sile Mraka.',
+    nightPrompt: 'Koga čopor noćas napada?',
+    nightActionType: 'kill-vote',
+    noRepeatTarget: false,
+    hintGroupId: 'luta',
+  },
   todorac: {
     id: 'todorac',
     name: 'Todorac',
@@ -219,7 +230,7 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
  * him on purpose: he reads as a clean villager (that IS his power).
  */
 export const GLUVO_DOBA_HINT_GROUPS: Record<string, { text: string }> = {
-  luta: { text: 'Noću luta selom… Vukodlak, Todorac ili Lesnik.' },
+  luta: { text: 'Noću luta selom… Vukodlak, Vampir, Todorac ili Lesnik.' },
   sudbina: {
     text: 'Dodiruje tuđe sudbine… Vila, Suđaja, Raskovnik ili Morana.',
   },
@@ -238,21 +249,25 @@ export interface GluvoDobaCompositionOpts {
 
 /**
  * The full role deck for a player count, per the balance tables:
- *  - 6–8  "mala družina": 2 wolves vs Vračara + Zmaj + villagers. No third
- *    parties, no multi-kill — every death stings.
+ *  - 6–8  "mala družina": Vukodlak + Vampir vs Vračara + Zmaj + villagers.
+ *    No third parties, no multi-kill — every death stings.
  *  - 9–12 "srednja ekipa": dark grows a Todorac OR a Bauk (50/50); village
  *    gets Suđaja + Knez.
- *  - 13–15 "veliko selo": dark = wolves + Todorac + Drekavac; village adds
+ *  - 13–15 "veliko selo": dark = core + Todorac + Drekavac; village adds
  *    Zduhać + Raskovnik.
- * Wolves are always exactly 2 — the dark side scales through specialists.
+ * The dark core is always a Vukodlak + a Vampir; bigger bands add
+ * specialists on top.
  */
 export function compositionFor(
   playerCount: number,
   opts: GluvoDobaCompositionOpts = {}
 ): GluvoDobaRoleId[] {
+  // The dark core is a Vukodlak (the "kum" who picks the victim) and a
+  // Vampir (who carries out the kill and inherits the pack if the Vukodlak
+  // dies). Bigger bands add more dark specialists on top.
   const deck: GluvoDobaRoleId[] = [
     'vukodlak',
-    'vukodlak',
+    'vampir',
     'vidovnjak',
     'zmaj',
   ];

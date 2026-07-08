@@ -21,6 +21,7 @@ import {
 
 const EDITOR_ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
+  vampir: '🧛',
   todorac: '🐎',
   drekavac: '😱',
   bauk: '👹',

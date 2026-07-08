@@ -696,6 +696,13 @@ export class GluvoDobaModule extends BaseGameModule {
     return null;
   }
 
+  private playerWithLivingRole(roleId: GluvoDobaRoleId): string | null {
+    for (const [id, r] of this.state.roles) {
+      if (r === roleId && this.state.alive.has(id)) return id;
+    }
+    return null;
+  }
+
   private validNightTargets(playerId: string): string[] {
     const role = this.roleOf(playerId);
     if (!role) return [];
@@ -950,6 +957,11 @@ export class GluvoDobaModule extends BaseGameModule {
             name: this.nameOf(actorId),
             targetName: this.nameOf(targetId),
           }));
+      }
+      if (roleId === 'vampir') {
+        // The Vampir inherits the pack (his own pick decides) once no
+        // Vukodlak is left alive.
+        pd.vampirLeader = !this.playerWithLivingRole('vukodlak');
       }
     }
 

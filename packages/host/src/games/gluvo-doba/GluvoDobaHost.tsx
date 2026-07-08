@@ -13,6 +13,7 @@ import { GLUVO_DOBA_ROLES, GLUVO_DOBA_TEAM_NAMES } from '@igra/shared';
 
 const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
+  vampir: '🧛',
   todorac: '🐎',
   drekavac: '😱',
   bauk: '👹',

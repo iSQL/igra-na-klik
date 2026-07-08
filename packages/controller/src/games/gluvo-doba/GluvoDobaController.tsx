@@ -37,6 +37,7 @@ const column: React.CSSProperties = {
 
 export const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
+  vampir: '🧛',
   todorac: '🐎',
   drekavac: '😱',
   bauk: '👹',
@@ -642,9 +643,13 @@ export default function GluvoDobaController() {
                 ? '🌘 Prva noć — upoznaj čopor, večeras nema krvi. Tvoj izbor se ne računa.'
                 : isMoranaOffNight
                   ? 'Noćas ne lediš — skupljaš snagu za sledeću noć.'
-                  : my.roleId === 'zduhac' && my.zduhacSaveAvailable
-                    ? 'Tvoja duša i dalje čuva selo (štit nepotrošen).'
-                    : undefined
+                  : my.roleId === 'vampir'
+                    ? my.vampirLeader
+                      ? '🧛 Kum je pao — sada ti biraš žrtvu čopora!'
+                      : 'Kum (Vukodlak) bira žrtvu — tvoj glas vredi tek ako kuma nestane.'
+                    : my.roleId === 'zduhac' && my.zduhacSaveAvailable
+                      ? 'Tvoja duša i dalje čuva selo (štit nepotrošen).'
+                      : undefined
             }
             targets={my.targets}
             onPick={(targetId) => emit('gluvo:night-action', { targetId })}

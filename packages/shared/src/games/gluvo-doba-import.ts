@@ -29,6 +29,7 @@ export const GLUVO_DOBA_MAX_WOLVES = 6;
  * order (dark → village → neutral).
  */
 export const GLUVO_DOBA_PACK_ROLE_IDS: GluvoDobaRoleId[] = [
+  'vampir',
   'todorac',
   'drekavac',
   'bauk',
