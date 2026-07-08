@@ -7,6 +7,7 @@ import {
 } from '@igra/shared';
 import type {
   GameDefinition,
+  GluvoDobaDeathReveal,
   QuizImportQuestion,
   KoSamJaImportQuestion,
   KoSamJaCategory,
@@ -94,6 +95,11 @@ export function GameSelectScreen() {
   const [koBiPreRounds, setKoBiPreRounds] = useState(8);
   const [pogodiGodinuRounds, setPogodiGodinuRounds] = useState(10);
   const [gluvoDobaDiscussion, setGluvoDobaDiscussion] = useState(180);
+  const [gluvoDeathReveal, setGluvoDeathReveal] =
+    useState<GluvoDobaDeathReveal>('team');
+  const [gluvoFirstNight, setGluvoFirstNight] = useState(true);
+  const [gluvoNeutral, setGluvoNeutral] = useState(false);
+  const [gluvoVila, setGluvoVila] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -182,6 +188,10 @@ export function GameSelectScreen() {
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
+      payload.gluvoDobaDeathReveal = gluvoDeathReveal;
+      payload.gluvoDobaFirstNightPeace = gluvoFirstNight;
+      payload.gluvoDobaNeutral = gluvoNeutral;
+      payload.gluvoDobaVila = gluvoVila;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -516,12 +526,61 @@ export function GameSelectScreen() {
                     />
                   )}
                   {game.id === 'gluvo-doba' && (
-                    <RoundsConfig
-                      label={t('config.discussionSeconds')}
-                      value={gluvoDobaDiscussion}
-                      options={GLUVO_DOBA_DISCUSSION_OPTIONS}
-                      onSelect={setGluvoDobaDiscussion}
-                    />
+                    <>
+                      <RoundsConfig
+                        label={t('config.discussionSeconds')}
+                        value={gluvoDobaDiscussion}
+                        options={GLUVO_DOBA_DISCUSSION_OPTIONS}
+                        onSelect={setGluvoDobaDiscussion}
+                      />
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.3rem',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {t('config.gluvoDeathReveal')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          {(['role', 'team', 'none'] as const).map((v) => (
+                            <Pill
+                              key={v}
+                              active={gluvoDeathReveal === v}
+                              onClick={() => setGluvoDeathReveal(v)}
+                            >
+                              {t(`config.gluvoDeathReveal.${v}`)}
+                            </Pill>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill
+                            active={gluvoFirstNight}
+                            onClick={() => setGluvoFirstNight(!gluvoFirstNight)}
+                          >
+                            🕊️ {t('config.gluvoFirstNight')}
+                          </Pill>
+                          <Pill
+                            active={gluvoNeutral}
+                            onClick={() => setGluvoNeutral(!gluvoNeutral)}
+                          >
+                            🌲 {t('config.gluvoNeutral')}
+                          </Pill>
+                          <Pill
+                            active={gluvoVila}
+                            onClick={() => setGluvoVila(!gluvoVila)}
+                          >
+                            🧚 {t('config.gluvoVila')}
+                          </Pill>
+                        </div>
+                      </div>
+                    </>
                   )}
                   {GAME_ROUND_CONFIG[game.id] && (
                     <RoundsConfig

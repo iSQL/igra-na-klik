@@ -25,6 +25,7 @@ import {
 } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
+import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
 import { getCustomPhoto } from './game/customPhotoStore.js';
 import { createGeoAdminRouter } from './admin/geo-admin.js';
@@ -578,6 +579,7 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 <div id="rooms-list"></div>
 </div>
 <a class="host-link" id="host-link" href="/host/">Kreiraj novu sobu →</a>
+<a class="host-link" href="/gluvo-doba">🌙 Gluvo doba — pravila igre</a>
 <a class="site" href="https://zabari.net" target="_blank" rel="noopener">zabari<span>.net</span></a>
 </div>
 <script>
@@ -684,6 +686,11 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 
 app.get('/', (_req, res) => {
   res.type('html').send(LANDING_HTML);
+});
+
+// Rules page for the Gluvo doba social-deduction game (Serbian, static).
+app.get('/gluvo-doba', (_req, res) => {
+  res.type('html').send(GLUVO_DOBA_PAGE_HTML);
 });
 
 // Brand favicons (zabari.net mark) for the landing + admin pages. Served

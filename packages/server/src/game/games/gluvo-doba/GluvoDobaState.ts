@@ -1,5 +1,6 @@
 import type {
   GluvoDobaDeathCause,
+  GluvoDobaDeathReveal,
   GluvoDobaPhase,
   GluvoDobaRoleId,
   GluvoDobaTeam,
@@ -33,24 +34,34 @@ export interface GluvoDobaInternalState {
   day: number; // 1-based, incremented when a night resolves into zora
   discussionDuration: number;
 
+  // Host config.
+  deathReveal: GluvoDobaDeathReveal;
+  firstNightPeace: boolean;
+
   roles: Map<string, GluvoDobaRoleId>;
   alive: Set<string>;
 
   // --- night ---
-  // actorId -> targetId, raw picks pre-redirect; one submission, final.
+  // actorId -> targetId, raw picks pre-block/redirect; one submission, final.
   nightActions: Map<string, string>;
   // Snapshot of living players at noc entry; pruned on permanent
   // disconnect so the phase can still early-exit.
   expectedActorIds: Set<string>;
-  // Ghosts eligible to answer the Zduhać this night (snapshot of connected
-  // dead at noc entry). Only gates early-exit while a question is pending.
-  expectedGhostIds: Set<string>;
-  ghostVotes: Map<string, 'da' | 'ne'>;
-  // Set when the Zduhać submits — that's what pushes the question to ghosts.
-  zduhacTargetId: string | null;
   lastProtectedId: string | null; // Zmaj no-repeat
   lastEnchantedId: string | null; // Vila no-repeat
   enchantedTonightId: string | null;
+  // The player the Todorac trampled last night (block survived Raskovnik) —
+  // they get a private "pregažen si" flag through the following day.
+  blockedLastNightId: string | null;
+
+  // One-time Zduhać intercept.
+  zduhacSaveUsed: boolean;
+  // Set for the dawn where the save happened (public reveal), then cleared.
+  zduhacSavedAnnouncement: { playerId: string } | null;
+  // Bauk's victim — loses the vote on the day that follows the night.
+  mutedTodayId: string | null;
+  // Zora flavour for a bloodless configured first night.
+  announcePeacefulFirstNight: boolean;
 
   // --- deaths / dawn ---
   pendingDeaths: GluvoDobaDeathRecord[];
@@ -61,7 +72,8 @@ export interface GluvoDobaInternalState {
   sudjajaId: string | null; // the avenger whose prompt is pending
   osvetaVictimId: string | null;
 
-  // --- day vote ---
+  // --- day ---
+  knezRevealedId: string | null; // revealed Knez votes double, permanently
   dayVotes: Map<string, string>; // voterId -> targetId | 'skip'
   expectedVoterIds: Set<string>;
   lynchedId: string | null;
@@ -70,12 +82,7 @@ export interface GluvoDobaInternalState {
 
   // --- private histories (survive reconnect via playerData) ---
   seerHistory: { night: number; targetName: string; hintText: string }[];
-  zduhacHistory: {
-    night: number;
-    targetName: string;
-    da: number;
-    ne: number;
-  }[];
 
   winner: GluvoDobaTeam | null;
+  moranaWon: boolean;
 }

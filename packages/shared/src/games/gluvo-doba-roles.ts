@@ -14,9 +14,12 @@ import { shuffled } from '../utils/shuffle.js';
  */
 export type GluvoDobaNightActionType =
   | 'kill-vote'
+  | 'kill-solo'
   | 'protect'
   | 'investigate'
-  | 'ask-dead'
+  | 'block'
+  | 'unblock'
+  | 'fear'
   | 'enchant'
   | 'whisper';
 
@@ -31,13 +34,15 @@ export interface GluvoDobaRoleDef {
   nightActionType: GluvoDobaNightActionType;
   /** Server refuses targeting the same player two nights in a row. */
   noRepeatTarget: boolean;
-  /** Vidovnjak ambiguity group this role belongs to. */
+  /** Vračara ambiguity group this role belongs to. */
   hintGroupId: string;
 }
 
-// Roles are NOT revealed when a player dies — the village has to reason from
-// whispers and investigations. Flip to true for a Town-of-Salem-style game.
-export const REVEAL_ROLE_ON_DEATH = false;
+export const GLUVO_DOBA_TEAM_NAMES: Record<GluvoDobaTeam, string> = {
+  vukodlaci: 'Sile Mraka',
+  selo: 'Selo',
+  neutralci: 'Neutralan',
+};
 
 export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
   vukodlak: {
@@ -45,11 +50,44 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
     name: 'Vukodlak',
     team: 'vukodlaci',
     description:
-      'Noću se pretvaraš u zver. Sa čoporom biraš žrtvu — danju glumiš nedužnog seljanina. Pobedi kad vukodlaka bude koliko i ostalih.',
+      'Noću se pretvaraš u zver. Sa Silama Mraka biraš žrtvu — danju glumiš nedužnog seljanina. Mrak pobeđuje kad vas bude koliko i ostalih.',
     nightPrompt: 'Koga čopor noćas napada?',
     nightActionType: 'kill-vote',
     noRepeatTarget: false,
     hintGroupId: 'luta',
+  },
+  todorac: {
+    id: 'todorac',
+    name: 'Todorac',
+    team: 'vukodlaci',
+    description:
+      'Mitski konjanik srastao sa konjem. Svake noći pregaziš jednog igrača — njegova moć te noći ne radi. Igraš za Sile Mraka.',
+    nightPrompt: 'Koga Todorac noćas gazi?',
+    nightActionType: 'block',
+    noRepeatTarget: false,
+    hintGroupId: 'luta',
+  },
+  drekavac: {
+    id: 'drekavac',
+    name: 'Drekavac',
+    team: 'vukodlaci',
+    description:
+      'Dete koje plače u noći. Nemaš svoju moć, ali Vračari izgledaš kao nedužni seljanin — a tvoj šapat sumnje truje selo. Igraš za Sile Mraka.',
+    nightPrompt: 'Koga sumnjičiš?',
+    nightActionType: 'whisper',
+    noRepeatTarget: false,
+    hintGroupId: 'mirno', // the false scan — reads as a villager
+  },
+  bauk: {
+    id: 'bauk',
+    name: 'Bauk',
+    team: 'vukodlaci',
+    description:
+      'Kriješ se u senci i plašiš selo. Noću biraš igrača koji od straha sutra ne sme da glasa. Igraš za Sile Mraka.',
+    nightPrompt: 'Koga Bauk noćas plaši?',
+    nightActionType: 'fear',
+    noRepeatTarget: false,
+    hintGroupId: 'strah',
   },
   zmaj: {
     id: 'zmaj',
@@ -64,7 +102,7 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
   },
   vidovnjak: {
     id: 'vidovnjak',
-    name: 'Vidovnjak',
+    name: 'Vračara',
     team: 'selo',
     description:
       'Svake noći zaviriš u nečiju dušu i dobiješ nagoveštaj — ali vizije su maglovite i mogu značiti više stvari.',
@@ -78,11 +116,11 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
     name: 'Zduhać',
     team: 'selo',
     description:
-      'Tvoj duh noću napušta telo i razgovara sa mrtvima. Pitaj ih za jednog igrača — ali pazi, mrtvi vukodlaci umeju da lažu.',
-    nightPrompt: 'Za koga pitaš mrtve?',
-    nightActionType: 'ask-dead',
+      'Tvoja duša noću leti nebom i čuva selo. Jednom po igri automatski presretneš napad vukodlaka i spaseš žrtvu — ali se tada tvoja uloga javno otkriva.',
+    nightPrompt: 'Koga sumnjičiš?',
+    nightActionType: 'whisper',
     noRepeatTarget: false,
-    hintGroupId: 'luta',
+    hintGroupId: 'strah',
   },
   sudjaja: {
     id: 'sudjaja',
@@ -92,6 +130,28 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
       'Ispredaš niti sudbine. Kad umreš — noću ili na vešalima — povlačiš jednu nit i vodiš jednog igrača sa sobom.',
     nightPrompt: 'Koga sumnjičiš?',
     nightActionType: 'whisper',
+    noRepeatTarget: false,
+    hintGroupId: 'sudbina',
+  },
+  knez: {
+    id: 'knez',
+    name: 'Knez',
+    team: 'selo',
+    description:
+      'Seoski kmet. U bilo kom trenutku dana možeš javno da se otkriješ — od tog trenutka tvoj glas na vešanju vredi dvostruko.',
+    nightPrompt: 'Koga sumnjičiš?',
+    nightActionType: 'whisper',
+    noRepeatTarget: false,
+    hintGroupId: 'mirno',
+  },
+  raskovnik: {
+    id: 'raskovnik',
+    name: 'Raskovnik',
+    team: 'selo',
+    description:
+      'Čuvaš mitsku travu koja otvara svaku bravu. Noću biraš igrača — ako ga je Todorac pregazio, oslobađaš ga blokade.',
+    nightPrompt: 'Koga Raskovnik noćas oslobađa?',
+    nightActionType: 'unblock',
     noRepeatTarget: false,
     hintGroupId: 'sudbina',
   },
@@ -117,52 +177,97 @@ export const GLUVO_DOBA_ROLES: Record<GluvoDobaRoleId, GluvoDobaRoleDef> = {
     noRepeatTarget: false,
     hintGroupId: 'mirno',
   },
+  lesnik: {
+    id: 'lesnik',
+    name: 'Lesnik',
+    team: 'neutralci',
+    description:
+      'Šumski gospodar — igraš sam za sebe. Cilj ti je jedino da preživiš do kraja: ako dočekaš kraj živ, pobeđuješ uz pobednike.',
+    nightPrompt: 'Koga sumnjičiš?',
+    nightActionType: 'whisper',
+    noRepeatTarget: false,
+    hintGroupId: 'luta',
+  },
+  morana: {
+    id: 'morana',
+    name: 'Morana',
+    team: 'neutralci',
+    description:
+      'Boginja smrti — igraš sama za sebe. Svake druge noći zamrzneš jednog igrača. Pobeđuješ ako ostaneš među poslednja dva živa.',
+    nightPrompt: 'Koga Morana noćas ledi?',
+    nightActionType: 'kill-solo',
+    noRepeatTarget: false,
+    hintGroupId: 'sudbina',
+  },
 };
 
 /**
- * Vidovnjak hint groups — deliberately ambiguous: each mixes wolf and
- * village roles so an investigation narrows, but never convicts.
+ * Vračara hint groups — deliberately ambiguous: each mixes teams so an
+ * investigation narrows, but never convicts. Drekavac's group text omits
+ * him on purpose: he reads as a clean villager (that IS his power).
  */
 export const GLUVO_DOBA_HINT_GROUPS: Record<string, { text: string }> = {
-  luta: { text: 'Noću luta selom… Vukodlak ili Zduhać.' },
-  sudbina: { text: 'Dodiruje tuđe sudbine… Vila ili Suđaja.' },
-  mirno: { text: 'Spava mirno… Zmaj, Vidovnjak ili Domaćin.' },
+  luta: { text: 'Noću luta selom… Vukodlak, Todorac ili Lesnik.' },
+  sudbina: {
+    text: 'Dodiruje tuđe sudbine… Vila, Suđaja, Raskovnik ili Morana.',
+  },
+  mirno: { text: 'Spava mirno… Zmaj, Vračara, Knez ili Domaćin.' },
+  strah: { text: 'Vazduh oko njega treperi… Bauk ili Zduhać.' },
 };
 
-/** 6–8 players → 2 wolves, 9–11 → 3, 12+ → 4. */
-export function wolfCountFor(playerCount: number): number {
-  if (playerCount >= 12) return 4;
-  if (playerCount >= 9) return 3;
-  return 2;
+export interface GluvoDobaCompositionOpts {
+  /** Adds a solo player: Lesnik at 9–12, Morana at 13+. */
+  neutral?: boolean;
+  /** Vila replaces one Domaćin (9+ only). */
+  vila?: boolean;
 }
 
-// Special village roles beyond the guaranteed Vidovnjak + Zmaj; a random
-// subset joins each game so no two games have the same role mix.
-const OPTIONAL_TOWN_ROLES: GluvoDobaRoleId[] = ['zduhac', 'sudjaja', 'vila'];
-
 /**
- * Deal roles for a fresh game. Wolves by player count; Vidovnjak and Zmaj
- * always in; 1–3 optional roles depending on how many villagers remain;
- * everyone else is a Domaćin.
+ * The full role deck for a player count, per the balance tables:
+ *  - 6–8  "mala družina": 2 wolves vs Vračara + Zmaj + villagers. No third
+ *    parties, no multi-kill — every death stings.
+ *  - 9–12 "srednja ekipa": dark grows a Todorac OR a Bauk (50/50); village
+ *    gets Suđaja + Knez.
+ *  - 13–15 "veliko selo": dark = wolves + Todorac + Drekavac; village adds
+ *    Zduhać + Raskovnik.
+ * Wolves are always exactly 2 — the dark side scales through specialists.
  */
-export function assignRoles(
-  playerIds: string[]
-): Map<string, GluvoDobaRoleId> {
-  const wolves = wolfCountFor(playerIds.length);
-  const townCount = playerIds.length - wolves;
-
-  const townRoles: GluvoDobaRoleId[] = ['vidovnjak', 'zmaj'];
-  const optionalCount = townCount >= 7 ? 3 : townCount >= 5 ? 2 : 1;
-  townRoles.push(...shuffled(OPTIONAL_TOWN_ROLES).slice(0, optionalCount));
-  while (townRoles.length < townCount) townRoles.push('domacin');
-
+export function compositionFor(
+  playerCount: number,
+  opts: GluvoDobaCompositionOpts = {}
+): GluvoDobaRoleId[] {
   const deck: GluvoDobaRoleId[] = [
-    ...Array<GluvoDobaRoleId>(wolves).fill('vukodlak'),
-    ...townRoles,
+    'vukodlak',
+    'vukodlak',
+    'vidovnjak',
+    'zmaj',
   ];
 
+  if (playerCount >= 13) {
+    deck.push('todorac', 'drekavac');
+    deck.push('sudjaja', 'knez', 'zduhac', 'raskovnik');
+    if (opts.neutral) deck.push('morana');
+  } else if (playerCount >= 9) {
+    deck.push(Math.random() < 0.5 ? 'todorac' : 'bauk');
+    deck.push('sudjaja', 'knez');
+    if (opts.neutral) deck.push('lesnik');
+  }
+
+  if (opts.vila && playerCount >= 9) deck.push('vila');
+
+  while (deck.length < playerCount) deck.push('domacin');
+  // Defensive: never deal more cards than players (toggles at the low end
+  // of a band can fill the deck exactly, but must not overflow it).
+  return deck.slice(0, playerCount);
+}
+
+/** Deal the composition randomly across the given players. */
+export function assignRoles(
+  playerIds: string[],
+  opts: GluvoDobaCompositionOpts = {}
+): Map<string, GluvoDobaRoleId> {
   const ids = shuffled(playerIds);
-  const dealt = shuffled(deck);
+  const dealt = shuffled(compositionFor(playerIds.length, opts));
   const roles = new Map<string, GluvoDobaRoleId>();
   ids.forEach((id, i) => roles.set(id, dealt[i]));
   return roles;

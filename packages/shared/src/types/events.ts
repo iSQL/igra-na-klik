@@ -13,6 +13,7 @@ import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
 import type { TajniAgentiScenario } from '../games/tajni-agenti-scenarios.js';
 import type { Language } from '../i18n/types.js';
+import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -73,8 +74,14 @@ export interface ClientToServerEvents {
     customTajniAgentiPack?: TajniAgentiImportPack;
     tajniAgentiScenarioCode?: string;
     customTajniAgentiScenario?: TajniAgentiScenario;
-    // Gluvo doba: day-discussion timer length in seconds (host-configurable).
+    // Gluvo doba host config: discussion timer, what a death reveals
+    // ('role' | 'team' | 'none'), the peaceful-first-night rule, and the
+    // optional neutral (Lesnik/Morana) and Vila roles.
     gluvoDobaDiscussionSeconds?: number;
+    gluvoDobaDeathReveal?: GluvoDobaDeathReveal;
+    gluvoDobaFirstNightPeace?: boolean;
+    gluvoDobaNeutral?: boolean;
+    gluvoDobaVila?: boolean;
     // Round / stroke counts for the newer games (host-configurable).
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;

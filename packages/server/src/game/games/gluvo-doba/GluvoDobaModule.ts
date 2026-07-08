@@ -3,17 +3,14 @@ import type {
   GameState,
   GluvoDobaControllerData,
   GluvoDobaDeath,
+  GluvoDobaDeathReveal,
   GluvoDobaFinalRole,
   GluvoDobaHostData,
   GluvoDobaPlayerInfo,
   GluvoDobaRoleId,
   GluvoDobaTargetOption,
 } from '@igra/shared';
-import {
-  GLUVO_DOBA_ROLES,
-  REVEAL_ROLE_ON_DEATH,
-  assignRoles,
-} from '@igra/shared';
+import { GLUVO_DOBA_ROLES, assignRoles } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type {
   GluvoDobaDeathRecord,
@@ -35,7 +32,13 @@ import { resolveNight } from './night-resolution.js';
 
 interface GluvoDobaCustomContent {
   gluvoDobaDiscussionSeconds?: number;
+  gluvoDobaDeathReveal?: GluvoDobaDeathReveal;
+  gluvoDobaFirstNightPeace?: boolean;
+  gluvoDobaNeutral?: boolean;
+  gluvoDobaVila?: boolean;
 }
+
+const DAY_PHASES = new Set(['zora', 'diskusija', 'glasanje', 'presuda']);
 
 function clampDiscussion(raw: unknown): number {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) {
@@ -45,6 +48,10 @@ function clampDiscussion(raw: unknown): number {
   if (n < MIN_DISCUSSION_DURATION) return MIN_DISCUSSION_DURATION;
   if (n > MAX_DISCUSSION_DURATION) return MAX_DISCUSSION_DURATION;
   return n;
+}
+
+function parseDeathReveal(raw: unknown): GluvoDobaDeathReveal {
+  return raw === 'role' || raw === 'none' ? raw : 'team';
 }
 
 // Identity snapshot taken at game start so names/colors survive a player
@@ -61,6 +68,8 @@ export class GluvoDobaModule extends BaseGameModule {
 
   private state!: GluvoDobaInternalState;
   private info = new Map<string, ParticipantInfo>();
+  // The match's role composition — open setup knowledge, computed once.
+  private rolesInPlay: { roleId: GluvoDobaRoleId; count: number }[] = [];
   // Deaths applied+announced at the most recent zora/presuda entry.
   private announcedDeaths: GluvoDobaDeathRecord[] = [];
 
@@ -86,36 +95,65 @@ export class GluvoDobaModule extends BaseGameModule {
       ])
     );
 
+    const roles = assignRoles(
+      participants.map((p) => p.id),
+      {
+        neutral: opts.gluvoDobaNeutral === true,
+        vila: opts.gluvoDobaVila === true,
+      }
+    );
+
     this.state = {
       phase: 'podela-uloga',
       phaseTimeRemaining: PODELA_ULOGA_DURATION,
       day: 0,
       discussionDuration: clampDiscussion(opts.gluvoDobaDiscussionSeconds),
-      roles: assignRoles(participants.map((p) => p.id)),
+      deathReveal: parseDeathReveal(opts.gluvoDobaDeathReveal),
+      firstNightPeace: opts.gluvoDobaFirstNightPeace !== false,
+      roles,
       alive: new Set(participants.map((p) => p.id)),
       nightActions: new Map(),
       expectedActorIds: new Set(),
-      expectedGhostIds: new Set(),
-      ghostVotes: new Map(),
-      zduhacTargetId: null,
       lastProtectedId: null,
       lastEnchantedId: null,
       enchantedTonightId: null,
+      blockedLastNightId: null,
+      zduhacSaveUsed: false,
+      zduhacSavedAnnouncement: null,
+      mutedTodayId: null,
+      announcePeacefulFirstNight: false,
       pendingDeaths: [],
       whisperTop: [],
       osvetaContext: null,
       sudjajaId: null,
       osvetaVictimId: null,
+      knezRevealedId: null,
       dayVotes: new Map(),
       expectedVoterIds: new Set(),
       lynchedId: null,
       lastVoteTally: [],
       lastSkipVotes: 0,
       seerHistory: [],
-      zduhacHistory: [],
       winner: null,
+      moranaWon: false,
     };
     this.announcedDeaths = [];
+
+    const counts = new Map<GluvoDobaRoleId, number>();
+    for (const roleId of roles.values()) {
+      counts.set(roleId, (counts.get(roleId) ?? 0) + 1);
+    }
+    const teamOrder = { vukodlaci: 0, selo: 1, neutralci: 2 };
+    this.rolesInPlay = [...counts.entries()]
+      .map(([roleId, count]) => ({ roleId, count }))
+      .sort(
+        (a, b) =>
+          teamOrder[GLUVO_DOBA_ROLES[a.roleId].team] -
+            teamOrder[GLUVO_DOBA_ROLES[b.roleId].team] ||
+          GLUVO_DOBA_ROLES[a.roleId].name.localeCompare(
+            GLUVO_DOBA_ROLES[b.roleId].name
+          )
+      );
 
     return this.buildGameState(room);
   }
@@ -130,12 +168,12 @@ export class GluvoDobaModule extends BaseGameModule {
     switch (action) {
       case 'gluvo:night-action':
         return this.handleNightAction(room, playerId, data);
-      case 'gluvo:ghost-vote':
-        return this.handleGhostVote(room, playerId, data);
       case 'gluvo:vote':
         return this.handleVote(room, playerId, data);
       case 'gluvo:osveta':
         return this.handleOsveta(room, playerId, data);
+      case 'gluvo:knez-reveal':
+        return this.handleKnezReveal(room, playerId);
       default:
         return null;
     }
@@ -149,7 +187,7 @@ export class GluvoDobaModule extends BaseGameModule {
     switch (action) {
       case 'gluvo:skip-discussion':
         if (this.state.phase !== 'diskusija') return null;
-        this.enterGlasanje(room);
+        this.enterGlasanje();
         return this.buildGameState(room);
       case 'gluvo:end-now':
         if (this.state.phase !== 'kraj') return null;
@@ -204,12 +242,6 @@ export class GluvoDobaModule extends BaseGameModule {
       } else if (this.state.phase === 'glasanje' && this.allVoted(room)) {
         this.finishVoting(room);
       }
-    } else {
-      // A ghost left — don't let the Zduhać's question wait on them.
-      this.state.expectedGhostIds.delete(playerId);
-      if (this.state.phase === 'noc' && this.nightComplete(room)) {
-        this.finishNight(room);
-      }
     }
 
     return this.buildGameState(room);
@@ -232,33 +264,6 @@ export class GluvoDobaModule extends BaseGameModule {
 
     this.state.nightActions.set(playerId, targetId);
 
-    const role = this.state.roles.get(playerId);
-    if (role && GLUVO_DOBA_ROLES[role].nightActionType === 'ask-dead') {
-      // This is what pushes the da/ne question to the ghosts' phones.
-      this.state.zduhacTargetId = targetId;
-    }
-
-    if (this.nightComplete(room)) this.finishNight(room);
-    return this.buildGameState(room);
-  }
-
-  private handleGhostVote(
-    room: Room,
-    playerId: string,
-    data: Record<string, unknown>
-  ): GameState | null {
-    if (this.state.phase !== 'noc') return null;
-    if (this.state.zduhacTargetId === null) return null;
-    if (!this.state.roles.has(playerId)) return null;
-    if (this.state.alive.has(playerId)) return null;
-    // Not gated on expectedGhostIds: a ghost who reconnected after the
-    // night started may still answer — they just don't block early-exit.
-    if (this.state.ghostVotes.has(playerId)) return null;
-
-    const vote = data.vote;
-    if (vote !== 'da' && vote !== 'ne') return null;
-
-    this.state.ghostVotes.set(playerId, vote);
     if (this.nightComplete(room)) this.finishNight(room);
     return this.buildGameState(room);
   }
@@ -302,12 +307,23 @@ export class GluvoDobaModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  private handleKnezReveal(room: Room, playerId: string): GameState | null {
+    if (!DAY_PHASES.has(this.state.phase)) return null;
+    if (this.state.phase === 'presuda') return null; // vote already settled
+    if (!this.state.alive.has(playerId)) return null;
+    if (this.roleOf(playerId) !== 'knez') return null;
+    if (this.state.knezRevealedId !== null) return null;
+
+    this.state.knezRevealedId = playerId;
+    return this.buildGameState(room);
+  }
+
   // --- Phase machine -----------------------------------------------------
 
   private advanceOnTimeout(room: Room): void {
     switch (this.state.phase) {
       case 'podela-uloga':
-        this.enterNoc(room);
+        this.enterNoc();
         break;
       case 'noc':
         this.finishNight(room);
@@ -320,14 +336,14 @@ export class GluvoDobaModule extends BaseGameModule {
         else this.enterDiskusija();
         break;
       case 'diskusija':
-        this.enterGlasanje(room);
+        this.enterGlasanje();
         break;
       case 'glasanje':
         this.finishVoting(room);
         break;
       case 'presuda':
         if (this.state.winner) this.enterKraj();
-        else this.enterNoc(room);
+        else this.enterNoc();
         break;
       case 'kraj':
         this.state.phase = 'ended';
@@ -336,46 +352,39 @@ export class GluvoDobaModule extends BaseGameModule {
     }
   }
 
-  private enterNoc(room: Room): void {
+  private enterNoc(): void {
     this.state.nightActions = new Map();
-    this.state.ghostVotes = new Map();
-    this.state.zduhacTargetId = null;
     this.state.enchantedTonightId = null;
     this.state.whisperTop = [];
+    // Yesterday's afflictions expire with the new night.
+    this.state.blockedLastNightId = null;
+    this.state.mutedTodayId = null;
+    this.state.zduhacSavedAnnouncement = null;
+    this.state.announcePeacefulFirstNight = false;
     // Snapshot every living player — a mid-grace disconnected phone keeps
     // its slot until the timer or its permanent removal, so a screen going
     // dark can't shrink the "did everyone act?" denominator.
     this.state.expectedActorIds = new Set(this.state.alive);
-    // Ghosts eligible to answer the Zduhać: dead participants currently
-    // connected. Players dying THIS night join only from the next one.
-    this.state.expectedGhostIds = new Set(
-      [...this.state.roles.keys()].filter(
-        (id) =>
-          !this.state.alive.has(id) &&
-          room.players.find((p) => p.id === id)?.isConnected === true
-      )
-    );
     this.state.phase = 'noc';
     this.state.phaseTimeRemaining = NOC_DURATION;
   }
 
   private nightComplete(room: Room): boolean {
     if (this.state.phase !== 'noc') return false;
-    const stillInRoom = (id: string) =>
-      room.players.some((p) => p.id === id);
     for (const id of this.state.expectedActorIds) {
       if (this.state.nightActions.has(id)) continue;
-      if (!stillInRoom(id)) continue;
+      if (!room.players.some((p) => p.id === id)) continue;
       return false;
     }
-    if (this.state.zduhacTargetId !== null) {
-      for (const id of this.state.expectedGhostIds) {
-        if (this.state.ghostVotes.has(id)) continue;
-        if (!stillInRoom(id)) continue;
-        return false;
-      }
-    }
     return true;
+  }
+
+  private isPeacefulNight(night: number): boolean {
+    return this.state.firstNightPeace && night === 1;
+  }
+
+  private isMoranaKillNight(night: number): boolean {
+    return night % 2 === 0;
   }
 
   private finishNight(room: Room): void {
@@ -385,29 +394,32 @@ export class GluvoDobaModule extends BaseGameModule {
       alive: this.state.alive,
       nightActions: this.state.nightActions,
       lastProtectedId: this.state.lastProtectedId,
-      ghostVotes: this.state.ghostVotes,
-      zduhacTargetId: this.state.zduhacTargetId,
       night,
+      peacefulNight: this.isPeacefulNight(night),
+      moranaKillNight: this.isMoranaKillNight(night),
+      zduhacSaveUsed: this.state.zduhacSaveUsed,
       nameOf: (id) => this.nameOf(id),
     });
 
     this.state.enchantedTonightId = outcome.enchantedTonightId;
     this.state.lastEnchantedId = outcome.enchantedTonightId;
     this.state.lastProtectedId = outcome.newLastProtectedId;
+    this.state.blockedLastNightId = outcome.blockedId;
+    this.state.mutedTodayId = outcome.mutedTodayId;
+    this.state.announcePeacefulFirstNight = this.isPeacefulNight(night);
     if (outcome.seerEntry) this.state.seerHistory.push(outcome.seerEntry);
-    if (outcome.zduhacEntry) this.state.zduhacHistory.push(outcome.zduhacEntry);
+    if (outcome.zduhacSavedBy) {
+      this.state.zduhacSaveUsed = true;
+      this.state.zduhacSavedAnnouncement = { playerId: outcome.zduhacSavedBy };
+    }
     this.state.whisperTop = outcome.whisperTop;
 
-    if (
-      outcome.wolfVictimId &&
-      !this.state.pendingDeaths.some(
-        (d) => d.playerId === outcome.wolfVictimId
-      )
-    ) {
-      this.state.pendingDeaths.push({
-        playerId: outcome.wolfVictimId,
-        cause: 'wolves',
-      });
+    for (const death of outcome.deaths) {
+      if (
+        !this.state.pendingDeaths.some((d) => d.playerId === death.playerId)
+      ) {
+        this.state.pendingDeaths.push(death);
+      }
     }
 
     const sudjajaPending = this.state.pendingDeaths.find(
@@ -450,9 +462,12 @@ export class GluvoDobaModule extends BaseGameModule {
     this.state.phaseTimeRemaining = this.state.discussionDuration;
   }
 
-  private enterGlasanje(_room: Room): void {
+  private enterGlasanje(): void {
     this.state.dayVotes = new Map();
-    this.state.expectedVoterIds = new Set(this.state.alive);
+    // Bauk's victim sits today's vote out.
+    this.state.expectedVoterIds = new Set(
+      [...this.state.alive].filter((id) => id !== this.state.mutedTodayId)
+    );
     this.state.lynchedId = null;
     this.state.lastVoteTally = [];
     this.state.lastSkipVotes = 0;
@@ -473,9 +488,11 @@ export class GluvoDobaModule extends BaseGameModule {
   private finishVoting(room: Room): void {
     const counts = new Map<string, number>();
     let skip = 0;
-    for (const targetId of this.state.dayVotes.values()) {
-      if (targetId === 'skip') skip += 1;
-      else counts.set(targetId, (counts.get(targetId) ?? 0) + 1);
+    for (const [voterId, targetId] of this.state.dayVotes) {
+      // A publicly revealed Knez speaks with the weight of two.
+      const weight = voterId === this.state.knezRevealedId ? 2 : 1;
+      if (targetId === 'skip') skip += weight;
+      else counts.set(targetId, (counts.get(targetId) ?? 0) + weight);
     }
 
     this.state.lastVoteTally = [...counts.entries()]
@@ -534,23 +551,40 @@ export class GluvoDobaModule extends BaseGameModule {
   private checkWinner(room: Room): boolean {
     if (this.state.winner) return true;
 
-    let wolves = 0;
+    let darkAlive = 0;
     for (const id of this.state.alive) {
-      if (this.state.roles.get(id) === 'vukodlak') wolves += 1;
+      if (this.teamOf(id) === 'vukodlaci') darkAlive += 1;
     }
-    const others = this.state.alive.size - wolves;
+    const othersAlive = this.state.alive.size - darkAlive;
+    const moranaId = this.playerWithRole('morana');
+    const moranaAlive = moranaId !== null && this.state.alive.has(moranaId);
 
-    if (wolves === 0) this.state.winner = 'selo';
-    else if (wolves >= others) this.state.winner = 'vukodlaci';
+    // Morana's endgame overrides everything: down to the last two, with
+    // her among them, the goddess of death claims the village.
+    if (moranaAlive && this.state.alive.size <= 2) {
+      this.state.winner = 'neutralci';
+      this.state.moranaWon = true;
+    } else if (darkAlive > 0 && darkAlive >= othersAlive) {
+      this.state.winner = 'vukodlaci';
+    } else if (darkAlive === 0 && !moranaAlive) {
+      // The village isn't safe while Morana still walks — with her alive
+      // the game continues even after the last wolf falls.
+      this.state.winner = 'selo';
+    }
 
     if (this.state.winner) {
-      // Team win/loss as 1/0 so the platform's final-scores screen isn't a
-      // flat tie — this game has no points of its own.
       for (const player of room.players) {
         const role = this.state.roles.get(player.id);
         if (!role) continue;
-        const team = GLUVO_DOBA_ROLES[role].team;
-        player.score = team === this.state.winner ? 1 : 0;
+        let won: boolean;
+        if (this.state.moranaWon) {
+          won = role === 'morana';
+        } else {
+          won = GLUVO_DOBA_ROLES[role].team === this.state.winner;
+        }
+        // Lesnik's own victory: surviving to the end, whoever wins.
+        if (role === 'lesnik' && this.state.alive.has(player.id)) won = true;
+        player.score = won ? 1 : 0;
       }
       return true;
     }
@@ -571,6 +605,18 @@ export class GluvoDobaModule extends BaseGameModule {
     return this.state.roles.get(playerId);
   }
 
+  private teamOf(playerId: string): string | undefined {
+    const role = this.roleOf(playerId);
+    return role ? GLUVO_DOBA_ROLES[role].team : undefined;
+  }
+
+  private playerWithRole(roleId: GluvoDobaRoleId): string | null {
+    for (const [id, r] of this.state.roles) {
+      if (r === roleId) return id;
+    }
+    return null;
+  }
+
   private validNightTargets(playerId: string): string[] {
     const role = this.roleOf(playerId);
     if (!role) return [];
@@ -578,9 +624,15 @@ export class GluvoDobaModule extends BaseGameModule {
     return [...this.state.alive].filter((id) => {
       if (id === playerId) return false;
       if (def.noRepeatTarget) {
-        if (def.nightActionType === 'protect' && id === this.state.lastProtectedId)
+        if (
+          def.nightActionType === 'protect' &&
+          id === this.state.lastProtectedId
+        )
           return false;
-        if (def.nightActionType === 'enchant' && id === this.state.lastEnchantedId)
+        if (
+          def.nightActionType === 'enchant' &&
+          id === this.state.lastEnchantedId
+        )
           return false;
       }
       return true;
@@ -614,8 +666,12 @@ export class GluvoDobaModule extends BaseGameModule {
       name: this.nameOf(record.playerId),
       cause: record.cause,
     };
-    if (REVEAL_ROLE_ON_DEATH) {
-      death.roleId = this.roleOf(record.playerId);
+    const role = this.roleOf(record.playerId);
+    if (role) {
+      if (this.state.deathReveal === 'role') death.roleId = role;
+      else if (this.state.deathReveal === 'team') {
+        death.team = GLUVO_DOBA_ROLES[role].team;
+      }
     }
     return death;
   }
@@ -651,7 +707,9 @@ export class GluvoDobaModule extends BaseGameModule {
   /**
    * Shared data, broadcast to every device. Never put role identities of
    * living players, night targets, or pre-presuda vote choices in here —
-   * anonymous aggregates only.
+   * anonymous aggregates only. Public by design: rolesInPlay (open setup),
+   * knezRevealed (his day power), zduhacSaved (the price of his save),
+   * mutedToday (the village verifies the missing vote).
    */
   private buildHostData(room: Room): GluvoDobaHostData {
     const players: GluvoDobaPlayerInfo[] = [...this.state.roles.keys()].map(
@@ -670,7 +728,15 @@ export class GluvoDobaModule extends BaseGameModule {
     const hostData: GluvoDobaHostData = {
       day: Math.max(1, this.state.day),
       players,
+      rolesInPlay: this.rolesInPlay,
     };
+
+    if (this.state.knezRevealedId) {
+      hostData.knezRevealed = {
+        playerId: this.state.knezRevealedId,
+        name: this.nameOf(this.state.knezRevealedId),
+      };
+    }
 
     if (this.state.phase === 'noc') {
       const stillHere = [...this.state.expectedActorIds].filter((id) =>
@@ -694,6 +760,27 @@ export class GluvoDobaModule extends BaseGameModule {
 
     if (this.state.phase === 'zora') {
       hostData.whisperTop = this.state.whisperTop;
+      if (this.state.announcePeacefulFirstNight) {
+        hostData.peacefulFirstNight = true;
+      }
+      if (this.state.zduhacSavedAnnouncement) {
+        hostData.zduhacSaved = {
+          playerId: this.state.zduhacSavedAnnouncement.playerId,
+          name: this.nameOf(this.state.zduhacSavedAnnouncement.playerId),
+        };
+      }
+    }
+
+    if (
+      this.state.mutedTodayId &&
+      (this.state.phase === 'zora' ||
+        this.state.phase === 'diskusija' ||
+        this.state.phase === 'glasanje')
+    ) {
+      hostData.mutedToday = {
+        playerId: this.state.mutedTodayId,
+        name: this.nameOf(this.state.mutedTodayId),
+      };
     }
 
     if (this.state.phase === 'glasanje') {
@@ -726,6 +813,14 @@ export class GluvoDobaModule extends BaseGameModule {
 
     if (this.state.phase === 'kraj' || this.state.phase === 'ended') {
       hostData.winner = this.state.winner ?? undefined;
+      hostData.moranaWon = this.state.moranaWon || undefined;
+      const lesnikId = this.playerWithRole('lesnik');
+      if (lesnikId && this.state.alive.has(lesnikId)) {
+        hostData.lesnikSurvived = {
+          playerId: lesnikId,
+          name: this.nameOf(lesnikId),
+        };
+      }
       hostData.finalRoles = [...this.state.roles.entries()].map(
         ([id, roleId]): GluvoDobaFinalRole => {
           const info = this.info.get(id);
@@ -751,20 +846,27 @@ export class GluvoDobaModule extends BaseGameModule {
       return { alive: false };
     }
 
+    const def = GLUVO_DOBA_ROLES[roleId];
     const alive = this.state.alive.has(playerId);
     const pd: GluvoDobaControllerData = { roleId, alive };
+    const night = this.state.day + 1;
 
-    if (roleId === 'vukodlak') {
+    if (def.team === 'vukodlaci') {
+      // The whole dark pack knows each other; the wolves' kill picks are
+      // shared with the pack for coordination.
       pd.packMates = [...this.state.roles.entries()]
-        .filter(([id, r]) => r === 'vukodlak' && id !== playerId)
+        .filter(
+          ([id, r]) =>
+            id !== playerId && GLUVO_DOBA_ROLES[r].team === 'vukodlaci'
+        )
         .map(([id]) => ({ playerId: id, name: this.nameOf(id) }));
       if (this.state.phase === 'noc' && alive) {
         pd.packPicks = [...this.state.nightActions.entries()]
-          .filter(
-            ([actorId]) =>
-              actorId !== playerId &&
-              this.roleOf(actorId) === 'vukodlak'
-          )
+          .filter(([actorId]) => {
+            if (actorId === playerId) return false;
+            const r = this.roleOf(actorId);
+            return r ? GLUVO_DOBA_ROLES[r].nightActionType === 'kill-vote' : false;
+          })
           .map(([actorId, targetId]) => ({
             name: this.nameOf(actorId),
             targetName: this.nameOf(targetId),
@@ -773,38 +875,57 @@ export class GluvoDobaModule extends BaseGameModule {
     }
 
     if (roleId === 'vidovnjak') pd.seerHistory = this.state.seerHistory;
-    if (roleId === 'zduhac') pd.zduhacHistory = this.state.zduhacHistory;
+    if (roleId === 'zduhac') {
+      pd.zduhacSaveAvailable = !this.state.zduhacSaveUsed;
+    }
 
-    if (this.state.phase === 'noc') {
-      if (alive) {
-        pd.canAct = this.state.expectedActorIds.has(playerId);
-        pd.hasActed = this.state.nightActions.has(playerId);
-        if (pd.canAct && !pd.hasActed) {
-          pd.targets = this.targetOptions(this.validNightTargets(playerId));
-        }
-      } else {
-        pd.ghostQuestion = this.state.zduhacTargetId
-          ? { targetName: this.nameOf(this.state.zduhacTargetId) }
-          : null;
-        pd.hasGhostVoted = this.state.ghostVotes.has(playerId);
+    if (this.state.phase === 'noc' && alive) {
+      pd.canAct = this.state.expectedActorIds.has(playerId);
+      pd.hasActed = this.state.nightActions.has(playerId);
+      if (pd.canAct && !pd.hasActed) {
+        pd.targets = this.targetOptions(this.validNightTargets(playerId));
+      }
+      if (def.nightActionType === 'kill-vote' && this.isPeacefulNight(night)) {
+        pd.peacefulNight = true;
+      }
+      if (roleId === 'morana') {
+        pd.moranaKillTonight = this.isMoranaKillNight(night);
       }
     }
 
     if (!alive) {
       // The dead see everything — spectating with full knowledge is the
-      // ghosts' consolation prize (and feeds honest/lying Zduhać answers).
+      // ghosts' consolation prize.
       pd.allRoles = [...this.state.roles.entries()].map(([id, r]) => ({
         name: this.nameOf(id),
         roleId: r,
       }));
     }
 
+    if (DAY_PHASES.has(this.state.phase)) {
+      if (playerId === this.state.blockedLastNightId) {
+        pd.blockedLastNight = true;
+      }
+      if (
+        roleId === 'knez' &&
+        alive &&
+        this.state.knezRevealedId === null &&
+        this.state.phase !== 'presuda'
+      ) {
+        pd.canKnezReveal = true;
+      }
+    }
+
     if (this.state.phase === 'glasanje' && alive) {
-      pd.hasVoted = this.state.dayVotes.has(playerId);
-      if (!pd.hasVoted) {
-        pd.voteOptions = this.targetOptions(
-          [...this.state.alive].filter((id) => id !== playerId)
-        );
+      if (playerId === this.state.mutedTodayId) {
+        pd.muted = true;
+      } else {
+        pd.hasVoted = this.state.dayVotes.has(playerId);
+        if (!pd.hasVoted && this.state.expectedVoterIds.has(playerId)) {
+          pd.voteOptions = this.targetOptions(
+            [...this.state.alive].filter((id) => id !== playerId)
+          );
+        }
       }
     }
 

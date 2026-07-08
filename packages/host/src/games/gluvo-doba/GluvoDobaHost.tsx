@@ -3,23 +3,43 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { socket } from '../../socket';
-import type { GluvoDobaHostData, GluvoDobaPlayerInfo } from '@igra/shared';
-import { GLUVO_DOBA_ROLES } from '@igra/shared';
+import type {
+  GluvoDobaHostData,
+  GluvoDobaPlayerInfo,
+  GluvoDobaRoleId,
+  GluvoDobaTeam,
+} from '@igra/shared';
+import { GLUVO_DOBA_ROLES, GLUVO_DOBA_TEAM_NAMES } from '@igra/shared';
 
-const ROLE_EMOJI: Record<string, string> = {
+const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
+  todorac: '🐎',
+  drekavac: '😱',
+  bauk: '👹',
   zmaj: '🐉',
   vidovnjak: '🔮',
-  zduhac: '👁️',
+  zduhac: '🌪️',
   sudjaja: '🧵',
+  knez: '👑',
+  raskovnik: '🌿',
   vila: '🧚',
   domacin: '🌾',
+  lesnik: '🌲',
+  morana: '❄️',
 };
+
+function teamColor(team: GluvoDobaTeam): string {
+  if (team === 'vukodlaci') return '#e74c3c';
+  if (team === 'neutralci') return '#c29b47';
+  return 'var(--accent)';
+}
 
 function causeText(cause: string): string {
   switch (cause) {
     case 'wolves':
       return 'rastrgnut u gluvo doba noći';
+    case 'morana':
+      return 'zaleđen Moraninom rukom';
     case 'osveta':
       return 'povučen niti sudbine';
     case 'lynch':
@@ -27,6 +47,32 @@ function causeText(cause: string): string {
     default:
       return 'nestao bez traga';
   }
+}
+
+function DeathReveal({
+  roleId,
+  team,
+}: {
+  roleId?: GluvoDobaRoleId;
+  team?: GluvoDobaTeam;
+}) {
+  if (roleId) {
+    return (
+      <span style={{ color: teamColor(GLUVO_DOBA_ROLES[roleId].team) }}>
+        {' '}
+        — {ROLE_EMOJI[roleId]} {GLUVO_DOBA_ROLES[roleId].name}
+      </span>
+    );
+  }
+  if (team) {
+    return (
+      <span style={{ color: teamColor(team), fontWeight: 700 }}>
+        {' '}
+        — {GLUVO_DOBA_TEAM_NAMES[team]}
+      </span>
+    );
+  }
+  return null;
 }
 
 function Center({ children }: { children: React.ReactNode }) {
@@ -82,11 +128,55 @@ function VillageGrid({ players }: { players: GluvoDobaPlayerInfo[] }) {
   );
 }
 
+function RolesInPlayStrip({ host }: { host: GluvoDobaHostData }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.4rem',
+        justifyContent: 'center',
+        maxWidth: '900px',
+      }}
+    >
+      {host.rolesInPlay?.map(({ roleId, count }) => {
+        const def = GLUVO_DOBA_ROLES[roleId];
+        return (
+          <span
+            key={roleId}
+            style={{
+              padding: '0.3rem 0.7rem',
+              borderRadius: '0.5rem',
+              background: 'var(--bg-card)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              borderLeft: `4px solid ${teamColor(def.team)}`,
+            }}
+          >
+            {ROLE_EMOJI[roleId]} {def.name}
+            {count > 1 && ` ×${count}`}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function KnezBanner({ host }: { host: GluvoDobaHostData }) {
+  if (!host.knezRevealed) return null;
+  return (
+    <p style={{ fontSize: '1.1rem', color: '#c29b47', fontWeight: 800, margin: 0 }}>
+      👑 Knez sela: {host.knezRevealed.name} — njegov glas vredi dvostruko
+    </p>
+  );
+}
+
 export default function GluvoDobaHost() {
   const gameState = useGameStore((s) => s.gameState);
   const { play } = useSound();
   const prevPhaseRef = useRef<string | null>(null);
   const prevTimeRef = useRef<number>(Infinity);
+  const prevKnezRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!gameState) return;
@@ -102,6 +192,11 @@ export default function GluvoDobaHost() {
       if (phase === 'kraj') play('victory');
       prevPhaseRef.current = phase;
     }
+    const knezId = host?.knezRevealed?.playerId ?? null;
+    if (knezId && knezId !== prevKnezRef.current) {
+      play('reveal');
+    }
+    prevKnezRef.current = knezId;
     if (phase === 'glasanje' || phase === 'diskusija') {
       const currSec = Math.ceil(timeRemaining);
       const prevSec = Math.ceil(prevTimeRef.current);
@@ -129,10 +224,10 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '1.4rem', color: 'var(--text-secondary)' }}>
           Pogledajte svoje telefone — svako je dobio tajnu ulogu.
         </p>
-        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-          Među vama se kriju vukodlaci. Noću biraju žrtvu, danju glume nevine.
-          Selo pobeđuje kad ih sve razotkrije.
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Uloge u ovoj partiji:
         </p>
+        <RolesInPlayStrip host={host} />
         <p style={{ fontSize: '1.2rem', fontWeight: 700 }}>{timeRemaining}s</p>
       </Center>
     );
@@ -218,6 +313,25 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '2.2rem', fontWeight: 800, margin: 0 }}>
           Zora — dan {host.day}
         </p>
+        {host.peacefulFirstNight && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{ fontSize: '1.4rem', margin: 0 }}
+          >
+            🕊️ Prva noć je prošla mirno — Sile Mraka su se samo upoznale.
+          </motion.p>
+        )}
+        {host.zduhacSaved && (
+          <motion.p
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{ fontSize: '1.4rem', margin: 0, color: '#c29b47', fontWeight: 800 }}
+          >
+            🌪️ Zduhać ({host.zduhacSaved.name}) je presreo napad u oblacima —
+            žrtva je spasena!
+          </motion.p>
+        )}
         {host.deaths && host.deaths.length > 0 ? (
           host.deaths.map((d) => (
             <motion.p
@@ -230,17 +344,19 @@ export default function GluvoDobaHost() {
               <span style={{ color: 'var(--text-secondary)' }}>
                 {causeText(d.cause)}
               </span>
-              {d.roleId && (
-                <>
-                  {' '}
-                  ({ROLE_EMOJI[d.roleId]} {GLUVO_DOBA_ROLES[d.roleId].name})
-                </>
-              )}
+              <DeathReveal roleId={d.roleId} team={d.team} />
             </motion.p>
           ))
         ) : (
-          <p style={{ fontSize: '1.5rem', margin: 0 }}>
-            Selo je osvanulo netaknuto — niko nije stradao! 🕊️
+          !host.peacefulFirstNight && (
+            <p style={{ fontSize: '1.5rem', margin: 0 }}>
+              Selo je osvanulo netaknuto — niko nije stradao! 🕊️
+            </p>
+          )
+        )}
+        {host.mutedToday && (
+          <p style={{ fontSize: '1.2rem', margin: 0 }}>
+            👹 {host.mutedToday.name} je preplašen — danas ne glasa.
           </p>
         )}
         {host.whisperTop && host.whisperTop.length > 0 && (
@@ -249,6 +365,7 @@ export default function GluvoDobaHost() {
             {host.whisperTop.map((w) => `${w.name} (${w.count})`).join(' · ')}
           </p>
         )}
+        <KnezBanner host={host} />
         <VillageGrid players={host.players} />
       </Center>
     );
@@ -272,6 +389,12 @@ export default function GluvoDobaHost() {
           {Math.floor(timeRemaining / 60)}:
           {String(timeRemaining % 60).padStart(2, '0')}
         </p>
+        <KnezBanner host={host} />
+        {host.mutedToday && (
+          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
+            👹 {host.mutedToday.name} danas ne glasa.
+          </p>
+        )}
         <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
           Ko laže? Ko se noćas čudno ponašao? Raspravljajte uživo!
         </p>
@@ -306,6 +429,12 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
           Glasajte na telefonima — koga selo šalje na vešala?
         </p>
+        <KnezBanner host={host} />
+        {host.mutedToday && (
+          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
+            👹 {host.mutedToday.name} od straha ne glasa.
+          </p>
+        )}
         <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>
           {host.votedCount}/{host.totalVoters} glasalo ·{' '}
           <span
@@ -346,13 +475,7 @@ export default function GluvoDobaHost() {
           >
             Selo je obesilo{' '}
             <strong style={{ color: '#e74c3c' }}>{host.lynched.name}</strong>
-            {host.lynched.roleId && (
-              <>
-                {' '}
-                ({ROLE_EMOJI[host.lynched.roleId]}{' '}
-                {GLUVO_DOBA_ROLES[host.lynched.roleId].name})
-              </>
-            )}
+            <DeathReveal roleId={host.lynched.roleId} team={host.lynched.team} />
           </motion.p>
         ) : (
           <p style={{ fontSize: '1.6rem', margin: 0 }}>
@@ -368,6 +491,10 @@ export default function GluvoDobaHost() {
           >
             🧵 Suđaja je povukla nit — <strong>{host.osvetaVictim.name}</strong>{' '}
             odlazi sa njom!
+            <DeathReveal
+              roleId={host.osvetaVictim.roleId}
+              team={host.osvetaVictim.team}
+            />
           </motion.p>
         )}
         {host.deaths &&
@@ -425,6 +552,11 @@ export default function GluvoDobaHost() {
                 Preskok: {host.skipVotes}
               </p>
             )}
+            {host.knezRevealed && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                👑 Glas Kneza ({host.knezRevealed.name}) vredi ×2
+              </p>
+            )}
           </div>
         )}
         <VillageGrid players={host.players} />
@@ -434,6 +566,16 @@ export default function GluvoDobaHost() {
 
   // --- kraj / ended ---------------------------------------------------------------
   if (phase === 'kraj' || phase === 'ended') {
+    const winnerEmoji = host.moranaWon
+      ? '❄️'
+      : host.winner === 'vukodlaci'
+        ? '🐺'
+        : '🌾';
+    const winnerText = host.moranaWon
+      ? 'Morana je uzela selo!'
+      : host.winner === 'vukodlaci'
+        ? 'Sile Mraka su pobedile!'
+        : 'Selo je pobedilo!';
     return (
       <div
         style={{
@@ -452,13 +594,17 @@ export default function GluvoDobaHost() {
           animate={{ scale: 1, opacity: 1 }}
           style={{ fontSize: '3rem', margin: 0 }}
         >
-          {host.winner === 'vukodlaci' ? '🐺' : '🌾'}
+          {winnerEmoji}
         </motion.p>
         <p style={{ fontSize: '2.4rem', fontWeight: 800, margin: 0 }}>
-          {host.winner === 'vukodlaci'
-            ? 'Vukodlaci su pobedili!'
-            : 'Selo je pobedilo!'}
+          {winnerText}
         </p>
+        {host.lesnikSurvived && (
+          <p style={{ fontSize: '1.2rem', margin: 0, color: '#c29b47', fontWeight: 700 }}>
+            🌲 Lesnik ({host.lesnikSurvived.name}) je preživeo — pobeđuje uz
+            pobednike!
+          </p>
+        )}
         <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', margin: 0 }}>
           Ko je bio ko:
         </p>
@@ -490,10 +636,7 @@ export default function GluvoDobaHost() {
               <span
                 style={{
                   fontWeight: 800,
-                  color:
-                    GLUVO_DOBA_ROLES[r.roleId].team === 'vukodlaci'
-                      ? '#e74c3c'
-                      : 'var(--accent)',
+                  color: teamColor(GLUVO_DOBA_ROLES[r.roleId].team),
                 }}
               >
                 {ROLE_EMOJI[r.roleId]} {GLUVO_DOBA_ROLES[r.roleId].name}

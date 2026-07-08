@@ -11,16 +11,31 @@ export type GluvoDobaPhase =
 
 export type GluvoDobaRoleId =
   | 'vukodlak'
+  | 'todorac'
+  | 'drekavac'
+  | 'bauk'
   | 'zmaj'
-  | 'vidovnjak'
+  | 'vidovnjak' // display name "Vračara" — id kept for wire compatibility
   | 'zduhac'
   | 'sudjaja'
+  | 'knez'
+  | 'raskovnik'
   | 'vila'
-  | 'domacin';
+  | 'domacin'
+  | 'lesnik'
+  | 'morana';
 
-export type GluvoDobaTeam = 'vukodlaci' | 'selo';
+export type GluvoDobaTeam = 'vukodlaci' | 'selo' | 'neutralci';
 
-export type GluvoDobaDeathCause = 'wolves' | 'osveta' | 'lynch' | 'disappeared';
+/** What the village learns about a dead player (host config). */
+export type GluvoDobaDeathReveal = 'role' | 'team' | 'none';
+
+export type GluvoDobaDeathCause =
+  | 'wolves'
+  | 'morana'
+  | 'osveta'
+  | 'lynch'
+  | 'disappeared';
 
 export interface GluvoDobaPlayerInfo {
   playerId: string;
@@ -34,8 +49,9 @@ export interface GluvoDobaDeath {
   playerId: string;
   name: string;
   cause: GluvoDobaDeathCause;
-  // Present only when REVEAL_ROLE_ON_DEATH is enabled.
+  // Populated per the death-reveal config ('role' → roleId, 'team' → team).
   roleId?: GluvoDobaRoleId;
+  team?: GluvoDobaTeam;
 }
 
 export interface GluvoDobaTargetOption {
@@ -64,11 +80,18 @@ export interface GluvoDobaFinalRole {
  * Shared "host view" data — broadcast to EVERY device (playerData is
  * stripped from the broadcast). MUST NOT contain role identities of living
  * players, anyone's night targets, or per-player vote choices before the
- * presuda tally. Anonymous aggregates (actedCount, whisper counts) only.
+ * presuda tally. Anonymous aggregates only. Exceptions that ARE public by
+ * design: rolesInPlay (the setup is open knowledge), knezRevealed (his own
+ * day power), zduhacSaved (his save reveals him — that's the cost), and
+ * mutedToday (the village sees who the Bauk silenced).
  */
 export interface GluvoDobaHostData {
   day: number;
   players: GluvoDobaPlayerInfo[];
+  /** The role composition of this match — open setup knowledge. */
+  rolesInPlay: { roleId: GluvoDobaRoleId; count: number }[];
+  /** Set once the Knez reveals himself; persists for the rest of the game. */
+  knezRevealed?: { playerId: string; name: string };
 
   // noc: anonymous progress only.
   actedCount?: number;
@@ -83,6 +106,12 @@ export interface GluvoDobaHostData {
   // and the anonymous suspicion-whisper aggregate.
   deaths?: GluvoDobaDeath[];
   whisperTop?: { name: string; count: number }[];
+  /** First night passed without wolf bloodshed (config flavour). */
+  peacefulFirstNight?: boolean;
+  /** The Zduhać intercepted the wolves tonight — publicly revealed. */
+  zduhacSaved?: { playerId: string; name: string };
+  /** Bauk's victim — loses today's vote (public, so the table can verify). */
+  mutedToday?: { playerId: string; name: string };
 
   // glasanje: anonymous progress only.
   votedCount?: number;
@@ -96,6 +125,10 @@ export interface GluvoDobaHostData {
 
   // kraj / ended
   winner?: GluvoDobaTeam;
+  /** Winner is Morana specifically (team 'neutralci'). */
+  moranaWon?: boolean;
+  /** Lesnik survived to the end — wins alongside the winners. */
+  lesnikSurvived?: { playerId: string; name: string };
   finalRoles?: GluvoDobaFinalRole[];
 }
 
@@ -105,8 +138,8 @@ export interface GluvoDobaControllerData {
   roleId?: GluvoDobaRoleId;
   alive: boolean;
 
-  // Wolves only: who the packmates are, and their submitted picks tonight
-  // (live coordination while choosing the victim).
+  // Dark team only: the whole pack knows each other; packPicks shows the
+  // wolves' submitted kill votes tonight (live coordination).
   packMates?: { playerId: string; name: string }[];
   packPicks?: { name: string; targetName: string }[];
 
@@ -116,25 +149,31 @@ export interface GluvoDobaControllerData {
   // Pre-filtered on the server: no self; Zmaj minus last protected;
   // Vila minus last enchanted.
   targets?: GluvoDobaTargetOption[];
+  /** Wolves, night 1 with the first-night-peace rule: picks are discarded. */
+  peacefulNight?: boolean;
+  /** Morana: whether tonight is one of her kill nights. */
+  moranaKillTonight?: boolean;
+  /** Zduhać: whether his one-time intercept is still unspent. */
+  zduhacSaveAvailable?: boolean;
 
-  // Private investigation histories — self-contained so a reconnect
-  // replays everything the player has learned so far.
+  /** Set at dawn if the Todorac trampled you last night. */
+  blockedLastNight?: boolean;
+  /** Set during glasanje if the Bauk scared you out of today's vote. */
+  muted?: boolean;
+
+  // Private investigation history — self-contained so a reconnect replays
+  // everything the Vračara has learned so far.
   seerHistory?: { night: number; targetName: string; hintText: string }[];
-  zduhacHistory?: {
-    night: number;
-    targetName: string;
-    da: number;
-    ne: number;
-  }[];
 
   // Ghosts: the dead see everything.
   allRoles?: { name: string; roleId: GluvoDobaRoleId }[];
-  ghostQuestion?: { targetName: string } | null;
-  hasGhostVoted?: boolean;
 
   // glasanje
   voteOptions?: GluvoDobaTargetOption[];
   hasVoted?: boolean;
+
+  // Knez day power
+  canKnezReveal?: boolean;
 
   // osveta (Suđaja only)
   isAvenger?: boolean;

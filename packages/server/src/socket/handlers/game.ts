@@ -70,6 +70,10 @@ export function registerGameHandlers(
       koBiPreRounds: data.koBiPreRounds,
       pogodiGodinuRounds: data.pogodiGodinuRounds,
       gluvoDobaDiscussionSeconds: data.gluvoDobaDiscussionSeconds,
+      gluvoDobaDeathReveal: data.gluvoDobaDeathReveal,
+      gluvoDobaFirstNightPeace: data.gluvoDobaFirstNightPeace,
+      gluvoDobaNeutral: data.gluvoDobaNeutral,
+      gluvoDobaVila: data.gluvoDobaVila,
       roundCount: data.roundCount,
       language: data.language,
     });

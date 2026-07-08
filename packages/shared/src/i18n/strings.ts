@@ -168,6 +168,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.rounds': 'Broj rundi',
     'config.strokes': 'Poteza po igraču',
     'config.discussionSeconds': 'Rasprava (sekunde)',
+    'config.gluvoDeathReveal': 'Otkrivanje pri smrti',
+    'config.gluvoDeathReveal.role': 'Uloga',
+    'config.gluvoDeathReveal.team': 'Strana',
+    'config.gluvoDeathReveal.none': 'Ništa',
+    'config.gluvoFirstNight': 'Mirna prva noć',
+    'config.gluvoNeutral': 'Neutralac (Lesnik/Morana)',
+    'config.gluvoVila': 'Vila u igri',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -440,6 +447,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.rounds': 'Number of rounds',
     'config.strokes': 'Strokes per player',
     'config.discussionSeconds': 'Discussion (seconds)',
+    'config.gluvoDeathReveal': 'Death reveal',
+    'config.gluvoDeathReveal.role': 'Role',
+    'config.gluvoDeathReveal.team': 'Side',
+    'config.gluvoDeathReveal.none': 'Nothing',
+    'config.gluvoFirstNight': 'Peaceful first night',
+    'config.gluvoNeutral': 'Neutral (Lesnik/Morana)',
+    'config.gluvoVila': 'Vila in play',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',

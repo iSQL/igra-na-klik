@@ -17,6 +17,7 @@ import {
   FAKE_ARTIST_ROUND_OPTIONS,
   FAKE_ARTIST_STROKE_OPTIONS,
   GLUVO_DOBA_DISCUSSION_OPTIONS,
+  GLUVO_DOBA_DEATH_REVEAL_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
@@ -128,6 +129,16 @@ export function GameSelectScreen() {
         gameId === 'gluvo-doba'
           ? newGamesConfig.gluvoDobaDiscussionSeconds
           : undefined,
+      gluvoDobaDeathReveal:
+        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaDeathReveal : undefined,
+      gluvoDobaFirstNightPeace:
+        gameId === 'gluvo-doba'
+          ? newGamesConfig.gluvoDobaFirstNightPeace
+          : undefined,
+      gluvoDobaNeutral:
+        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaNeutral : undefined,
+      gluvoDobaVila:
+        gameId === 'gluvo-doba' ? newGamesConfig.gluvoDobaVila : undefined,
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
@@ -364,12 +375,53 @@ export function GameSelectScreen() {
               </>
             )}
             {game.id === 'gluvo-doba' && (
-              <PillRow
-                label={t('config.discussionSeconds')}
-                value={newGamesConfig.gluvoDobaDiscussionSeconds}
-                options={GLUVO_DOBA_DISCUSSION_OPTIONS}
-                onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
-              />
+              <>
+                <PillRow
+                  label={t('config.discussionSeconds')}
+                  value={newGamesConfig.gluvoDobaDiscussionSeconds}
+                  options={GLUVO_DOBA_DISCUSSION_OPTIONS}
+                  onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
+                />
+                <TextPillRow
+                  label={t('config.gluvoDeathReveal')}
+                  value={newGamesConfig.gluvoDobaDeathReveal}
+                  options={GLUVO_DOBA_DEATH_REVEAL_OPTIONS.map((v) => ({
+                    value: v,
+                    label: t(`config.gluvoDeathReveal.${v}`),
+                  }))}
+                  onSelect={(v) =>
+                    newGamesConfig.setGluvoDobaDeathReveal(
+                      v as (typeof GLUVO_DOBA_DEATH_REVEAL_OPTIONS)[number]
+                    )
+                  }
+                />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    marginTop: '0.5rem',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <TogglePill
+                    label={`🕊️ ${t('config.gluvoFirstNight')}`}
+                    checked={newGamesConfig.gluvoDobaFirstNightPeace}
+                    onToggle={newGamesConfig.setGluvoDobaFirstNightPeace}
+                  />
+                  <TogglePill
+                    label={`🌲 ${t('config.gluvoNeutral')}`}
+                    checked={newGamesConfig.gluvoDobaNeutral}
+                    onToggle={newGamesConfig.setGluvoDobaNeutral}
+                  />
+                  <TogglePill
+                    label={`🧚 ${t('config.gluvoVila')}`}
+                    checked={newGamesConfig.gluvoDobaVila}
+                    onToggle={newGamesConfig.setGluvoDobaVila}
+                  />
+                </div>
+              </>
             )}
             {GAME_ROUND_CONFIG[game.id] && (
               <PillRow
@@ -463,5 +515,94 @@ function PillRow({
         })}
       </div>
     </div>
+  );
+}
+
+// PillRow variant for string-valued options (e.g. Gluvo doba death reveal).
+function TextPillRow({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onSelect: (v: string) => void;
+}) {
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '0.75rem' }}>
+      <div
+        style={{
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.3rem',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '0.35rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        {options.map((o) => {
+          const active = o.value === value;
+          return (
+            <button
+              key={o.value}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(o.value);
+              }}
+              style={{
+                padding: '0.3rem 0.65rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: active ? 'var(--accent)' : 'var(--bg-secondary)',
+                color: active ? '#fff' : 'var(--text-primary)',
+              }}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// On/off pill for boolean game options.
+function TogglePill({
+  label,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(!checked);
+      }}
+      style={{
+        padding: '0.3rem 0.65rem',
+        fontSize: '0.8rem',
+        fontWeight: 700,
+        borderRadius: '6px',
+        background: checked ? 'var(--accent)' : 'var(--bg-secondary)',
+        color: checked ? '#fff' : 'var(--text-secondary)',
+      }}
+    >
+      {checked ? '✓ ' : ''}
+      {label}
+    </button>
   );
 }
