@@ -2,15 +2,17 @@ import type {
   Room,
   GameState,
   PogodiGodinuControllerData,
-  PogodiGodinuEvent,
   PogodiGodinuGuessResult,
   PogodiGodinuHostData,
   PogodiGodinuLeaderboardEntry,
 } from '@igra/shared';
-import { POGODI_GODINU_EVENTS, shuffled } from '@igra/shared';
+import { POGODI_BROJ_QUESTIONS, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
-import type { PogodiGodinuInternalState } from './PogodiGodinuState.js';
+import type {
+  PogodiGodinuInternalState,
+  RuntimeQuestion,
+} from './PogodiGodinuState.js';
 import {
   DEFAULT_ROUNDS,
   FINAL_LEADERBOARD_DURATION,
@@ -19,10 +21,14 @@ import {
   MAX_ROUNDS,
   MIN_ROUNDS,
   REVEAL_DURATION,
-  YEAR_MAX,
-  YEAR_MIN,
 } from './PogodiGodinuState.js';
-import { pointsForYearDistance } from './scoring.js';
+import { resolvePogodiBrojPack } from './pack-resolver.js';
+import { pointsForGuess } from './scoring.js';
+
+interface PogodiBrojCustomContent {
+  pogodiGodinuRounds?: unknown;
+  pogodiBrojPackId?: unknown;
+}
 
 function clampRounds(raw: unknown): number {
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_ROUNDS;
@@ -32,31 +38,78 @@ function clampRounds(raw: unknown): number {
   return n;
 }
 
+/** Snap a raw guess to the question's range and step. */
+function normalizeGuess(raw: number, question: RuntimeQuestion): number {
+  const clamped = Math.max(question.min, Math.min(question.max, raw));
+  const step = question.step && question.step > 0 ? question.step : 1;
+  const snapped = question.min + Math.round((clamped - question.min) / step) * step;
+  return Math.max(question.min, Math.min(question.max, snapped));
+}
+
 export class PogodiGodinuModule extends BaseGameModule {
   readonly gameId = 'pogodi-godinu';
 
   private state!: PogodiGodinuInternalState;
   private timings: Record<string, number> = {};
+  private desiredRounds = DEFAULT_ROUNDS;
+
+  constructor(private readonly packsDir: string = '') {
+    super();
+  }
 
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
-    const rounds = clampRounds(
-      (customContent as { pogodiGodinuRounds?: unknown } | undefined)
-        ?.pogodiGodinuRounds
-    );
-    const events = shuffled(POGODI_GODINU_EVENTS).slice(0, rounds);
+    const cc = (customContent as PogodiBrojCustomContent | undefined) ?? {};
+    this.desiredRounds = clampRounds(cc.pogodiGodinuRounds);
+
     this.state = {
       phase: 'intro',
       phaseTimeRemaining: this.timings.INTRO_DURATION ?? INTRO_DURATION,
-      events,
+      questions: [],
       currentIndex: 0,
-      totalRounds: events.length,
+      totalRounds: 0,
       guesses: new Map(),
+      guessSpeed: new Map(),
       expectedGuesserIds: new Set(),
       roundScores: new Map(),
     };
-    void room;
+
+    const packId =
+      typeof cc.pogodiBrojPackId === 'string' ? cc.pogodiBrojPackId : undefined;
+
+    if (packId) {
+      // Pack questions load from disk; onStart can't be async, so build the
+      // intro placeholder now and fill the questions once the load resolves.
+      void this.loadPack(packId);
+    } else {
+      this.state.questions = shuffled(POGODI_BROJ_QUESTIONS).slice(
+        0,
+        this.desiredRounds
+      );
+      this.state.totalRounds = this.state.questions.length;
+    }
+
     return this.buildGameState(room);
+  }
+
+  private async loadPack(packId: string): Promise<void> {
+    const resolved = this.packsDir
+      ? await resolvePogodiBrojPack(this.packsDir, packId)
+      : null;
+
+    if (!resolved || resolved.questions.length === 0) {
+      // Bad/empty pack — fall back to the built-in bank so the game still runs.
+      this.state.questions = shuffled(POGODI_BROJ_QUESTIONS).slice(
+        0,
+        this.desiredRounds
+      );
+      this.state.totalRounds = this.state.questions.length;
+      return;
+    }
+
+    const picked = shuffled(resolved.questions).slice(0, this.desiredRounds);
+    this.state.questions = picked;
+    this.state.totalRounds = picked.length;
   }
 
   onPlayerAction(
@@ -66,18 +119,25 @@ export class PogodiGodinuModule extends BaseGameModule {
     action: string,
     data: Record<string, unknown>
   ): GameState | null {
-    if (action !== 'godina:guess') return null;
+    if (action !== 'broj:guess') return null;
     if (this.state.phase !== 'guessing') return null;
     if (this.state.guesses.has(playerId)) return null;
     if (!room.players.some((p) => p.id === playerId && p.isConnected)) {
       return null;
     }
+    const question = this.currentQuestion();
+    if (!question) return null;
 
-    const raw = data.year;
+    const raw = data.value;
     if (typeof raw !== 'number' || !Number.isFinite(raw)) return null;
-    const year = Math.max(YEAR_MIN, Math.min(YEAR_MAX, Math.round(raw)));
 
-    this.state.guesses.set(playerId, year);
+    this.state.guesses.set(playerId, normalizeGuess(raw, question));
+    // Capture the share of the round clock still left — the speed bonus at
+    // reveal scales with this. GUESSING_DURATION is the full window.
+    this.state.guessSpeed.set(
+      playerId,
+      Math.max(0, Math.min(1, this.state.phaseTimeRemaining / GUESSING_DURATION))
+    );
     if (this.allGuessed(room)) this.transitionToReveal(room);
     return this.buildGameState(room);
   }
@@ -106,6 +166,12 @@ export class PogodiGodinuModule extends BaseGameModule {
   private advancePhase(room: Room): void {
     switch (this.state.phase) {
       case 'intro':
+        // The pack may still be loading; keep waiting one tick if so.
+        if (this.state.questions.length === 0) {
+          this.state.phaseTimeRemaining =
+            this.timings.INTRO_DURATION ?? INTRO_DURATION;
+          return;
+        }
         this.enterGuessing(room);
         break;
       case 'guessing':
@@ -115,7 +181,8 @@ export class PogodiGodinuModule extends BaseGameModule {
         this.state.currentIndex += 1;
         if (this.state.currentIndex >= this.state.totalRounds) {
           this.state.phase = 'final-leaderboard';
-          this.state.phaseTimeRemaining = this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
+          this.state.phaseTimeRemaining =
+            this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
         } else {
           this.enterGuessing(room);
         }
@@ -131,6 +198,7 @@ export class PogodiGodinuModule extends BaseGameModule {
     this.state.phase = 'guessing';
     this.state.phaseTimeRemaining = GUESSING_DURATION;
     this.state.guesses = new Map();
+    this.state.guessSpeed = new Map();
     this.state.roundScores = new Map();
     this.state.expectedGuesserIds = new Set(
       room.players.filter((p) => p.isConnected).map((p) => p.id)
@@ -138,12 +206,14 @@ export class PogodiGodinuModule extends BaseGameModule {
   }
 
   private transitionToReveal(room: Room): void {
-    const event = this.currentEvent();
+    const question = this.currentQuestion();
     const scores = new Map<string, number>();
-    if (event) {
+    if (question) {
+      const span = question.max - question.min;
       for (const [playerId, guess] of this.state.guesses) {
-        const distance = Math.abs(guess - event.year);
-        const points = pointsForYearDistance(distance);
+        const distance = Math.abs(guess - question.answer);
+        const speed = this.state.guessSpeed.get(playerId) ?? 0;
+        const points = pointsForGuess(distance, span, speed);
         scores.set(playerId, points);
         const player = room.players.find((p) => p.id === playerId);
         if (player) player.score += points;
@@ -166,28 +236,35 @@ export class PogodiGodinuModule extends BaseGameModule {
 
   // --- Helpers -----------------------------------------------------------
 
-  private currentEvent(): PogodiGodinuEvent | undefined {
-    return this.state.events[this.state.currentIndex];
+  private currentQuestion(): RuntimeQuestion | undefined {
+    return this.state.questions[this.state.currentIndex];
   }
 
   // --- Build state -------------------------------------------------------
 
   private buildGameState(room: Room): GameState {
-    const event = this.currentEvent();
+    const question = this.currentQuestion();
     const hostData: PogodiGodinuHostData = {
       round: this.state.currentIndex + 1,
       totalRounds: this.state.totalRounds,
-      yearMin: YEAR_MIN,
-      yearMax: YEAR_MAX,
     };
 
     if (
       (this.state.phase === 'guessing' || this.state.phase === 'reveal') &&
-      event
+      question
     ) {
-      // Public event never carries the year — trueYear is exposed only at
-      // reveal so a curious player can't read the answer off the wire.
-      hostData.event = { text: event.text, emoji: event.emoji };
+      // The public event never carries the answer — trueValue is exposed only
+      // at reveal so a curious player can't read it off the wire.
+      hostData.event = {
+        text: question.text,
+        emoji: question.emoji,
+        imageUrl: question.imageUrl,
+        unit: question.unit,
+        valueType: question.valueType,
+        min: question.min,
+        max: question.max,
+        step: question.step,
+      };
     }
 
     if (this.state.phase === 'guessing') {
@@ -200,9 +277,9 @@ export class PogodiGodinuModule extends BaseGameModule {
       ).length;
     }
 
-    if (this.state.phase === 'reveal' && event) {
-      hostData.trueYear = event.year;
-      hostData.results = this.buildResults(room, event.year);
+    if (this.state.phase === 'reveal' && question) {
+      hostData.trueValue = question.answer;
+      hostData.results = this.buildResults(room, question.answer);
     }
 
     if (
@@ -221,7 +298,7 @@ export class PogodiGodinuModule extends BaseGameModule {
     for (const player of room.players) {
       playerData[player.id] = this.buildControllerData(
         player.id,
-        event?.year
+        question?.answer
       ) as unknown as Record<string, unknown>;
     }
 
@@ -238,7 +315,7 @@ export class PogodiGodinuModule extends BaseGameModule {
 
   private buildControllerData(
     playerId: string,
-    trueYear: number | undefined
+    trueValue: number | undefined
   ): PogodiGodinuControllerData {
     const pd: PogodiGodinuControllerData = {};
     if (this.state.phase === 'guessing') {
@@ -248,18 +325,18 @@ export class PogodiGodinuModule extends BaseGameModule {
     if (this.state.phase === 'reveal') {
       const guess = this.state.guesses.get(playerId);
       pd.ownDistance =
-        guess !== undefined && trueYear !== undefined
-          ? Math.abs(guess - trueYear)
+        guess !== undefined && trueValue !== undefined
+          ? Math.abs(guess - trueValue)
           : null;
       pd.ownPoints = this.state.roundScores.get(playerId) ?? 0;
-      pd.wasExact = guess !== undefined && guess === trueYear;
+      pd.wasExact = guess !== undefined && guess === trueValue;
     }
     return pd;
   }
 
   private buildResults(
     room: Room,
-    trueYear: number
+    trueValue: number
   ): PogodiGodinuGuessResult[] {
     return room.players
       .filter((p) => p.isConnected || this.state.guesses.has(p.id))
@@ -270,7 +347,7 @@ export class PogodiGodinuModule extends BaseGameModule {
           name: p.name,
           avatarColor: p.avatarColor,
           guess: guess ?? null,
-          distance: guess !== undefined ? Math.abs(guess - trueYear) : null,
+          distance: guess !== undefined ? Math.abs(guess - trueValue) : null,
           points: this.state.roundScores.get(p.id) ?? 0,
         };
       })

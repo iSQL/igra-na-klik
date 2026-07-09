@@ -101,10 +101,10 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
   },
   {
     gameId: 'pogodi-godinu',
-    gameName: 'Pogodi godinu',
+    gameName: 'Pogodi broj',
     fields: [
       { key: 'INTRO_DURATION', label: 'Uvod runde', min: 1, max: 20, def: 3 },
-      { key: 'REVEAL_DURATION', label: 'Otkrivanje godine', min: 2, max: 40, def: 8 },
+      { key: 'REVEAL_DURATION', label: 'Otkrivanje broja', min: 2, max: 40, def: 8 },
       { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 2, max: 40, def: 10 },
     ],
   },

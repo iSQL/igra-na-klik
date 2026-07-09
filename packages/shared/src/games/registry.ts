@@ -54,11 +54,11 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   },
   'pogodi-godinu': {
     id: 'pogodi-godinu',
-    name: 'Pogodi godinu',
+    name: 'Pogodi broj',
     minPlayers: 1,
     maxPlayers: 8,
     description:
-      'Kada se to desilo? Pomeri klizač na godinu — bliži pogodak, više poena!',
+      'Pogodi vrednost — cenu, godinu, težinu, dužinu… bliži pogodak, više poena!',
     supportsHostless: true,
   },
   'slepi-telefoni': {

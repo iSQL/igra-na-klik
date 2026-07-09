@@ -28,6 +28,7 @@ import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
 import { UPUTSTVA_PAGE_HTML } from './uputstva-page.js';
 import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
+import { listPogodiBrojPacks } from './game/games/pogodi-godinu/pack-resolver.js';
 import { getCustomPhoto } from './game/customPhotoStore.js';
 import { createGeoAdminRouter } from './admin/geo-admin.js';
 import { renderGeoEditorPage } from './admin/geo-editor-page.js';
@@ -40,6 +41,8 @@ import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
 import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
 import { renderTajniAgentiScenarioEditorPage } from './admin/tajni-agenti-scenario-editor-page.js';
 import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
+import { createPogodiBrojAdminRouter } from './admin/pogodi-broj-admin.js';
+import { renderPogodiBrojEditorPage } from './admin/pogodi-broj-editor-page.js';
 import { parseGluvoDobaPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -74,6 +77,11 @@ const TAJNI_AGENTI_SCENARIOS_DIR = process.env.TAJNI_AGENTI_SCENARIOS_DIR
 const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
   ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
+// "Pogodi broj" question packs (with per-question images) live here; each
+// <id>.json has a sibling <id>/ folder served at /pogodi-images/<id>/<file>.
+const POGODI_BROJ_PACKS_DIR = process.env.POGODI_BROJ_PACKS_DIR
+  ? path.resolve(process.env.POGODI_BROJ_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'pogodi-broj-packs');
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = process.env.TIMING_CONFIG_FILE
   ? path.resolve(process.env.TIMING_CONFIG_FILE)
@@ -376,6 +384,16 @@ app.get('/api/geo-packs', async (_req, res) => {
   }
 });
 
+app.get('/api/pogodi-broj-packs', async (_req, res) => {
+  try {
+    const packs = await listPogodiBrojPacks(POGODI_BROJ_PACKS_DIR);
+    res.json({ packs });
+  } catch (err) {
+    console.error('Failed to read pogodi-broj packs directory:', err);
+    res.status(500).json({ error: 'Failed to read pogodi-broj packs' });
+  }
+});
+
 // Player-uploaded photos (geo/foto custom modes) live in memory for the
 // duration of a game; the game state carries only these short URLs instead
 // of inline base64. Ids are immutable UUIDs, so clients may cache hard.
@@ -408,6 +426,13 @@ app.use(
   express.static(QUIZ_IMAGES_DIR, { maxAge: '7d', etag: true })
 );
 
+// "Pogodi broj" pack images. Same unconditional-mount rationale as /geo-images.
+app.use(
+  '/pogodi-images',
+  cors({ origin: corsOrigins }),
+  express.static(POGODI_BROJ_PACKS_DIR, { maxAge: '7d', etag: true })
+);
+
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
 // (geo, kviz, ko-sam-ja, tajni-agenti packs + scenarios). See ADMIN_TOKEN in
@@ -425,6 +450,7 @@ app.use(
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
+app.use('/api/admin', createPogodiBrojAdminRouter(POGODI_BROJ_PACKS_DIR));
 
 const GEO_EDITOR_HTML = renderGeoEditorPage(SERBIAN_DISTRICTS);
 app.get('/admin/geo', (_req, res) => {
@@ -437,6 +463,7 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
   ['/admin/tajni-agenti-scenariji', renderTajniAgentiScenarioEditorPage()],
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
+  ['/admin/pogodi-broj', renderPogodiBrojEditorPage()],
   ['/admin/timinzi', renderTimingEditorPage()],
 ];
 for (const [route, html] of ADMIN_EDITOR_PAGES) {
@@ -459,6 +486,7 @@ const httpServer = createServer(app);
 const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
 const { roomManager } = setupSocket(httpServer, socketOrigins, {
   geoPacksDir: GEO_PACKS_DIR,
+  pogodiBrojPacksDir: POGODI_BROJ_PACKS_DIR,
 });
 
 if (SINGLE_ROOM_MODE) {
@@ -770,6 +798,7 @@ httpServer.listen(PORT, () => {
   console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
   console.log(`Ko sam ja packs dir: ${KO_SAM_JA_PACKS_DIR}`);
   console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
+  console.log(`Pogodi broj packs dir: ${POGODI_BROJ_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   console.log(`Tajni agenti scenarios dir: ${TAJNI_AGENTI_SCENARIOS_DIR}`);
   if (SINGLE_ROOM_MODE) {

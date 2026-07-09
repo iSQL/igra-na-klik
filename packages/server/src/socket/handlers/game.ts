@@ -69,6 +69,7 @@ export function registerGameHandlers(
       fakeArtistStrokes: data.fakeArtistStrokes,
       koBiPreRounds: data.koBiPreRounds,
       pogodiGodinuRounds: data.pogodiGodinuRounds,
+      pogodiBrojPackId: data.pogodiBrojPackId,
       gluvoDobaDiscussionSeconds: data.gluvoDobaDiscussionSeconds,
       gluvoDobaDeathReveal: data.gluvoDobaDeathReveal,
       gluvoDobaFirstNightPeace: data.gluvoDobaFirstNightPeace,

@@ -37,7 +37,7 @@ import { hostRoom, playerRoom } from './rooms.js';
 export function setupSocket(
   httpServer: HttpServer,
   corsOrigins: string | string[],
-  options?: { geoPacksDir?: string }
+  options?: { geoPacksDir?: string; pogodiBrojPacksDir?: string }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
@@ -69,13 +69,14 @@ export function setupSocket(
   // so concurrent rooms playing the same game don't share mutable state.
   const gameRegistry = new GameRegistry();
   const geoPacksDir = options?.geoPacksDir ?? '';
+  const pogodiBrojPacksDir = options?.pogodiBrojPacksDir ?? '';
   gameRegistry.register(() => new TestGameModule());
   gameRegistry.register(() => new QuizGameModule());
   gameRegistry.register(() => new DrawGuessModule());
   gameRegistry.register(() => new FakeArtistModule());
   gameRegistry.register(() => new KoBiPreModule());
   gameRegistry.register(() => new DveIstineModule());
-  gameRegistry.register(() => new PogodiGodinuModule());
+  gameRegistry.register(() => new PogodiGodinuModule(pogodiBrojPacksDir));
   gameRegistry.register(() => new FibbageModule());
   gameRegistry.register(() => new SlepiTelefoniModule());
   gameRegistry.register(() => new GeoGuessModule(geoPacksDir));

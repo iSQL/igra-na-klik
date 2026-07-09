@@ -90,6 +90,9 @@ export interface ClientToServerEvents {
     fakeArtistStrokes?: number;
     koBiPreRounds?: number;
     pogodiGodinuRounds?: number;
+    // Selected "Pogodi broj" question pack (id from GET /api/pogodi-broj-packs).
+    // Empty/absent → the built-in question bank.
+    pogodiBrojPackId?: string;
     // Generic round count for games in GAME_ROUND_CONFIG (quiz, draw-guess,
     // fibbage, geo-pogodi, foto-kviz, ko-sam-ja, spot-it). Each module
     // clamps it to its own range.

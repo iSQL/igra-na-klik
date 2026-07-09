@@ -1,0 +1,58 @@
+{
+  "name": "Primeri",
+  "description": "Demo paket za „Pogodi broj\" — miks pitanja o brojevima, cenama, dužinama, trajanjima i brojanju. Bez slika (slike se dodaju kroz /admin/pogodi-broj).",
+  "questions": [
+    {
+      "text": "Koje godine je Gutenberg izumeo štampariju?",
+      "answer": 1440,
+      "min": 1300,
+      "max": 1600,
+      "unit": "god.",
+      "emoji": "🖨️"
+    },
+    {
+      "text": "Kolika je ukupna dužina reke Dunav?",
+      "answer": 2850,
+      "min": 500,
+      "max": 4000,
+      "step": 10,
+      "unit": "km",
+      "emoji": "🌊"
+    },
+    {
+      "text": "Kolika je prosečna težina odraslog afričkog slona?",
+      "answer": 5000,
+      "min": 500,
+      "max": 10000,
+      "step": 100,
+      "unit": "kg",
+      "emoji": "🐘"
+    },
+    {
+      "text": "Koliko traje pesma „Bohemian Rhapsody\"?",
+      "answer": 355,
+      "min": 60,
+      "max": 480,
+      "step": 5,
+      "valueType": "duration",
+      "emoji": "🎵"
+    },
+    {
+      "text": "Koliko slova „A\" ima u reči „ananas\"?",
+      "answer": 3,
+      "min": 0,
+      "max": 8,
+      "unit": "slova",
+      "emoji": "🅰️"
+    },
+    {
+      "text": "Kolika je visina Ajfelove kule?",
+      "answer": 330,
+      "min": 100,
+      "max": 600,
+      "step": 5,
+      "unit": "m",
+      "emoji": "🗼"
+    }
+  ]
+}

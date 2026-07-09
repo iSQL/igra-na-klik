@@ -3,7 +3,12 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
-import type { PogodiGodinuGuessResult, PogodiGodinuHostData } from '@igra/shared';
+import {
+  formatPogodiBrojValue,
+  type PogodiBrojValueType,
+  type PogodiGodinuGuessResult,
+  type PogodiGodinuHostData,
+} from '@igra/shared';
 
 export default function PogodiGodinuHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -32,6 +37,9 @@ export default function PogodiGodinuHost() {
 
   const { phase, timeRemaining, data } = gameState;
   const host = data.host as PogodiGodinuHostData;
+  const unit = host.event?.unit;
+  const valueType = host.event?.valueType;
+  const fmt = (v: number) => formatPogodiBrojValue(v, unit, valueType);
   const emojiFor = (id: string) =>
     players.find((p) => p.id === id)?.avatarEmoji ?? '👤';
 
@@ -43,10 +51,10 @@ export default function PogodiGodinuHost() {
           animate={{ scale: 1, opacity: 1 }}
           style={{ fontSize: '3.4rem', fontWeight: 800 }}
         >
-          📅 Pogodi godinu
+          🔢 Pogodi broj
         </motion.p>
         <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
-          Kada se to desilo? Bliži pogodak nosi više poena.
+          Koliko je to? Bliži i brži pogodak nosi više poena.
         </p>
       </Center>
     );
@@ -59,7 +67,7 @@ export default function PogodiGodinuHost() {
           Runda {host.round}/{host.totalRounds}
         </p>
         <p style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>
-          Kada se ovo desilo?
+          Koliko?
         </p>
         <motion.p
           key={host.event?.text}
@@ -76,6 +84,21 @@ export default function PogodiGodinuHost() {
           {host.event?.emoji ? `${host.event.emoji} ` : ''}
           {host.event?.text}
         </motion.p>
+        {host.event?.imageUrl && (
+          <motion.img
+            key={host.event.imageUrl}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            src={host.event.imageUrl}
+            alt=""
+            style={{
+              maxWidth: 'min(90%, 720px)',
+              maxHeight: '46vh',
+              objectFit: 'contain',
+              borderRadius: '1rem',
+            }}
+          />
+        )}
         <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
           Pomeri klizač na telefonu · {host.lockedCount}/{host.totalGuessers} · {timeRemaining}s
         </p>
@@ -101,20 +124,33 @@ export default function PogodiGodinuHost() {
           {host.event?.emoji ? `${host.event.emoji} ` : ''}
           {host.event?.text}
         </p>
+        {host.event?.imageUrl && (
+          <img
+            src={host.event.imageUrl}
+            alt=""
+            style={{
+              maxWidth: 'min(80%, 520px)',
+              maxHeight: '30vh',
+              objectFit: 'contain',
+              borderRadius: '0.8rem',
+            }}
+          />
+        )}
         <motion.p
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           style={{ fontSize: '3.2rem', fontWeight: 800, color: 'var(--accent)' }}
         >
-          {host.trueYear}
+          {host.trueValue != null ? fmt(host.trueValue) : '—'}
         </motion.p>
 
         <Timeline
-          yearMin={host.yearMin}
-          yearMax={host.yearMax}
-          trueYear={host.trueYear ?? host.yearMin}
+          min={host.event?.min ?? 0}
+          max={host.event?.max ?? 100}
+          trueValue={host.trueValue ?? host.event?.min ?? 0}
           results={host.results ?? []}
-          emojiFor={emojiFor}
+          unit={unit}
+          valueType={valueType}
         />
 
         <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -134,11 +170,11 @@ export default function PogodiGodinuHost() {
               <span style={{ flex: 1, fontWeight: 600 }}>
                 {emojiFor(r.playerId)} {r.name}
               </span>
-              <span style={{ color: 'var(--text-secondary)', minWidth: '3.5rem', textAlign: 'right' }}>
-                {r.guess ?? '—'}
+              <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right' }}>
+                {r.guess != null ? fmt(r.guess) : '—'}
               </span>
-              <span style={{ color: 'var(--text-secondary)', minWidth: '4rem', textAlign: 'right', fontSize: '0.85rem' }}>
-                {r.distance === null ? '' : `±${r.distance}`}
+              <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right', fontSize: '0.85rem' }}>
+                {r.distance === null ? '' : `±${fmt(r.distance)}`}
               </span>
               <span style={{ fontWeight: 800, minWidth: '3.5rem', textAlign: 'right', color: r.points > 0 ? '#7be37b' : 'var(--text-secondary)' }}>
                 +{r.points}
@@ -203,20 +239,22 @@ export default function PogodiGodinuHost() {
 }
 
 function Timeline({
-  yearMin,
-  yearMax,
-  trueYear,
+  min,
+  max,
+  trueValue,
   results,
-  emojiFor,
+  unit,
+  valueType,
 }: {
-  yearMin: number;
-  yearMax: number;
-  trueYear: number;
+  min: number;
+  max: number;
+  trueValue: number;
   results: PogodiGodinuGuessResult[];
-  emojiFor: (id: string) => string;
+  unit?: string;
+  valueType?: PogodiBrojValueType;
 }) {
-  const span = Math.max(1, yearMax - yearMin);
-  const pct = (year: number) => ((year - yearMin) / span) * 100;
+  const span = Math.max(1, max - min);
+  const pct = (v: number) => ((v - min) / span) * 100;
   return (
     <div style={{ width: '100%', maxWidth: '900px', padding: '2.2rem 1rem 1.6rem' }}>
       <div style={{ position: 'relative', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
@@ -240,11 +278,11 @@ function Timeline({
               }}
             />
           ))}
-        {/* True-year marker */}
+        {/* True-value marker */}
         <div
           style={{
             position: 'absolute',
-            left: `${pct(trueYear)}%`,
+            left: `${pct(trueValue)}%`,
             top: '-1.9rem',
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -254,14 +292,14 @@ function Timeline({
           }}
         >
           <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent)' }}>
-            {trueYear}
+            {formatPogodiBrojValue(trueValue, unit, valueType)}
           </span>
           <div style={{ width: '3px', height: '2.6rem', background: 'var(--accent)', borderRadius: '2px' }} />
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        <span>{yearMin}</span>
-        <span>{yearMax}</span>
+        <span>{formatPogodiBrojValue(min, unit, valueType)}</span>
+        <span>{formatPogodiBrojValue(max, unit, valueType)}</span>
       </div>
     </div>
   );

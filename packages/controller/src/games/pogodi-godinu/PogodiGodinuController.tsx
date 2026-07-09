@@ -3,9 +3,11 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
-import type {
-  PogodiGodinuControllerData,
-  PogodiGodinuHostData,
+import {
+  formatPogodiBrojValue,
+  type PogodiBrojValueType,
+  type PogodiGodinuControllerData,
+  type PogodiGodinuHostData,
 } from '@igra/shared';
 
 const wrap: React.CSSProperties = {
@@ -31,14 +33,17 @@ export default function PogodiGodinuController() {
   const my = playerData[playerId] as unknown as
     | PogodiGodinuControllerData
     | undefined;
+  const unit = host.event?.unit;
+  const valueType = host.event?.valueType;
+  const fmt = (v: number) => formatPogodiBrojValue(v, unit, valueType);
 
   if (phase === 'intro') {
     return (
       <div style={wrap}>
-        <p style={{ fontSize: '2.2rem' }}>📅</p>
-        <p style={{ fontSize: '1.4rem', fontWeight: 800 }}>Pogodi godinu</p>
+        <p style={{ fontSize: '2.2rem' }}>🔢</p>
+        <p style={{ fontSize: '1.4rem', fontWeight: 800 }}>Pogodi broj</p>
         <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Pomeri klizač što bliže tačnoj godini!
+          Pomeri klizač što bliže tačnoj vrednosti — i požuri!
         </p>
       </div>
     );
@@ -49,9 +54,11 @@ export default function PogodiGodinuController() {
       return (
         <div style={wrap}>
           <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-            Zaključao si godinu
+            Zaključao si odgovor
           </p>
-          <p style={{ fontSize: '3rem', fontWeight: 800 }}>{my.ownGuess}</p>
+          <p style={{ fontSize: '3rem', fontWeight: 800 }}>
+            {my.ownGuess != null ? fmt(my.ownGuess) : '—'}
+          </p>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
             {host.lockedCount}/{host.totalGuessers} zaključalo
           </p>
@@ -63,8 +70,12 @@ export default function PogodiGodinuController() {
         key={round}
         prompt={host.event?.text ?? ''}
         emoji={host.event?.emoji}
-        yearMin={host.yearMin}
-        yearMax={host.yearMax}
+        imageUrl={host.event?.imageUrl}
+        min={host.event?.min ?? 0}
+        max={host.event?.max ?? 100}
+        step={host.event?.step}
+        unit={unit}
+        valueType={valueType}
         timeRemaining={timeRemaining}
       />
     );
@@ -88,7 +99,7 @@ export default function PogodiGodinuController() {
       >
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Tačna godina
+            Tačan odgovor
           </p>
           <p
             style={{
@@ -98,17 +109,17 @@ export default function PogodiGodinuController() {
               margin: '0.1rem 0',
             }}
           >
-            {host.trueYear}
+            {host.trueValue != null ? fmt(host.trueValue) : '—'}
           </p>
           {dist === null || dist === undefined ? (
             <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Nisi zaključao godinu
+              Nisi zaključao odgovor
             </p>
           ) : (
             <p style={{ fontSize: '1rem', margin: 0 }}>
               {my?.wasExact
                 ? 'Pun pogodak! 🎯'
-                : `Promašio si za ${dist} ${dist === 1 ? 'godinu' : 'godina'}`}
+                : `Promašio si za ${fmt(dist)}`}
               {' · '}
               <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
                 +{pts}
@@ -161,11 +172,11 @@ export default function PogodiGodinuController() {
                   <span
                     style={{
                       color: 'var(--text-secondary)',
-                      minWidth: '3.5ch',
+                      minWidth: '4ch',
                       textAlign: 'right',
                     }}
                   >
-                    {r.guess ?? '—'}
+                    {r.guess != null ? fmt(r.guess) : '—'}
                   </span>
                   <span
                     style={{
@@ -175,7 +186,7 @@ export default function PogodiGodinuController() {
                       fontSize: '0.78rem',
                     }}
                   >
-                    {r.distance === null ? '' : `±${r.distance}`}
+                    {r.distance === null ? '' : `±${fmt(r.distance)}`}
                   </span>
                   <span
                     style={{
@@ -232,27 +243,39 @@ export default function PogodiGodinuController() {
 function GuessingView({
   prompt,
   emoji,
-  yearMin,
-  yearMax,
+  imageUrl,
+  min,
+  max,
+  step,
+  unit,
+  valueType,
   timeRemaining,
 }: {
   prompt: string;
   emoji?: string;
-  yearMin: number;
-  yearMax: number;
+  imageUrl?: string;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  valueType?: PogodiBrojValueType;
   timeRemaining: number;
 }) {
-  const [year, setYear] = useState(Math.round((yearMin + yearMax) / 2));
+  const stepSize = step && step > 0 ? step : 1;
+  const snap = (v: number) => {
+    const clamped = Math.max(min, Math.min(max, v));
+    const snapped = min + Math.round((clamped - min) / stepSize) * stepSize;
+    return Math.max(min, Math.min(max, snapped));
+  };
+  const [value, setValue] = useState(() => snap((min + max) / 2));
   const [sent, setSent] = useState(false);
-
-  const clamp = (y: number) => Math.max(yearMin, Math.min(yearMax, y));
 
   const lock = () => {
     if (sent) return;
     setSent(true);
     socket.emit('game:player-action', {
-      action: 'godina:guess',
-      data: { year },
+      action: 'broj:guess',
+      data: { value },
     });
   };
 
@@ -264,41 +287,56 @@ function GuessingView({
         height: '100%',
         width: '100%',
         padding: '1rem',
-        gap: '1rem',
+        gap: '0.85rem',
         justifyContent: 'center',
       }}
     >
       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
-        Kada se ovo desilo? · {timeRemaining}s
+        Koliko? · {timeRemaining}s
       </p>
-      <p style={{ fontSize: '1.35rem', fontWeight: 800, textAlign: 'center', margin: 0, lineHeight: 1.3 }}>
+      <p style={{ fontSize: '1.25rem', fontWeight: 800, textAlign: 'center', margin: 0, lineHeight: 1.3 }}>
         {emoji ? `${emoji} ` : ''}
         {prompt}
       </p>
 
+      {imageUrl && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <img
+            src={imageUrl}
+            alt=""
+            style={{
+              maxWidth: '100%',
+              maxHeight: '32vh',
+              objectFit: 'contain',
+              borderRadius: '0.6rem',
+            }}
+          />
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
         <button
-          onClick={() => setYear((y) => clamp(y - 1))}
+          onClick={() => setValue((v) => snap(v - stepSize))}
           style={stepBtn}
-          aria-label="Godina manje"
+          aria-label="Manje"
         >
           −
         </button>
         <span
           style={{
-            fontSize: '3rem',
+            fontSize: '2.4rem',
             fontWeight: 800,
-            minWidth: '5.5rem',
+            minWidth: '6.5rem',
             textAlign: 'center',
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {year}
+          {formatPogodiBrojValue(value, unit, valueType)}
         </span>
         <button
-          onClick={() => setYear((y) => clamp(y + 1))}
+          onClick={() => setValue((v) => snap(v + stepSize))}
           style={stepBtn}
-          aria-label="Godina više"
+          aria-label="Više"
         >
           +
         </button>
@@ -306,16 +344,16 @@ function GuessingView({
 
       <input
         type="range"
-        min={yearMin}
-        max={yearMax}
-        step={1}
-        value={year}
-        onChange={(e) => setYear(clamp(parseInt(e.target.value, 10)))}
+        min={min}
+        max={max}
+        step={stepSize}
+        value={value}
+        onChange={(e) => setValue(snap(parseFloat(e.target.value)))}
         style={{ width: '100%', accentColor: 'var(--accent)' }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        <span>{yearMin}</span>
-        <span>{yearMax}</span>
+        <span>{formatPogodiBrojValue(min, unit, valueType)}</span>
+        <span>{formatPogodiBrojValue(max, unit, valueType)}</span>
       </div>
 
       <button
@@ -332,7 +370,7 @@ function GuessingView({
           opacity: sent ? 0.5 : 1,
         }}
       >
-        {sent ? 'Zaključano ✓' : 'Zaključaj godinu'}
+        {sent ? 'Zaključano ✓' : 'Zaključaj odgovor'}
       </button>
     </div>
   );

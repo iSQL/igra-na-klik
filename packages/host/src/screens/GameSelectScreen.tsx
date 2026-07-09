@@ -47,6 +47,9 @@ export function GameSelectScreen() {
   const connectedCount = players.filter((p) => p.isConnected).length;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
+  const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
+    { id: string; name: string; count: number }[]
+  >([]);
   const t = useT();
 
   useEffect(() => {
@@ -58,6 +61,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setGluvoPacks([]);
+      });
+    fetch('/api/pogodi-broj-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: { id: string; name: string; count: number }[] }) => {
+        if (!cancelled) setPogodiBrojPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setPogodiBrojPacks([]);
       });
     return () => {
       cancelled = true;
@@ -175,6 +186,10 @@ export function GameSelectScreen() {
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
+          : undefined,
+      pogodiBrojPackId:
+        gameId === 'pogodi-godinu' && newGamesConfig.pogodiBrojPackId
+          ? newGamesConfig.pogodiBrojPackId
           : undefined,
       roundCount: GAME_ROUND_CONFIG[gameId]
         ? newGamesConfig.roundCounts[gameId] ??
@@ -376,12 +391,26 @@ export function GameSelectScreen() {
               </div>
             )}
             {game.id === 'pogodi-godinu' && (
-              <PillRow
-                label={t('config.rounds')}
-                value={newGamesConfig.pogodiGodinuRounds}
-                options={POGODI_GODINU_ROUND_OPTIONS}
-                onSelect={newGamesConfig.setPogodiGodinuRounds}
-              />
+              <>
+                <PillRow
+                  label={t('config.rounds')}
+                  value={newGamesConfig.pogodiGodinuRounds}
+                  options={POGODI_GODINU_ROUND_OPTIONS}
+                  onSelect={newGamesConfig.setPogodiGodinuRounds}
+                />
+                <TextPillRow
+                  label={t('config.questionPack')}
+                  value={newGamesConfig.pogodiBrojPackId}
+                  options={[
+                    { value: '', label: t('config.builtInBank') },
+                    ...pogodiBrojPacks.map((p) => ({
+                      value: p.id,
+                      label: `${p.name} (${p.count})`,
+                    })),
+                  ]}
+                  onSelect={newGamesConfig.setPogodiBrojPackId}
+                />
+              </>
             )}
             {game.id === 'ko-bi-pre' && (
               <PillRow

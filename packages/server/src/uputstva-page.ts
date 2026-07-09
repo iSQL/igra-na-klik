@@ -81,11 +81,11 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>`,
   },
   'pogodi-godinu': {
-    emoji: '📅',
-    body: `<p>Kada se to desilo?</p>
+    emoji: '🔢',
+    body: `<p>Koliko je to?</p>
 <ul>
-<li>TV pokaže događaj ili činjenicu.</li>
-<li>Na telefonu pomeriš klizač na godinu kada misliš da se desilo.</li>
+<li>TV pokaže pitanje (i po potrebi sliku) — cenu, godinu, težinu, dužinu, trajanje…</li>
+<li>Na telefonu pomeriš klizač u zadatom rasponu što bliže tačnoj vrednosti.</li>
 <li>Bliži pogodak — više poena.</li>
 </ul>`,
   },

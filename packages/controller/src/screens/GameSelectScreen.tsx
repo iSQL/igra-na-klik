@@ -106,6 +106,10 @@ export function GameSelectScreen() {
   const [gluvoBajacica, setGluvoBajacica] = useState(false);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [gluvoPackId, setGluvoPackId] = useState('');
+  const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
+    { id: string; name: string; count: number }[]
+  >([]);
+  const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -147,6 +151,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setGluvoPacks([]);
+      });
+    fetch('/api/pogodi-broj-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: { id: string; name: string; count: number }[] }) => {
+        if (!cancelled) setPogodiBrojPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setPogodiBrojPacks([]);
       });
     return () => {
       cancelled = true;
@@ -199,6 +211,7 @@ export function GameSelectScreen() {
     }
     if (game.id === 'pogodi-godinu') {
       payload.pogodiGodinuRounds = pogodiGodinuRounds;
+      if (pogodiBrojPackId) payload.pogodiBrojPackId = pogodiBrojPackId;
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
@@ -541,12 +554,47 @@ export function GameSelectScreen() {
                     />
                   )}
                   {game.id === 'pogodi-godinu' && (
-                    <RoundsConfig
-                      label={t('config.rounds')}
-                      value={pogodiGodinuRounds}
-                      options={POGODI_GODINU_ROUND_OPTIONS}
-                      onSelect={setPogodiGodinuRounds}
-                    />
+                    <>
+                      <RoundsConfig
+                        label={t('config.rounds')}
+                        value={pogodiGodinuRounds}
+                        options={POGODI_GODINU_ROUND_OPTIONS}
+                        onSelect={setPogodiGodinuRounds}
+                      />
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.3rem',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {t('config.questionPack')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill
+                            active={pogodiBrojPackId === ''}
+                            onClick={() => setPogodiBrojPackId('')}
+                          >
+                            {t('config.builtInBank')}
+                          </Pill>
+                          {pogodiBrojPacks.map((p) => (
+                            <Pill
+                              key={p.id}
+                              active={pogodiBrojPackId === p.id}
+                              onClick={() => setPogodiBrojPackId(p.id)}
+                            >
+                              {p.name} ({p.count})
+                            </Pill>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
                   {game.id === 'gluvo-doba' && (
                     <>
