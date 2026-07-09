@@ -31,16 +31,25 @@ interface LeaderboardEntry {
 export default function SpotItController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const haptics = useHaptics();
   const t = useT();
   const [lockMsLeft, setLockMsLeft] = useState(0);
   const cardSizeRef = useRef(320);
+  // Smaller size for hostless mode, where the phone stacks the center card
+  // above the personal card (no TV to show the center card).
+  const dualCardSizeRef = useRef(200);
 
   // Compute card size from viewport (controllers vary widely).
   useEffect(() => {
     const update = () => {
       const minDim = Math.min(window.innerWidth, window.innerHeight);
       cardSizeRef.current = Math.max(240, Math.min(minDim - 32, 400));
+      // Two stacked cards must share the height (minus labels/timer chrome).
+      dualCardSizeRef.current = Math.max(
+        150,
+        Math.min(window.innerWidth - 40, (window.innerHeight - 150) / 2)
+      );
     };
     update();
     window.addEventListener('resize', update);
@@ -73,6 +82,7 @@ export default function SpotItController() {
 
   const { phase, timeRemaining, data } = gameState;
   const roundNumber = (data.roundNumber as number) ?? 1;
+  const centerCard = (data.centerCard as number[] | undefined) ?? null;
   const personalCard = myData?.personalCard ?? null;
   const iWonRound = myData?.iWonRound ?? false;
   const isLocked = lockMsLeft > 0;
@@ -111,6 +121,64 @@ export default function SpotItController() {
             {t('spotIt.waitForOthers')}
           </p>
         </CenteredScreen>
+      );
+    }
+    // Hostless: no TV, so the phone shows the center card (read-only) above
+    // the player's own card (tappable). The player finds the shared symbol
+    // and taps it on their own card, exactly as on the big screen.
+    if (hostless && centerCard) {
+      const dualSize = dualCardSizeRef.current;
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            gap: '0.4rem',
+            padding: '0.4rem',
+            position: 'relative',
+          }}
+        >
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+            {timeRemaining}s • {t('spotIt.findPair')}
+          </p>
+          <SpotItCard
+            symbolIndices={centerCard}
+            roundNumber={roundNumber}
+            size={dualSize}
+          />
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0, fontWeight: 700 }}>
+            ↓ {t('spotIt.yourCard')} ↓
+          </p>
+          <SpotItCard
+            symbolIndices={personalCard}
+            roundNumber={roundNumber}
+            size={dualSize}
+            onSymbolClick={handleTap}
+            dimmed={isLocked}
+          />
+          {isLocked && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '1.4rem',
+                fontWeight: 700,
+                color: 'var(--danger)',
+                background: 'rgba(0,0,0,0.7)',
+                borderRadius: '0.5rem',
+                padding: '0.6rem 1.2rem',
+                pointerEvents: 'none',
+              }}
+            >
+              {(lockMsLeft / 1000).toFixed(1)}s
+            </div>
+          )}
+        </div>
       );
     }
     return (

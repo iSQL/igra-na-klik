@@ -104,6 +104,9 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 12,
     description:
       'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
+    // Hostless-capable: in a hostless room the phone stacks the center card
+    // above the player's own card (see SpotItController), so no TV is needed.
+    supportsHostless: true,
   },
   'gluvo-doba': {
     id: 'gluvo-doba',
