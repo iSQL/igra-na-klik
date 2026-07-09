@@ -136,6 +136,19 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Pobednik je onaj ko sakupi najviše karata.</li>
 </ul>`,
   },
+  'bolji-zivot': {
+    emoji: '🌰',
+    body: `<p>Kartaška igra pamćenja sa likovima iz „Srećnih ljudi". Bodovi su „orasi u džepu" — cilj je imati ih <strong>što manje</strong>.</p>
+<ul>
+<li>Svako ima 4 karte okrenute naopačke na svom telefonu — na početku runde proviriš samo 2 i pamtiš ih.</li>
+<li>Na potezu: vučeš kartu sa špila (tajno) ili uzmeš vrh otpada (javno), pa je zameniš jednom svojom ili je baciš.</li>
+<li>Karte 5–9 imaju moći <em>samo</em> kad ih izvučeš sa špila i odmah baciš: pogledaj svoju (5), pogledaj tuđu (6), slepa zamena (7), racija — svima se otkriva po jedna karta (8), pogledaj tuđu i po želji je zameni svojom (9).</li>
+<li><strong>Slap:</strong> kad na otpad padne karta 0–9, najbrži sme da baci svoju istu takvu — pogodak smanjuje porodicu, promašaj donosi kaznenu kartu.</li>
+<li>Specijalci: Malina (10) + Ozren (11) zajedno u tvojim kartama vrede 0; Radomir Popara (12) poništava akciju usmerenu na tebe („pišite odbijenicu!"); Riska (13) se oglašava posle poziva i daje vlasniku dodatni potez da je se reši.</li>
+<li>Kad misliš da imaš najmanje oraha, na početku poteza vikni <strong>„Bolji život!"</strong> — svi ostali odigraju još po jedan potez pa se karte otkrivaju. Ako si strogo najniži, runda ti nosi 0; ako nisi — svoj zbir + 20 kazne!</li>
+</ul>
+<p class="tip">Pamti pozicije: karte se nikad same ne mešaju, ali tuđa zamena tvoje karte poništava ono što si znao.</p>`,
+  },
   'tajni-agenti': {
     emoji: '🕵️',
     body: `<p>Igra šifara na tabli 5×5 — pazi na ubicu. Tri moda, može i sa samo 2 igrača.</p>

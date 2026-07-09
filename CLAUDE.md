@@ -190,6 +190,12 @@ client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/t
   `GAME_ROUND_CONFIG` knob; wait-phase durations are in `GAME_TIMING_DEFS`
   (`/admin/timinzi`), active-input timers stay hardcoded in the module.
 
+Note for ANY new game: the public instructions hub at `GET /uputstva`
+([packages/server/src/uputstva-page.ts](packages/server/src/uputstva-page.ts))
+only lists games that have a `GAME_RULES` entry there — add one (short Serbian
+rules HTML) as a sixth wiring step, or the game silently won't appear on the
+page.
+
 ### Cross-game reliability patterns
 
 Two recurring server-side patterns worth knowing about when touching any game module:
