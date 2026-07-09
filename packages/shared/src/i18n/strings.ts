@@ -171,6 +171,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoMode': 'Mod (uloge)',
     'config.gluvoModeClassic': 'Klasik (ugrađeni balans)',
     'config.gluvoModeNote': 'Uloge dolaze iz izabranog moda — ostala pravila i dalje važe.',
+    'config.tajniMode': 'Mod igre',
+    'config.tajniMode.classic': 'Klasik',
+    'config.tajniMode.duet': 'Duet',
+    'config.tajniMode.coop': 'Kooperativni',
+    'config.tajniModeHint.classic': 'Dva tima sa špijunima — najmanje 4 igrača.',
+    'config.tajniModeHint.duet': 'Zajedno: svaka strana vidi svoj ključ, nađite 15 agenata za 9 poteza. Od 2 igrača.',
+    'config.tajniModeHint.coop': 'Špijun + tim protiv table: nađite 9 agenata pre nego što potrošite 9 poena. Od 2 igrača.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -284,7 +291,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
     'game.tajni-agenti.name': 'Tajni agenti',
     'game.tajni-agenti.description':
-      'Špijun daje šifru tima — saigrači pogađaju reči, ali pazi na ubicu!',
+      'Špijun daje šifru — pogađaj reči, ali pazi na ubicu! Klasik, Duet ili kooperativni mod — može i sa 2 igrača.',
     'game.gluvo-doba.name': 'Gluvo doba',
     'game.gluvo-doba.description':
       'Vukodlaci noću haraju selom — otkrijte ih pre nego što vas nestane!',
@@ -447,6 +454,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoMode': 'Mode (roles)',
     'config.gluvoModeClassic': 'Classic (built-in balance)',
     'config.gluvoModeNote': 'Roles come from the selected mode — other rules still apply.',
+    'config.tajniMode': 'Game mode',
+    'config.tajniMode.classic': 'Classic',
+    'config.tajniMode.duet': 'Duet',
+    'config.tajniMode.coop': 'Co-op',
+    'config.tajniModeHint.classic': 'Two teams with spymasters — at least 4 players.',
+    'config.tajniModeHint.duet': 'Together: each side sees its own key — find 15 agents in 9 turns. From 2 players.',
+    'config.tajniModeHint.coop': 'Spymaster + team vs the board: find 9 agents before 9 points run out. From 2 players.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',
@@ -561,7 +575,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Your card and the center card share exactly one symbol — spot it first!',
     'game.tajni-agenti.name': 'Secret Agents',
     'game.tajni-agenti.description':
-      'The spy gives the team a clue — teammates guess the words, but watch out for the assassin!',
+      'The spy gives a clue — guess the words, but watch out for the assassin! Classic, Duet or co-op mode — playable with just 2 players.',
     'game.gluvo-doba.name': 'Dead of Night',
     'game.gluvo-doba.description':
       'Werewolves prowl the village at night — unmask them before no one is left!',

@@ -1,5 +1,7 @@
 import type {
   TajniAgentiClue,
+  TajniAgentiEndReason,
+  TajniAgentiMode,
   TajniAgentiPhase,
   TajniAgentiSecretCard,
   TajniAgentiTeam,
@@ -10,6 +12,17 @@ import type {
 export interface TajniAgentiInternalState {
   phase: TajniAgentiPhase;
   phaseTimeRemaining: number;
+
+  /** Game mode — see TajniAgentiMode in @igra/shared. */
+  mode: TajniAgentiMode;
+
+  /**
+   * Duet/coop shared budget: starts at TAJNI_AGENTI_COOP_TURNS (9). Duet:
+   * one turn token per clue given. Coop: one point per turn, plus one
+   * extra for revealing an enemy-coloured card. 0 with agents left → loss.
+   * Unused (stays 0) in classic.
+   */
+  turnsRemaining: number;
 
   /**
    * When `true`, the game runs the simplified scenario flow: no
@@ -46,14 +59,20 @@ export interface TajniAgentiInternalState {
   expectedSpymasterId: string | null;
 
   lastTurnResults: TajniAgentiTurnResultsData | null;
-  winner: TajniAgentiTeam | null;
-  winReason: 'all-found' | 'assassin' | 'opponent-finished' | null;
+  /** True once the game is decided (turn-results → ended). `winner` alone
+   * can't signal this — coop losses have winner === null. */
+  gameOver: boolean;
+  winner: TajniAgentiTeam | 'players' | null;
+  winReason: TajniAgentiEndReason | null;
 }
 
 export const TEAM_SELECTION_DURATION = 300;
 export const CLUE_GIVING_DURATION = 90;
 export const GUESSING_DURATION = 90;
 export const TURN_RESULTS_DURATION = 5;
+
+/** Duet/coop: the shared budget of turns (duet) / points (coop). */
+export const TAJNI_AGENTI_COOP_TURNS = 9;
 
 export const MIN_CLUE_NUMBER = 1;
 export const MAX_CLUE_NUMBER = 9;

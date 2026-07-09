@@ -63,6 +63,7 @@ export function registerGameHandlers(
       koSamJaCategory: data.koSamJaCategory,
       customKoSamJaQuestions: data.customKoSamJaQuestions,
       customTajniAgentiPack: data.customTajniAgentiPack,
+      tajniAgentiMode: data.tajniAgentiMode,
       fakeArtistRounds: data.fakeArtistRounds,
       fakeArtistStrokes: data.fakeArtistStrokes,
       koBiPreRounds: data.koBiPreRounds,

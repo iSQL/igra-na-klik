@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GluvoDobaDeathReveal } from '@igra/shared';
+import type { GluvoDobaDeathReveal, TajniAgentiMode } from '@igra/shared';
 
 // Host-side round / stroke config for the newer games (Pogodi godinu,
 // Ko bi pre, Lažni umetnik). Persisted so the TV remembers the operator's
@@ -18,6 +18,8 @@ interface NewGamesConfigStore {
   gluvoDobaPackId: string;
   // Selected "Pogodi broj" question pack id ('' = built-in question bank).
   pogodiBrojPackId: string;
+  // Tajni agenti mode: classic (2 teams), duet, or coop (see @igra/shared).
+  tajniAgentiMode: TajniAgentiMode;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
@@ -33,6 +35,7 @@ interface NewGamesConfigStore {
   setGluvoDobaBajacica: (v: boolean) => void;
   setGluvoDobaPackId: (id: string) => void;
   setPogodiBrojPackId: (id: string) => void;
+  setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setDrawGuessTimeLimit: (n: number) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
@@ -50,6 +53,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaBajacica: false,
       gluvoDobaPackId: '',
       pogodiBrojPackId: '',
+      tajniAgentiMode: 'classic',
       drawGuessTimeLimit: 60,
       roundCounts: {},
       setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
@@ -63,6 +67,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
       setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
+      setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),

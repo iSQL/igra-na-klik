@@ -129,7 +129,6 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
   },
   'spot-it': {
     emoji: '🔍',
-    requiresTv: true,
     body: `<p>Pronađi zajednički simbol prvi.</p>
 <ul>
 <li>Tvoja karta i centralna karta dele tačno jedan isti simbol.</li>
@@ -139,13 +138,24 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
   },
   'tajni-agenti': {
     emoji: '🕵️',
-    requiresTv: true,
-    body: `<p>Timska igra šifara — pazi na ubicu.</p>
+    body: `<p>Igra šifara na tabli 5×5 — pazi na ubicu. Tri moda, može i sa samo 2 igrača.</p>
+<p><strong>Klasik</strong> (4+ igrača, dva tima):</p>
 <ul>
-<li>Dva tima; svaki ima špijuna koji vidi čije su reči na tabli 5×5.</li>
+<li>Svaki tim ima špijuna koji vidi čije su reči na tabli.</li>
 <li>Špijun daje šifru — jedna reč + broj — da navede saigrače na svoje reči.</li>
-<li>Saigrači pogađaju; pogođena protivnička reč pomaže protivniku.</li>
 <li>Ko prvi pogodi sve svoje reči pobeđuje — ali ko dotakne ubicu, odmah gubi.</li>
+</ul>
+<p><strong>Duet</strong> (2+ igrača, zajednička igra):</p>
+<ul>
+<li>Nema špijuna — svaka strana vidi svoj tajni ključ i daje šifre drugoj.</li>
+<li>Zajedno tražite svih 15 agenata u najviše 9 poteza.</li>
+<li>Ubica na strani onoga ko je dao šifru = trenutni poraz za oboje.</li>
+</ul>
+<p><strong>Kooperativni</strong> (2+ igrača, protiv table):</p>
+<ul>
+<li>Jedan igrač je špijun, ostali pogađaju — svi ste isti tim.</li>
+<li>Nađite 9 agenata pre nego što potrošite 9 poena.</li>
+<li>Svaki potez troši poen; pogrešna boja košta dodatni poen.</li>
 </ul>`,
   },
   'gluvo-doba': {

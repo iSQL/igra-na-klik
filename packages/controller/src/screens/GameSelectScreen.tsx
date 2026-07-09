@@ -13,6 +13,7 @@ import type {
   QuizImportQuestion,
   KoSamJaImportQuestion,
   KoSamJaCategory,
+  TajniAgentiMode,
 } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
@@ -112,6 +113,7 @@ export function GameSelectScreen() {
     { id: string; name: string; count: number }[]
   >([]);
   const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
+  const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -187,6 +189,10 @@ export function GameSelectScreen() {
 
   const connectedCount = room.players.filter((p) => p.isConnected).length;
   const games: GameDefinition[] = Object.values(GAME_DEFINITIONS);
+  // Tajni agenti: classic needs 4+ players — with fewer, silently fall
+  // back to duet so start can't fire a server-side validation error.
+  const effectiveTajniMode: TajniAgentiMode =
+    tajniMode === 'classic' && connectedCount < 4 ? 'duet' : tajniMode;
 
   const handleStart = (game: GameDefinition) => {
     if (connectedCount < game.minPlayers) return;
@@ -214,6 +220,9 @@ export function GameSelectScreen() {
     if (game.id === 'pogodi-godinu') {
       payload.pogodiGodinuRounds = pogodiGodinuRounds;
       if (pogodiBrojPackId) payload.pogodiBrojPackId = pogodiBrojPackId;
+    }
+    if (game.id === 'tajni-agenti') {
+      payload.tajniAgentiMode = effectiveTajniMode;
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
@@ -601,6 +610,48 @@ export function GameSelectScreen() {
                         </div>
                       </div>
                     </>
+                  )}
+                  {game.id === 'tajni-agenti' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.3rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {t('config.tajniMode')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        {(['classic', 'duet', 'coop'] as const).map((m) => {
+                          const modeLocked = m === 'classic' && connectedCount < 4;
+                          return (
+                            <Pill
+                              key={m}
+                              active={m === effectiveTajniMode}
+                              onClick={() => {
+                                if (!modeLocked) setTajniMode(m);
+                              }}
+                            >
+                              {t(`config.tajniMode.${m}`)}
+                            </Pill>
+                          );
+                        })}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {t(`config.tajniModeHint.${effectiveTajniMode}`)}
+                      </span>
+                    </div>
                   )}
                   {game.id === 'gluvo-doba' && (
                     <>

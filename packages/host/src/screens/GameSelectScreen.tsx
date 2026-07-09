@@ -44,7 +44,16 @@ export function GameSelectScreen() {
     (s) => s.setSelectedCategory
   );
   const newGamesConfig = useNewGamesConfigStore();
+  const setTajniAgentiMode = useNewGamesConfigStore(
+    (s) => s.setTajniAgentiMode
+  );
   const connectedCount = players.filter((p) => p.isConnected).length;
+  // Classic needs 4+ players — with fewer, silently fall back to duet so
+  // the start button can't fire a server-side validation error.
+  const effectiveTajniMode =
+    newGamesConfig.tajniAgentiMode === 'classic' && connectedCount < 4
+      ? 'duet'
+      : newGamesConfig.tajniAgentiMode;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
@@ -143,6 +152,8 @@ export function GameSelectScreen() {
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
       customTajniAgentiPack,
+      tajniAgentiMode:
+        gameId === 'tajni-agenti' ? effectiveTajniMode : undefined,
       fakeArtistRounds:
         gameId === 'fake-artist' ? newGamesConfig.fakeArtistRounds : undefined,
       fakeArtistStrokes:
@@ -341,7 +352,58 @@ export function GameSelectScreen() {
                 <KoSamJaImportButton />
               </>
             )}
-            {game.id === 'tajni-agenti' && <TajniAgentiImportButton />}
+            {game.id === 'tajni-agenti' && (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                    marginTop: '0.75rem',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {(['classic', 'duet', 'coop'] as const).map((m) => {
+                    const active = m === effectiveTajniMode;
+                    const modeLocked = m === 'classic' && connectedCount < 4;
+                    return (
+                      <button
+                        key={m}
+                        disabled={modeLocked}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!modeLocked) setTajniAgentiMode(m);
+                        }}
+                        style={{
+                          padding: '0.3rem 0.75rem',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          background: active
+                            ? 'var(--accent)'
+                            : 'var(--bg-secondary)',
+                          color: active ? '#fff' : 'var(--text-primary)',
+                          opacity: modeLocked ? 0.4 : 1,
+                          cursor: modeLocked ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {t(`config.tajniMode.${m}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p
+                  style={{
+                    fontSize: '0.75rem',
+                    marginTop: '0.4rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {t(`config.tajniModeHint.${effectiveTajniMode}`)}
+                </p>
+                <TajniAgentiImportButton />
+              </>
+            )}
             {game.id === 'slepi-telefoni' && (
               <div
                 style={{

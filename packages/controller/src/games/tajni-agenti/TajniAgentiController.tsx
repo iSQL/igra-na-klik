@@ -8,6 +8,7 @@ import type {
   TajniAgentiSecretCard,
   TajniAgentiCardType,
   TajniAgentiClue,
+  TajniAgentiMode,
   TajniAgentiPublicRosters,
   TajniAgentiTeam,
   TajniAgentiTurnResultsData,
@@ -18,16 +19,23 @@ const TEAM_RED = '#C75146';
 const TEAM_BLUE = '#4F80B8';
 const NEUTRAL = '#C9B896';
 const ASSASSIN = '#0B1728';
+const AGENT_GREEN = '#4C9E6B';
 
 const typeColor = (t: TajniAgentiCardType): string => {
   if (t === 'red') return TEAM_RED;
   if (t === 'blue') return TEAM_BLUE;
   if (t === 'neutral') return NEUTRAL;
+  if (t === 'agent') return AGENT_GREEN;
   return ASSASSIN;
 };
 
 const teamLabel = (t: TajniAgentiTeam): string =>
   t === 'red' ? 'Crveni' : 'Plavi';
+
+const OTHER: Record<TajniAgentiTeam, TajniAgentiTeam> = {
+  red: 'blue',
+  blue: 'red',
+};
 
 interface MyData {
   team: TajniAgentiTeam | null;
@@ -55,8 +63,9 @@ export default function TajniAgentiController() {
     isCurrentGuesser: false,
   };
 
-  const isScenarioMode = Boolean(data.isScenarioMode);
+  const mode = ((data.mode as TajniAgentiMode) ?? 'classic');
   const isRemoteHost = remoteHostPlayerId === playerId;
+  const turnsRemaining = data.turnsRemaining as number | undefined;
 
   if (phase === 'team-selection') {
     return (
@@ -66,7 +75,7 @@ export default function TajniAgentiController() {
         isSpymaster={my.isSpymaster}
         rosters={data.rosters as TajniAgentiPublicRosters | undefined}
         roomPlayers={roomPlayers}
-        isScenarioMode={isScenarioMode}
+        mode={mode}
         isRemoteHost={isRemoteHost}
       />
     );
@@ -74,20 +83,29 @@ export default function TajniAgentiController() {
 
   if (phase === 'clue-giving') {
     if (my.isCurrentSpymaster) {
-      return <ClueGivingForm secretCards={my.secretCards ?? []} />;
+      return (
+        <ClueGivingForm secretCards={my.secretCards ?? []} mode={mode} />
+      );
     }
     if (my.isSpymaster) {
       return (
         <SpymasterWaitingView
           secretCards={my.secretCards ?? []}
-          subTitle="Drugi špijun bira šifru…"
+          subTitle={
+            mode === 'duet'
+              ? 'Druga strana smišlja šifru — pripremi se da pogađaš.'
+              : 'Drugi špijun bira šifru…'
+          }
         />
       );
     }
     const currentTeam = data.currentTeam as TajniAgentiTeam;
-    const title = `${teamLabel(currentTeam)} špijun bira šifru…`;
+    const title =
+      mode === 'coop'
+        ? 'Špijun bira šifru…'
+        : `${teamLabel(currentTeam)} špijun bira šifru…`;
     const subtitle =
-      my.team === currentTeam
+      mode === 'coop' || my.team === currentTeam
         ? 'Pripremi se da pogađaš.'
         : 'Drugi tim je na potezu.';
     // Hostless: no TV, so waiting players follow the board on their phone.
@@ -120,6 +138,11 @@ export default function TajniAgentiController() {
           cards={cards}
           clue={clue}
           guessesRemaining={guessesRemaining ?? 0}
+          mode={mode}
+          turnsRemaining={turnsRemaining}
+          // Duet: guessers still see their OWN side of the key — legal
+          // table knowledge that informs which cards are safe to tap.
+          ownKey={mode === 'duet' ? my.secretCards : undefined}
         />
       );
     }
@@ -128,16 +151,21 @@ export default function TajniAgentiController() {
         <SpymasterWaitingView
           secretCards={my.secretCards ?? []}
           subTitle={
-            my.isCurrentSpymaster
-              ? 'Tvoj tim pogađa.'
-              : 'Drugi tim pogađa.'
+            mode === 'duet'
+              ? 'Druga strana pogađa tvoju šifru.'
+              : my.isCurrentSpymaster
+                ? 'Tvoj tim pogađa.'
+                : 'Drugi tim pogađa.'
           }
           clue={clue}
         />
       );
     }
     const currentTeam = data.currentTeam as TajniAgentiTeam;
-    const title = `${teamLabel(currentTeam)} tim pogađa…`;
+    const title =
+      mode === 'coop'
+        ? 'Tim pogađa…'
+        : `${teamLabel(mode === 'duet' ? OTHER[currentTeam] : currentTeam)} tim pogađa…`;
     const subtitle = clue
       ? `Šifra: ${clue.word.toUpperCase()} · ${clue.count}`
       : undefined;
@@ -165,13 +193,13 @@ export default function TajniAgentiController() {
   if (phase === 'turn-results') {
     const results = data.turnResults as TajniAgentiTurnResultsData | undefined;
     if (!results) return null;
-    return <TurnResultsScreen results={results} />;
+    return <TurnResultsScreen results={results} mode={mode} />;
   }
 
   if (phase === 'ended') {
     const ended = data.ended as TajniAgentiEndedData | undefined;
     if (!ended) return null;
-    return <EndedScreen ended={ended} myTeam={my.team} />;
+    return <EndedScreen ended={ended} myTeam={my.team} mode={mode} />;
   }
 
   return null;
@@ -192,7 +220,7 @@ function TeamSelectionController({
   isSpymaster,
   rosters,
   roomPlayers,
-  isScenarioMode,
+  mode,
   isRemoteHost,
 }: {
   playerId: string;
@@ -200,7 +228,7 @@ function TeamSelectionController({
   isSpymaster: boolean;
   rosters: TajniAgentiPublicRosters | undefined;
   roomPlayers: RosterPlayer[];
-  isScenarioMode: boolean;
+  mode: TajniAgentiMode;
   isRemoteHost: boolean;
 }) {
   const haptics = useHaptics();
@@ -267,39 +295,56 @@ function TeamSelectionController({
           color: 'var(--text-secondary)',
         }}
       >
-        Izaberi tim
+        {mode === 'coop'
+          ? 'Svi ste jedan tim — ko će biti špijun?'
+          : mode === 'duet'
+            ? 'Izaberi stranu'
+            : 'Izaberi tim'}
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '0.6rem',
-          flex: '1 1 auto',
-        }}
-      >
-        <TeamCard
-          color={TEAM_RED}
-          label="Crveni"
-          playerIds={rosters?.red.playerIds ?? []}
-          spymasterId={isScenarioMode ? null : rosters?.red.spymasterId ?? null}
-          selected={myTeam === 'red'}
-          onPick={() => pickTeam('red')}
-          roomPlayers={roomPlayers}
-          myPlayerId={playerId}
-        />
+      {mode === 'coop' ? (
         <TeamCard
           color={TEAM_BLUE}
-          label="Plavi"
+          label="Tim"
           playerIds={rosters?.blue.playerIds ?? []}
-          spymasterId={isScenarioMode ? null : rosters?.blue.spymasterId ?? null}
-          selected={myTeam === 'blue'}
-          onPick={() => pickTeam('blue')}
+          spymasterId={rosters?.blue.spymasterId ?? null}
+          selected={true}
+          onPick={() => {}}
           roomPlayers={roomPlayers}
           myPlayerId={playerId}
         />
-      </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.6rem',
+            flex: '1 1 auto',
+          }}
+        >
+          <TeamCard
+            color={TEAM_RED}
+            label="Crveni"
+            playerIds={rosters?.red.playerIds ?? []}
+            spymasterId={mode === 'duet' ? null : rosters?.red.spymasterId ?? null}
+            selected={myTeam === 'red'}
+            onPick={() => pickTeam('red')}
+            roomPlayers={roomPlayers}
+            myPlayerId={playerId}
+          />
+          <TeamCard
+            color={TEAM_BLUE}
+            label="Plavi"
+            playerIds={rosters?.blue.playerIds ?? []}
+            spymasterId={mode === 'duet' ? null : rosters?.blue.spymasterId ?? null}
+            selected={myTeam === 'blue'}
+            onPick={() => pickTeam('blue')}
+            roomPlayers={roomPlayers}
+            myPlayerId={playerId}
+          />
+        </div>
+      )}
 
-      {!isScenarioMode && (
+      {mode !== 'duet' && (
         <button
           onClick={toggleSpymaster}
           disabled={!canClaim}
@@ -321,7 +366,7 @@ function TeamSelectionController({
         </button>
       )}
 
-      {isScenarioMode && (
+      {mode === 'duet' && (
         <p
           style={{
             margin: 0,
@@ -331,11 +376,24 @@ function TeamSelectionController({
             fontStyle: 'italic',
           }}
         >
-          Scenario: nema špijuna — tema reči je vaša šifra.
+          Duet: nema špijuna — svaka strana vidi svoj ključ i daje šifre drugoj. Zajedno tražite 15 agenata za 9 poteza.
+        </p>
+      )}
+      {mode === 'coop' && (
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            fontStyle: 'italic',
+          }}
+        >
+          Špijun daje šifre, ostali pogađaju. Nađite 9 agenata pre nego što potrošite 9 poena — pogrešna boja košta dodatni poen!
         </p>
       )}
 
-      {!isScenarioMode && claimTakenByOther && (
+      {mode !== 'duet' && claimTakenByOther && (
         <p
           style={{
             margin: 0,
@@ -536,8 +594,10 @@ function TeamCard({
 
 function ClueGivingForm({
   secretCards,
+  mode,
 }: {
   secretCards: TajniAgentiSecretCard[];
+  mode: TajniAgentiMode;
 }) {
   const haptics = useHaptics();
   const [word, setWord] = useState('');
@@ -573,7 +633,9 @@ function ClueGivingForm({
           color: 'var(--accent)',
         }}
       >
-        Ti si špijun — daj šifru.
+        {mode === 'duet'
+          ? 'Tvoja strana daje šifru — zeleno su vaši agenti.'
+          : 'Ti si špijun — daj šifru.'}
       </p>
       <SecretMiniBoard cards={secretCards} />
       <input
@@ -661,10 +723,17 @@ function GuessingGrid({
   cards,
   clue,
   guessesRemaining,
+  mode,
+  turnsRemaining,
+  ownKey,
 }: {
   cards: TajniAgentiPublicCard[];
   clue: TajniAgentiClue | undefined;
   guessesRemaining: number;
+  mode: TajniAgentiMode;
+  turnsRemaining?: number;
+  /** Duet — the guesser's own side of the key, rendered as subtle hints. */
+  ownKey?: TajniAgentiSecretCard[];
 }) {
   const haptics = useHaptics();
   const tap = (cardId: number) => {
@@ -716,6 +785,9 @@ function GuessingGrid({
             }}
           >
             ostalo: {guessesRemaining}
+            {mode !== 'classic' && typeof turnsRemaining === 'number' && (
+              <> · {mode === 'duet' ? 'potezi' : 'poeni'}: {turnsRemaining}</>
+            )}
           </span>
         </p>
       )}
@@ -728,8 +800,20 @@ function GuessingGrid({
         }}
       >
         {cards.map((card) => {
+          // Duet: a card already burned as a bystander against the current
+          // clue-giver's key can't be guessed again this direction.
+          const burned =
+            mode === 'duet' &&
+            !card.revealed &&
+            clue !== undefined &&
+            (card.bystanderFor?.includes(clue.team) ?? false);
+          const ownType = ownKey?.find((k) => k.id === card.id)?.type;
           const bg =
-            card.revealed && card.type ? typeColor(card.type) : '#f3eedd';
+            card.revealed && card.type
+              ? typeColor(card.type)
+              : burned
+                ? NEUTRAL
+                : '#f3eedd';
           const fg = card.revealed
             ? card.type === 'assassin'
               ? 'var(--danger)'
@@ -740,8 +824,8 @@ function GuessingGrid({
           return (
             <button
               key={card.id}
-              onClick={() => !card.revealed && tap(card.id)}
-              disabled={card.revealed}
+              onClick={() => !card.revealed && !burned && tap(card.id)}
+              disabled={card.revealed || burned}
               style={{
                 background: bg,
                 color: fg,
@@ -754,6 +838,15 @@ function GuessingGrid({
                 lineHeight: 1.05,
                 minHeight: '48px',
                 WebkitTapHighlightColor: 'transparent',
+                opacity: burned ? 0.6 : 1,
+                // Duet: outline what this card is on MY OWN key — legal
+                // knowledge that helps avoid my own assassins.
+                boxShadow:
+                  !card.revealed && mode === 'duet' && ownType === 'agent'
+                    ? `inset 0 0 0 2px ${AGENT_GREEN}`
+                    : !card.revealed && mode === 'duet' && ownType === 'assassin'
+                      ? `inset 0 0 0 2px ${ASSASSIN}`
+                      : 'none',
               }}
             >
               {card.word}
@@ -1028,8 +1121,10 @@ function WaitingMessage({
 
 function TurnResultsScreen({
   results,
+  mode,
 }: {
   results: TajniAgentiTurnResultsData;
+  mode: TajniAgentiMode;
 }) {
   return (
     <div
@@ -1049,7 +1144,9 @@ function TurnResultsScreen({
           color: typeColor(results.team),
         }}
       >
-        {teamLabel(results.team)} tim — kraj poteza
+        {mode === 'coop'
+          ? 'Kraj poteza'
+          : `${teamLabel(results.team)} — kraj poteza`}
       </p>
       {results.clue && (
         <p
@@ -1077,7 +1174,21 @@ function TurnResultsScreen({
           </li>
         ))}
       </ul>
-      {results.nextTeam && (
+      {typeof results.turnsRemaining === 'number' && (
+        <p
+          style={{
+            margin: 0,
+            textAlign: 'center',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {mode === 'duet' ? 'Preostalo poteza' : 'Preostalo poena'}:{' '}
+          <strong>{results.turnsRemaining}</strong>
+        </p>
+      )}
+      {results.nextTeam && mode !== 'coop' && (
         <p
           style={{
             margin: 0,
@@ -1086,23 +1197,41 @@ function TurnResultsScreen({
             color: 'var(--text-secondary)',
           }}
         >
-          Sledeći potez:{' '}
+          {mode === 'duet' ? 'Sledeću šifru daju:' : 'Sledeći potez:'}{' '}
           <strong style={{ color: typeColor(results.nextTeam) }}>
-            {teamLabel(results.nextTeam)} tim
+            {teamLabel(results.nextTeam)}
           </strong>
         </p>
       )}
-      {results.winner && (
+      {results.winner !== undefined && results.winner !== null && (
         <p
           style={{
             margin: '0.3rem 0 0',
             textAlign: 'center',
             fontSize: '1.15rem',
             fontWeight: 800,
-            color: typeColor(results.winner),
+            color:
+              results.winner === 'players'
+                ? AGENT_GREEN
+                : typeColor(results.winner),
           }}
         >
-          🏆 {teamLabel(results.winner)} tim pobeđuje!
+          {results.winner === 'players'
+            ? '🏆 Pobedili ste!'
+            : `🏆 ${teamLabel(results.winner)} tim pobeđuje!`}
+        </p>
+      )}
+      {results.winner === null && results.nextTeam === null && (
+        <p
+          style={{
+            margin: '0.3rem 0 0',
+            textAlign: 'center',
+            fontSize: '1.15rem',
+            fontWeight: 800,
+            color: 'var(--danger)',
+          }}
+        >
+          💀 Poraz…
         </p>
       )}
     </div>
@@ -1112,11 +1241,67 @@ function TurnResultsScreen({
 function EndedScreen({
   ended,
   myTeam,
+  mode,
 }: {
   ended: TajniAgentiEndedData;
   myTeam: TajniAgentiTeam | null;
+  mode: TajniAgentiMode;
 }) {
-  const won = myTeam !== null && myTeam === ended.winner;
+  if (mode !== 'classic') {
+    const won = ended.winner === 'players';
+    const reasonText =
+      ended.reason === 'all-found'
+        ? 'Našli ste sve agente!'
+        : ended.reason === 'assassin'
+          ? 'Dirnuli ste ubicu…'
+          : ended.reason === 'out-of-turns'
+            ? mode === 'duet'
+              ? 'Potrošili ste svih 9 poteza.'
+              : 'Potrošili ste svih 9 poena.'
+            : 'Nedovoljno igrača za nastavak.';
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          padding: '1.5rem',
+          background: won ? AGENT_GREEN : ASSASSIN,
+          color: '#fff',
+          textAlign: 'center',
+          gap: '0.5rem',
+        }}
+      >
+        <p style={{ margin: 0, fontSize: '1rem', opacity: 0.85 }}>
+          {won ? 'POBEDA!' : 'PORAZ'}
+        </p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: won ? '2rem' : '1.6rem',
+            fontWeight: 800,
+            letterSpacing: '0.05em',
+            lineHeight: 1.1,
+          }}
+        >
+          {won ? 'BRAVO!' : 'KRAJ MISIJE'}
+        </p>
+        <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>
+          {reasonText}
+        </p>
+        {typeof ended.agentsFound === 'number' && (
+          <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.85 }}>
+            Pronađeno agenata: {ended.agentsFound}/{ended.agentsTotal}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const winner = ended.winner as TajniAgentiTeam;
+  const won = myTeam !== null && myTeam === winner;
   return (
     <div
       style={{
@@ -1126,7 +1311,7 @@ function EndedScreen({
         justifyContent: 'center',
         height: '100%',
         padding: '1.5rem',
-        background: typeColor(ended.winner),
+        background: typeColor(winner),
         color: '#fff',
         textAlign: 'center',
         gap: '0.5rem',
@@ -1145,8 +1330,8 @@ function EndedScreen({
         }}
       >
         {won
-          ? `${teamLabel(ended.winner).toUpperCase()} TIM`
-          : `POBEDIO ${teamLabel(ended.winner).toUpperCase()} TIM`}
+          ? `${teamLabel(winner).toUpperCase()} TIM`
+          : `POBEDIO ${teamLabel(winner).toUpperCase()} TIM`}
       </p>
     </div>
   );

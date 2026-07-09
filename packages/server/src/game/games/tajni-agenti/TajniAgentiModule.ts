@@ -3,6 +3,10 @@ import type {
   GameState,
   TajniAgentiTeam,
   TajniAgentiCardType,
+  TajniAgentiDuetKey,
+  TajniAgentiDuetSideType,
+  TajniAgentiEndReason,
+  TajniAgentiMode,
   TajniAgentiPublicCard,
   TajniAgentiSecretCard,
   TajniAgentiPublicRosters,
@@ -23,6 +27,7 @@ import {
   CLUE_GIVING_DURATION,
   GUESSING_DURATION,
   TURN_RESULTS_DURATION,
+  TAJNI_AGENTI_COOP_TURNS,
   MIN_CLUE_NUMBER,
   MAX_CLUE_NUMBER,
   MAX_CLUE_WORD_LENGTH,
@@ -31,6 +36,7 @@ import type { TajniAgentiInternalState } from './TajniAgentiState.js';
 
 interface TajniAgentiCustomContent {
   customTajniAgentiPack?: unknown;
+  tajniAgentiMode?: unknown;
 }
 
 const OTHER_TEAM: Record<TajniAgentiTeam, TajniAgentiTeam> = {
@@ -38,17 +44,45 @@ const OTHER_TEAM: Record<TajniAgentiTeam, TajniAgentiTeam> = {
   blue: 'red',
 };
 
+// Coop mode: everyone plays as the blue team against the board; the red
+// cards are the "enemy agents" that cost an extra point when revealed.
+const COOP_TEAM: TajniAgentiTeam = 'blue';
+
+/**
+ * The standard Codenames: Duet key distribution over 25 cards. Per side:
+ * 9 agents, 3 assassins, 13 bystanders; 15 distinct agents total (3 shared).
+ */
+const DUET_KEY_DISTRIBUTION: Array<[TajniAgentiDuetSideType, TajniAgentiDuetSideType, number]> = [
+  ['agent', 'agent', 3],
+  ['agent', 'neutral', 5],
+  ['neutral', 'agent', 5],
+  ['agent', 'assassin', 1],
+  ['assassin', 'agent', 1],
+  ['assassin', 'assassin', 1],
+  ['assassin', 'neutral', 1],
+  ['neutral', 'assassin', 1],
+  ['neutral', 'neutral', 7],
+];
+
+const resolveMode = (raw: unknown): TajniAgentiMode =>
+  raw === 'duet' || raw === 'coop' ? raw : 'classic';
+
 export class TajniAgentiModule extends BaseGameModule {
   readonly gameId = 'tajni-agenti';
 
   private state!: TajniAgentiInternalState;
   private timings: Record<string, number> = {};
 
-  validateStart(room: Room, _customContent?: unknown): string | null {
-    // Two teams, each with a spymaster + at least one guesser → floor of 4.
+  validateStart(room: Room, customContent?: unknown): string | null {
+    const cc = customContent as TajniAgentiCustomContent | undefined;
+    const mode = resolveMode(cc?.tajniAgentiMode);
     const connected = room.players.filter((p) => p.isConnected);
-    if (connected.length < 4) {
-      return 'Tajni agenti zahteva najmanje 4 igrača.';
+    if (mode === 'classic' && connected.length < 4) {
+      // Two teams, each with a spymaster + at least one guesser → floor of 4.
+      return 'Klasični mod zahteva najmanje 4 igrača — za manje izaberi Duet ili Kooperativni mod.';
+    }
+    if (connected.length < 2) {
+      return 'Tajni agenti zahteva najmanje 2 igrača.';
     }
     return null;
   }
@@ -56,15 +90,22 @@ export class TajniAgentiModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
     const cc = customContent as TajniAgentiCustomContent | undefined;
+    const mode = resolveMode(cc?.tajniAgentiMode);
 
     const words = this.resolveWords(cc?.customTajniAgentiPack);
-    const startingTeam: TajniAgentiTeam = Math.random() < 0.5 ? 'red' : 'blue';
-    const cards = this.buildBoard(words, startingTeam);
+    const startingTeam: TajniAgentiTeam =
+      mode === 'coop' ? COOP_TEAM : Math.random() < 0.5 ? 'red' : 'blue';
+    const cards =
+      mode === 'duet'
+        ? this.buildDuetBoard(words)
+        : this.buildBoard(words, startingTeam);
 
     this.state = {
       phase: 'team-selection',
       phaseTimeRemaining: TEAM_SELECTION_DURATION,
-      // Scenario mode was removed — always the standard two-team flow.
+      mode,
+      turnsRemaining: mode === 'classic' ? 0 : TAJNI_AGENTI_COOP_TURNS,
+      // Scenario mode was removed — always false.
       isScenarioMode: false,
       cards,
       teams: { red: [], blue: [] },
@@ -77,9 +118,18 @@ export class TajniAgentiModule extends BaseGameModule {
       expectedGuesserIds: new Set(),
       expectedSpymasterId: null,
       lastTurnResults: null,
+      gameOver: false,
       winner: null,
       winReason: null,
     };
+
+    // Coop: no team picking — everyone is on the one team from the start;
+    // team-selection is only used to (optionally) claim the spymaster role.
+    if (mode === 'coop') {
+      this.state.teams[COOP_TEAM] = room.players
+        .filter((p) => p.isConnected)
+        .map((p) => p.id);
+    }
 
     return this.buildGameState(room);
   }
@@ -147,17 +197,48 @@ export class TajniAgentiModule extends BaseGameModule {
     this.removePlayerFromRosters(playerId);
     this.state.expectedGuesserIds.delete(playerId);
 
-    if (this.state.phase === 'team-selection') {
+    if (this.state.phase === 'team-selection' || this.state.phase === 'ended') {
       return this.buildGameState(room);
     }
 
-    // If the leaving player was the current spymaster, promote a
+    if (this.state.mode === 'duet') {
+      // Both sides must stay populated — each gives clues to the other.
+      if (
+        this.state.teams.red.length === 0 ||
+        this.state.teams.blue.length === 0
+      ) {
+        this.endGame(null, 'abandoned', true);
+      }
+      return this.buildGameState(room);
+    }
+
+    if (this.state.mode === 'coop') {
+      const roster = this.state.teams[COOP_TEAM];
+      if (roster.length < 2) {
+        // A lone player can't be both spymaster and guesser.
+        this.endGame(null, 'abandoned', true);
+        return this.buildGameState(room);
+      }
+      if (this.state.spymasters[COOP_TEAM] === null) {
+        // The spymaster left — promote a random remaining player.
+        const next = roster[Math.floor(Math.random() * roster.length)];
+        this.state.spymasters[COOP_TEAM] = next;
+        this.state.expectedGuesserIds.delete(next);
+        if (this.state.phase === 'clue-giving') {
+          this.state.phaseTimeRemaining = CLUE_GIVING_DURATION;
+          this.state.expectedSpymasterId = next;
+        }
+      }
+      return this.buildGameState(room);
+    }
+
+    // Classic: if the leaving player was the current spymaster, promote a
     // teammate or hand the win to the other team if the team is empty.
     for (const team of ['red', 'blue'] as const) {
       if (this.state.spymasters[team] === playerId) {
         const teammates = this.state.teams[team];
         if (teammates.length === 0) {
-          this.endGameWithWinner(OTHER_TEAM[team], 'opponent-finished');
+          this.endGame(OTHER_TEAM[team], 'opponent-finished', true);
           return this.buildGameState(room);
         }
         const next = teammates[Math.floor(Math.random() * teammates.length)];
@@ -177,13 +258,13 @@ export class TajniAgentiModule extends BaseGameModule {
 
     // If a team is now completely empty, the other team wins.
     if (
-      this.state.phase !== 'ended' &&
+      !this.state.gameOver &&
       (this.state.teams.red.length === 0 ||
         this.state.teams.blue.length === 0)
     ) {
       const emptyTeam =
         this.state.teams.red.length === 0 ? 'red' : 'blue';
-      this.endGameWithWinner(OTHER_TEAM[emptyTeam], 'opponent-finished');
+      this.endGame(OTHER_TEAM[emptyTeam], 'opponent-finished', true);
     }
 
     return this.buildGameState(room);
@@ -209,17 +290,21 @@ export class TajniAgentiModule extends BaseGameModule {
     return out;
   }
 
-  private buildBoard(
-    sourceWords: readonly string[],
-    startingTeam: TajniAgentiTeam
-  ): TajniAgentiSecretCard[] {
+  private pickWords(sourceWords: readonly string[]): string[] {
     const pool = [...sourceWords];
     // Fisher-Yates partial shuffle to pick 25.
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    const chosen = pool.slice(0, TAJNI_AGENTI_BOARD_SIZE);
+    return pool.slice(0, TAJNI_AGENTI_BOARD_SIZE);
+  }
+
+  private buildBoard(
+    sourceWords: readonly string[],
+    startingTeam: TajniAgentiTeam
+  ): TajniAgentiSecretCard[] {
+    const chosen = this.pickWords(sourceWords);
 
     const startingCount = 9;
     const otherCount = 8;
@@ -242,6 +327,41 @@ export class TajniAgentiModule extends BaseGameModule {
       type: types[idx],
       revealed: false,
     }));
+  }
+
+  private buildDuetBoard(sourceWords: readonly string[]): TajniAgentiSecretCard[] {
+    const chosen = this.pickWords(sourceWords);
+
+    const keys: TajniAgentiDuetKey[] = [];
+    for (const [red, blue, count] of DUET_KEY_DISTRIBUTION) {
+      for (let i = 0; i < count; i++) keys.push({ red, blue });
+    }
+    for (let i = keys.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [keys[i], keys[j]] = [keys[j], keys[i]];
+    }
+
+    // `type` is a placeholder until reveal — duet reveals set it to
+    // 'agent' or 'assassin' based on the clue-giving side's key.
+    return chosen.map((word, idx) => ({
+      id: idx,
+      word,
+      type: 'neutral' as TajniAgentiCardType,
+      revealed: false,
+      duet: keys[idx],
+    }));
+  }
+
+  private duetAgentsTotal(): number {
+    return this.state.cards.filter(
+      (c) => c.duet && (c.duet.red === 'agent' || c.duet.blue === 'agent')
+    ).length;
+  }
+
+  private duetAgentsFound(): number {
+    return this.state.cards.filter(
+      (c) => c.revealed && c.type === 'agent'
+    ).length;
   }
 
   private removePlayerFromRosters(playerId: string): void {
@@ -275,6 +395,8 @@ export class TajniAgentiModule extends BaseGameModule {
     data: Record<string, unknown>
   ): GameState | null {
     if (this.state.phase !== 'team-selection') return null;
+    // Coop: a single fixed team — nothing to pick.
+    if (this.state.mode === 'coop') return null;
     if (!room.players.some((p) => p.id === playerId)) return null;
 
     const team = data.team as TajniAgentiTeam | null | undefined;
@@ -289,9 +411,9 @@ export class TajniAgentiModule extends BaseGameModule {
 
   private handleToggleSpymaster(room: Room, playerId: string): GameState | null {
     if (this.state.phase !== 'team-selection') return null;
-    // Scenario mode runs without spymasters — silently ignore so a
-    // stale controller tapping the button doesn't desync anything.
-    if (this.state.isScenarioMode) return null;
+    // Duet has no spymaster role — everyone on a side both gives clues and
+    // guesses. Silently ignore stale controller taps.
+    if (this.state.mode === 'duet') return null;
     if (!room.players.some((p) => p.id === playerId)) return null;
 
     const team = this.playerTeam(playerId);
@@ -321,6 +443,12 @@ export class TajniAgentiModule extends BaseGameModule {
       ...this.state.teams.blue,
     ]);
     const unassigned = connected.filter((id) => !assigned.has(id));
+
+    if (this.state.mode === 'coop') {
+      // One team — just sweep everyone in.
+      this.state.teams[COOP_TEAM].push(...unassigned);
+      return;
+    }
 
     // Shuffle unassigned, then balance towards the smaller team.
     for (let i = unassigned.length - 1; i > 0; i--) {
@@ -369,21 +497,27 @@ export class TajniAgentiModule extends BaseGameModule {
     ]);
     const unassigned = [...connectedIds].filter((id) => !assigned.has(id));
 
-    // Scenario mode runs without spymasters, so a team of 1 is fine —
-    // the theme is the implicit clue. Normal mode needs ≥2 per team so
-    // there's a spymaster AND at least one guesser.
-    const minPerTeam = this.state.isScenarioMode ? 1 : 2;
     let rosterIssue: string | null = null;
-    if (this.state.teams.red.length < minPerTeam) {
-      rosterIssue = `Crveni tim mora imati najmanje ${minPerTeam} igrača.`;
-    } else if (this.state.teams.blue.length < minPerTeam) {
-      rosterIssue = `Plavi tim mora imati najmanje ${minPerTeam} igrača.`;
-    } else if (
-      Math.abs(this.state.teams.red.length - this.state.teams.blue.length) > 1
-    ) {
-      rosterIssue = 'Razlika između timova ne sme biti veća od 1 igrača.';
-    } else if (unassigned.length > 0) {
-      rosterIssue = 'Svi igrači moraju izabrati tim.';
+    if (this.state.mode === 'coop') {
+      if (this.state.teams[COOP_TEAM].length < 2) {
+        rosterIssue = 'Potrebna su najmanje 2 igrača (špijun + pogađač).';
+      }
+    } else {
+      // Duet sides work from a single player (everyone on a side both
+      // gives clues and guesses); classic needs ≥2 per team so there's a
+      // spymaster AND at least one guesser.
+      const minPerTeam = this.state.mode === 'duet' ? 1 : 2;
+      if (this.state.teams.red.length < minPerTeam) {
+        rosterIssue = `Crveni tim mora imati najmanje ${minPerTeam} igrača.`;
+      } else if (this.state.teams.blue.length < minPerTeam) {
+        rosterIssue = `Plavi tim mora imati najmanje ${minPerTeam} igrača.`;
+      } else if (
+        Math.abs(this.state.teams.red.length - this.state.teams.blue.length) > 1
+      ) {
+        rosterIssue = 'Razlika između timova ne sme biti veća od 1 igrača.';
+      } else if (unassigned.length > 0) {
+        rosterIssue = 'Svi igrači moraju izabrati tim.';
+      }
     }
 
     return {
@@ -417,17 +551,18 @@ export class TajniAgentiModule extends BaseGameModule {
   }
 
   private beginPlay(room: Room): void {
-    if (this.state.isScenarioMode) {
-      // No spymasters in scenario mode — the theme is the implicit
-      // clue, so we drop the role entirely and jump straight into
-      // turn-based guessing on the public board.
+    void room;
+    if (this.state.mode === 'duet') {
+      // No spymaster role — the whole giving side knows its key.
       this.state.spymasters.red = null;
       this.state.spymasters.blue = null;
-      this.beginGuessing(room);
-      return;
+    } else if (this.state.mode === 'coop') {
+      this.state.spymasters[COOP_TEAM] = this.resolveSpymaster(COOP_TEAM);
+      this.state.spymasters[OTHER_TEAM[COOP_TEAM]] = null;
+    } else {
+      this.state.spymasters.red = this.resolveSpymaster('red');
+      this.state.spymasters.blue = this.resolveSpymaster('blue');
     }
-    this.state.spymasters.red = this.resolveSpymaster('red');
-    this.state.spymasters.blue = this.resolveSpymaster('blue');
     this.beginClueGiving();
   }
 
@@ -435,7 +570,10 @@ export class TajniAgentiModule extends BaseGameModule {
     this.state.phase = 'clue-giving';
     this.state.phaseTimeRemaining = CLUE_GIVING_DURATION;
     this.state.currentClue = null;
-    this.state.expectedSpymasterId = this.state.spymasters[this.state.currentTeam];
+    this.state.expectedSpymasterId =
+      this.state.mode === 'duet'
+        ? null
+        : this.state.spymasters[this.state.currentTeam];
   }
 
   private handleSubmitClue(
@@ -444,7 +582,14 @@ export class TajniAgentiModule extends BaseGameModule {
     data: Record<string, unknown>
   ): GameState | null {
     if (this.state.phase !== 'clue-giving') return null;
-    if (this.state.spymasters[this.state.currentTeam] !== playerId) return null;
+    if (this.state.mode === 'duet') {
+      // Any member of the giving side may submit — first clue wins.
+      if (!this.state.teams[this.state.currentTeam].includes(playerId)) {
+        return null;
+      }
+    } else if (this.state.spymasters[this.state.currentTeam] !== playerId) {
+      return null;
+    }
 
     const rawWord = data.word;
     const rawCount = data.count;
@@ -465,26 +610,41 @@ export class TajniAgentiModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  /** The side that taps cards this turn. Duet: the OTHER side guesses the
+   * giver's clue; classic/coop: the giving team's own guessers. */
+  private guessingSide(): TajniAgentiTeam {
+    return this.state.mode === 'duet'
+      ? OTHER_TEAM[this.state.currentTeam]
+      : this.state.currentTeam;
+  }
+
   private beginGuessing(room: Room): void {
-    const team = this.state.currentTeam;
-    const spymasterId = this.state.spymasters[team];
-    // Scenario mode has no spymaster — every team member is a guesser.
+    const side = this.guessingSide();
+    const spymasterId = this.state.spymasters[side];
     this.state.expectedGuesserIds = new Set(
-      this.state.isScenarioMode
-        ? this.state.teams[team]
-        : this.state.teams[team].filter((id) => id !== spymasterId)
+      this.state.mode === 'duet'
+        ? this.state.teams[side]
+        : this.state.teams[side].filter((id) => id !== spymasterId)
     );
-    // Classic Codenames: guessers can make count + 1 guesses.
-    // Scenario mode has no clue / count — keep tapping until a wrong
-    // colour or the "Završi potez" button.
-    this.state.guessesRemaining = this.state.isScenarioMode
-      ? Number.MAX_SAFE_INTEGER
-      : (this.state.currentClue?.count ?? 0) + 1;
+    // Classic Codenames rule in every mode: count + 1 guesses.
+    this.state.guessesRemaining = (this.state.currentClue?.count ?? 0) + 1;
     this.state.turnLog = [];
     this.state.phase = 'guessing';
     this.state.phaseTimeRemaining = GUESSING_DURATION;
-    // Silence unused param: room is referenced indirectly via teams.
     void room;
+  }
+
+  private canGuess(playerId: string): boolean {
+    const side = this.guessingSide();
+    if (!this.state.teams[side].includes(playerId)) return false;
+    // Classic/coop: the spymaster already sees the colours.
+    if (
+      this.state.mode !== 'duet' &&
+      this.state.spymasters[side] === playerId
+    ) {
+      return false;
+    }
+    return true;
   }
 
   private handleGuessCard(
@@ -493,38 +653,29 @@ export class TajniAgentiModule extends BaseGameModule {
     data: Record<string, unknown>
   ): GameState | null {
     if (this.state.phase !== 'guessing') return null;
-    const team = this.state.currentTeam;
-    // Only active-team players can guess. In normal mode the spymaster
-    // is excluded (they already see the colours); scenario mode has no
-    // spymaster so everyone on the active team can tap.
-    if (!this.state.teams[team].includes(playerId)) return null;
-    if (
-      !this.state.isScenarioMode &&
-      this.state.spymasters[team] === playerId
-    ) {
-      return null;
-    }
+    if (!this.canGuess(playerId)) return null;
 
     const rawId = data.cardId;
     if (typeof rawId !== 'number' || !Number.isInteger(rawId)) return null;
     const card = this.state.cards.find((c) => c.id === rawId);
     if (!card || card.revealed) return null;
 
-    card.revealed = true;
-    const guesser = room.players.find((p) => p.id === playerId);
-    this.state.turnLog.push({
-      cardId: card.id,
-      word: card.word,
-      revealedType: card.type,
-      guesserId: playerId,
-      guesserName: guesser?.name ?? '?',
-    });
+    if (this.state.mode === 'duet') {
+      return this.adjudicateDuetGuess(room, playerId, card);
+    }
 
-    // Adjudicate the reveal.
+    card.revealed = true;
+    this.logGuess(room, playerId, card, card.type);
+
+    const team = this.state.currentTeam;
     const teamColor: TajniAgentiCardType = team;
     if (card.type === 'assassin') {
       this.endTurnWith('assassin', room);
-      this.endGameWithWinner(OTHER_TEAM[team], 'assassin');
+      if (this.state.mode === 'coop') {
+        this.endGame(null, 'assassin');
+      } else {
+        this.endGame(OTHER_TEAM[team], 'assassin');
+      }
       return this.buildGameState(room);
     }
 
@@ -532,17 +683,13 @@ export class TajniAgentiModule extends BaseGameModule {
       // Correct guess — check for win.
       if (this.teamRemaining(teamColor) === 0) {
         this.endTurnWith('count-reached', room);
-        this.endGameWithWinner(team, 'all-found');
+        this.endGame(this.state.mode === 'coop' ? 'players' : team, 'all-found');
         return this.buildGameState(room);
       }
-      // Scenario mode runs without a count limit — keep guessing until
-      // a wrong colour, the assassin, or the "Završi potez" button.
-      if (!this.state.isScenarioMode) {
-        this.state.guessesRemaining--;
-        if (this.state.guessesRemaining <= 0) {
-          this.endTurnWith('count-reached', room);
-          return this.buildGameState(room);
-        }
+      this.state.guessesRemaining--;
+      if (this.state.guessesRemaining <= 0) {
+        this.endTurnWith('count-reached', room);
+        return this.buildGameState(room);
       }
       return this.buildGameState(room);
     }
@@ -552,22 +699,91 @@ export class TajniAgentiModule extends BaseGameModule {
       return this.buildGameState(room);
     }
 
-    // Opposing team's card revealed.
+    // Enemy-coloured card revealed.
+    if (this.state.mode === 'coop') {
+      // Coop: the enemy card costs one EXTRA point on top of the turn's
+      // base cost (applied in endTurnWith).
+      this.state.turnsRemaining--;
+      this.endTurnWith('wrong-team', room);
+      return this.buildGameState(room);
+    }
+
     const opp = OTHER_TEAM[team];
     if (this.teamRemaining(opp) === 0) {
       this.endTurnWith('wrong-team', room);
-      this.endGameWithWinner(opp, 'opponent-finished');
+      this.endGame(opp, 'opponent-finished');
       return this.buildGameState(room);
     }
     this.endTurnWith('wrong-team', room);
     return this.buildGameState(room);
   }
 
+  /**
+   * Duet: guesses are adjudicated against the CLUE GIVER's side of the key
+   * (currentTeam). Agents are covered for good; bystanders only mark the
+   * card as dead-for-that-side (it may still be an agent on the other side);
+   * an assassin on the giver's side loses the game for both.
+   */
+  private adjudicateDuetGuess(
+    room: Room,
+    playerId: string,
+    card: TajniAgentiSecretCard
+  ): GameState | null {
+    const giver = this.state.currentTeam;
+    if (card.bystanderFor?.includes(giver)) return null;
+    const key = card.duet![giver];
+
+    if (key === 'assassin') {
+      card.revealed = true;
+      card.type = 'assassin';
+      this.logGuess(room, playerId, card, 'assassin');
+      this.endTurnWith('assassin', room);
+      this.endGame(null, 'assassin');
+      return this.buildGameState(room);
+    }
+
+    if (key === 'agent') {
+      card.revealed = true;
+      card.type = 'agent';
+      this.logGuess(room, playerId, card, 'agent');
+      if (this.duetAgentsFound() === this.duetAgentsTotal()) {
+        this.endTurnWith('count-reached', room);
+        this.endGame('players', 'all-found');
+        return this.buildGameState(room);
+      }
+      this.state.guessesRemaining--;
+      if (this.state.guessesRemaining <= 0) {
+        this.endTurnWith('count-reached', room);
+      }
+      return this.buildGameState(room);
+    }
+
+    // Bystander on the giver's side — mark and end the turn.
+    card.bystanderFor = [...(card.bystanderFor ?? []), giver];
+    this.logGuess(room, playerId, card, 'neutral');
+    this.endTurnWith('neutral', room);
+    return this.buildGameState(room);
+  }
+
+  private logGuess(
+    room: Room,
+    playerId: string,
+    card: TajniAgentiSecretCard,
+    revealedType: TajniAgentiCardType
+  ): void {
+    const guesser = room.players.find((p) => p.id === playerId);
+    this.state.turnLog.push({
+      cardId: card.id,
+      word: card.word,
+      revealedType,
+      guesserId: playerId,
+      guesserName: guesser?.name ?? '?',
+    });
+  }
+
   private handleEndTurn(room: Room, playerId: string): GameState | null {
     if (this.state.phase !== 'guessing') return null;
-    const team = this.state.currentTeam;
-    if (!this.state.teams[team].includes(playerId)) return null;
-    if (this.state.spymasters[team] === playerId) return null;
+    if (!this.canGuess(playerId)) return null;
     this.endTurnWith('ended-early', room);
     return this.buildGameState(room);
   }
@@ -583,33 +799,66 @@ export class TajniAgentiModule extends BaseGameModule {
     _room: Room
   ): void {
     const team = this.state.currentTeam;
-    const nextTeam = OTHER_TEAM[team];
+    // Classic and duet alternate sides; coop is always the one team.
+    const nextTeam =
+      this.state.mode === 'coop' ? team : OTHER_TEAM[team];
+
+    // Duet/coop: every turn consumes one of the 9 shared turns/points.
+    if (this.state.mode !== 'classic') {
+      this.state.turnsRemaining--;
+    }
+
     this.state.lastTurnResults = {
       team,
       clue: this.state.currentClue,
       log: [...this.state.turnLog],
       endReason: reason,
       nextTeam,
+      turnsRemaining:
+        this.state.mode === 'classic'
+          ? undefined
+          : Math.max(0, this.state.turnsRemaining),
     };
     this.state.currentTeam = nextTeam;
     this.state.phase = 'turn-results';
     this.state.phaseTimeRemaining =
       this.timings.TURN_RESULTS_DURATION ?? TURN_RESULTS_DURATION;
+
+    // Budget exhausted with agents still hidden → cooperative loss.
+    if (
+      this.state.mode !== 'classic' &&
+      !this.state.gameOver &&
+      this.state.turnsRemaining <= 0
+    ) {
+      this.endGame(null, 'out-of-turns');
+    }
   }
 
-  private endGameWithWinner(
-    winner: TajniAgentiTeam,
-    reason: 'all-found' | 'assassin' | 'opponent-finished'
+  /**
+   * Decide the game. Classic: `winner` is a team. Duet/coop: 'players' on
+   * a win, null on a loss. `immediate` skips the turn-results beat and
+   * jumps straight to the ended phase (disconnect-driven endings).
+   */
+  private endGame(
+    winner: TajniAgentiTeam | 'players' | null,
+    reason: TajniAgentiEndReason,
+    immediate = false
   ): void {
+    if (this.state.gameOver) return;
+    this.state.gameOver = true;
     this.state.winner = winner;
     this.state.winReason = reason;
     // Overwrite the just-set turn-results to ensure post-turn-results
     // we jump to the ended phase rather than another clue-giving, and to
-    // announce the winner on the turn-results screen (the phones' final
+    // announce the outcome on the turn-results screen (the phones' final
     // notice overlay would otherwise cover the ended screen instantly).
     if (this.state.lastTurnResults) {
       this.state.lastTurnResults.nextTeam = null;
       this.state.lastTurnResults.winner = winner;
+    }
+    if (immediate) {
+      this.state.phase = 'ended';
+      this.state.phaseTimeRemaining = 0;
     }
   }
 
@@ -628,7 +877,8 @@ export class TajniAgentiModule extends BaseGameModule {
         break;
       }
       case 'clue-giving': {
-        // Spymaster didn't submit in time — flip turn.
+        // Clue never arrived — the turn is forfeit (in duet/coop this
+        // still consumes one of the 9 turns, so stalling isn't free).
         this.endTurnWith('timeout', room);
         break;
       }
@@ -637,13 +887,9 @@ export class TajniAgentiModule extends BaseGameModule {
         break;
       }
       case 'turn-results': {
-        if (this.state.winner) {
+        if (this.state.gameOver) {
           this.state.phase = 'ended';
           this.state.phaseTimeRemaining = 0;
-        } else if (this.state.isScenarioMode) {
-          // No clue-giving phase in scenario mode — flip straight back
-          // into guessing for the next team.
-          this.beginGuessing(room);
         } else {
           this.beginClueGiving();
         }
@@ -657,25 +903,46 @@ export class TajniAgentiModule extends BaseGameModule {
   // -------------------------------------------------------- buildGameState
 
   private toPublicCard(card: TajniAgentiSecretCard): TajniAgentiPublicCard {
-    if (card.revealed) {
-      return {
-        id: card.id,
-        word: card.word,
-        revealed: true,
-        type: card.type,
-      };
+    const pub: TajniAgentiPublicCard = card.revealed
+      ? { id: card.id, word: card.word, revealed: true, type: card.type }
+      : { id: card.id, word: card.word, revealed: false };
+    if (card.bystanderFor && card.bystanderFor.length > 0) {
+      pub.bystanderFor = [...card.bystanderFor];
     }
-    return { id: card.id, word: card.word, revealed: false };
+    return pub;
+  }
+
+  /** Duet: a player's view of their own side of the key. */
+  private duetSideView(side: TajniAgentiTeam): TajniAgentiSecretCard[] {
+    return this.state.cards.map((c) => ({
+      id: c.id,
+      word: c.word,
+      type: (c.duet![side] === 'agent'
+        ? 'agent'
+        : c.duet![side]) as TajniAgentiCardType,
+      revealed: c.revealed,
+      bystanderFor: c.bystanderFor ? [...c.bystanderFor] : undefined,
+    }));
   }
 
   private buildGameState(room: Room): GameState {
     const phase = this.state.phase;
+    const mode = this.state.mode;
     const publicCards = this.state.cards.map((c) => this.toPublicCard(c));
     const redRemaining = this.teamRemaining('red');
     const blueRemaining = this.teamRemaining('blue');
+    const agentsTotal =
+      mode === 'duet' ? this.duetAgentsTotal() : mode === 'coop' ? 9 : 0;
+    const agentsFound =
+      mode === 'duet'
+        ? this.duetAgentsFound()
+        : mode === 'coop'
+          ? agentsTotal - this.teamRemaining(COOP_TEAM)
+          : 0;
 
     const data: Record<string, unknown> = {
       phase,
+      mode,
       cards: publicCards,
       currentTeam: this.state.currentTeam,
       startingTeam: this.state.startingTeam,
@@ -691,6 +958,12 @@ export class TajniAgentiModule extends BaseGameModule {
         spymasterId: this.state.spymasters.blue,
       },
     };
+
+    if (mode !== 'classic') {
+      data.turnsRemaining = Math.max(0, this.state.turnsRemaining);
+      data.agentsFound = agentsFound;
+      data.agentsTotal = agentsTotal;
+    }
 
     if (phase === 'team-selection') {
       data.rosters = this.evaluateRosters(room);
@@ -709,35 +982,52 @@ export class TajniAgentiModule extends BaseGameModule {
         reason: this.state.winReason,
         redRemaining,
         blueRemaining,
+        agentsFound: mode === 'classic' ? undefined : agentsFound,
+        agentsTotal: mode === 'classic' ? undefined : agentsTotal,
       };
     }
 
-    // Per-player view: team membership + spymaster's secret board.
+    // Per-player view: team membership + the player's secret board slice.
     const playerData: Record<string, Record<string, unknown>> = {};
     for (const player of room.players) {
       const team = this.playerTeam(player.id);
-      const isSpymaster =
-        team !== null && this.state.spymasters[team] === player.id;
-      const isCurrentSpymaster =
-        isSpymaster && this.state.currentTeam === team;
-      const isCurrentGuesser =
-        team !== null &&
-        this.state.currentTeam === team &&
-        !isSpymaster;
+      let isSpymaster: boolean;
+      let isCurrentSpymaster: boolean;
+      let isCurrentGuesser: boolean;
+      if (mode === 'duet') {
+        // Everyone always sees their own side of the key ("spymaster"),
+        // gives clues when their side is up, and guesses the other side's.
+        isSpymaster = team !== null;
+        isCurrentSpymaster = team !== null && this.state.currentTeam === team;
+        isCurrentGuesser =
+          team !== null && this.guessingSide() === team && !isCurrentSpymaster;
+      } else {
+        isSpymaster =
+          team !== null && this.state.spymasters[team] === player.id;
+        isCurrentSpymaster =
+          isSpymaster && this.state.currentTeam === team;
+        isCurrentGuesser =
+          team !== null &&
+          this.state.currentTeam === team &&
+          !isSpymaster;
+      }
       const myData: Record<string, unknown> = {
         team,
         isSpymaster,
         isCurrentSpymaster,
         isCurrentGuesser,
       };
-      if (isSpymaster) {
+      if (isSpymaster && team !== null) {
         // Send the secret board view so they can see all colours.
-        myData.secretCards = this.state.cards.map((c) => ({
-          id: c.id,
-          word: c.word,
-          type: c.type,
-          revealed: c.revealed,
-        }));
+        myData.secretCards =
+          mode === 'duet'
+            ? this.duetSideView(team)
+            : this.state.cards.map((c) => ({
+                id: c.id,
+                word: c.word,
+                type: c.type,
+                revealed: c.revealed,
+              }));
       }
       playerData[player.id] = myData;
     }

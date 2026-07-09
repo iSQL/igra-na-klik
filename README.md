@@ -226,7 +226,7 @@ in the game until they validate.
 - [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
 - [x] **Phase 9** — Foto kviz (multiple-choice variant of Pogodi gde je — 4 captioned answers, speed scoring)
 - [x] **Phase 10** — Ko sam ja (personal-question party game — players guess each other's answers, four question shapes including peer-name picks)
-- [x] **Phase 11** — Tajni agenti (Codenames-style team game — two teams, one spymaster per team, 5×5 word grid, Serbian-only content)
+- [x] **Phase 11** — Tajni agenti (Codenames-style team game — 5×5 word grid, Serbian-only content; three modes: classic two-team duel, cooperative Duet and spymaster-vs-board co-op, the latter two playable with just 2 players)
 
 ### What's Implemented
 
@@ -362,8 +362,11 @@ in the game until they validate.
 - Host display: question text with subject name highlighted, faded option cards during `subject-picking`, full color grid during `guessing`, per-guesser breakdown + subject-bonus panel on `showing-results`, reused Quiz leaderboard between rounds.
 
 **Tajni agenti (Codenames-style)** — *Serbian-only content*
-- 4–8 players split across two teams (crveni / plavi). First **team mechanic** in the codebase — team rosters and spymaster roles live inside the game module rather than on the global `Player` shape.
-- **Phase flow**: `team-selection → [clue-giving (90s) → guessing (90s) → turn-results (5s)] × … → ended`. Turns alternate between teams; the game ends as soon as a team reveals all of their words or someone hits the assassin.
+- **2–8 players, three modes** picked on the game-select screen before starting (`tajniAgentiMode` in `host:start-game`): **Klasik** (the original two-team duel, needs 4+), **Duet** (cooperative Codenames: Duet — works from just 2 players) and **Kooperativni** (spymaster + guessers vs the board — also from 2 players). First **team mechanic** in the codebase — team rosters and spymaster roles live inside the game module rather than on the global `Player` shape.
+- **Klasik**: 4–8 players split across two teams (crveni / plavi), one spymaster per team, exactly as before.
+- **Duet**: two sides, no spymaster role — every player permanently sees their own side of a double key (9 agents / 3 assassins / 13 bystanders per side; 15 distinct agents total). Sides alternate giving clues to each other; guesses are judged against the clue-giver's key. Bystanders only "burn" the card for that direction, an assassin on the giver's side loses instantly, and the shared budget is **9 turns** to find all 15 agents.
+- **Kooperativni**: everyone is one team, one player claims (or is randomly assigned) the spymaster role. Same 25-card board; find all 9 agents before the shared pool of **9 points** runs out — every turn costs 1 point, revealing an enemy-coloured card costs 1 extra, the assassin ends it all.
+- **Phase flow**: `team-selection → [clue-giving (90s) → guessing (90s) → turn-results (5s)] × … → ended`. Klasik/Duet alternate sides each turn; Kooperativni keeps looping on the single team. The game ends on all-words-found, the assassin, or (Duet/Koop) an exhausted turn/point budget.
 - **Self-pick team selection**: each controller offers Crveni / Plavi buttons + a "Volim biti špijun" volunteer toggle. Server validates both teams ≥ 2 players and a max 1-player imbalance before allowing the host's "Počni rundu" button. Host also has a "Pomiri timove" auto-balance button that randomly distributes unassigned players. At phase exit the server picks one spymaster per team — preferring a random volunteer, falling back to a random teammate.
 - **Board**: 25 cards in a 5×5 grid; the starting team gets 9, the other 8, plus 7 neutral and 1 assassin (classic Codenames distribution). Starting team is random per game.
 - **Secret board protection**: the host TV and all controllers receive only the *public* card list (word + revealed state; type only present for revealed cards). The full colour-keyed board is sent **only** inside `playerData[playerId]` to the two spymasters, so walking past the TV cannot leak the answer key.

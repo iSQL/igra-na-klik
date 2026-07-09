@@ -10,6 +10,7 @@ import type { DrawOp } from './draw-guess.js';
 import type { QuizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
+import type { TajniAgentiMode } from './tajni-agenti.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
 import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
@@ -72,6 +73,9 @@ export interface ClientToServerEvents {
     koSamJaCategory?: KoSamJaCategory;
     customKoSamJaQuestions?: KoSamJaImportQuestion[];
     customTajniAgentiPack?: TajniAgentiImportPack;
+    // Tajni agenti game mode ('classic' default). Re-validated server-side
+    // (classic needs ≥4 players, duet/coop need ≥2).
+    tajniAgentiMode?: TajniAgentiMode;
     // Gluvo doba host config: discussion timer, what a death reveals
     // ('role' | 'team' | 'none'), the peaceful-first-night rule, and the
     // optional neutral (Lesnik/Morana) and Vila roles.
