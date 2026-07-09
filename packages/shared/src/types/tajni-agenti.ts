@@ -70,6 +70,8 @@ export interface TajniAgentiTurnResultsData {
   log: TajniAgentiTurnLogEntry[];
   endReason: 'wrong-team' | 'neutral' | 'assassin' | 'count-reached' | 'ended-early' | 'timeout';
   nextTeam: TajniAgentiTeam | null;
+  /** Set when this turn ends the game — the winning team is announced here. */
+  winner?: TajniAgentiTeam | null;
 }
 
 export interface TajniAgentiEndedData {

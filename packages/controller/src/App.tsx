@@ -356,7 +356,13 @@ export function App() {
       const mine = myId
         ? finalScores.find((s) => s.playerId === myId)
         : undefined;
-      if (mine) {
+      // Only show a personal placement when the scores actually rank players.
+      // Team games (e.g. Tajni agenti) never set per-player scores, so
+      // everyone ties at 0 — a "1. mesto" badge for all would be misleading.
+      const scoresVary =
+        finalScores.length > 0 &&
+        finalScores.some((s) => s.score !== finalScores[0].score);
+      if (mine && scoresVary) {
         const sorted = [...finalScores].sort((a, b) => b.score - a.score);
         // Ties share the higher rank (two players at 1000 are both 1st).
         const rank = sorted.findIndex((s) => s.score === mine.score) + 1;

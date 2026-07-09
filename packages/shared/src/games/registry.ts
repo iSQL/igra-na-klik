@@ -120,11 +120,8 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   'tajni-agenti': {
     id: 'tajni-agenti',
     name: 'Tajni agenti',
-    // Floor is 2 (only allowed with a scenario loaded — see
-    // TajniAgentiModule.validateStart). Without a scenario the module
-    // still rejects under 4 players because the spymaster + guesser
-    // role split doesn't work below that.
-    minPlayers: 2,
+    // Two teams, each with a spymaster + at least one guesser → floor of 4.
+    minPlayers: 4,
     maxPlayers: 8,
     description:
       'Špijun daje šifru tima — saigrači pogađaju reči, ali pazi na ubicu!',

@@ -8,7 +8,6 @@ import {
   parseQuizImport,
   parseKoSamJaImport,
   parseTajniAgentiImport,
-  parseTajniAgentiScenarioImport,
   parseGluvoDobaPack,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
@@ -18,7 +17,7 @@ import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './adm
 
 /**
  * Admin CRUD API for JSON-only content packs: quiz question packs,
- * Ko sam ja packs, Tajni agenti word packs and Tajni agenti scenarios.
+ * Ko sam ja packs and Tajni agenti word packs.
  *
  * Same auth model as the geo admin (X-Admin-Token vs ADMIN_TOKEN). Unlike
  * geo-packs there are no images here, so editing is whole-file PUT: the
@@ -29,8 +28,8 @@ import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './adm
  * listing endpoints stay strict and simply skip such files. Writes are
  * strict for quiz / ko-sam-ja (the editor form builds one valid question
  * at a time) but lax for tajni-agenti packs (< 25 words allowed while
- * drafting) and scenarios (incomplete boards allowed while drafting) —
- * a draft that fails strict validation just stays invisible in the game.
+ * drafting) — a draft that fails strict validation just stays invisible in
+ * the game.
  */
 
 interface ContentDirs {
@@ -39,16 +38,11 @@ interface ContentDirs {
   quizImagesDir: string;
   koSamJaPacksDir: string;
   tajniAgentiPacksDir: string;
-  tajniAgentiScenariosDir: string;
   gluvoDobaPacksDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
 
-type CardType = 'red' | 'blue' | 'neutral' | 'assassin';
-const CARD_TYPES = new Set<CardType>(['red', 'blue', 'neutral', 'assassin']);
-
-const MAX_SCENARIO_CODE_LENGTH = 12;
 const MAX_NAME_LENGTH = 80;
 
 export function createContentAdminRouter(dirs: ContentDirs): Router {
@@ -424,86 +418,6 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     },
   });
 
-  // ---------- tajni agenti scenarios ---------------------------------------------
-  // File on disk: { code, name, cards: [{word, type}] × 25 }. Lax write:
-  // empty words / off-balance boards are storable drafts; the strict check
-  // result rides along in the response so the page can show why a draft is
-  // still invisible in the game.
-
-  function parseScenarioLax(
-    body: Record<string, unknown>
-  ):
-    | { ok: true; data: { code: string; name: string; cards: { word: string; type: CardType }[] } }
-    | { ok: false; error: string } {
-    if (typeof body.code !== 'string' || body.code.trim().length === 0)
-      return { ok: false, error: 'Nedostaje kod scenarija.' };
-    const code = body.code.trim().toUpperCase();
-    if (code.length > MAX_SCENARIO_CODE_LENGTH)
-      return {
-        ok: false,
-        error: `Kod sme imati najviše ${MAX_SCENARIO_CODE_LENGTH} znakova.`,
-      };
-    const name = parseName(body, true);
-    if (!name.ok) return { ok: false, error: name.error };
-    if (!Array.isArray(body.cards) || body.cards.length !== 25)
-      return { ok: false, error: 'Polje "cards" mora imati tačno 25 karata.' };
-    const cards: { word: string; type: CardType }[] = [];
-    for (let i = 0; i < body.cards.length; i++) {
-      const card = body.cards[i] as Record<string, unknown> | undefined;
-      if (!card || typeof card !== 'object')
-        return { ok: false, error: `Karta ${i + 1}: nije objekat.` };
-      const word = typeof card.word === 'string' ? card.word.trim() : '';
-      if (word.length > 30)
-        return { ok: false, error: `Karta ${i + 1}: reč predugačka (max 30).` };
-      if (typeof card.type !== 'string' || !CARD_TYPES.has(card.type as CardType))
-        return { ok: false, error: `Karta ${i + 1}: nevažeći tip.` };
-      cards.push({ word, type: card.type as CardType });
-    }
-    return { ok: true, data: { code, name: name.name as string, cards } };
-  }
-
-  function describeScenario(id: string, raw: unknown): Record<string, unknown> {
-    const obj = (raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? raw
-      : {}) as Record<string, unknown>;
-    const code = typeof obj.code === 'string' ? obj.code : '';
-    const name = typeof obj.name === 'string' ? obj.name : '';
-    // Normalize to exactly 25 renderable cards so the editor grid always
-    // has a full board even for malformed files.
-    const rawCards = Array.isArray(obj.cards) ? obj.cards : [];
-    const cards: { word: string; type: CardType }[] = [];
-    for (let i = 0; i < 25; i++) {
-      const card = rawCards[i] as Record<string, unknown> | undefined;
-      const word =
-        card && typeof card.word === 'string' ? card.word : '';
-      const type =
-        card && typeof card.type === 'string' && CARD_TYPES.has(card.type as CardType)
-          ? (card.type as CardType)
-          : 'neutral';
-      cards.push({ word, type });
-    }
-    const strict = parseTajniAgentiScenarioImport(raw);
-    return {
-      id,
-      code,
-      name,
-      cards,
-      visibleInGame: strict.ok,
-      error: strict.ok ? undefined : strict.error,
-      startingTeam: strict.ok ? strict.scenario.startingTeam : undefined,
-    };
-  }
-
-  /** Fresh board template: 9 red / 8 blue / 7 neutral / 1 assassin, empty words. */
-  function templateCards(): { word: string; type: CardType }[] {
-    const types: CardType[] = [];
-    for (let i = 0; i < 9; i++) types.push('red');
-    for (let i = 0; i < 8; i++) types.push('blue');
-    for (let i = 0; i < 7; i++) types.push('neutral');
-    types.push('assassin');
-    return types.map((type) => ({ word: '', type }));
-  }
-
   // ---------- gluvo doba role packs ---------------------------------------------
   // File on disk: { name?, wolves, roles: GluvoDobaRoleId[] }. A pack curates
   // which roles are in play; strict validation (valid wolf count + role ids)
@@ -540,33 +454,6 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
       const parsed = parseGluvoDobaPack(body);
       if (!parsed.ok) return { ok: false, error: parsed.error };
       return { ok: true, data: parsed.pack };
-    },
-  });
-
-  mountPackRoutes({
-    route: 'tajni-agenti-scenarios',
-    dir: dirs.tajniAgentiScenariosDir,
-    listKey: 'scenarios',
-    nameRequiredOnCreate: true,
-    describe: describeScenario,
-    create: (body, name) => {
-      if (typeof body.code !== 'string' || body.code.trim().length === 0)
-        return { ok: false, error: 'Nedostaje kod scenarija.' };
-      const code = body.code.trim().toUpperCase();
-      if (code.length > MAX_SCENARIO_CODE_LENGTH)
-        return {
-          ok: false,
-          error: `Kod sme imati najviše ${MAX_SCENARIO_CODE_LENGTH} znakova.`,
-        };
-      return {
-        ok: true,
-        data: { code, name: name as string, cards: templateCards() },
-      };
-    },
-    replace: (body) => {
-      const parsed = parseScenarioLax(body);
-      if (!parsed.ok) return parsed;
-      return { ok: true, data: parsed.data };
     },
   });
 

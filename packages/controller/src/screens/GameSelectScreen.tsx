@@ -391,7 +391,8 @@ export function GameSelectScreen() {
       >
         {games.map((game) => {
           const needsTv = room.hostless && !game.supportsHostless;
-          const lacking = connectedCount < game.minPlayers;
+          const minPlayers = game.minPlayers;
+          const lacking = connectedCount < minPlayers;
           const disabled = lacking || needsTv;
           const expanded = selectedGameId === game.id;
           return (
@@ -474,9 +475,9 @@ export function GameSelectScreen() {
                       }}
                     >
                       {t('gameSelect.needMore', {
-                        n: game.minPlayers - connectedCount,
+                        n: minPlayers - connectedCount,
                         noun: t(
-                          game.minPlayers - connectedCount === 1
+                          minPlayers - connectedCount === 1
                             ? 'common.player.one'
                             : 'common.player.many'
                         ),

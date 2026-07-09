@@ -132,18 +132,6 @@ export function GameSelectScreen() {
       gameId === 'tajni-agenti'
         ? useTajniAgentiImportStore.getState().customPack ?? undefined
         : undefined;
-    const tajniAgentiStore = useTajniAgentiImportStore.getState();
-    // Imported / server-pack scenario object takes precedence; built-in
-    // code is only sent if no object scenario is selected. Server
-    // re-validates the object regardless.
-    const customTajniAgentiScenario =
-      gameId === 'tajni-agenti' && tajniAgentiStore.customScenario
-        ? tajniAgentiStore.customScenario.scenario
-        : undefined;
-    const tajniAgentiScenarioCode =
-      gameId === 'tajni-agenti' && !customTajniAgentiScenario
-        ? tajniAgentiStore.scenarioCode ?? undefined
-        : undefined;
 
     const payload: HostStartGamePayload = {
       gameId,
@@ -155,8 +143,6 @@ export function GameSelectScreen() {
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
       customTajniAgentiPack,
-      tajniAgentiScenarioCode,
-      customTajniAgentiScenario,
       fakeArtistRounds:
         gameId === 'fake-artist' ? newGamesConfig.fakeArtistRounds : undefined,
       fakeArtistStrokes:
@@ -250,7 +236,8 @@ export function GameSelectScreen() {
         }}
       >
         {games.map((game) => {
-          const lacking = connectedCount < game.minPlayers;
+          const minPlayers = game.minPlayers;
+          const lacking = connectedCount < minPlayers;
           return (
           <div
             key={game.id}
@@ -300,9 +287,9 @@ export function GameSelectScreen() {
             >
               {lacking
                 ? t('gameSelect.needMore', {
-                    n: game.minPlayers - connectedCount,
+                    n: minPlayers - connectedCount,
                     noun: t(
-                      game.minPlayers - connectedCount === 1
+                      minPlayers - connectedCount === 1
                         ? 'common.player.one'
                         : 'common.player.many'
                     ),

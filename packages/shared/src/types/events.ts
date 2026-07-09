@@ -11,7 +11,6 @@ import type { QuizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
-import type { TajniAgentiScenario } from '../games/tajni-agenti-scenarios.js';
 import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
@@ -73,8 +72,6 @@ export interface ClientToServerEvents {
     koSamJaCategory?: KoSamJaCategory;
     customKoSamJaQuestions?: KoSamJaImportQuestion[];
     customTajniAgentiPack?: TajniAgentiImportPack;
-    tajniAgentiScenarioCode?: string;
-    customTajniAgentiScenario?: TajniAgentiScenario;
     // Gluvo doba host config: discussion timer, what a death reveals
     // ('role' | 'team' | 'none'), the peaceful-first-night rule, and the
     // optional neutral (Lesnik/Morana) and Vila roles.

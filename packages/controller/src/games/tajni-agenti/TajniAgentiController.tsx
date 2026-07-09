@@ -1092,6 +1092,19 @@ function TurnResultsScreen({
           </strong>
         </p>
       )}
+      {results.winner && (
+        <p
+          style={{
+            margin: '0.3rem 0 0',
+            textAlign: 'center',
+            fontSize: '1.15rem',
+            fontWeight: 800,
+            color: typeColor(results.winner),
+          }}
+        >
+          🏆 {teamLabel(results.winner)} tim pobeđuje!
+        </p>
+      )}
     </div>
   );
 }

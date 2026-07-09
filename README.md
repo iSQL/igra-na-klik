@@ -206,11 +206,8 @@ files the game reads, so changes are live immediately:
   hints. Writes `ko-sam-ja-packs/<id>.json`.
 - **`/admin/tajni-agenti`** — Tajni agenti word packs: one word per line with
   a live unique-word counter. Writes `tajni-agenti-packs/<id>.json`.
-- **`/admin/tajni-agenti-scenariji`** — pre-built Tajni agenti boards: a 5×5
-  grid where clicking a card's color strip cycles its type, with live
-  9/8/7/1 distribution counts. Writes `tajni-agenti-scenarios/<id>.json`.
 
-Drafts are always saveable: packs/scenarios that don't yet pass the in-game
+Drafts are always saveable: packs that don't yet pass the in-game
 validation (empty quiz pack, fewer than 25 words, incomplete board…) stay
 visible in the editor with a "nevidljiv u igri" badge and simply don't appear
 in the game until they validate.
@@ -245,7 +242,7 @@ in the game until they validate.
 - **Per-device** preference saved in `localStorage` (`igra-language`, default Serbian) — the TV and each phone keep their own choice; there is no room-wide language sync
 - Strings live in one shared dictionary ([packages/shared/src/i18n/strings.ts](packages/shared/src/i18n/strings.ts)) with a `translate()` helper and a `useT()` hook per app
 - **Translated**: all platform chrome (lobby, join, game-select, overlay/leave/reconnect/kick prompts, import & config panels), all nine game-select cards, and the three games **Crtaj i pogodi, Slepi telefoni, Pronađi par** (host + controller). In English mode, Crtaj i pogodi even draws from an English word bank (the host's language is passed to the server as a content hint)
-- **Still Serbian by design**: the in-game screens of the other six games, the shared import-validator error messages, and the built-in question/scenario content banks
+- **Still Serbian by design**: the in-game screens of the other six games, the shared import-validator error messages, and the built-in question content banks
 
 **Kviz (Quiz) — Serbian**
 - 30-question Serbian trivia bank (Latin script), 10 random per game

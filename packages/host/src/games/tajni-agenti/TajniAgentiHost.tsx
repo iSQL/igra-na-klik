@@ -600,6 +600,18 @@ function TurnResultsView({ results }: { results: TajniAgentiTurnResultsData }) {
             </strong>
           </p>
         )}
+        {results.winner && (
+          <p
+            style={{
+              margin: '0.6rem 0 0',
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: teamColor(results.winner),
+            }}
+          >
+            🏆 {teamLabel(results.winner)} tim pobeđuje!
+          </p>
+        )}
       </motion.div>
     </AnimatePresence>
   );

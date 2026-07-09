@@ -1,6 +1,6 @@
 /**
  * Shared HTML shell for the admin editor pages (kviz, ko-sam-ja,
- * tajni-agenti, scenariji). Same approach as geo-editor-page.ts: the whole
+ * tajni-agenti). Same approach as geo-editor-page.ts: the whole
  * page is a TS template literal, so the inline scripts must not contain
  * backticks or the dollar-brace sequence — page JS uses string concatenation.
  *
@@ -21,7 +21,6 @@ export interface AdminPageOptions {
     | 'kviz'
     | 'ko-sam-ja'
     | 'tajni-agenti'
-    | 'scenariji'
     | 'gluvo-doba'
     | 'pogodi-broj'
     | 'timinzi';
@@ -38,7 +37,6 @@ export const ADMIN_NAV_LINKS: ReadonlyArray<[key: string, href: string, label: s
   ['kviz', '/admin/kviz', 'Kviz'],
   ['ko-sam-ja', '/admin/ko-sam-ja', 'Ko sam ja'],
   ['tajni-agenti', '/admin/tajni-agenti', 'Tajni agenti'],
-  ['scenariji', '/admin/tajni-agenti-scenariji', 'Scenariji'],
   ['gluvo-doba', '/admin/gluvo-doba', 'Gluvo doba'],
   ['pogodi-broj', '/admin/pogodi-broj', 'Pogodi broj'],
   ['timinzi', '/admin/timinzi', 'Timinzi'],

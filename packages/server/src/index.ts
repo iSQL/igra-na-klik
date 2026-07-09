@@ -20,7 +20,6 @@ import {
   parseQuizImport,
   parseKoSamJaImport,
   parseTajniAgentiImport,
-  parseTajniAgentiScenarioImport,
   SERBIAN_DISTRICTS,
 } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
@@ -39,7 +38,6 @@ import { renderTimingEditorPage } from './admin/timing-editor-page.js';
 import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
 import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
 import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
-import { renderTajniAgentiScenarioEditorPage } from './admin/tajni-agenti-scenario-editor-page.js';
 import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
 import { createPogodiBrojAdminRouter } from './admin/pogodi-broj-admin.js';
 import { renderPogodiBrojEditorPage } from './admin/pogodi-broj-editor-page.js';
@@ -71,9 +69,6 @@ const KO_SAM_JA_PACKS_DIR = process.env.KO_SAM_JA_PACKS_DIR
 const TAJNI_AGENTI_PACKS_DIR = process.env.TAJNI_AGENTI_PACKS_DIR
   ? path.resolve(process.env.TAJNI_AGENTI_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'tajni-agenti-packs');
-const TAJNI_AGENTI_SCENARIOS_DIR = process.env.TAJNI_AGENTI_SCENARIOS_DIR
-  ? path.resolve(process.env.TAJNI_AGENTI_SCENARIOS_DIR)
-  : path.resolve(__dirname, '../../..', 'tajni-agenti-scenarios');
 const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
   ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
@@ -311,69 +306,6 @@ app.get('/api/tajni-agenti-packs', async (_req, res) => {
   }
 });
 
-app.get('/api/tajni-agenti-scenarios', async (_req, res) => {
-  try {
-    const entries = await readdir(TAJNI_AGENTI_SCENARIOS_DIR, {
-      withFileTypes: true,
-    });
-    const jsonFiles = entries.filter(
-      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
-    );
-
-    const scenarios: Array<{
-      id: string;
-      fileName: string;
-      code: string;
-      name: string;
-      startingTeam: 'red' | 'blue';
-      cardCount: number;
-      // Full scenario shape, sent to the host so it can submit the
-      // resolved object back to the server when starting a game.
-      scenario: {
-        code: string;
-        name: string;
-        cards: { word: string; type: 'red' | 'blue' | 'neutral' | 'assassin' }[];
-      };
-    }> = [];
-
-    for (const entry of jsonFiles) {
-      try {
-        const raw = await readFile(
-          path.join(TAJNI_AGENTI_SCENARIOS_DIR, entry.name),
-          'utf-8'
-        );
-        const parsed = parseTajniAgentiScenarioImport(JSON.parse(raw));
-        if (!parsed.ok) continue;
-        scenarios.push({
-          id: entry.name.replace(/\.json$/i, ''),
-          fileName: entry.name,
-          code: parsed.scenario.code,
-          name: parsed.scenario.name,
-          startingTeam: parsed.scenario.startingTeam,
-          cardCount: parsed.scenario.cards.length,
-          scenario: {
-            code: parsed.scenario.code,
-            name: parsed.scenario.name,
-            cards: parsed.scenario.cards,
-          },
-        });
-      } catch {
-        // Skip unreadable or malformed files.
-      }
-    }
-
-    scenarios.sort((a, b) => a.id.localeCompare(b.id));
-    res.json({ scenarios });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      res.json({ scenarios: [] });
-      return;
-    }
-    console.error('Failed to read tajni-agenti scenarios directory:', err);
-    res.status(500).json({ error: 'Failed to read tajni-agenti scenarios' });
-  }
-});
-
 app.get('/api/geo-packs', async (_req, res) => {
   try {
     const packs = await listGeoPacks(GEO_PACKS_DIR);
@@ -435,7 +367,7 @@ app.use(
 
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
-// (geo, kviz, ko-sam-ja, tajni-agenti packs + scenarios). See ADMIN_TOKEN in
+// (geo, kviz, ko-sam-ja, tajni-agenti packs). See ADMIN_TOKEN in
 // the environment; without it the APIs answer 403 and the pages can't login.
 app.use('/api/admin', createGeoAdminRouter(GEO_PACKS_DIR));
 app.use(
@@ -445,7 +377,6 @@ app.use(
     quizImagesDir: QUIZ_IMAGES_DIR,
     koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
-    tajniAgentiScenariosDir: TAJNI_AGENTI_SCENARIOS_DIR,
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
   })
 );
@@ -461,7 +392,6 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/kviz', renderQuizEditorPage()],
   ['/admin/ko-sam-ja', renderKoSamJaEditorPage()],
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
-  ['/admin/tajni-agenti-scenariji', renderTajniAgentiScenarioEditorPage()],
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
   ['/admin/pogodi-broj', renderPogodiBrojEditorPage()],
   ['/admin/timinzi', renderTimingEditorPage()],
@@ -800,13 +730,12 @@ httpServer.listen(PORT, () => {
   console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
   console.log(`Pogodi broj packs dir: ${POGODI_BROJ_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
-  console.log(`Tajni agenti scenarios dir: ${TAJNI_AGENTI_SCENARIOS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }
   console.log(
     process.env.ADMIN_TOKEN
-      ? 'Admin editors enabled at /admin (geo, kviz, ko-sam-ja, tajni-agenti, scenariji)'
+      ? 'Admin editors enabled at /admin (geo, kviz, ko-sam-ja, tajni-agenti)'
       : 'Admin editors disabled (set ADMIN_TOKEN to enable)'
   );
 });

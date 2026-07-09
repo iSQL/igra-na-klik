@@ -15,8 +15,6 @@ import {
   TAJNI_AGENTI_BOARD_SIZE,
   TAJNI_AGENTI_NEUTRAL_CARDS,
   TAJNI_AGENTI_ASSASSIN_CARDS,
-  findTajniAgentiScenarioByCode,
-  parseTajniAgentiScenarioImport,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
@@ -33,8 +31,6 @@ import type { TajniAgentiInternalState } from './TajniAgentiState.js';
 
 interface TajniAgentiCustomContent {
   customTajniAgentiPack?: unknown;
-  tajniAgentiScenarioCode?: unknown;
-  customTajniAgentiScenario?: unknown;
 }
 
 const OTHER_TEAM: Record<TajniAgentiTeam, TajniAgentiTeam> = {
@@ -48,18 +44,11 @@ export class TajniAgentiModule extends BaseGameModule {
   private state!: TajniAgentiInternalState;
   private timings: Record<string, number> = {};
 
-  validateStart(room: Room, customContent?: unknown): string | null {
-    const cc = customContent as TajniAgentiCustomContent | undefined;
-    const hasScenario =
-      cc?.customTajniAgentiScenario !== undefined ||
-      (typeof cc?.tajniAgentiScenarioCode === 'string' &&
-        cc.tajniAgentiScenarioCode.trim().length > 0);
+  validateStart(room: Room, _customContent?: unknown): string | null {
+    // Two teams, each with a spymaster + at least one guesser → floor of 4.
     const connected = room.players.filter((p) => p.isConnected);
-    const minPlayers = hasScenario ? 2 : 4;
-    if (connected.length < minPlayers) {
-      return `Tajni agenti zahteva najmanje ${minPlayers} igrača${
-        hasScenario ? '' : ' (sa scenariom dovoljno je 2)'
-      }.`;
+    if (connected.length < 4) {
+      return 'Tajni agenti zahteva najmanje 4 igrača.';
     }
     return null;
   }
@@ -68,39 +57,15 @@ export class TajniAgentiModule extends BaseGameModule {
     this.timings = getGameTimings(this.gameId);
     const cc = customContent as TajniAgentiCustomContent | undefined;
 
-    // Hidden scenario code OR an imported scenario object takes
-    // precedence over the word-pack flow — it pins a specific board
-    // (words + colour assignments) so a host can replay or share a
-    // known layout. We always re-validate server-side: the host might
-    // have a stale dist, an out-of-spec file, or a malicious payload.
-    let cards: TajniAgentiSecretCard[];
-    let startingTeam: TajniAgentiTeam;
-    let scenario = null as ReturnType<typeof findTajniAgentiScenarioByCode>;
-    if (cc?.customTajniAgentiScenario !== undefined) {
-      const parsed = parseTajniAgentiScenarioImport(cc.customTajniAgentiScenario);
-      if (parsed.ok) scenario = parsed.scenario;
-    }
-    if (!scenario && typeof cc?.tajniAgentiScenarioCode === 'string') {
-      scenario = findTajniAgentiScenarioByCode(cc.tajniAgentiScenarioCode);
-    }
-    if (scenario) {
-      startingTeam = scenario.startingTeam;
-      cards = scenario.cards.map((c, idx) => ({
-        id: idx,
-        word: c.word,
-        type: c.type,
-        revealed: false,
-      }));
-    } else {
-      const words = this.resolveWords(cc?.customTajniAgentiPack);
-      startingTeam = Math.random() < 0.5 ? 'red' : 'blue';
-      cards = this.buildBoard(words, startingTeam);
-    }
+    const words = this.resolveWords(cc?.customTajniAgentiPack);
+    const startingTeam: TajniAgentiTeam = Math.random() < 0.5 ? 'red' : 'blue';
+    const cards = this.buildBoard(words, startingTeam);
 
     this.state = {
       phase: 'team-selection',
       phaseTimeRemaining: TEAM_SELECTION_DURATION,
-      isScenarioMode: scenario !== null,
+      // Scenario mode was removed — always the standard two-team flow.
+      isScenarioMode: false,
       cards,
       teams: { red: [], blue: [] },
       spymasters: { red: null, blue: null },
@@ -639,9 +604,12 @@ export class TajniAgentiModule extends BaseGameModule {
     this.state.winner = winner;
     this.state.winReason = reason;
     // Overwrite the just-set turn-results to ensure post-turn-results
-    // we jump to the ended phase rather than another clue-giving.
+    // we jump to the ended phase rather than another clue-giving, and to
+    // announce the winner on the turn-results screen (the phones' final
+    // notice overlay would otherwise cover the ended screen instantly).
     if (this.state.lastTurnResults) {
       this.state.lastTurnResults.nextTeam = null;
+      this.state.lastTurnResults.winner = winner;
     }
   }
 
