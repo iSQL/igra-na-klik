@@ -12,7 +12,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   'draw-guess': {
     id: 'draw-guess',
     name: 'Crtaj i pogodi',
-    minPlayers: 3,
+    minPlayers: 2,
     maxPlayers: 8,
     description: 'Crtajte redom — ostali pogađaju reč!',
     supportsHostless: true,
@@ -29,7 +29,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   fibbage: {
     id: 'fibbage',
     name: 'Lažov',
-    minPlayers: 3,
+    minPlayers: 2,
     maxPlayers: 8,
     description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
     supportsHostless: true,
