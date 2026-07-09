@@ -73,35 +73,124 @@ export default function PogodiGodinuController() {
   if (phase === 'reveal') {
     const dist = my?.ownDistance;
     const pts = my?.ownPoints ?? 0;
+    const results = host.results ?? [];
     return (
-      <div style={wrap}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Tačna godina
-        </p>
-        <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
-          {host.trueYear}
-        </p>
-        {dist === null || dist === undefined ? (
-          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-            Nisi zaključao godinu
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          padding: '1rem',
+          gap: '0.75rem',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Tačna godina
           </p>
-        ) : (
-          <>
-            <p style={{ fontSize: '1.05rem' }}>
+          <p
+            style={{
+              fontSize: '2.6rem',
+              fontWeight: 800,
+              color: 'var(--accent)',
+              margin: '0.1rem 0',
+            }}
+          >
+            {host.trueYear}
+          </p>
+          {dist === null || dist === undefined ? (
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+              Nisi zaključao godinu
+            </p>
+          ) : (
+            <p style={{ fontSize: '1rem', margin: 0 }}>
               {my?.wasExact
                 ? 'Pun pogodak! 🎯'
                 : `Promašio si za ${dist} ${dist === 1 ? 'godinu' : 'godina'}`}
+              {' · '}
+              <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+                +{pts}
+              </strong>
             </p>
-            <p
-              style={{
-                fontSize: '1.4rem',
-                fontWeight: 800,
-                color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)',
-              }}
-            >
-              +{pts} poena
-            </p>
-          </>
+          )}
+        </div>
+
+        {results.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            {results.map((r) => {
+              const isMe = r.playerId === playerId;
+              return (
+                <div
+                  key={r.playerId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.45rem 0.6rem',
+                    background: isMe
+                      ? 'rgba(194,155,71,.16)'
+                      : 'var(--bg-secondary)',
+                    border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                    borderRadius: '0.5rem',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      background: r.avatarColor,
+                      flex: 'none',
+                    }}
+                  />
+                  <span
+                    style={{
+                      flex: 1,
+                      textAlign: 'left',
+                      fontWeight: isMe ? 800 : 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {r.name}
+                  </span>
+                  <span
+                    style={{
+                      color: 'var(--text-secondary)',
+                      minWidth: '3.5ch',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {r.guess ?? '—'}
+                  </span>
+                  <span
+                    style={{
+                      color: 'var(--text-secondary)',
+                      minWidth: '4ch',
+                      textAlign: 'right',
+                      fontSize: '0.78rem',
+                    }}
+                  >
+                    {r.distance === null ? '' : `±${r.distance}`}
+                  </span>
+                  <span
+                    style={{
+                      fontWeight: 800,
+                      minWidth: '3ch',
+                      textAlign: 'right',
+                      color: r.points > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    +{r.points}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     );
