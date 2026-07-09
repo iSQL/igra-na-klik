@@ -125,5 +125,9 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Špijun daje šifru tima — saigrači pogađaju reči, ali pazi na ubicu!',
+    // Hostless-capable: the controller renders the full board (interactive for
+    // the active guesser, secret key for spymasters) and, in hostless rooms,
+    // a read-only board for waiting players — everything the TV would show.
+    supportsHostless: true,
   },
 };

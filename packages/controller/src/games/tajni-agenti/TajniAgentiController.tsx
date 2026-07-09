@@ -44,6 +44,7 @@ export default function TajniAgentiController() {
   const remoteHostPlayerId = usePlayerStore(
     (s) => s.room?.remoteHostPlayerId ?? null
   );
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
 
   if (!gameState || !playerId) return null;
   const { phase, data, playerData } = gameState;
@@ -84,14 +85,26 @@ export default function TajniAgentiController() {
       );
     }
     const currentTeam = data.currentTeam as TajniAgentiTeam;
+    const title = `${teamLabel(currentTeam)} špijun bira šifru…`;
+    const subtitle =
+      my.team === currentTeam
+        ? 'Pripremi se da pogađaš.'
+        : 'Drugi tim je na potezu.';
+    // Hostless: no TV, so waiting players follow the board on their phone.
+    if (hostless) {
+      return (
+        <WaitingBoard
+          cards={(data.cards as TajniAgentiPublicCard[]) ?? []}
+          title={title}
+          subtitle={subtitle}
+          accent={typeColor(currentTeam)}
+        />
+      );
+    }
     return (
       <WaitingMessage
-        title={`${teamLabel(currentTeam)} špijun bira šifru…`}
-        subtitle={
-          my.team === currentTeam
-            ? 'Pripremi se da pogađaš.'
-            : 'Drugi tim je na potezu.'
-        }
+        title={title}
+        subtitle={subtitle}
         accent={typeColor(currentTeam)}
       />
     );
@@ -124,14 +137,26 @@ export default function TajniAgentiController() {
       );
     }
     const currentTeam = data.currentTeam as TajniAgentiTeam;
+    const title = `${teamLabel(currentTeam)} tim pogađa…`;
+    const subtitle = clue
+      ? `Šifra: ${clue.word.toUpperCase()} · ${clue.count}`
+      : undefined;
+    // Hostless: show the read-only board so everyone can follow the guesses.
+    if (hostless) {
+      return (
+        <WaitingBoard
+          cards={cards}
+          clue={clue}
+          title={title}
+          subtitle={subtitle}
+          accent={typeColor(currentTeam)}
+        />
+      );
+    }
     return (
       <WaitingMessage
-        title={`${teamLabel(currentTeam)} tim pogađa…`}
-        subtitle={
-          clue
-            ? `Šifra: ${clue.word.toUpperCase()} · ${clue.count}`
-            : undefined
-        }
+        title={title}
+        subtitle={subtitle}
         accent={typeColor(currentTeam)}
       />
     );
@@ -854,6 +879,103 @@ function SecretMiniBoard({ cards }: { cards: TajniAgentiSecretCard[] }) {
 }
 
 // ============================================================ waiting
+
+// Hostless-only: a read-only board with a status header, shown to players who
+// are waiting (not the active guesser/spymaster) so they can follow along on
+// their phone when there is no TV. Never interactive — no card taps.
+function WaitingBoard({
+  cards,
+  clue,
+  title,
+  subtitle,
+  accent,
+}: {
+  cards: TajniAgentiPublicCard[];
+  clue?: TajniAgentiClue;
+  title: string;
+  subtitle?: string;
+  accent?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.4rem',
+        padding: '0.5rem',
+        height: '100%',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: 800,
+            color: accent ?? 'var(--text-primary)',
+          }}
+        >
+          {title}
+        </p>
+        {(clue || subtitle) && (
+          <p
+            style={{
+              margin: '0.1rem 0 0',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {clue ? `Šifra: ${clue.word.toUpperCase()} · ${clue.count}` : subtitle}
+          </p>
+        )}
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: '0.3rem',
+          flex: '1 1 auto',
+        }}
+      >
+        {cards.map((card) => {
+          const bg =
+            card.revealed && card.type ? typeColor(card.type) : '#f3eedd';
+          const fg = card.revealed
+            ? card.type === 'assassin'
+              ? 'var(--danger)'
+              : card.type === 'neutral'
+                ? '#2b230f'
+                : '#fff'
+            : '#2b2412';
+          return (
+            <div
+              key={card.id}
+              style={{
+                background: bg,
+                color: fg,
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                padding: '0.15rem',
+                borderRadius: '0.35rem',
+                textTransform: 'uppercase',
+                wordBreak: 'break-word',
+                lineHeight: 1.05,
+                minHeight: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                opacity: card.revealed ? 1 : 0.92,
+              }}
+            >
+              {card.word}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function WaitingMessage({
   title,
