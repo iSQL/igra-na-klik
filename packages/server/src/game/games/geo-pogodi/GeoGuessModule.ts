@@ -23,6 +23,7 @@ import {
   svgToLatLng,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import {
   DEFAULT_PHOTOS_PER_PLAYER,
   FINAL_LEADERBOARD_DURATION,
@@ -79,6 +80,7 @@ export class GeoGuessModule extends BaseGameModule {
   }
 
   private state!: GeoGuessInternalState;
+  private timings: Record<string, number> = {};
   // Round cap for predefined mode (custom mode uses every uploaded photo).
   private desiredRounds = GAME_ROUND_CONFIG['geo-pogodi'].default;
 
@@ -96,13 +98,14 @@ export class GeoGuessModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const cc = (customContent as GeoCustomContent | undefined) ?? {};
     const mode: GeoGuessMode = cc.geoMode === 'custom' ? 'custom' : 'predefined';
     this.desiredRounds = clampGameRounds(this.gameId, cc.roundCount);
 
     this.state = {
       phase: 'intro',
-      phaseTimeRemaining: INTRO_DURATION,
+      phaseTimeRemaining: this.timings.INTRO_DURATION ?? INTRO_DURATION,
       mode,
       packName: undefined,
       map: undefined,
@@ -228,7 +231,7 @@ export class GeoGuessModule extends BaseGameModule {
       : SERBIA_DECAY_KM;
     this.state.currentRoundIndex = 0;
     this.state.phase = 'intro';
-    this.state.phaseTimeRemaining = INTRO_DURATION;
+    this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
     void room;
   }
 
@@ -320,7 +323,7 @@ export class GeoGuessModule extends BaseGameModule {
     this.state.totalRounds = all.length;
     this.state.currentRoundIndex = 0;
     this.state.phase = 'intro';
-    this.state.phaseTimeRemaining = INTRO_DURATION;
+    this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
     void room;
   }
 
@@ -393,11 +396,11 @@ export class GeoGuessModule extends BaseGameModule {
       case 'intro':
         // Defensive: nothing loaded yet (race between loadPredefinedPack and the tick).
         if (this.state.locations.length === 0) {
-          this.state.phaseTimeRemaining = INTRO_DURATION;
+          this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
           return;
         }
         this.state.phase = 'viewing';
-        this.state.phaseTimeRemaining = VIEWING_DURATION;
+        this.state.phaseTimeRemaining = this.timings.VIEWING_DURATION ?? VIEWING_DURATION;
         return;
 
       case 'viewing':
@@ -428,7 +431,7 @@ export class GeoGuessModule extends BaseGameModule {
     const current = this.currentLocation();
     if (!current) {
       this.state.phase = 'final-leaderboard';
-      this.state.phaseTimeRemaining = FINAL_LEADERBOARD_DURATION;
+      this.state.phaseTimeRemaining = this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
       return;
     }
 
@@ -483,19 +486,19 @@ export class GeoGuessModule extends BaseGameModule {
     this.state.roundResultsHistory.push(results);
 
     this.state.phase = 'reveal';
-    this.state.phaseTimeRemaining = REVEAL_DURATION;
+    this.state.phaseTimeRemaining = this.timings.REVEAL_DURATION ?? REVEAL_DURATION;
   }
 
   private advanceFromReveal(_room: Room): void {
     const next = this.state.currentRoundIndex + 1;
     if (next >= this.state.locations.length) {
       this.state.phase = 'final-leaderboard';
-      this.state.phaseTimeRemaining = FINAL_LEADERBOARD_DURATION;
+      this.state.phaseTimeRemaining = this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
       return;
     }
     this.state.currentRoundIndex = next;
     this.state.phase = 'viewing';
-    this.state.phaseTimeRemaining = VIEWING_DURATION;
+    this.state.phaseTimeRemaining = this.timings.VIEWING_DURATION ?? VIEWING_DURATION;
     this.state.pinsThisRound = new Map();
   }
 

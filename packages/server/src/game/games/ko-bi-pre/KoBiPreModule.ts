@@ -9,6 +9,7 @@ import type {
 } from '@igra/shared';
 import { KO_BI_PRE_PROMPTS, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { KoBiPreInternalState } from './KoBiPreState.js';
 import {
   CORRECT_CROWD_POINTS,
@@ -31,8 +32,10 @@ export class KoBiPreModule extends BaseGameModule {
   readonly gameId = 'ko-bi-pre';
 
   private state!: KoBiPreInternalState;
+  private timings: Record<string, number> = {};
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const rounds = clampRounds(
       (customContent as { koBiPreRounds?: unknown } | undefined)?.koBiPreRounds
     );
@@ -137,7 +140,8 @@ export class KoBiPreModule extends BaseGameModule {
     this.state.roundScores = scores;
 
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private nextRoundOrEnd(room: Room): void {

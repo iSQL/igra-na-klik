@@ -36,3 +36,4 @@ export * from './games/tajni-agenti-scenarios.js';
 export * from './types/gluvo-doba.js';
 export * from './games/gluvo-doba-roles.js';
 export * from './games/gluvo-doba-import.js';
+export * from './games/game-timings.js';

@@ -19,6 +19,7 @@ import {
   parseTajniAgentiScenarioImport,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import {
   TEAM_SELECTION_DURATION,
   CLUE_GIVING_DURATION,
@@ -45,6 +46,7 @@ export class TajniAgentiModule extends BaseGameModule {
   readonly gameId = 'tajni-agenti';
 
   private state!: TajniAgentiInternalState;
+  private timings: Record<string, number> = {};
 
   validateStart(room: Room, customContent?: unknown): string | null {
     const cc = customContent as TajniAgentiCustomContent | undefined;
@@ -63,6 +65,7 @@ export class TajniAgentiModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const cc = customContent as TajniAgentiCustomContent | undefined;
 
     // Hidden scenario code OR an imported scenario object takes
@@ -625,7 +628,8 @@ export class TajniAgentiModule extends BaseGameModule {
     };
     this.state.currentTeam = nextTeam;
     this.state.phase = 'turn-results';
-    this.state.phaseTimeRemaining = TURN_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.TURN_RESULTS_DURATION ?? TURN_RESULTS_DURATION;
   }
 
   private endGameWithWinner(

@@ -18,6 +18,7 @@ import {
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { DrawGuessInternalState, DrawGuessPhase } from './DrawGuessState.js';
 import {
   CHOOSING_WORD_DURATION,
@@ -30,6 +31,7 @@ export class DrawGuessModule extends BaseGameModule {
   readonly gameId = 'draw-guess';
 
   private state!: DrawGuessInternalState;
+  private timings: Record<string, number> = {};
   private usedWords = new Set<string>();
   // The host's UI language at start time, used only to pick the word bank.
   private language: Language = 'sr';
@@ -46,6 +48,7 @@ export class DrawGuessModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const opts = customContent as
       | { language?: Language; roundCount?: number }
       | undefined;
@@ -260,7 +263,8 @@ export class DrawGuessModule extends BaseGameModule {
 
       case 'turn-results':
         this.state.phase = 'leaderboard';
-        this.state.phaseTimeRemaining = LEADERBOARD_DURATION;
+        this.state.phaseTimeRemaining =
+          this.timings.LEADERBOARD_DURATION ?? LEADERBOARD_DURATION;
         break;
 
       case 'leaderboard':
@@ -303,7 +307,8 @@ export class DrawGuessModule extends BaseGameModule {
       });
 
     this.state.phase = 'turn-results';
-    this.state.phaseTimeRemaining = TURN_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.TURN_RESULTS_DURATION ?? TURN_RESULTS_DURATION;
   }
 
   private nextTurnOrEnd(room: Room): void {

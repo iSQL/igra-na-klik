@@ -9,6 +9,7 @@ import type {
 } from '@igra/shared';
 import { POGODI_GODINU_EVENTS, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { PogodiGodinuInternalState } from './PogodiGodinuState.js';
 import {
   DEFAULT_ROUNDS,
@@ -35,8 +36,10 @@ export class PogodiGodinuModule extends BaseGameModule {
   readonly gameId = 'pogodi-godinu';
 
   private state!: PogodiGodinuInternalState;
+  private timings: Record<string, number> = {};
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const rounds = clampRounds(
       (customContent as { pogodiGodinuRounds?: unknown } | undefined)
         ?.pogodiGodinuRounds
@@ -44,7 +47,7 @@ export class PogodiGodinuModule extends BaseGameModule {
     const events = shuffled(POGODI_GODINU_EVENTS).slice(0, rounds);
     this.state = {
       phase: 'intro',
-      phaseTimeRemaining: INTRO_DURATION,
+      phaseTimeRemaining: this.timings.INTRO_DURATION ?? INTRO_DURATION,
       events,
       currentIndex: 0,
       totalRounds: events.length,
@@ -112,7 +115,7 @@ export class PogodiGodinuModule extends BaseGameModule {
         this.state.currentIndex += 1;
         if (this.state.currentIndex >= this.state.totalRounds) {
           this.state.phase = 'final-leaderboard';
-          this.state.phaseTimeRemaining = FINAL_LEADERBOARD_DURATION;
+          this.state.phaseTimeRemaining = this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
         } else {
           this.enterGuessing(room);
         }
@@ -148,7 +151,7 @@ export class PogodiGodinuModule extends BaseGameModule {
     }
     this.state.roundScores = scores;
     this.state.phase = 'reveal';
-    this.state.phaseTimeRemaining = REVEAL_DURATION;
+    this.state.phaseTimeRemaining = this.timings.REVEAL_DURATION ?? REVEAL_DURATION;
   }
 
   private allGuessed(room: Room): boolean {

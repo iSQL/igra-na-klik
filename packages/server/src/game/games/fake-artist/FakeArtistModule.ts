@@ -14,6 +14,7 @@ import type {
 } from '@igra/shared';
 import { appendStrokeOp, getFakeArtistWords, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { FakeArtistInternalState } from './FakeArtistState.js';
 import {
   CORRECT_VOTE_POINTS,
@@ -63,17 +64,20 @@ export class FakeArtistModule extends BaseGameModule {
   readonly gameId = 'fake-artist';
 
   private state!: FakeArtistInternalState;
+  private timings: Record<string, number> = {};
   private language: Language = 'sr';
   private wordBank: FakeArtistWord[] = [];
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const opts = (customContent as FakeArtistCustomContent | undefined) ?? {};
     this.language = opts.language ?? 'sr';
     this.wordBank = getFakeArtistWords(this.language);
 
     this.state = {
       phase: 'reveal-role',
-      phaseTimeRemaining: REVEAL_ROLE_DURATION,
+      phaseTimeRemaining:
+        this.timings.REVEAL_ROLE_DURATION ?? REVEAL_ROLE_DURATION,
       totalRounds: clampRounds(opts.fakeArtistRounds),
       currentRound: 1,
       strokesPerPlayer: clampStrokes(opts.fakeArtistStrokes),
@@ -264,7 +268,8 @@ export class FakeArtistModule extends BaseGameModule {
     this.state.fakeCaught = false;
     this.state.roundScores = new Map();
     this.state.phase = 'reveal-role';
-    this.state.phaseTimeRemaining = REVEAL_ROLE_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.REVEAL_ROLE_DURATION ?? REVEAL_ROLE_DURATION;
   }
 
   private advanceOnTimeout(room: Room): void {
@@ -371,7 +376,8 @@ export class FakeArtistModule extends BaseGameModule {
     }
     this.state.roundScores = scores;
     this.state.phase = 'results';
-    this.state.phaseTimeRemaining = RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.RESULTS_DURATION ?? RESULTS_DURATION;
   }
 
   private nextRoundOrEnd(room: Room): void {

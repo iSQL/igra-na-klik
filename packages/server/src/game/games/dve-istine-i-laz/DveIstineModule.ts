@@ -11,6 +11,7 @@ import type {
 } from '@igra/shared';
 import { shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { DveIstineInternalState } from './DveIstineState.js';
 import {
   COLLECTING_DURATION,
@@ -26,8 +27,11 @@ export class DveIstineModule extends BaseGameModule {
   readonly gameId = 'dve-istine-i-laz';
 
   private state!: DveIstineInternalState;
+  /** Admin timing overrides (seconds), resolved at start; empty = use consts. */
+  private timings: Record<string, number> = {};
 
   onStart(room: Room): GameState {
+    this.timings = getGameTimings(this.gameId);
     const connected = room.players.filter((p) => p.isConnected);
     this.state = {
       phase: 'collecting',
@@ -221,7 +225,8 @@ export class DveIstineModule extends BaseGameModule {
 
     this.state.roundScores = scores;
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private nextRoundOrEnd(room: Room): void {

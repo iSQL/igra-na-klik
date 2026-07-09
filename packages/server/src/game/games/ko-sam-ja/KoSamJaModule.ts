@@ -17,6 +17,7 @@ import {
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import {
   COLLECTING_UPFRONT_DURATION,
   SHOWING_QUESTION_DURATION,
@@ -41,6 +42,7 @@ export class KoSamJaModule extends BaseGameModule {
   readonly gameId = 'ko-sam-ja';
 
   private state!: KoSamJaInternalState;
+  private timings: Record<string, number> = {};
 
   validateStart(_room: Room, customContent?: unknown): string | null {
     const cc = customContent as KoSamJaCustomContent | undefined;
@@ -57,6 +59,7 @@ export class KoSamJaModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const cc = customContent as KoSamJaCustomContent | undefined;
     const category: KoSamJaCategory =
       cc?.koSamJaCategory === 'nsfw' ? 'nsfw' : 'family';
@@ -331,7 +334,7 @@ export class KoSamJaModule extends BaseGameModule {
           // Subject didn't pick in time — skip the round.
           this.markRoundSkipped();
           this.state.phase = 'showing-results';
-          this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+          this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
         }
         // If a pick was made, we'd have already transitioned to guessing
         // from onPlayerAction; if we got here on a tick with a pick, just
@@ -353,7 +356,7 @@ export class KoSamJaModule extends BaseGameModule {
           this.state.currentRoundIndex++;
           this.resetRoundState();
           this.state.phase = 'showing-question';
-          this.state.phaseTimeRemaining = SHOWING_QUESTION_DURATION;
+          this.state.phaseTimeRemaining = this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION;
         } else {
           this.state.phase = 'ended';
           this.state.phaseTimeRemaining = 0;
@@ -388,7 +391,7 @@ export class KoSamJaModule extends BaseGameModule {
 
     this.resetRoundState();
     this.state.phase = 'showing-question';
-    this.state.phaseTimeRemaining = SHOWING_QUESTION_DURATION;
+    this.state.phaseTimeRemaining = this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION;
   }
 
   private transitionFromShowingQuestion(room: Room): void {
@@ -405,7 +408,7 @@ export class KoSamJaModule extends BaseGameModule {
     if (!subject || !subject.isConnected) {
       this.markRoundSkipped();
       this.state.phase = 'showing-results';
-      this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+      this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
       return;
     }
 
@@ -414,7 +417,7 @@ export class KoSamJaModule extends BaseGameModule {
       if (!ok) {
         this.markRoundSkipped();
         this.state.phase = 'showing-results';
-        this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+        this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
         return;
       }
       this.state.phase = 'subject-picking';
@@ -427,7 +430,7 @@ export class KoSamJaModule extends BaseGameModule {
       if (!ok) {
         this.markRoundSkipped();
         this.state.phase = 'showing-results';
-        this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+        this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
         return;
       }
       this.state.phase = 'subject-picking';
@@ -441,7 +444,7 @@ export class KoSamJaModule extends BaseGameModule {
       // free question whose options reference more peers than are present.
       this.markRoundSkipped();
       this.state.phase = 'showing-results';
-      this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+      this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
       return;
     }
     this.transitionToGuessing(room);
@@ -470,7 +473,7 @@ export class KoSamJaModule extends BaseGameModule {
       // reached this method via a guard) — mark as skipped.
       this.markRoundSkipped();
       this.state.phase = 'showing-results';
-      this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+      this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
       return;
     }
 
@@ -510,7 +513,7 @@ export class KoSamJaModule extends BaseGameModule {
     }
 
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private setupPeerOptions(

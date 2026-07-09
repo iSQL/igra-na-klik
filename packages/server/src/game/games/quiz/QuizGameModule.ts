@@ -6,6 +6,7 @@ import {
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type { QuizInternalState, QuizPhase, QuizPlayerAnswer } from './QuizState.js';
 
 const SHOWING_QUESTION_DURATION = 5;
@@ -16,8 +17,10 @@ export class QuizGameModule extends BaseGameModule {
   readonly gameId = 'quiz';
 
   private state!: QuizInternalState;
+  private timings: Record<string, number> = {};
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     let sourceBank: QuizQuestionFull[] = QUIZ_QUESTION_BANK;
     const customQuestions =
       customContent && typeof customContent === 'object'
@@ -44,7 +47,8 @@ export class QuizGameModule extends BaseGameModule {
       questions,
       currentQuestionIndex: 0,
       phase: 'showing-question',
-      phaseTimeRemaining: SHOWING_QUESTION_DURATION,
+      phaseTimeRemaining:
+        this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION,
       answers: new Map(),
       questionStartTime: Date.now(),
       expectedAnswererIds: new Set(),
@@ -143,14 +147,16 @@ export class QuizGameModule extends BaseGameModule {
 
       case 'showing-results':
         this.state.phase = 'leaderboard';
-        this.state.phaseTimeRemaining = LEADERBOARD_DURATION;
+        this.state.phaseTimeRemaining =
+          this.timings.LEADERBOARD_DURATION ?? LEADERBOARD_DURATION;
         break;
 
       case 'leaderboard':
         if (this.state.currentQuestionIndex < this.state.questions.length - 1) {
           this.state.currentQuestionIndex++;
           this.state.phase = 'showing-question';
-          this.state.phaseTimeRemaining = SHOWING_QUESTION_DURATION;
+          this.state.phaseTimeRemaining =
+            this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION;
           this.state.answers = new Map();
         } else {
           this.state.phase = 'ended';
@@ -162,7 +168,8 @@ export class QuizGameModule extends BaseGameModule {
 
   private transitionToResults(_room: Room): void {
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private currentQuestion(): QuizQuestionFull {
@@ -185,7 +192,8 @@ export class QuizGameModule extends BaseGameModule {
       case 'showing-question':
         data.questionText = question.text;
         if (question.imageUrl) data.imageUrl = question.imageUrl;
-        data.previewDuration = SHOWING_QUESTION_DURATION;
+        data.previewDuration =
+          this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION;
         break;
 
       case 'answering':

@@ -3,5 +3,6 @@ dist/
 .env
 *.tsbuildinfo
 .vite/
+timing-config.json
 .claude/
 Agent tool input*

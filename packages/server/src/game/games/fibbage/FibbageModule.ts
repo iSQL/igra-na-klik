@@ -17,6 +17,7 @@ import {
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type {
   FibbageInternalState,
   FibbagePhase,
@@ -36,8 +37,10 @@ export class FibbageModule extends BaseGameModule {
   readonly gameId = 'fibbage';
 
   private state!: FibbageInternalState;
+  private timings: Record<string, number> = {};
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const rounds = clampGameRounds(
       this.gameId,
       (customContent as { roundCount?: unknown } | undefined)?.roundCount
@@ -51,7 +54,8 @@ export class FibbageModule extends BaseGameModule {
       questions,
       currentIndex: 0,
       phase: 'showing-question',
-      phaseTimeRemaining: SHOWING_QUESTION_DURATION,
+      phaseTimeRemaining:
+        this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION,
       submissions: new Map(),
       autoFinders: new Set(),
       options: [],
@@ -208,7 +212,8 @@ export class FibbageModule extends BaseGameModule {
 
       case 'showing-results':
         this.state.phase = 'leaderboard';
-        this.state.phaseTimeRemaining = LEADERBOARD_DURATION;
+        this.state.phaseTimeRemaining =
+          this.timings.LEADERBOARD_DURATION ?? LEADERBOARD_DURATION;
         break;
 
       case 'leaderboard':
@@ -216,7 +221,8 @@ export class FibbageModule extends BaseGameModule {
           this.state.currentIndex++;
           this.resetRoundState();
           this.state.phase = 'showing-question';
-          this.state.phaseTimeRemaining = SHOWING_QUESTION_DURATION;
+          this.state.phaseTimeRemaining =
+            this.timings.SHOWING_QUESTION_DURATION ?? SHOWING_QUESTION_DURATION;
         } else {
           this.state.phase = 'ended';
           this.state.phaseTimeRemaining = 0;
@@ -327,7 +333,8 @@ export class FibbageModule extends BaseGameModule {
     void realOption;
 
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining =
+      this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private resetRoundState(): void {

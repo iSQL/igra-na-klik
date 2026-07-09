@@ -16,6 +16,7 @@ import type {
 } from '@igra/shared';
 import { QUIZ_OPTION_COLORS, clampGameRounds, shuffleInPlace } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import { resolveGeoPack } from '../geo-pogodi/geo-pack-resolver.js';
 import {
   clearRoomPhotos,
@@ -85,6 +86,7 @@ export class FotoKvizModule extends BaseGameModule {
   }
 
   private state!: FotoKvizInternalState;
+  private timings: Record<string, number> = {};
   // Round cap for predefined mode (custom mode uses every uploaded photo).
   private desiredRounds = MAX_ROUNDS;
 
@@ -106,13 +108,14 @@ export class FotoKvizModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const cc = (customContent as FotoKvizCustomContent | undefined) ?? {};
     const mode: FotoKvizMode = cc.geoMode === 'custom' ? 'custom' : 'predefined';
     this.desiredRounds = clampGameRounds(this.gameId, cc.roundCount);
 
     this.state = {
       phase: 'intro',
-      phaseTimeRemaining: INTRO_DURATION,
+      phaseTimeRemaining: this.timings.INTRO_DURATION ?? INTRO_DURATION,
       mode,
       packName: undefined,
       questions: [],
@@ -220,7 +223,7 @@ export class FotoKvizModule extends BaseGameModule {
     this.state.totalRounds = this.state.questions.length;
     this.state.currentQuestionIndex = 0;
     this.state.phase = 'intro';
-    this.state.phaseTimeRemaining = INTRO_DURATION;
+    this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
   }
 
   // -- Submission phase (custom mode) -------------------------------------
@@ -313,7 +316,7 @@ export class FotoKvizModule extends BaseGameModule {
     this.state.totalRounds = this.state.questions.length;
     this.state.currentQuestionIndex = 0;
     this.state.phase = 'intro';
-    this.state.phaseTimeRemaining = INTRO_DURATION;
+    this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
     void room;
   }
 
@@ -471,11 +474,11 @@ export class FotoKvizModule extends BaseGameModule {
       case 'intro':
         if (this.state.questions.length === 0) {
           // Pack still loading; reset countdown and wait.
-          this.state.phaseTimeRemaining = INTRO_DURATION;
+          this.state.phaseTimeRemaining = this.timings.INTRO_DURATION ?? INTRO_DURATION;
           return;
         }
         this.state.phase = 'showing-photo';
-        this.state.phaseTimeRemaining = SHOWING_PHOTO_DURATION;
+        this.state.phaseTimeRemaining = this.timings.SHOWING_PHOTO_DURATION ?? SHOWING_PHOTO_DURATION;
         return;
 
       case 'showing-photo':
@@ -506,19 +509,19 @@ export class FotoKvizModule extends BaseGameModule {
 
   private transitionToResults(): void {
     this.state.phase = 'showing-results';
-    this.state.phaseTimeRemaining = SHOWING_RESULTS_DURATION;
+    this.state.phaseTimeRemaining = this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION;
   }
 
   private advanceFromResults(_room: Room): void {
     const next = this.state.currentQuestionIndex + 1;
     if (next >= this.state.questions.length) {
       this.state.phase = 'final-leaderboard';
-      this.state.phaseTimeRemaining = FINAL_LEADERBOARD_DURATION;
+      this.state.phaseTimeRemaining = this.timings.FINAL_LEADERBOARD_DURATION ?? FINAL_LEADERBOARD_DURATION;
       return;
     }
     this.state.currentQuestionIndex = next;
     this.state.phase = 'showing-photo';
-    this.state.phaseTimeRemaining = SHOWING_PHOTO_DURATION;
+    this.state.phaseTimeRemaining = this.timings.SHOWING_PHOTO_DURATION ?? SHOWING_PHOTO_DURATION;
     this.state.answers = new Map();
   }
 

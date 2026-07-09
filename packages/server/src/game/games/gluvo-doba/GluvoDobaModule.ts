@@ -18,6 +18,7 @@ import {
 } from '@igra/shared';
 import type { GluvoDobaPack } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { getGameTimings } from '../../timing-config.js';
 import type {
   GluvoDobaDeathRecord,
   GluvoDobaInternalState,
@@ -73,6 +74,7 @@ export class GluvoDobaModule extends BaseGameModule {
   readonly gameId = 'gluvo-doba';
 
   private state!: GluvoDobaInternalState;
+  private timings: Record<string, number> = {};
   private info = new Map<string, ParticipantInfo>();
   // The match's role composition — open setup knowledge, computed once.
   private rolesInPlay: { roleId: GluvoDobaRoleId; count: number }[] = [];
@@ -87,6 +89,7 @@ export class GluvoDobaModule extends BaseGameModule {
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
+    this.timings = getGameTimings(this.gameId);
     const opts = (customContent as GluvoDobaCustomContent | undefined) ?? {};
     const participants = room.players.filter((p) => p.isConnected);
 
@@ -118,7 +121,8 @@ export class GluvoDobaModule extends BaseGameModule {
 
     this.state = {
       phase: 'podela-uloga',
-      phaseTimeRemaining: PODELA_ULOGA_DURATION,
+      phaseTimeRemaining:
+        this.timings.PODELA_ULOGA_DURATION ?? PODELA_ULOGA_DURATION,
       day: 0,
       discussionDuration: clampDiscussion(opts.gluvoDobaDiscussionSeconds),
       deathReveal: parseDeathReveal(opts.gluvoDobaDeathReveal),
@@ -529,7 +533,7 @@ export class GluvoDobaModule extends BaseGameModule {
     this.state.day += 1;
     this.checkWinner(room);
     this.state.phase = 'zora';
-    this.state.phaseTimeRemaining = ZORA_DURATION;
+    this.state.phaseTimeRemaining = this.timings.ZORA_DURATION ?? ZORA_DURATION;
   }
 
   private enterDiskusija(): void {
@@ -606,12 +610,12 @@ export class GluvoDobaModule extends BaseGameModule {
     this.applyPendingDeaths();
     this.checkWinner(room);
     this.state.phase = 'presuda';
-    this.state.phaseTimeRemaining = PRESUDA_DURATION;
+    this.state.phaseTimeRemaining = this.timings.PRESUDA_DURATION ?? PRESUDA_DURATION;
   }
 
   private enterKraj(): void {
     this.state.phase = 'kraj';
-    this.state.phaseTimeRemaining = KRAJ_DURATION;
+    this.state.phaseTimeRemaining = this.timings.KRAJ_DURATION ?? KRAJ_DURATION;
   }
 
   private applyPendingDeaths(): void {

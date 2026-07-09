@@ -32,6 +32,9 @@ import { getCustomPhoto } from './game/customPhotoStore.js';
 import { createGeoAdminRouter } from './admin/geo-admin.js';
 import { renderGeoEditorPage } from './admin/geo-editor-page.js';
 import { createContentAdminRouter } from './admin/content-admin.js';
+import { createTimingAdminRouter } from './admin/timing-admin.js';
+import { initTimingConfig } from './game/timing-config.js';
+import { renderTimingEditorPage } from './admin/timing-editor-page.js';
 import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
 import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
 import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
@@ -71,6 +74,11 @@ const TAJNI_AGENTI_SCENARIOS_DIR = process.env.TAJNI_AGENTI_SCENARIOS_DIR
 const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
   ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
+// Admin-configurable "wait" timings live in a single JSON file (overrides only).
+const TIMING_CONFIG_FILE = process.env.TIMING_CONFIG_FILE
+  ? path.resolve(process.env.TIMING_CONFIG_FILE)
+  : path.resolve(__dirname, '../../..', 'timing-config.json');
+initTimingConfig(TIMING_CONFIG_FILE);
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -416,6 +424,7 @@ app.use(
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
   })
 );
+app.use('/api/admin', createTimingAdminRouter());
 
 const GEO_EDITOR_HTML = renderGeoEditorPage(SERBIAN_DISTRICTS);
 app.get('/admin/geo', (_req, res) => {
@@ -428,6 +437,7 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
   ['/admin/tajni-agenti-scenariji', renderTajniAgentiScenarioEditorPage()],
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
+  ['/admin/timinzi', renderTimingEditorPage()],
 ];
 for (const [route, html] of ADMIN_EDITOR_PAGES) {
   app.get(route, (_req, res) => {
