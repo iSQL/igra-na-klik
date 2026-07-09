@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, dev: `localhost:5173/host/` or `localhost:3001/host/` through the proxy), players join from phones as "controllers" (dev: `localhost:5174/play/` or `localhost:3001/play/`) via a 2-letter room code or QR. Real-time via Socket.io. Ships with games including: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Dve istine i laž, Ko bi pre, Pogodi broj (guess-a-number: prices, weights, distances, durations, years — each question carries its own min–max range and an optional image; internal game id stays `pogodi-godinu`), Lažni umetnik (Fake Artist), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), Foto kviz (multiple-choice photo quiz that reuses the same geo-packs), Ko sam ja (personal-question party game where players guess each other's answers), Pronađi par (Spot It), Tajni agenti (Codenames-style team game), and Gluvo doba (Mafia/Werewolf social deduction with Slavic-mythology roles — see its section below and the public rules page at `GET /gluvo-doba`). A per-device **EN/SR language switch** (localStorage, default Serbian) translates the platform chrome plus three games (Crtaj i pogodi, Slepi telefoni, Pronađi par); the other games' in-game screens stay Serbian (Latin) by design — see the i18n section below.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, dev: `localhost:5173/host/` or `localhost:3001/host/` through the proxy), players join from phones as "controllers" (dev: `localhost:5174/play/` or `localhost:3001/play/`) via a 2-letter room code or QR. Real-time via Socket.io. Ships with games including: Kviz (quiz), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Dve istine i laž, Ko bi pre, Pogodi broj (guess-a-number: prices, weights, distances, durations, years — each question carries its own min–max range and an optional image; internal game id stays `pogodi-godinu`), Lažni umetnik (Fake Artist), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia), Foto kviz (multiple-choice photo quiz that reuses the same geo-packs), Ko sam ja (personal-question party game where players guess each other's answers), Pronađi par (Spot It), Tajni agenti (Codenames-style team game), Bolji život (Omerta/Cabo-style memory card game with "Srećni ljudi" characters — see its section below and [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md)), and Gluvo doba (Mafia/Werewolf social deduction with Slavic-mythology roles — see its section below and the public rules page at `GET /gluvo-doba`). A per-device **EN/SR language switch** (localStorage, default Serbian) translates the platform chrome plus three games (Crtaj i pogodi, Slepi telefoni, Pronađi par); the other games' in-game screens stay Serbian (Latin) by design — see the i18n section below.
 
 **Visual identity** follows [brand.md](brand.md) (zabari.net "Sunrise Hill": navy `#1D3557`/`#162E4E`, gold `#C29B47`, cream `#F5EBE0`). Type is **Fredoka** for display/headings (`--font-display`, `--font-caps`) and **Manrope** for body — a deliberate divergence from brand.md's original Marcellus/Cormorant serif pairing: the classical serifs read too stiff/narrow for a playful party game, so the rounded Fredoka + clean Manrope sans were chosen to match the "vibe" while keeping the navy/gold/cream palette. The apps use the navy (reverse) canvas, the landing page and `/admin` editors use the cream canvas. All colors flow through the CSS custom properties in `packages/host/src/styles/global.css` and `packages/controller/src/styles/global.css` (identical token sets — keep them in sync); functional palettes that must stay in code are `AVATAR_COLORS` ([constants.ts](packages/shared/src/constants.ts)), `QUIZ_OPTION_COLORS` / `KO_SAM_JA_FIXED_OPTION_COLORS` (paired with `OPTION_TEXT_COLORS` in the controller's quiz [AnswerButtons.tsx](packages/controller/src/games/quiz/components/AnswerButtons.tsx) — keys must match the hexes exactly), and the Tajni agenti team constants (host + controller). Fonts ship via `@fontsource/fredoka` + `@fontsource/manrope` in host & controller; the landing/admin pages load them from Google Fonts. Brand favicons live in `packages/{host,controller}/public/` and `packages/server/assets/brand/` (served at `/favicon.*`); PWA icons in `packages/controller/public/icons/` are the mark on a cream square.
 
@@ -149,6 +149,46 @@ Tajni agenti has three modes, picked on the game-select screen (host: `newGamesC
 - **coop** — one spymaster + guessers vs the board. Everyone is auto-assigned to `COOP_TEAM` ('blue') in `onStart` (team-selection is only the spymaster claim); board is the classic one with blue starting (9 blue). Same 9-point budget: each turn costs 1, revealing a red "enemy" card costs 1 EXTRA, neutral just ends the turn, assassin = loss; find all 9 blue to win.
 
 Coop-mode endings use `winner: 'players' | null` (win/loss) + reasons `out-of-turns`/`abandoned` (see `TajniAgentiEndedData`); `state.gameOver` — not `winner` — signals the decided game (coop losses have `winner === null`). Disconnects: duet ends (`abandoned`) if a side empties; coop promotes a new spymaster or ends when <2 remain.
+
+### Bolji život (Omerta/Cabo-style memory card game)
+
+Cabo-style card game themed on the "Srećni ljudi" TV series: each player has a
+**family of 4 face-down cards** on fixed positions (2×2 on the phone); card
+values 0–13 are "orasi u džepu" (walnuts — corruption points, LOWER IS BETTER).
+Full rules + balance rationale: [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md).
+Server module in [packages/server/src/game/games/bolji-zivot/](packages/server/src/game/games/bolji-zivot/),
+deck + scoring helpers in [packages/shared/src/games/bolji-zivot-deck.ts](packages/shared/src/games/bolji-zivot-deck.ts),
+client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/types/bolji-zivot.ts). 3–6 players, 45-card deck, hostless-capable.
+
+- **Phase machine** (`GameState.phase` === the `sub` field in data): `peeking →
+  [await-draw → holding → (power-select → reaction? → peek-show/power-look/racija-show)?]
+  × N → riska? → reveal → …rounds… → final-leaderboard → ended`. The **slap
+  window is parallel**, not a phase — `data.slap` has its own `deadlineMs`
+  independent of the turn sub-phase; it closes on correct slap, timeout, or any
+  discard-top change.
+- **Core rule**: powers (5 peek-own, 6 peek-other, 7 blind-swap, 8 raid,
+  9 look-swap) activate ONLY when the card is drawn from the pile and discarded
+  directly (`bz:discard`); swaps and discard-pile takes never trigger powers.
+  Timeout auto-discards also skip the power (it needs target selection).
+- **Anti-leak**: card faces live only server-side. Public `data` may carry
+  faces only for: discard top, racija reveals, failed slap/Popara reveals, and
+  the end-of-round `reveal`. Private peeks flow through `playerData.visible`
+  and are **sub-phase-scoped** — cleared at turn end and never re-sent on
+  reconnect (memory is the game). Position changes from other players' actions
+  are announced publicly via `changedSlots` + `lastAction` (Serbian strings
+  built server-side; the game is Serbian-only in-game by design).
+- **Specials**: Malina(10)+Ozren(11) pair in one family scores 0 (helper
+  `bzRoundSum`); Popara(12) is a reaction — targeted player gets a `reaction`
+  window to tap their believed-Popara slot (wrong guess = public reveal +
+  penalty card); the single Riska(13) gives its non-caller holder one extra
+  swap-only turn after the "Bolji život!" call (`riska` phase), announced
+  publicly. Caller must be STRICTLY lowest for 0 points, else sum + 20 penalty
+  (`BZ_CALL_PENALTY`); leaderboard sorts ASCENDING (fewer walnuts wins) — don't
+  reuse descending leaderboard components.
+- All interactions ride the generic `game:player-action` event (`bz:*` actions);
+  no new socket events were added. Round count uses the generic `roundCount` /
+  `GAME_ROUND_CONFIG` knob; wait-phase durations are in `GAME_TIMING_DEFS`
+  (`/admin/timinzi`), active-input timers stay hardcoded in the module.
 
 ### Cross-game reliability patterns
 

@@ -130,6 +130,17 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'bolji-zivot',
+    gameName: 'Bolji život!',
+    fields: [
+      { key: 'PEEKING_DURATION', label: 'Početno gledanje 2 karte', min: 10, max: 60, def: 20 },
+      { key: 'PEEK_SHOW_DURATION', label: 'Prikaz virnute karte', min: 2, max: 10, def: 4 },
+      { key: 'RACIJA_SHOW_DURATION', label: 'Racija (prikaz otkrivenih)', min: 3, max: 20, def: 7 },
+      { key: 'REVEAL_DURATION', label: 'Otkrivanje kraja runde', min: 5, max: 60, def: 15 },
+      { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 3, max: 40, def: 10 },
+    ],
+  },
+  {
     gameId: 'gluvo-doba',
     gameName: 'Gluvo doba',
     fields: [

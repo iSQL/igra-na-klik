@@ -18,6 +18,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'spot-it': () => import('./spot-it/SpotItController'),
   'tajni-agenti': () => import('./tajni-agenti/TajniAgentiController'),
   'gluvo-doba': () => import('./gluvo-doba/GluvoDobaController'),
+  'bolji-zivot': () => import('./bolji-zivot/BoljiZivotController'),
 };
 
 let prefetchStarted = false;
