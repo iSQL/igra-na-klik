@@ -89,6 +89,8 @@ export interface ClientToServerEvents {
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;
     koBiPreRounds?: number;
+    // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
+    drawTimeLimit?: number;
     pogodiGodinuRounds?: number;
     // Selected "Pogodi broj" question pack (id from GET /api/pogodi-broj-packs).
     // Empty/absent → the built-in question bank.

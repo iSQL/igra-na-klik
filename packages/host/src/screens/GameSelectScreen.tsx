@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GAME_DEFINITIONS, GAME_ROUND_CONFIG } from '@igra/shared';
+import { GAME_DEFINITIONS, GAME_ROUND_CONFIG, DRAW_GUESS_TIME_OPTIONS } from '@igra/shared';
 import type { HostStartGamePayload, GluvoDobaPack } from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
@@ -163,6 +163,8 @@ export function GameSelectScreen() {
         gameId === 'fake-artist' ? newGamesConfig.fakeArtistStrokes : undefined,
       koBiPreRounds:
         gameId === 'ko-bi-pre' ? newGamesConfig.koBiPreRounds : undefined,
+      drawTimeLimit:
+        gameId === 'draw-guess' ? newGamesConfig.drawGuessTimeLimit : undefined,
       gluvoDobaDiscussionSeconds:
         gameId === 'gluvo-doba'
           ? newGamesConfig.gluvoDobaDiscussionSeconds
@@ -515,6 +517,17 @@ export function GameSelectScreen() {
                 }
                 options={GAME_ROUND_CONFIG[game.id].options}
                 onSelect={(n) => newGamesConfig.setRoundCount(game.id, n)}
+              />
+            )}
+            {game.id === 'draw-guess' && (
+              <TextPillRow
+                label={t('config.drawTime')}
+                value={String(newGamesConfig.drawGuessTimeLimit)}
+                options={DRAW_GUESS_TIME_OPTIONS.map((s) => ({
+                  value: String(s),
+                  label: t('config.minutes', { n: String(s / 60) }),
+                }))}
+                onSelect={(v) => newGamesConfig.setDrawGuessTimeLimit(Number(v))}
               />
             )}
           </div>

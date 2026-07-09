@@ -24,6 +24,20 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   'spot-it': { options: [5, 10, 15], default: 10, min: 3, max: 20 },
 };
 
+// Crtaj i pogodi: selectable per-turn drawing time (seconds). The host picks
+// 1 / 2 / 3 minutes in game-select; the server clamps to this whitelist. One
+// source of truth for the UI options and the server-side clamp.
+export const DRAW_GUESS_TIME_OPTIONS = [60, 120, 180] as const;
+export const DRAW_GUESS_TIME_DEFAULT = 60;
+
+/** Clamp an incoming draw time to the allowed set, else the default (60s). */
+export function clampDrawTime(raw: unknown): number {
+  const n = typeof raw === 'number' && Number.isFinite(raw) ? Math.round(raw) : NaN;
+  return (DRAW_GUESS_TIME_OPTIONS as readonly number[]).includes(n)
+    ? n
+    : DRAW_GUESS_TIME_DEFAULT;
+}
+
 /**
  * Clamp an incoming roundCount for a game to its configured range, falling
  * back to the game's default when the value is missing or invalid. Games

@@ -15,6 +15,7 @@ import {
   undoLast,
   clearOps,
   clampGameRounds,
+  clampDrawTime,
   shuffled,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -22,7 +23,6 @@ import { getGameTimings } from '../../timing-config.js';
 import type { DrawGuessInternalState, DrawGuessPhase } from './DrawGuessState.js';
 import {
   CHOOSING_WORD_DURATION,
-  DRAW_TIME_LIMIT,
   TURN_RESULTS_DURATION,
   LEADERBOARD_DURATION,
 } from './DrawGuessState.js';
@@ -50,9 +50,10 @@ export class DrawGuessModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
     const opts = customContent as
-      | { language?: Language; roundCount?: number }
+      | { language?: Language; roundCount?: number; drawTimeLimit?: number }
       | undefined;
     this.language = opts?.language ?? 'sr';
+    const drawTimeLimit = clampDrawTime(opts?.drawTimeLimit);
     const connectedPlayers = room.players.filter((p) => p.isConnected);
     const turnOrder = shuffled(connectedPlayers.map((p) => p.id));
 
@@ -69,7 +70,7 @@ export class DrawGuessModule extends BaseGameModule {
       currentWord: null,
       wordChoices: this.pickWordChoices(),
       wordHint: '',
-      drawTimeLimit: DRAW_TIME_LIMIT,
+      drawTimeLimit,
       operations: [],
       guesses: [],
       correctGuessers: [],

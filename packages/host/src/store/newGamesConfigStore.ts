@@ -18,6 +18,8 @@ interface NewGamesConfigStore {
   gluvoDobaPackId: string;
   // Selected "Pogodi broj" question pack id ('' = built-in question bank).
   pogodiBrojPackId: string;
+  // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
+  drawGuessTimeLimit: number;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
   // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -31,6 +33,7 @@ interface NewGamesConfigStore {
   setGluvoDobaBajacica: (v: boolean) => void;
   setGluvoDobaPackId: (id: string) => void;
   setPogodiBrojPackId: (id: string) => void;
+  setDrawGuessTimeLimit: (n: number) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -47,6 +50,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaBajacica: false,
       gluvoDobaPackId: '',
       pogodiBrojPackId: '',
+      drawGuessTimeLimit: 60,
       roundCounts: {},
       setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
@@ -59,6 +63,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
       setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
+      setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

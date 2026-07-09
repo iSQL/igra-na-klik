@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
+  DRAW_GUESS_TIME_OPTIONS,
   parseKoSamJaImport,
   parseQuizImport,
 } from '@igra/shared';
@@ -99,6 +100,7 @@ export function GameSelectScreen() {
   const [fakeArtistStrokes, setFakeArtistStrokes] = useState(2);
   const [koBiPreRounds, setKoBiPreRounds] = useState(8);
   const [pogodiGodinuRounds, setPogodiGodinuRounds] = useState(10);
+  const [drawGuessTimeLimit, setDrawGuessTimeLimit] = useState(60);
   const [gluvoDobaDiscussion, setGluvoDobaDiscussion] = useState(180);
   const [gluvoDeathReveal, setGluvoDeathReveal] =
     useState<GluvoDobaDeathReveal>('team');
@@ -232,6 +234,9 @@ export function GameSelectScreen() {
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
         roundCounts[game.id] ?? GAME_ROUND_CONFIG[game.id].default;
+    }
+    if (game.id === 'draw-guess') {
+      payload.drawTimeLimit = drawGuessTimeLimit;
     }
     if (game.id === 'quiz' && quizImport) {
       payload.customQuestions = quizImport.questions;
@@ -697,6 +702,24 @@ export function GameSelectScreen() {
                         setRoundCounts((prev) => ({ ...prev, [game.id]: n }))
                       }
                     />
+                  )}
+                  {game.id === 'draw-guess' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {t('config.drawTime')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        {DRAW_GUESS_TIME_OPTIONS.map((s) => (
+                          <Pill
+                            key={s}
+                            active={s === drawGuessTimeLimit}
+                            onClick={() => setDrawGuessTimeLimit(s)}
+                          >
+                            {t('config.minutes', { n: String(s / 60) })}
+                          </Pill>
+                        ))}
+                      </div>
+                    </div>
                   )}
                   <button className="btn-primary" onClick={() => handleStart(game)}>
                     ▶ {t('gameSelect.start')}
