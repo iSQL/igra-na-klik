@@ -9,7 +9,11 @@ import type {
   GluvoDobaRoleId,
   GluvoDobaTeam,
 } from '@igra/shared';
-import { GLUVO_DOBA_ROLES, GLUVO_DOBA_TEAM_NAMES } from '@igra/shared';
+import {
+  GLUVO_DOBA_ROLES,
+  GLUVO_DOBA_TEAM_NAMES,
+  GLUVO_TUTORIAL_PHASE_TEXT,
+} from '@igra/shared';
 
 const ROLE_EMOJI: Record<GluvoDobaRoleId, string> = {
   vukodlak: '🐺',
@@ -164,6 +168,76 @@ function RolesInPlayStrip({ host }: { host: GluvoDobaHostData }) {
   );
 }
 
+// Faze u kojima igrači unose odluke — tu "sledeća faza" znači prinudno
+// razrešenje sa dosad pristiglim akcijama, pa dugme menja tekst.
+const GLUVO_INPUT_PHASES = new Set(['noc', 'osveta', 'glasanje']);
+
+function TutorialNextButton({ label }: { label: string }) {
+  return (
+    <button
+      onClick={() =>
+        socket.emit('host:game-action', { action: 'gluvo:next-phase' })
+      }
+      style={{
+        padding: '0.45rem 1.1rem',
+        borderRadius: '0.6rem',
+        border: 'none',
+        background: 'var(--accent)',
+        color: '#fff',
+        fontWeight: 700,
+        fontSize: '0.9rem',
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Tutorial traka na TV-u: objašnjenje tekuće faze + ručno pomeranje. */
+function TutorialBar({ phase, hintOverride }: { phase: string; hintOverride?: string }) {
+  const hint =
+    hintOverride ??
+    GLUVO_TUTORIAL_PHASE_TEXT[phase as keyof typeof GLUVO_TUTORIAL_PHASE_TEXT];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        background: 'rgba(194,155,71,0.1)',
+        border: '1px solid rgba(194,155,71,0.35)',
+        borderRadius: '0.75rem',
+        padding: '0.6rem 1rem',
+        maxWidth: '900px',
+        width: '100%',
+        textAlign: 'left',
+      }}
+    >
+      <span style={{ fontSize: '1.3rem' }}>🎓</span>
+      <p
+        style={{
+          margin: 0,
+          flex: 1,
+          fontSize: '0.95rem',
+          color: 'var(--text-primary)',
+          lineHeight: 1.4,
+        }}
+      >
+        {hint ?? 'Vođena partija — faze pomera voditelj.'}
+      </p>
+      <TutorialNextButton
+        label={
+          GLUVO_INPUT_PHASES.has(phase)
+            ? 'Preskoči — nastavi ▸'
+            : 'Sledeća faza ▸'
+        }
+      />
+    </div>
+  );
+}
+
 function KnezBanner({ host }: { host: GluvoDobaHostData }) {
   if (!host.knezRevealed) return null;
   return (
@@ -211,6 +285,8 @@ export default function GluvoDobaHost() {
 
   const { phase, timeRemaining, data } = gameState;
   const host = data.host as GluvoDobaHostData;
+  const tutorial = data.tutorialMode === true;
+  const tutorialBar = tutorial ? <TutorialBar phase={phase} /> : null;
 
   // --- podela-uloga -------------------------------------------------------
   if (phase === 'podela-uloga') {
@@ -223,14 +299,19 @@ export default function GluvoDobaHost() {
         >
           🌙 Gluvo doba
         </motion.p>
-        <p style={{ fontSize: '1.4rem', color: 'var(--text-secondary)' }}>
-          Pogledajte svoje telefone — svako je dobio tajnu ulogu.
-        </p>
+        {tutorial && (
+          <p style={{ fontSize: '1.4rem', color: 'var(--text-secondary)' }}>
+            Pogledajte svoje telefone — svako je dobio tajnu ulogu.
+          </p>
+        )}
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
           Uloge u ovoj partiji:
         </p>
         <RolesInPlayStrip host={host} />
-        <p style={{ fontSize: '1.2rem', fontWeight: 700 }}>{timeRemaining}s</p>
+        {!tutorial && (
+          <p style={{ fontSize: '1.2rem', fontWeight: 700 }}>{timeRemaining}s</p>
+        )}
+        {tutorialBar}
       </Center>
     );
   }
@@ -263,13 +344,17 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '2.2rem', fontWeight: 800, margin: 0 }}>
           Noć {host.day} — selo spava
         </p>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-          Svi gledaju u svoje telefone… niko ne priča. 🤫
-        </p>
+        {tutorial && (
+          <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
+            Svi gledaju u svoje telefone… niko ne priča. 🤫
+          </p>
+        )}
         <p style={{ fontSize: '1.3rem', fontWeight: 700 }}>
-          {host.actedCount}/{host.totalActors} odlučilo · {timeRemaining}s
+          {host.actedCount}/{host.totalActors} odlučilo
+          {!tutorial && ` · ${timeRemaining}s`}
         </p>
         <VillageGrid players={host.players} />
+        {tutorialBar}
       </div>
     );
   }
@@ -289,7 +374,8 @@ export default function GluvoDobaHost() {
               Suđaja se sveti!
             </motion.p>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-              Njena nit je presečena — nekoga vodi sa sobom… {timeRemaining}s
+              Njena nit je presečena — nekoga vodi sa sobom…
+              {!tutorial && ` ${timeRemaining}s`}
             </p>
           </>
         ) : (
@@ -299,9 +385,20 @@ export default function GluvoDobaHost() {
               Noć se produžava…
             </p>
             <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-              Nešto se mrda u mraku. {timeRemaining}s
+              Nešto se mrda u mraku.{!tutorial && ` ${timeRemaining}s`}
             </p>
           </>
+        )}
+        {/* ANTI-LEAK: noćna osveta ne sme da oda da je Suđaja pala. */}
+        {tutorial && (
+          <TutorialBar
+            phase={phase}
+            hintOverride={
+              host.osvetaPublic
+                ? undefined
+                : 'Noć se produžava — neko u mraku još odlučuje. Voditelj može da nastavi kad je odluka pala.'
+            }
+          />
         )}
       </Center>
     );
@@ -369,6 +466,7 @@ export default function GluvoDobaHost() {
         )}
         <KnezBanner host={host} />
         <VillageGrid players={host.players} />
+        {tutorialBar}
       </Center>
     );
   }
@@ -380,43 +478,52 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '2.4rem', fontWeight: 800, margin: 0 }}>
           🗣️ Rasprava
         </p>
-        <p
-          style={{
-            fontSize: timeRemaining <= 10 ? '4rem' : '3rem',
-            fontWeight: 800,
-            color: timeRemaining <= 10 ? '#e74c3c' : 'var(--accent)',
-            margin: 0,
-          }}
-        >
-          {Math.floor(timeRemaining / 60)}:
-          {String(timeRemaining % 60).padStart(2, '0')}
-        </p>
+        {!tutorial && (
+          <p
+            style={{
+              fontSize: timeRemaining <= 10 ? '4rem' : '3rem',
+              fontWeight: 800,
+              color: timeRemaining <= 10 ? '#e74c3c' : 'var(--accent)',
+              margin: 0,
+            }}
+          >
+            {Math.floor(timeRemaining / 60)}:
+            {String(timeRemaining % 60).padStart(2, '0')}
+          </p>
+        )}
         <KnezBanner host={host} />
         {host.mutedToday && (
           <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
             👹 {host.mutedToday.name} danas ne glasa.
           </p>
         )}
-        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-          Ko laže? Ko se noćas čudno ponašao? Raspravljajte uživo!
-        </p>
+        {tutorial && (
+          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+            Ko laže? Ko se noćas čudno ponašao? Raspravljajte uživo!
+          </p>
+        )}
         <VillageGrid players={host.players} />
-        <button
-          onClick={() =>
-            socket.emit('host:game-action', { action: 'gluvo:skip-discussion' })
-          }
-          style={{
-            padding: '0.6rem 1.4rem',
-            borderRadius: '10px',
-            border: 'none',
-            background: 'var(--bg-card)',
-            color: 'var(--text-primary)',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          Pređi na glasanje ▶
-        </button>
+        {/* U tutorialu TutorialBar-ovo dugme pokriva prelaz — bez duplog dugmeta. */}
+        {tutorial ? (
+          tutorialBar
+        ) : (
+          <button
+            onClick={() =>
+              socket.emit('host:game-action', { action: 'gluvo:skip-discussion' })
+            }
+            style={{
+              padding: '0.6rem 1.4rem',
+              borderRadius: '10px',
+              border: 'none',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Pređi na glasanje ▶
+          </button>
+        )}
       </Center>
     );
   }
@@ -428,9 +535,11 @@ export default function GluvoDobaHost() {
         <p style={{ fontSize: '2.4rem', fontWeight: 800, margin: 0 }}>
           ⚖️ Glasanje
         </p>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-          Glasajte na telefonima — koga selo šalje na vešala?
-        </p>
+        {tutorial && (
+          <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
+            Glasajte na telefonima — koga selo šalje na vešala?
+          </p>
+        )}
         <KnezBanner host={host} />
         {host.mutedToday && (
           <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -438,16 +547,22 @@ export default function GluvoDobaHost() {
           </p>
         )}
         <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-          {host.votedCount}/{host.totalVoters} glasalo ·{' '}
-          <span
-            style={{
-              color: timeRemaining <= 5 ? '#e74c3c' : 'var(--text-primary)',
-            }}
-          >
-            {timeRemaining}s
-          </span>
+          {host.votedCount}/{host.totalVoters} glasalo
+          {!tutorial && (
+            <>
+              {' · '}
+              <span
+                style={{
+                  color: timeRemaining <= 5 ? '#e74c3c' : 'var(--text-primary)',
+                }}
+              >
+                {timeRemaining}s
+              </span>
+            </>
+          )}
         </p>
         <VillageGrid players={host.players} />
+        {tutorialBar}
       </Center>
     );
   }
@@ -562,6 +677,7 @@ export default function GluvoDobaHost() {
           </div>
         )}
         <VillageGrid players={host.players} />
+        {tutorialBar}
       </div>
     );
   }
@@ -646,24 +762,27 @@ export default function GluvoDobaHost() {
             </div>
           ))}
         </div>
-        {phase === 'kraj' && (
-          <button
-            onClick={() =>
-              socket.emit('host:game-action', { action: 'gluvo:end-now' })
-            }
-            style={{
-              padding: '0.6rem 1.4rem',
-              borderRadius: '10px',
-              border: 'none',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Nazad u sobu ({timeRemaining}s) ▶
-          </button>
-        )}
+        {phase === 'kraj' &&
+          (tutorial ? (
+            <TutorialNextButton label="Nazad u sobu ▸" />
+          ) : (
+            <button
+              onClick={() =>
+                socket.emit('host:game-action', { action: 'gluvo:end-now' })
+              }
+              style={{
+                padding: '0.6rem 1.4rem',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Nazad u sobu ({timeRemaining}s) ▶
+            </button>
+          ))}
       </div>
     );
   }

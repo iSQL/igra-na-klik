@@ -5,11 +5,17 @@ import { socket } from '../../socket';
 import type {
   GluvoDobaControllerData,
   GluvoDobaHostData,
+  GluvoDobaPhase,
   GluvoDobaRoleId,
   GluvoDobaTargetOption,
   GluvoDobaTeam,
 } from '@igra/shared';
-import { GLUVO_DOBA_ROLES, GLUVO_DOBA_TEAM_NAMES } from '@igra/shared';
+import {
+  GLUVO_DOBA_ROLES,
+  GLUVO_DOBA_TEAM_NAMES,
+  GLUVO_CHEAT_FLOW,
+  gluvoTutorialControllerHint,
+} from '@igra/shared';
 
 function emit(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -101,9 +107,10 @@ function DeathReveal({
 }
 
 /**
- * Floating "?" button + modal with this match's active roles. The
- * composition is open setup knowledge (it arrives via the shared
- * hostData.rolesInPlay), so every phone may browse it at any time.
+ * Floating "?" button + modal: game-flow cheat lines + this match's active
+ * roles (open setup knowledge via hostData.rolesInPlay). TUTORIAL-ONLY —
+ * a normal game keeps a clean screen; players learn the roles beforehand
+ * or on the /gluvo-doba rules page.
  */
 function RolesInPlayButton({ host }: { host: GluvoDobaHostData }) {
   const [open, setOpen] = useState(false);
@@ -158,6 +165,31 @@ function RolesInPlayButton({ host }: { host: GluvoDobaHostData }) {
               gap: '0.6rem',
             }}
           >
+            <p style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem', textAlign: 'center' }}>
+              🎓 Tok igre
+            </p>
+            <div
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: '10px',
+                padding: '0.6rem 0.75rem',
+                borderLeft: '4px solid #c29b47',
+              }}
+            >
+              {GLUVO_CHEAT_FLOW.map((line, i) => (
+                <p
+                  key={i}
+                  style={{
+                    margin: i === 0 ? 0 : '0.35rem 0 0',
+                    fontSize: '0.85rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {line}
+                </p>
+              ))}
+            </div>
             <p style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem', textAlign: 'center' }}>
               Uloge u ovoj partiji
             </p>
@@ -239,6 +271,7 @@ function TargetGrid({
   onPick,
   extraOption,
   timeRemaining,
+  hideTimer,
 }: {
   roleLine?: string;
   prompt: string;
@@ -247,6 +280,8 @@ function TargetGrid({
   onPick: (targetId: string) => void;
   extraOption?: { id: string; label: string };
   timeRemaining: number;
+  /** Tutorial mod: tajmer stoji na serveru pa se ne prikazuje. */
+  hideTimer?: boolean;
 }) {
   // One shared layout for every night role — from across the room every
   // phone looks identical, only the small text differs.
@@ -280,16 +315,18 @@ function TargetGrid({
           {note}
         </p>
       )}
-      <p
-        style={{
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)',
-          textAlign: 'center',
-          margin: 0,
-        }}
-      >
-        {timeRemaining}s
-      </p>
+      {!hideTimer && (
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            margin: 0,
+          }}
+        >
+          {timeRemaining}s
+        </p>
+      )}
       <div
         style={{
           display: 'flex',
@@ -341,7 +378,13 @@ function TargetGrid({
   );
 }
 
-function GhostView({ my }: { my: GluvoDobaControllerData }) {
+function GhostView({
+  my,
+  tutorial,
+}: {
+  my: GluvoDobaControllerData;
+  tutorial?: boolean;
+}) {
   return (
     <div style={{ ...column, overflowY: 'auto' }}>
       <p style={{ fontSize: '1.1rem', fontWeight: 800, textAlign: 'center', margin: 0 }}>
@@ -404,15 +447,17 @@ function GhostView({ my }: { my: GluvoDobaControllerData }) {
               </button>
             </div>
           )}
-          <p
-            style={{
-              margin: '0.5rem 0 0',
-              fontSize: '0.78rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            Mrtvi vukodlaci smeju da lažu…
-          </p>
+          {tutorial && (
+            <p
+              style={{
+                margin: '0.5rem 0 0',
+                fontSize: '0.78rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Mrtvi vukodlaci smeju da lažu…
+            </p>
+          )}
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -632,6 +677,7 @@ export default function GluvoDobaController() {
 
   const { phase, timeRemaining, data, playerData } = gameState;
   const host = data.host as GluvoDobaHostData;
+  const tutorial = data.tutorialMode === true;
   const my = (playerData[playerId] ?? { alive: false }) as unknown as
     GluvoDobaControllerData;
   const roleDef = my.roleId ? GLUVO_DOBA_ROLES[my.roleId] : null;
@@ -640,7 +686,7 @@ export default function GluvoDobaController() {
   if (!roleDef) {
     return (
       <div style={wrap}>
-        <RolesInPlayButton host={host} />
+        {tutorial && <RolesInPlayButton host={host} />}
         <p style={{ fontSize: '1.1rem' }}>
           Partija je u toku — posmatraj i uskači u sledeću!
         </p>
@@ -678,16 +724,18 @@ export default function GluvoDobaController() {
               Sam si u Silama Mraka — nema saborca.
             </p>
           )}
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Nikome ne pokazuj ekran! 🤫
-          </p>
+          {tutorial && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Nikome ne pokazuj ekran! 🤫
+            </p>
+          )}
         </div>
       );
     }
 
     // --- noc ----------------------------------------------------------------
     if (phase === 'noc') {
-      if (!my.alive) return <GhostView my={my} />;
+      if (!my.alive) return <GhostView my={my} tutorial={tutorial} />;
       if (my.canAct && !my.hasActed && my.targets) {
         const isMoranaOffNight =
           my.roleId === 'morana' && !my.moranaKillTonight;
@@ -718,6 +766,7 @@ export default function GluvoDobaController() {
                 targets={my.targets}
                 onPick={(targetId) => emit('gluvo:night-action', { targetId })}
                 timeRemaining={timeRemaining}
+                hideTimer={tutorial}
               />
             </div>
           </div>
@@ -743,7 +792,8 @@ export default function GluvoDobaController() {
             </div>
           )}
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            {host.actedCount}/{host.totalActors} · {timeRemaining}s
+            {host.actedCount}/{host.totalActors}
+            {!tutorial && ` · ${timeRemaining}s`}
           </p>
           <HistoryPanel my={my} />
         </div>
@@ -759,6 +809,7 @@ export default function GluvoDobaController() {
             targets={my.osvetaTargets}
             onPick={(targetId) => emit('gluvo:osveta', { targetId })}
             timeRemaining={timeRemaining}
+            hideTimer={tutorial}
           />
         );
       }
@@ -781,7 +832,7 @@ export default function GluvoDobaController() {
 
     // --- zora -----------------------------------------------------------------
     if (phase === 'zora') {
-      if (!my.alive) return <GhostView my={my} />;
+      if (!my.alive) return <GhostView my={my} tutorial={tutorial} />;
       return (
         <div style={{ ...wrap, overflowY: 'auto' }}>
           <p style={{ fontSize: '2rem', margin: 0 }}>🌅</p>
@@ -826,26 +877,31 @@ export default function GluvoDobaController() {
 
     // --- diskusija --------------------------------------------------------------
     if (phase === 'diskusija') {
-      if (!my.alive) return <GhostView my={my} />;
+      if (!my.alive) return <GhostView my={my} tutorial={tutorial} />;
       return (
         <div style={wrap}>
           <p style={{ fontSize: '2rem', margin: 0 }}>🗣️</p>
           <p style={{ fontSize: '1.2rem', fontWeight: 800 }}>Raspravljajte!</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent)' }}>
-            {timeRemaining}s
-          </p>
+          {!tutorial && (
+            <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent)' }}>
+              {timeRemaining}s
+            </p>
+          )}
           {my.blockedLastNight && <BlockedBanner />}
           {host.knezRevealed && (
             <p style={{ margin: 0, fontSize: '0.95rem', color: '#c29b47' }}>
               👑 Knez sela: <strong>{host.knezRevealed.name}</strong> (glas ×2)
             </p>
           )}
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Ko se noćas čudno ponašao? Pričajte uživo — glasanje stiže.
-          </p>
+          {tutorial && (
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Ko se noćas čudno ponašao? Pričajte uživo — glasanje stiže.
+            </p>
+          )}
           {my.canKnezReveal && <KnezRevealButton />}
           <HistoryPanel my={my} />
-          {isRemoteHost && (
+          {/* U tutorialu globalno "Sledeća faza" dugme pokriva prelaz. */}
+          {isRemoteHost && !tutorial && (
             <button
               onClick={() =>
                 socket.emit('host:game-action', { action: 'gluvo:skip-discussion' })
@@ -868,7 +924,7 @@ export default function GluvoDobaController() {
 
     // --- glasanje ---------------------------------------------------------------
     if (phase === 'glasanje') {
-      if (!my.alive) return <GhostView my={my} />;
+      if (!my.alive) return <GhostView my={my} tutorial={tutorial} />;
       if (my.muted) {
         return (
           <div style={wrap}>
@@ -888,7 +944,8 @@ export default function GluvoDobaController() {
           <div style={wrap}>
             <p style={{ fontSize: '1.1rem' }}>Glas je zabeležen ✅</p>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {host.votedCount}/{host.totalVoters} glasalo · {timeRemaining}s
+              {host.votedCount}/{host.totalVoters} glasalo
+              {!tutorial && ` · ${timeRemaining}s`}
             </p>
           </div>
         );
@@ -907,6 +964,7 @@ export default function GluvoDobaController() {
               onPick={(targetId) => emit('gluvo:vote', { targetId })}
               extraOption={{ id: 'skip', label: 'Preskoči — niko danas' }}
               timeRemaining={timeRemaining}
+              hideTimer={tutorial}
             />
           </div>
           {my.canKnezReveal && (
@@ -1027,7 +1085,8 @@ export default function GluvoDobaController() {
               </div>
             ))}
           </div>
-          {isRemoteHost && phase === 'kraj' && (
+          {/* U tutorialu globalno "Sledeća faza" dugme završava igru. */}
+          {isRemoteHost && phase === 'kraj' && !tutorial && (
             <button
               onClick={() =>
                 socket.emit('host:game-action', { action: 'gluvo:end-now' })
@@ -1051,10 +1110,70 @@ export default function GluvoDobaController() {
     return null;
   })();
 
+  const tutorialHint = tutorial
+    ? gluvoTutorialControllerHint(phase as GluvoDobaPhase, {
+        alive: my.alive,
+        canAct: my.canAct === true,
+        hasActed: my.hasActed === true,
+        muted: my.muted === true,
+        isGhost: !my.alive,
+        isAvenger: my.isAvenger === true,
+        osvetaPublic: host.osvetaPublic === true,
+      })
+    : null;
+
   return (
     <>
-      <RolesInPlayButton host={host} />
-      {screen}
+      {tutorial && <RolesInPlayButton host={host} />}
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {tutorialHint && (
+          <p
+            key={`${phase}-${my.hasActed}-${my.canAct}`}
+            style={{
+              margin: '0.6rem 0.75rem 0',
+              fontSize: '0.75rem',
+              color: 'var(--text-primary)',
+              background: 'rgba(194,155,71,0.1)',
+              border: '1px solid rgba(194,155,71,0.35)',
+              borderRadius: '0.6rem',
+              padding: '0.45rem 0.6rem',
+              // "?" dugme je u gornjem desnom uglu — hint mu ne sme pod prste.
+              marginRight: '3.4rem',
+              lineHeight: 1.4,
+              animation: 'igra-pop .3s',
+            }}
+          >
+            🎓 {tutorialHint}
+          </p>
+        )}
+        {tutorial && isRemoteHost && phase !== 'ended' && (
+          <button
+            onClick={() =>
+              socket.emit('host:game-action', { action: 'gluvo:next-phase' })
+            }
+            style={{
+              margin: '0.4rem 0.75rem 0',
+              padding: '0.5rem 1rem',
+              borderRadius: '0.6rem',
+              border: 'none',
+              background: 'var(--accent)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+            }}
+          >
+            🎓{' '}
+            {GLUVO_INPUT_PHASES.has(phase)
+              ? 'Preskoči — nastavi ▸'
+              : 'Sledeća faza ▸'}
+          </button>
+        )}
+        <div style={{ flex: 1, minHeight: 0 }}>{screen}</div>
+      </div>
     </>
   );
 }
+
+// Faze u kojima igrači unose odluke — "sledeća faza" tu prinudno razrešava
+// fazu sa dosad pristiglim akcijama, pa dugme menja tekst.
+const GLUVO_INPUT_PHASES = new Set(['noc', 'osveta', 'glasanje']);

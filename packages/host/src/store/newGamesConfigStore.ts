@@ -16,6 +16,8 @@ interface NewGamesConfigStore {
   gluvoDobaBajacica: boolean;
   // Selected role pack id ('' = built-in balance bands + the toggles above).
   gluvoDobaPackId: string;
+  // Gluvo doba: tutorial mode (guided game — hints + moderator-driven phases).
+  gluvoDobaTutorial: boolean;
   // Selected "Pogodi broj" question pack id ('' = built-in question bank).
   pogodiBrojPackId: string;
   // Tajni agenti mode: classic (2 teams), duet, or coop (see @igra/shared).
@@ -36,6 +38,7 @@ interface NewGamesConfigStore {
   setGluvoDobaFirstNightPeace: (v: boolean) => void;
   setGluvoDobaBajacica: (v: boolean) => void;
   setGluvoDobaPackId: (id: string) => void;
+  setGluvoDobaTutorial: (v: boolean) => void;
   setPogodiBrojPackId: (id: string) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setDrawGuessTimeLimit: (n: number) => void;
@@ -55,6 +58,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaFirstNightPeace: true,
       gluvoDobaBajacica: false,
       gluvoDobaPackId: '',
+      gluvoDobaTutorial: false,
       pogodiBrojPackId: '',
       tajniAgentiMode: 'classic',
       drawGuessTimeLimit: 60,
@@ -70,6 +74,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaFirstNightPeace: (v) => set({ gluvoDobaFirstNightPeace: v }),
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
       setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
+      setGluvoDobaTutorial: (v) => set({ gluvoDobaTutorial: v }),
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),

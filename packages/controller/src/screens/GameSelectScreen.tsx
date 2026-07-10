@@ -109,6 +109,7 @@ export function GameSelectScreen() {
   const [gluvoBajacica, setGluvoBajacica] = useState(false);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [gluvoPackId, setGluvoPackId] = useState('');
+  const [gluvoTutorial, setGluvoTutorial] = useState(false);
   const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
     { id: string; name: string; count: number }[]
   >([]);
@@ -240,6 +241,7 @@ export function GameSelectScreen() {
       } else {
         payload.gluvoDobaBajacica = gluvoBajacica;
       }
+      if (gluvoTutorial) payload.gluvoDobaTutorial = true;
     }
     if (game.id === 'bolji-zivot' && bzTutorial) {
       payload.boljiZivotTutorial = true;
@@ -733,7 +735,23 @@ export function GameSelectScreen() {
                               🕯️ {t('config.gluvoBajacica')}
                             </Pill>
                           )}
+                          <Pill
+                            active={gluvoTutorial}
+                            onClick={() => setGluvoTutorial(!gluvoTutorial)}
+                          >
+                            🎓 {t('config.gluvoTutorial')}
+                          </Pill>
                         </div>
+                        {gluvoTutorial && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {t('config.gluvoTutorialHint')}
+                          </span>
+                        )}
                         {gluvoPackId !== '' && (
                           <span
                             style={{

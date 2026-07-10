@@ -182,6 +182,10 @@ export function GameSelectScreen() {
         gameId === 'gluvo-doba' && gluvoPack
           ? { name: gluvoPack.name, wolves: gluvoPack.wolves, roles: gluvoPack.roles }
           : undefined,
+      gluvoDobaTutorial:
+        gameId === 'gluvo-doba' && newGamesConfig.gluvoDobaTutorial
+          ? true
+          : undefined,
       pogodiGodinuRounds:
         gameId === 'pogodi-godinu'
           ? newGamesConfig.pogodiGodinuRounds
@@ -563,7 +567,24 @@ export function GameSelectScreen() {
                       onToggle={newGamesConfig.setGluvoDobaBajacica}
                     />
                   )}
+                  <TogglePill
+                    label={`🎓 ${t('config.gluvoTutorial')}`}
+                    checked={newGamesConfig.gluvoDobaTutorial}
+                    onToggle={newGamesConfig.setGluvoDobaTutorial}
+                  />
                 </div>
+                {newGamesConfig.gluvoDobaTutorial && (
+                  <p
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      textAlign: 'center',
+                      marginTop: '0.35rem',
+                    }}
+                  >
+                    {t('config.gluvoTutorialHint')}
+                  </p>
+                )}
                 {newGamesConfig.gluvoDobaPackId !== '' && (
                   <p
                     style={{

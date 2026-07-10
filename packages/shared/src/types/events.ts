@@ -86,6 +86,10 @@ export interface ClientToServerEvents {
     // A selected role pack fully defines the roster (overrides the bands +
     // neutral/vila/bajačica toggles). Re-validated server-side.
     gluvoDobaPack?: GluvoDobaPack;
+    // Gluvo doba tutorial mode: shows the "?" roles sheet + guide texts
+    // (hidden in a normal game) and phases advance on the moderator's
+    // "next phase" button instead of the timers.
+    gluvoDobaTutorial?: boolean;
     // Round / stroke counts for the newer games (host-configurable).
     fakeArtistRounds?: number;
     fakeArtistStrokes?: number;

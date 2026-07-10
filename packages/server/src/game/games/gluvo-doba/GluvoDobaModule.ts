@@ -43,6 +43,7 @@ interface GluvoDobaCustomContent {
   gluvoDobaFirstNightPeace?: boolean;
   gluvoDobaBajacica?: boolean;
   gluvoDobaPack?: GluvoDobaPack;
+  gluvoDobaTutorial?: boolean;
 }
 
 const DAY_PHASES = new Set(['zora', 'diskusija', 'glasanje', 'presuda']);
@@ -75,6 +76,11 @@ export class GluvoDobaModule extends BaseGameModule {
 
   private state!: GluvoDobaInternalState;
   private timings: Record<string, number> = {};
+  // Tutorial mod: fazni tajmer stoji — faze pomera voditelj host akcijom
+  // 'gluvo:next-phase' (izvršava tačno ono što bi istek tajmera uradio).
+  // Rano završavanje kroz akcije igrača (svi odigrali / svi glasali) i
+  // dalje važi nepromenjeno.
+  private tutorialMode = false;
   private info = new Map<string, ParticipantInfo>();
   // The match's role composition — open setup knowledge, computed once.
   private rolesInPlay: { roleId: GluvoDobaRoleId; count: number }[] = [];
@@ -91,6 +97,7 @@ export class GluvoDobaModule extends BaseGameModule {
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
     const opts = (customContent as GluvoDobaCustomContent | undefined) ?? {};
+    this.tutorialMode = opts.gluvoDobaTutorial === true;
     const participants = room.players.filter((p) => p.isConnected);
 
     this.info = new Map(
@@ -217,6 +224,13 @@ export class GluvoDobaModule extends BaseGameModule {
         this.state.phase = 'ended';
         this.state.phaseTimeRemaining = 0;
         return this.buildGameState(room);
+      case 'gluvo:next-phase':
+        // Tutorial mod: voditelj ručno izvršava ono što bi istek tajmera
+        // uradio u tekućoj fazi (noć → razreši sa pristiglim akcijama itd.).
+        if (!this.tutorialMode) return null;
+        if (this.state.phase === 'ended') return null;
+        this.advanceOnTimeout(room);
+        return this.buildGameState(room);
       default:
         return null;
     }
@@ -225,9 +239,13 @@ export class GluvoDobaModule extends BaseGameModule {
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
     if (this.state.phase === 'ended') return null;
 
-    this.state.phaseTimeRemaining -= deltaMs / 1000;
-    if (this.state.phaseTimeRemaining <= 0) {
-      this.advanceOnTimeout(room);
+    // Tutorial mod: tajmer stoji — tick i dalje emituje stanje (progres
+    // noći/glasanja ostaje svež), ali faze pomera samo voditelj.
+    if (!this.tutorialMode) {
+      this.state.phaseTimeRemaining -= deltaMs / 1000;
+      if (this.state.phaseTimeRemaining <= 0) {
+        this.advanceOnTimeout(room);
+      }
     }
     return this.buildGameState(room);
   }
@@ -769,6 +787,7 @@ export class GluvoDobaModule extends BaseGameModule {
 
     const data: Record<string, unknown> = {
       phase: this.state.phase,
+      tutorialMode: this.tutorialMode,
       host: hostData,
     };
 

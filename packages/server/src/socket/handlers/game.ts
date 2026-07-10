@@ -75,6 +75,7 @@ export function registerGameHandlers(
       gluvoDobaFirstNightPeace: data.gluvoDobaFirstNightPeace,
       gluvoDobaBajacica: data.gluvoDobaBajacica,
       gluvoDobaPack: data.gluvoDobaPack,
+      gluvoDobaTutorial: data.gluvoDobaTutorial,
       roundCount: data.roundCount,
       boljiZivotTutorial: data.boljiZivotTutorial,
       language: data.language,
