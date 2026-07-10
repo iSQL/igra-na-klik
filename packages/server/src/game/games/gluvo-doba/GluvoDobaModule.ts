@@ -945,7 +945,7 @@ export class GluvoDobaModule extends BaseGameModule {
           ([id, r]) =>
             id !== playerId && GLUVO_DOBA_ROLES[r].team === 'vukodlaci'
         )
-        .map(([id]) => ({ playerId: id, name: this.nameOf(id) }));
+        .map(([id, r]) => ({ playerId: id, name: this.nameOf(id), roleId: r }));
       if (this.state.phase === 'noc' && alive) {
         pd.packPicks = [...this.state.nightActions.entries()]
           .filter(([actorId]) => {

@@ -140,9 +140,10 @@ export interface GluvoDobaControllerData {
   roleId?: GluvoDobaRoleId;
   alive: boolean;
 
-  // Dark team only: the whole pack knows each other; packPicks shows the
-  // wolves' submitted kill votes tonight (live coordination).
-  packMates?: { playerId: string; name: string }[];
+  // Dark team only: the whole pack knows each other (name + exact role, so a
+  // Vukodlak sees his Vampir / Todorac / etc.); packPicks shows the wolves'
+  // submitted kill votes tonight (live coordination).
+  packMates?: { playerId: string; name: string; roleId: GluvoDobaRoleId }[];
   packPicks?: { name: string; targetName: string }[];
   // Vampir only: true once no Vukodlak is left alive — the Vampir has
   // inherited the pack and his own pick now decides the kill.

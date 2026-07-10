@@ -496,6 +496,63 @@ function HistoryPanel({ my }: { my: GluvoDobaControllerData }) {
   );
 }
 
+/**
+ * The dark pack's private roster — every member's name AND exact role, so a
+ * Vukodlak always knows who his Vampir / Todorac / etc. are. Dark-team only;
+ * flows through the private playerData slice, never the shared hostData.
+ */
+function PackRoster({
+  packMates,
+  compact,
+}: {
+  packMates: NonNullable<GluvoDobaControllerData['packMates']>;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: '340px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.35rem',
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: compact ? '0.8rem' : '0.9rem',
+          fontWeight: 800,
+          color: 'var(--danger)',
+        }}
+      >
+        🐺 Tvoje Sile Mraka
+      </p>
+      {packMates.map((m) => (
+        <div
+          key={m.playerId}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.45rem 0.7rem',
+            background: 'var(--bg-card)',
+            borderRadius: '10px',
+            borderLeft: '4px solid var(--danger)',
+            fontSize: compact ? '0.85rem' : '0.95rem',
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>{m.name}</span>
+          <span style={{ fontWeight: 700, color: 'var(--danger)' }}>
+            {ROLE_EMOJI[m.roleId]} {GLUVO_DOBA_ROLES[m.roleId].name}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function BlockedBanner() {
   return (
     <p
@@ -614,11 +671,11 @@ export default function GluvoDobaController() {
             {roleDef.description}
           </p>
           {isDark && my.packMates && my.packMates.length > 0 && (
-            <p style={{ fontSize: '0.95rem' }}>
-              Tvoje Sile Mraka:{' '}
-              <strong style={{ color: 'var(--danger)' }}>
-                {my.packMates.map((m) => m.name).join(', ')}
-              </strong>
+            <PackRoster packMates={my.packMates} />
+          )}
+          {isDark && my.packMates && my.packMates.length === 0 && (
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Sam si u Silama Mraka — nema saborca.
             </p>
           )}
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -635,26 +692,35 @@ export default function GluvoDobaController() {
         const isMoranaOffNight =
           my.roleId === 'morana' && !my.moranaKillTonight;
         return (
-          <TargetGrid
-            roleLine={roleLine}
-            prompt={isMoranaOffNight ? 'Koga sumnjičiš?' : roleDef.nightPrompt}
-            note={
-              my.peacefulNight
-                ? '🌘 Prva noć — upoznaj čopor, večeras nema krvi. Tvoj izbor se ne računa.'
-                : isMoranaOffNight
-                  ? 'Noćas ne lediš — skupljaš snagu za sledeću noć.'
-                  : my.roleId === 'vampir'
-                    ? my.vampirLeader
-                      ? '🧛 Kum je pao — sada ti biraš žrtvu čopora!'
-                      : 'Kum (Vukodlak) bira žrtvu — tvoj glas vredi tek ako kuma nestane.'
-                    : my.roleId === 'zduhac' && my.zduhacSaveAvailable
-                      ? 'Tvoja duša i dalje čuva selo (štit nepotrošen).'
-                      : undefined
-            }
-            targets={my.targets}
-            onPick={(targetId) => emit('gluvo:night-action', { targetId })}
-            timeRemaining={timeRemaining}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {isDark && my.packMates && my.packMates.length > 0 && (
+              <div style={{ padding: '0.75rem 1rem 0', display: 'flex', justifyContent: 'center' }}>
+                <PackRoster packMates={my.packMates} compact />
+              </div>
+            )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <TargetGrid
+                roleLine={roleLine}
+                prompt={isMoranaOffNight ? 'Koga sumnjičiš?' : roleDef.nightPrompt}
+                note={
+                  my.peacefulNight
+                    ? '🌘 Prva noć — upoznaj čopor, večeras nema krvi. Tvoj izbor se ne računa.'
+                    : isMoranaOffNight
+                      ? 'Noćas ne lediš — skupljaš snagu za sledeću noć.'
+                      : my.roleId === 'vampir'
+                        ? my.vampirLeader
+                          ? '🧛 Kum je pao — sada ti biraš žrtvu čopora!'
+                          : 'Kum (Vukodlak) bira žrtvu — tvoj glas vredi tek ako kuma nestane.'
+                        : my.roleId === 'zduhac' && my.zduhacSaveAvailable
+                          ? 'Tvoja duša i dalje čuva selo (štit nepotrošen).'
+                          : undefined
+                }
+                targets={my.targets}
+                onPick={(targetId) => emit('gluvo:night-action', { targetId })}
+                timeRemaining={timeRemaining}
+              />
+            </div>
+          </div>
         );
       }
       return (
@@ -664,6 +730,9 @@ export default function GluvoDobaController() {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
             {roleLine}
           </p>
+          {isDark && my.packMates && my.packMates.length > 0 && (
+            <PackRoster packMates={my.packMates} compact />
+          )}
           {isDark && my.packPicks && my.packPicks.length > 0 && (
             <div style={{ fontSize: '0.9rem' }}>
               {my.packPicks.map((p, i) => (
