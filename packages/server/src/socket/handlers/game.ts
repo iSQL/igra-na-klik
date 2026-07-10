@@ -76,6 +76,7 @@ export function registerGameHandlers(
       gluvoDobaBajacica: data.gluvoDobaBajacica,
       gluvoDobaPack: data.gluvoDobaPack,
       roundCount: data.roundCount,
+      boljiZivotTutorial: data.boljiZivotTutorial,
       language: data.language,
     });
     if (result.error) {

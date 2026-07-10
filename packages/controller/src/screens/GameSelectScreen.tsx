@@ -114,6 +114,7 @@ export function GameSelectScreen() {
   >([]);
   const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
+  const [bzTutorial, setBzTutorial] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -239,6 +240,9 @@ export function GameSelectScreen() {
       } else {
         payload.gluvoDobaBajacica = gluvoBajacica;
       }
+    }
+    if (game.id === 'bolji-zivot' && bzTutorial) {
+      payload.boljiZivotTutorial = true;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -742,6 +746,28 @@ export function GameSelectScreen() {
                         )}
                       </div>
                     </>
+                  )}
+                  {game.id === 'bolji-zivot' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        <Pill
+                          active={bzTutorial}
+                          onClick={() => setBzTutorial(!bzTutorial)}
+                        >
+                          🎓 {t('config.bzTutorial')}
+                        </Pill>
+                      </div>
+                      {bzTutorial && (
+                        <span
+                          style={{
+                            fontSize: '0.68rem',
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {t('config.bzTutorialHint')}
+                        </span>
+                      )}
+                    </div>
                   )}
                   {GAME_ROUND_CONFIG[game.id] && (
                     <RoundsConfig

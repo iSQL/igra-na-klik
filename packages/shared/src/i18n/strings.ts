@@ -177,6 +177,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoDeathReveal.none': 'Ništa',
     'config.gluvoFirstNight': 'Mirna prva noć',
     'config.gluvoBajacica': 'Bajačica u igri',
+    'config.bzTutorial': 'Tutorial mod',
+    'config.bzTutorialHint':
+      'Vođena partija za učenje: saveti i podsetnik pravila na telefonima, a faze pomera voditelj dugmetom umesto tajmera.',
     'config.gluvoMode': 'Mod (uloge)',
     'config.gluvoModeClassic': 'Klasik (ugrađeni balans)',
     'config.gluvoModeNote': 'Uloge dolaze iz izabranog moda — ostala pravila i dalje važe.',
@@ -477,6 +480,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoDeathReveal.none': 'Nothing',
     'config.gluvoFirstNight': 'Peaceful first night',
     'config.gluvoBajacica': 'Bajačica in play',
+    'config.bzTutorial': 'Tutorial mode',
+    'config.bzTutorialHint':
+      'Guided game for learning: tips and a rules sheet on the phones, and the moderator advances phases with a button instead of timers.',
     'config.gluvoMode': 'Mode (roles)',
     'config.gluvoModeClassic': 'Classic (built-in balance)',
     'config.gluvoModeNote': 'Roles come from the selected mode — other rules still apply.',

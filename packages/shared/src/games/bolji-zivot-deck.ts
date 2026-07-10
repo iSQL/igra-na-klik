@@ -45,6 +45,9 @@ export const BZ_RISKA_V = 13;
 /** Kazna kad pozivač "Bolji život!" ne bude strogo najniži. */
 export const BZ_CALL_PENALTY = 20;
 
+/** Dužina paralelnog SLAP prozora — server rok + klijentski progress bar. */
+export const BZ_SLAP_WINDOW_SECONDS = 4;
+
 export const BZ_POWER_BY_VALUE: Readonly<
   Record<number, BoljiZivotPowerKind | undefined>
 > = {

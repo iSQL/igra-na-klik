@@ -22,6 +22,8 @@ interface NewGamesConfigStore {
   tajniAgentiMode: TajniAgentiMode;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
+  // Bolji život: tutorial mode (guided game — hints + admin-driven phases).
+  boljiZivotTutorial: boolean;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
   // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -37,6 +39,7 @@ interface NewGamesConfigStore {
   setPogodiBrojPackId: (id: string) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setDrawGuessTimeLimit: (n: number) => void;
+  setBoljiZivotTutorial: (v: boolean) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -55,6 +58,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       pogodiBrojPackId: '',
       tajniAgentiMode: 'classic',
       drawGuessTimeLimit: 60,
+      boljiZivotTutorial: false,
       roundCounts: {},
       setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
@@ -69,6 +73,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
+      setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

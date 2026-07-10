@@ -49,6 +49,8 @@ export interface BZSlapPublic {
   /** Vrednost koju treba pogoditi (vrh otpada u trenutku otvaranja). */
   value: number;
   secondsLeft: number;
+  /** Puna dužina prozora u sekundama — za progress bar na klijentima. */
+  windowSeconds: number;
   winnerId: string | null;
   winnerName: string | null;
   /** Promašaji — javno otkrivene karte + kaznena karta za svakog. */
@@ -96,6 +98,11 @@ export interface BZLeaderboardEntry {
 
 export interface BoljiZivotHostData {
   sub: BoljiZivotPhase;
+  /**
+   * Tutorial mod: klijenti prikazuju vodič (hintove, "?" podsetnik) i
+   * kriju tajmer — faze pomera admin dugmetom (host akcija 'bz:next-phase').
+   */
+  tutorialMode: boolean;
   roundNumber: number;
   totalRounds: number;
   turnOrder: string[];

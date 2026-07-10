@@ -189,6 +189,14 @@ client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/t
   no new socket events were added. Round count uses the generic `roundCount` /
   `GAME_ROUND_CONFIG` knob; wait-phase durations are in `GAME_TIMING_DEFS`
   (`/admin/timinzi`), active-input timers stay hardcoded in the module.
+- **Tutorial mode** (`boljiZivotTutorial` in `host:start-game`, toggle on both
+  game-select screens): phase timers don't tick — the host/remote-host advances
+  phases via the `bz:next-phase` host action (executes exactly what the timeout
+  would); the parallel slap window keeps its real-time deadline. Clients read
+  `data.tutorialMode` and show guide content from
+  [bolji-zivot-tutorial.ts](packages/shared/src/games/bolji-zivot-tutorial.ts)
+  (TV phase explainers, personalized phone hints, "?" rules sheet) — none of it
+  renders in a normal game.
 
 Note for ANY new game: the public instructions hub at `GET /uputstva`
 ([packages/server/src/uputstva-page.ts](packages/server/src/uputstva-page.ts))

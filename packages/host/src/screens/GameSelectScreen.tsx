@@ -194,6 +194,10 @@ export function GameSelectScreen() {
         ? newGamesConfig.roundCounts[gameId] ??
           GAME_ROUND_CONFIG[gameId].default
         : undefined,
+      boljiZivotTutorial:
+        gameId === 'bolji-zivot' && newGamesConfig.boljiZivotTutorial
+          ? true
+          : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -570,6 +574,36 @@ export function GameSelectScreen() {
                     }}
                   >
                     {t('config.gluvoModeNote')}
+                  </p>
+                )}
+              </>
+            )}
+            {game.id === 'bolji-zivot' && (
+              <>
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    marginTop: '0.5rem',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TogglePill
+                    label={`🎓 ${t('config.bzTutorial')}`}
+                    checked={newGamesConfig.boljiZivotTutorial}
+                    onToggle={newGamesConfig.setBoljiZivotTutorial}
+                  />
+                </div>
+                {newGamesConfig.boljiZivotTutorial && (
+                  <p
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      textAlign: 'center',
+                      marginTop: '0.35rem',
+                    }}
+                  >
+                    {t('config.bzTutorialHint')}
                   </p>
                 )}
               </>

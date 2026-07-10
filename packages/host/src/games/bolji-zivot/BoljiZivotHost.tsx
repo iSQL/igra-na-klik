@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
+import { socket } from '../../socket';
 import type { BoljiZivotHostData, BZFamilyPublic } from '@igra/shared';
-import { BZ_POWER_TEXT } from '@igra/shared';
+import { BZ_POWER_TEXT, BZ_TUTORIAL_PHASE_TEXT } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
@@ -35,6 +36,7 @@ export default function BoljiZivotHost() {
   if (!gameState || !data) return null;
 
   const { phase, timeRemaining } = gameState;
+  const tutorial = data.tutorialMode;
 
   if (phase === 'final-leaderboard' || phase === 'ended') {
     return <FinalBoard data={data} />;
@@ -72,17 +74,35 @@ export default function BoljiZivotHost() {
         <span style={{ opacity: 0.5 }}>•</span>
         <span>{phaseLabel(phase, data)}</span>
         <span style={{ opacity: 0.5 }}>•</span>
-        <span
-          style={{
-            fontFamily: 'monospace',
-            fontWeight: 700,
-            fontSize: '1.3rem',
-            color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--text-primary)',
-          }}
-        >
-          {timeRemaining}s
-        </span>
+        {tutorial ? (
+          <span
+            style={{
+              fontWeight: 700,
+              color: 'var(--accent)',
+              border: '1px solid rgba(194,155,71,0.5)',
+              borderRadius: '999px',
+              padding: '0.1rem 0.7rem',
+              fontSize: '0.9rem',
+            }}
+          >
+            🎓 Tutorial
+          </span>
+        ) : (
+          <span
+            style={{
+              fontFamily: 'monospace',
+              fontWeight: 700,
+              fontSize: '1.3rem',
+              color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--text-primary)',
+            }}
+          >
+            {timeRemaining}s
+          </span>
+        )}
       </div>
+
+      {/* Tutorial: fazni vodič + ručno pomeranje faza */}
+      {tutorial && <TutorialBar phase={phase} />}
 
       {/* Poslednji događaj na stolu */}
       <AnimatePresence mode="popLayout">
@@ -170,7 +190,12 @@ export default function BoljiZivotHost() {
       {/* Centar: špil + otpad */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
         <div style={{ textAlign: 'center' }}>
-          <div
+          {/* Puls na promenu broja karata = neko je upravo vukao. */}
+          <motion.div
+            key={data.drawCount}
+            initial={{ scale: 1.12, rotate: -4 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 18 }}
             style={{
               width: 84,
               height: 118,
@@ -185,17 +210,27 @@ export default function BoljiZivotHost() {
             }}
           >
             🌰
-          </div>
+          </motion.div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0' }}>
             Špil · {data.drawCount}
           </p>
         </div>
         <div style={{ textAlign: 'center' }}>
-          {data.discardTop ? (
-            <BZCardFace v={data.discardTop.v} name={data.discardTop.name} size={84} />
-          ) : (
-            <BZCardGap size={84} />
-          )}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {data.discardTop ? (
+              <motion.div
+                key={`${data.discardCount}-${data.discardTop.v}-${data.discardTop.name}`}
+                initial={{ rotateY: 90, scale: 1.18, y: -10 }}
+                animate={{ rotateY: 0, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.35 }}
+              >
+                <BZCardFace v={data.discardTop.v} name={data.discardTop.name} size={84} />
+              </motion.div>
+            ) : (
+              <BZCardGap size={84} />
+            )}
+          </AnimatePresence>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0' }}>
             Otpad · {data.discardCount}
           </p>
@@ -215,6 +250,74 @@ export default function BoljiZivotHost() {
           <FamilyPanel key={fam.playerId} fam={fam} data={data} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// Faze u kojima se čeka odluka igrača — "Sledeća faza" tu znači "preskoči
+// potez" (izvršava se isto što i istek tajmera), pa dugme menja tekst.
+const BZ_INPUT_PHASES = new Set([
+  'peeking',
+  'await-draw',
+  'holding',
+  'power-select',
+  'power-look',
+  'reaction',
+  'riska',
+]);
+
+function TutorialNextButton({ label }: { label: string }) {
+  return (
+    <button
+      onClick={() =>
+        socket.emit('host:game-action', { action: 'bz:next-phase' })
+      }
+      style={{
+        padding: '0.45rem 1.1rem',
+        borderRadius: '0.6rem',
+        background: 'var(--accent)',
+        color: '#fff',
+        fontWeight: 700,
+        fontSize: '0.9rem',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Tutorial traka na TV-u: objašnjenje tekuće faze + ručno pomeranje. */
+function TutorialBar({ phase }: { phase: string }) {
+  const hint = BZ_TUTORIAL_PHASE_TEXT[phase as keyof typeof BZ_TUTORIAL_PHASE_TEXT];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        background: 'rgba(194,155,71,0.1)',
+        border: '1px solid rgba(194,155,71,0.35)',
+        borderRadius: '0.75rem',
+        padding: '0.6rem 1rem',
+        maxWidth: '900px',
+        width: '100%',
+      }}
+    >
+      <span style={{ fontSize: '1.3rem' }}>🎓</span>
+      <p
+        style={{
+          margin: 0,
+          flex: 1,
+          fontSize: '0.95rem',
+          color: 'var(--text-primary)',
+          lineHeight: 1.4,
+        }}
+      >
+        {hint ?? 'Vođena partija — faze pomera voditelj.'}
+      </p>
+      <TutorialNextButton
+        label={BZ_INPUT_PHASES.has(phase) ? 'Preskoči potez ▸' : 'Sledeća faza ▸'}
+      />
     </div>
   );
 }
@@ -314,7 +417,25 @@ function FamilyPanel({
             BOLJI ŽIVOT!
           </span>
         )}
-        {isCurrent && (
+        {isCurrent && data.sub === 'holding' && (
+          <motion.span
+            initial={{ scale: 0, y: -6 }}
+            animate={{ scale: 1, y: 0 }}
+            style={{
+              marginLeft: 'auto',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              background: 'rgba(194,155,71,0.2)',
+              border: '1px solid var(--accent)',
+              color: 'var(--accent)',
+              borderRadius: '999px',
+              padding: '0.15rem 0.55rem',
+            }}
+          >
+            🎴 drži kartu
+          </motion.span>
+        )}
+        {isCurrent && data.sub !== 'holding' && (
           <span style={{ marginLeft: 'auto', fontSize: '1.1rem' }}>▶</span>
         )}
       </div>
@@ -335,14 +456,23 @@ function FamilyPanel({
               </motion.div>
             );
           }
-          return (
-            <BZCardBack
-              key={slot.pos}
-              pos={slot.pos}
-              size={58}
-              highlight={changed.has(slot.pos)}
-            />
-          );
+          if (changed.has(slot.pos)) {
+            // Prodrmaj kartu dirnutu poslednjom akcijom — jasno se vidi
+            // ČIJA karta i NA KOM mestu se upravo promenila.
+            return (
+              <motion.div
+                key={`${slot.pos}-${data.lastActionId}`}
+                animate={{
+                  rotate: [0, -7, 7, -5, 5, 0],
+                  scale: [1, 1.12, 1.12, 1.06, 1],
+                }}
+                transition={{ duration: 0.55 }}
+              >
+                <BZCardBack pos={slot.pos} size={58} highlight />
+              </motion.div>
+            );
+          }
+          return <BZCardBack key={slot.pos} pos={slot.pos} size={58} />;
         })}
       </div>
     </div>
@@ -377,9 +507,13 @@ function RevealBoard({
             : `💥 ${reveal.callerName} je pao — +20 oraha kazne!`
           : 'Runda je istekla — otkrivanje!'}
       </p>
-      <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-        Runda {data.roundNumber}/{data.totalRounds} · sledeća za {timeRemaining}s
-      </p>
+      {data.tutorialMode ? (
+        <TutorialBar phase="reveal" />
+      ) : (
+        <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+          Runda {data.roundNumber}/{data.totalRounds} · sledeća za {timeRemaining}s
+        </p>
+      )}
       <div
         style={{
           display: 'flex',
@@ -478,6 +612,9 @@ function FinalBoard({ data }: { data: BoljiZivotHostData }) {
       <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
         Manje je bolje — pobednik je na vrhu!
       </p>
+      {data.tutorialMode && data.sub === 'final-leaderboard' && (
+        <TutorialNextButton label="Završi igru ▸" />
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
         {entries.map((e) => (
           <motion.div

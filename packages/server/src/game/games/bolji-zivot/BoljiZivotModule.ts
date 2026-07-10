@@ -7,6 +7,7 @@ import {
   BZ_CALL_PENALTY,
   BZ_POPARA_V,
   BZ_RISKA_V,
+  BZ_SLAP_WINDOW_SECONDS,
   bzRoundSum,
 } from '@igra/shared';
 import type {
@@ -29,7 +30,7 @@ const POWER_SELECT_DURATION = 20;
 const POWER_LOOK_DURATION = 15;
 const REACTION_DURATION = 7;
 const RISKA_DURATION = 20;
-const SLAP_WINDOW_MS = 4000;
+const SLAP_WINDOW_MS = BZ_SLAP_WINDOW_SECONDS * 1000;
 
 // Pauze — podesive kroz /admin/timinzi (GAME_TIMING_DEFS 'bolji-zivot').
 const PEEKING_DURATION = 20;
@@ -84,6 +85,11 @@ export class BoljiZivotModule extends BaseGameModule {
 
   private timings: Record<string, number> = {};
 
+  // Tutorial mod: fazni tajmeri ne teku — pomera ih admin ('bz:next-phase'
+  // host akcija, izvršava tačno ono što bi istek tajmera uradio). Paralelni
+  // slap prozor zadržava svoj realni rok (refleks je poenta tog mini-dela).
+  private tutorialMode = false;
+
   private sub: BoljiZivotPhase = 'peeking';
   private timeLeft = 0;
   private roundNumber = 1;
@@ -129,6 +135,9 @@ export class BoljiZivotModule extends BaseGameModule {
 
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
+    this.tutorialMode =
+      (customContent as { boljiZivotTutorial?: unknown } | undefined)
+        ?.boljiZivotTutorial === true;
     this.totalRounds = clampGameRounds(
       this.gameId,
       (customContent as { roundCount?: unknown } | undefined)?.roundCount
@@ -1060,10 +1069,27 @@ export class BoljiZivotModule extends BaseGameModule {
       this.slap = null;
     }
 
-    this.timeLeft -= deltaMs / 1000;
-    if (this.timeLeft <= 0) {
-      this.advanceOnTimeout(room);
+    // Tutorial mod: fazni tajmer stoji — faze pomera admin (bz:next-phase).
+    // Tick i dalje emituje stanje da slap secondsLeft ostane svež.
+    if (!this.tutorialMode) {
+      this.timeLeft -= deltaMs / 1000;
+      if (this.timeLeft <= 0) {
+        this.advanceOnTimeout(room);
+      }
     }
+    return this.buildGameState(room);
+  }
+
+  onHostAction(
+    room: Room,
+    _gameState: GameState,
+    action: string
+  ): GameState | null {
+    if (action !== 'bz:next-phase') return null;
+    if (!this.tutorialMode) return null;
+    if (this.sub === 'ended') return null;
+    // Izvrši tačno ono što bi istek tajmera uradio u tekućoj pod-fazi.
+    this.advanceOnTimeout(room);
     return this.buildGameState(room);
   }
 
@@ -1273,6 +1299,7 @@ export class BoljiZivotModule extends BaseGameModule {
             0,
             Math.ceil((this.slap.deadlineMs - Date.now()) / 1000)
           ),
+          windowSeconds: BZ_SLAP_WINDOW_SECONDS,
           winnerId: this.slap.winnerId,
           winnerName: this.slap.winnerId
             ? this.nameOf(room, this.slap.winnerId)
@@ -1293,6 +1320,7 @@ export class BoljiZivotModule extends BaseGameModule {
 
     const data: Record<string, unknown> = {
       sub: this.sub,
+      tutorialMode: this.tutorialMode,
       roundNumber: this.roundNumber,
       totalRounds: this.totalRounds,
       turnOrder: this.turnOrder,

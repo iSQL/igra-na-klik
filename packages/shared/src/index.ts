@@ -39,3 +39,4 @@ export * from './games/gluvo-doba-import.js';
 export * from './games/game-timings.js';
 export * from './types/bolji-zivot.js';
 export * from './games/bolji-zivot-deck.js';
+export * from './games/bolji-zivot-tutorial.js';

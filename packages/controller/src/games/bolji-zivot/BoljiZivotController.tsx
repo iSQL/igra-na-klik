@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -9,7 +9,11 @@ import type {
   BoljiZivotPlayerData,
   BZFamilyPublic,
 } from '@igra/shared';
-import { BZ_POWER_TEXT } from '@igra/shared';
+import {
+  BZ_POWER_TEXT,
+  BZ_CHEATSHEET,
+  bzTutorialControllerHint,
+} from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
@@ -22,11 +26,19 @@ export default function BoljiZivotController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
+  const iAmRemoteHost = usePlayerStore(
+    (s) =>
+      !!s.room &&
+      s.room.remoteHostPlayerId != null &&
+      s.room.remoteHostPlayerId === s.player?.id
+  );
   const haptics = useHaptics();
 
   const [blindOwnPos, setBlindOwnPos] = useState<number | null>(null);
   const [confirmCall, setConfirmCall] = useState(false);
   const [riskaPick, setRiskaPick] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [turnBannerId, setTurnBannerId] = useState(0);
 
   const phase = gameState?.phase ?? '';
 
@@ -37,9 +49,44 @@ export default function BoljiZivotController() {
     setRiskaPick(false);
   }, [phase]);
 
+  // "TVOJ POTEZ" — na uzlaznu ivicu (nije moj potez → jeste) zavibriraj i
+  // pokaži krupni baner na ~1.8s. Izvedeno pre ranih return-a (redosled hookova).
+  const amOnTurnNow = !!(
+    gameState &&
+    playerId &&
+    phase === 'await-draw' &&
+    (gameState.playerData[playerId] as { isMyTurn?: boolean } | undefined)
+      ?.isMyTurn
+  );
+  const wasOnTurnRef = useRef(false);
+  useEffect(() => {
+    if (amOnTurnNow && !wasOnTurnRef.current) {
+      haptics.success();
+      setTurnBannerId((n) => n + 1);
+    }
+    wasOnTurnRef.current = amOnTurnNow;
+  }, [amOnTurnNow, haptics]);
+
+  // Slap prozor se otvorio i mene se tiče → kratka vibracija za pažnju.
+  const slapForMe = !!(
+    gameState &&
+    playerId &&
+    (gameState.data as unknown as BoljiZivotHostData | null)?.slap &&
+    (gameState.playerData[playerId] as { canSlap?: boolean } | undefined)
+      ?.canSlap
+  );
+  const hadSlapRef = useRef(false);
+  useEffect(() => {
+    if (slapForMe && !hadSlapRef.current) haptics.tap();
+    hadSlapRef.current = slapForMe;
+  }, [slapForMe, haptics]);
+
   if (!gameState || !playerId) return null;
   const data = gameState.data as unknown as BoljiZivotHostData;
   const me = (gameState.playerData[playerId] ?? {}) as unknown as BoljiZivotPlayerData;
+  const tutorial = data.tutorialMode === true;
+  // U tutorial modu faze pomera onaj ko drži kontrolu (remote-host / hostless kreator).
+  const canAdvance = tutorial && iAmRemoteHost;
 
   if (!me.mySlots) {
     return (
@@ -148,6 +195,9 @@ export default function BoljiZivotController() {
     const mine = entries.find((e) => e.playerId === playerId);
     return (
       <Centered>
+        {canAdvance && phase === 'final-leaderboard' && (
+          <TutorialNextButton label="Završi igru ▸" onTap={haptics.tap} />
+        )}
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
           Kraj partije — manje oraha je bolje!
         </p>
@@ -193,6 +243,18 @@ export default function BoljiZivotController() {
     const myFam = reveal.families.find((f) => f.playerId === playerId);
     return (
       <div style={{ padding: '0.75rem', overflowY: 'auto', height: '100%' }}>
+        {canAdvance && (
+          <div style={{ marginBottom: '0.5rem' }}>
+            <TutorialNextButton
+              label={
+                data.roundNumber < data.totalRounds
+                  ? 'Sledeća runda ▸'
+                  : 'Konačni rezultati ▸'
+              }
+              onTap={haptics.tap}
+            />
+          </div>
+        )}
         <p
           className="display"
           style={{ fontSize: '1.25rem', fontWeight: 700, textAlign: 'center', margin: '0 0 0.25rem' }}
@@ -274,10 +336,76 @@ export default function BoljiZivotController() {
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {statusLine(phase, data, me)}
         </span>
-        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--text-primary)' }}>
-          {timeRemaining}s
-        </span>
+        {tutorial ? (
+          <span style={{ fontWeight: 700, color: 'var(--accent)' }}>🎓</span>
+        ) : (
+          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--text-primary)' }}>
+            {timeRemaining}s
+          </span>
+        )}
       </div>
+
+      {/* Krupni "TVOJ POTEZ" baner — kratko preko svega, bez blokiranja tapova */}
+      {turnBannerId > 0 && amOnTurnNow && (
+        <div
+          key={turnBannerId}
+          style={{
+            position: 'fixed',
+            top: '18%',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            zIndex: 500,
+            pointerEvents: 'none',
+            animation: 'igra-banner 1.8s ease-out forwards',
+          }}
+        >
+          <span
+            className="display"
+            style={{
+              background: 'var(--accent)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '1.5rem',
+              padding: '0.6rem 1.6rem',
+              borderRadius: '999px',
+              boxShadow: '0 6px 24px rgba(0,0,0,0.45)',
+            }}
+          >
+            🎯 TVOJ POTEZ!
+          </span>
+        </div>
+      )}
+
+      {/* Tutorial: personalizovani savet za tekuću fazu */}
+      {tutorial &&
+        (() => {
+          const hint = bzTutorialControllerHint(data.sub, {
+            isMyTurn: me.isMyTurn,
+            amTargeted: me.amTargeted,
+            amRiskaHolder: me.amRiskaHolder,
+          });
+          if (!hint) return null;
+          return (
+            <p
+              key={data.sub + String(me.isMyTurn)}
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-primary)',
+                background: 'rgba(194,155,71,0.1)',
+                border: '1px solid rgba(194,155,71,0.35)',
+                borderRadius: '0.6rem',
+                padding: '0.45rem 0.6rem',
+                margin: 0,
+                lineHeight: 1.4,
+                animation: 'igra-pop .3s',
+              }}
+            >
+              🎓 {hint}
+            </p>
+          );
+        })()}
 
       {/* Poslednji događaj */}
       {data.lastAction && (
@@ -304,11 +432,40 @@ export default function BoljiZivotController() {
             borderRadius: '0.6rem',
             padding: '0.45rem',
             textAlign: 'center',
+            animation: 'igra-pop .25s, igra-pulse-ring 1s ease-out',
           }}
         >
-          <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.85rem' }}>
-            ⚡ SLAP! Imaš li {data.slap.value}? ({data.slap.secondsLeft}s)
+          <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: '0.85rem' }}>
+            ⚡ SLAP! Imaš li {data.slap.value}?
           </p>
+          {/* Odbrojavanje prozora — puna traka se topi ka nuli */}
+          <div
+            style={{
+              height: 5,
+              borderRadius: 999,
+              background: 'rgba(255,255,255,0.15)',
+              overflow: 'hidden',
+              margin: '0 0.2rem 0.4rem',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                borderRadius: 999,
+                background: 'var(--danger)',
+                width: `${Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    (data.slap.secondsLeft /
+                      Math.max(1, data.slap.windowSeconds ?? 4)) *
+                      100
+                  )
+                )}%`,
+                transition: 'width 1s linear',
+              }}
+            />
+          </div>
           <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center' }}>
             {me.mySlots
               .filter((s) => s.present)
@@ -467,7 +624,9 @@ export default function BoljiZivotController() {
         }}
       >
         <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+          {/* Puls na promenu broja karata = neko je upravo vukao sa špila. */}
           <div
+            key={data.drawCount}
             style={{
               width: 46,
               height: 64,
@@ -479,6 +638,7 @@ export default function BoljiZivotController() {
               justifyContent: 'center',
               fontSize: '1.2rem',
               margin: '0 auto',
+              animation: 'igra-pop .3s',
             }}
           >
             🌰
@@ -487,7 +647,13 @@ export default function BoljiZivotController() {
         </div>
         <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
           {data.discardTop ? (
-            <BZCardFace v={data.discardTop.v} name={data.discardTop.name} size={46} style={{ margin: '0 auto' }} />
+            // Nova karta na vrhu otpada se "okreće" — ključ po broju + licu.
+            <div
+              key={`${data.discardCount}-${data.discardTop.v}-${data.discardTop.name}`}
+              style={{ animation: 'igra-flip-in .35s' }}
+            >
+              <BZCardFace v={data.discardTop.v} name={data.discardTop.name} size={46} style={{ margin: '0 auto' }} />
+            </div>
           ) : (
             <BZCardGap size={46} style={{ margin: '0 auto' }} />
           )}
@@ -495,7 +661,12 @@ export default function BoljiZivotController() {
         </div>
         {phase === 'holding' && me.isMyTurn && me.held && (
           <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>
-            <BZCardFace v={me.held.v} name={me.held.name} size={56} style={{ margin: '0 auto', borderWidth: 3 }} />
+            <div
+              key={`${me.held.v}-${me.held.name}`}
+              style={{ animation: 'igra-flip-in .4s' }}
+            >
+              <BZCardFace v={me.held.v} name={me.held.name} size={56} style={{ margin: '0 auto', borderWidth: 3 }} />
+            </div>
             U ruci
           </div>
         )}
@@ -512,6 +683,7 @@ export default function BoljiZivotController() {
           me={me}
           visible={myVisible}
           changed={myChanged}
+          actionId={data.lastActionId}
           selectedPos={blindOwnPos}
           interactive={gridMode !== null}
           onTap={(pos) => tap(() => onGridTap(pos))()}
@@ -575,6 +747,163 @@ export default function BoljiZivotController() {
           ✅ Zapamtio sam
         </ActionButton>
       )}
+
+      {/* Tutorial: onaj ko drži kontrolu ručno pomera faze */}
+      {canAdvance && (
+        <TutorialNextButton
+          label={
+            BZ_WAIT_PHASES.has(phase) ? 'Sledeća faza ▸' : 'Preskoči potez ▸'
+          }
+          subtle={!BZ_WAIT_PHASES.has(phase)}
+          onTap={haptics.tap}
+        />
+      )}
+
+      {/* Tutorial: "?" podsetnik pravila */}
+      {tutorial && (
+        <>
+          <button
+            onClick={tap(() => setShowHelp(true))}
+            aria-label="Pravila i karte"
+            style={{
+              position: 'fixed',
+              right: '0.9rem',
+              bottom: '0.9rem',
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              color: '#fff',
+              fontSize: '1.3rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+              zIndex: 400,
+            }}
+          >
+            ?
+          </button>
+          {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Faze pauze/prikaza — tu je "Sledeća faza" prirodan tok; u ulaznim fazama
+// isto dugme znači "preskoči potez igrača" pa je vizuelno tiše.
+const BZ_WAIT_PHASES = new Set(['peek-show', 'racija-show', 'reveal', 'final-leaderboard']);
+
+function TutorialNextButton({
+  label,
+  subtle,
+  onTap,
+}: {
+  label: string;
+  subtle?: boolean;
+  onTap?: () => void;
+}) {
+  return (
+    <button
+      onClick={() => {
+        onTap?.();
+        socket.emit('host:game-action', { action: 'bz:next-phase' });
+      }}
+      style={{
+        padding: '0.55rem 1rem',
+        borderRadius: '0.6rem',
+        fontWeight: 700,
+        fontSize: '0.85rem',
+        width: '100%',
+        background: subtle ? 'var(--bg-secondary)' : 'var(--accent)',
+        color: subtle ? 'var(--text-secondary)' : '#fff',
+        border: subtle ? '1px dashed rgba(194,155,71,0.5)' : 'none',
+      }}
+    >
+      🎓 {label}
+    </button>
+  );
+}
+
+/** "?" podsetnik pravila — pun ekran, skroluje se, tutorial mod. */
+function HelpSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 15, 35, 0.88)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-secondary)',
+          borderRadius: '18px 18px 0 0',
+          border: '1px solid var(--line2, rgba(255,255,255,0.12))',
+          borderBottom: 'none',
+          width: '100%',
+          maxWidth: '30rem',
+          maxHeight: '85dvh',
+          overflowY: 'auto',
+          padding: '1rem 1rem 1.5rem',
+          animation: 'igra-pop .25s',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h2 className="display" style={{ margin: 0, fontSize: '1.15rem' }}>
+            🌰 Bolji život — podsetnik
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label="Zatvori"
+            style={{
+              marginLeft: 'auto',
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        {BZ_CHEATSHEET.map((section) => (
+          <div key={section.title} style={{ marginBottom: '0.8rem' }}>
+            <p
+              style={{
+                margin: '0 0 0.3rem',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                color: 'var(--accent)',
+              }}
+            >
+              {section.title}
+            </p>
+            {section.lines.map((line, i) => (
+              <p
+                key={i}
+                style={{
+                  margin: '0 0 0.25rem',
+                  fontSize: '0.8rem',
+                  lineHeight: 1.45,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -633,6 +962,7 @@ function MyGrid({
   me,
   visible,
   changed,
+  actionId,
   selectedPos,
   interactive,
   onTap,
@@ -640,6 +970,7 @@ function MyGrid({
   me: BoljiZivotPlayerData;
   visible: Map<number, { v: number; name: string }>;
   changed: Set<number>;
+  actionId: number;
   selectedPos: number | null;
   interactive: boolean;
   onTap: (pos: number) => void;
@@ -660,7 +991,7 @@ function MyGrid({
       {slots.map((slot) => {
         if (!slot.present) return <BZCardGap key={slot.pos} size={size} />;
         const seen = visible.get(slot.pos);
-        const inner = seen ? (
+        const raw = seen ? (
           <BZCardFace v={seen.v} name={seen.name} size={size} />
         ) : (
           <BZCardBack
@@ -668,6 +999,19 @@ function MyGrid({
             size={size}
             highlight={changed.has(slot.pos) || selectedPos === slot.pos}
           />
+        );
+        // Viđena karta uleće flipom; upravo promenjena se prodrma — jasno je
+        // ŠTA se desilo i na kom mestu, čak i kad je lice tajna.
+        const inner = seen ? (
+          <div key={`f-${slot.pos}-${seen.v}`} style={{ animation: 'igra-flip-in .35s' }}>
+            {raw}
+          </div>
+        ) : changed.has(slot.pos) ? (
+          <div key={`c-${slot.pos}-${actionId}`} style={{ animation: 'igra-shake .55s' }}>
+            {raw}
+          </div>
+        ) : (
+          raw
         );
         if (!interactive) return <div key={slot.pos}>{inner}</div>;
         return (
@@ -741,8 +1085,15 @@ function OpponentsBoard({
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
               {fam.slots.map((slot) => {
                 if (!slot.present) return <BZCardGap key={slot.pos} size={34} />;
-                const inner = (
-                  <BZCardBack pos={slot.pos} size={34} highlight={changed.has(slot.pos)} />
+                const inner = changed.has(slot.pos) ? (
+                  <div
+                    key={`c-${slot.pos}-${data.lastActionId}`}
+                    style={{ animation: 'igra-shake .55s' }}
+                  >
+                    <BZCardBack pos={slot.pos} size={34} highlight />
+                  </div>
+                ) : (
+                  <BZCardBack pos={slot.pos} size={34} />
                 );
                 if (!interactive) return <div key={slot.pos}>{inner}</div>;
                 return (
