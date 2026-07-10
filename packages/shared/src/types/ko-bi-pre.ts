@@ -6,12 +6,21 @@ export interface KoBiPreVoteOption {
   avatarColor: string;
 }
 
+export interface KoBiPreVoter {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  avatarEmoji: string;
+}
+
 export interface KoBiPreVoteTally {
   playerId: string;
   name: string;
   avatarColor: string;
   votes: number;
   isTop: boolean;
+  /** Who cast a vote for this player this round (public reveal). */
+  voters: KoBiPreVoter[];
 }
 
 export interface KoBiPreLeaderboardEntry {

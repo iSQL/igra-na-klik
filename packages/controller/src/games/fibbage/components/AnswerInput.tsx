@@ -74,7 +74,7 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
         flexDirection: 'column',
         height: '100%',
         padding: '1rem',
-        gap: '1rem',
+        gap: '0.7rem',
       }}
     >
       <p
@@ -97,12 +97,12 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
         onChange={(e) => setText(e.target.value.slice(0, FIBBAGE_MAX_ANSWER_LENGTH))}
         placeholder="Napiši lažan odgovor..."
         autoFocus
+        rows={2}
         style={{
-          flex: 1,
           width: '100%',
           fontSize: '1.1rem',
           fontWeight: 700,
-          padding: '1rem',
+          padding: '0.85rem 1rem',
           borderRadius: '16px',
           border: '1.5px solid var(--cyan)',
           boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
@@ -110,6 +110,7 @@ export function AnswerInput({ questionText }: AnswerInputProps) {
           color: 'var(--text-primary)',
           resize: 'none',
           fontFamily: 'inherit',
+          flexShrink: 0,
         }}
       />
 

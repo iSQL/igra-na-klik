@@ -77,6 +77,7 @@ export class DrawGuessModule extends BaseGameModule {
       turnScores: [],
       drawingStartTime: 0,
       lastHintRevealFraction: 0,
+      hintRevealOrder: [],
     };
 
     return this.buildGameState(room);
@@ -100,6 +101,7 @@ export class DrawGuessModule extends BaseGameModule {
         const word = this.state.wordChoices[wordIndex];
         this.usedWords.add(word);
         this.state.currentWord = word;
+        this.state.hintRevealOrder = this.getLetterIndices(word);
         this.state.wordHint = this.buildHint(word, []);
         this.state.phase = 'drawing';
         this.state.phaseTimeRemaining = this.state.drawTimeLimit;
@@ -250,6 +252,7 @@ export class DrawGuessModule extends BaseGameModule {
           const word = this.state.wordChoices[0];
           this.usedWords.add(word);
           this.state.currentWord = word;
+          this.state.hintRevealOrder = this.getLetterIndices(word);
           this.state.wordHint = this.buildHint(word, []);
         }
         this.state.phase = 'drawing';
@@ -345,6 +348,7 @@ export class DrawGuessModule extends BaseGameModule {
     this.state.correctGuessers = [];
     this.state.turnScores = [];
     this.state.lastHintRevealFraction = 0;
+    this.state.hintRevealOrder = [];
   }
 
   // --- Hints ---
@@ -362,7 +366,9 @@ export class DrawGuessModule extends BaseGameModule {
       this.state.lastHintRevealFraction = revealThreshold;
 
       const word = this.state.currentWord;
-      const letterIndices = this.getLetterIndices(word);
+      // Use the stable, already-shuffled reveal order — do NOT re-shuffle
+      // here, or each reveal would swap which letters show.
+      const letterIndices = this.state.hintRevealOrder;
       const numToReveal = Math.floor(
         (revealThreshold / 0.2) * (letterIndices.length * 0.15)
       );

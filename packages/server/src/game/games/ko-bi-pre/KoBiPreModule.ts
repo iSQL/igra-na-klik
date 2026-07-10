@@ -6,6 +6,7 @@ import type {
   KoBiPreLeaderboardEntry,
   KoBiPreVoteOption,
   KoBiPreVoteTally,
+  KoBiPreVoter,
 } from '@igra/shared';
 import { KO_BI_PRE_PROMPTS, shuffled } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
@@ -245,8 +246,18 @@ export class KoBiPreModule extends BaseGameModule {
 
   private buildVoteTally(room: Room): KoBiPreVoteTally[] {
     const counts = new Map<string, number>();
-    for (const target of this.state.votes.values()) {
+    const votersByTarget = new Map<string, KoBiPreVoter[]>();
+    for (const [voterId, target] of this.state.votes) {
       counts.set(target, (counts.get(target) ?? 0) + 1);
+      const voter = room.players.find((p) => p.id === voterId);
+      const arr = votersByTarget.get(target) ?? [];
+      arr.push({
+        playerId: voterId,
+        name: voter?.name ?? '?',
+        avatarColor: voter?.avatarColor ?? '#888',
+        avatarEmoji: voter?.avatarEmoji ?? '👤',
+      });
+      votersByTarget.set(target, arr);
     }
     return room.players
       .filter((p) => p.isConnected || counts.has(p.id))
@@ -256,6 +267,7 @@ export class KoBiPreModule extends BaseGameModule {
         avatarColor: p.avatarColor,
         votes: counts.get(p.id) ?? 0,
         isTop: this.state.topPlayerIds.has(p.id),
+        voters: votersByTarget.get(p.id) ?? [],
       }))
       .sort((a, b) => b.votes - a.votes);
   }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type {
   GeoHostData,
   GeoLeaderboardEntry,
+  GeoPlayerRoundResult,
   GeoSubmissionProgress,
 } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
@@ -86,6 +87,7 @@ export default function GeoGuessHost() {
         revealPins={host.revealPins ?? []}
         truePin={host.truePinSvg}
         mapImageUrl={host.mapImageUrl}
+        roundResults={host.roundResults ?? []}
       />
     );
   }
@@ -317,19 +319,28 @@ function RevealScreen({
   revealPins,
   truePin,
   mapImageUrl,
+  roundResults,
 }: {
   caption?: string;
   revealPins: import('@igra/shared').GeoRevealPin[];
   truePin?: import('@igra/shared').GeoPin;
   mapImageUrl?: string;
+  roundResults: GeoPlayerRoundResult[];
 }) {
+  const players = useRoomStore((s) => s.players);
+  const emojiFor = (id: string) =>
+    players.find((p) => p.id === id)?.avatarEmoji ?? '👤';
+  // Only players who actually placed a pin this round (skip the photo's
+  // uploader / anyone who didn't guess).
+  const scored = roundResults.filter((r) => r.pin !== null);
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '1rem',
+        gap: '0.8rem',
         padding: '1.5rem',
         width: '100%',
         height: '100%',
@@ -361,11 +372,53 @@ function RevealScreen({
           pins={revealPins}
           truePin={truePin}
           showLines
-          maxHeightCss="calc(100dvh - 140px)"
+          maxHeightCss="calc(100dvh - 260px)"
           maxWidthCss="80vw"
           mapImageUrl={mapImageUrl}
         />
       </div>
+      {scored.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            maxWidth: '1000px',
+            flexShrink: 0,
+          }}
+        >
+          {scored.map((r) => (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.4rem 0.8rem',
+                background: 'var(--bg-card)',
+                borderRadius: '0.7rem',
+                borderLeft: `5px solid ${r.avatarColor}`,
+                fontSize: '1rem',
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>
+                {emojiFor(r.playerId)} {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                {r.distanceKm === null
+                  ? '—'
+                  : r.distanceKm < 1
+                    ? `${Math.round(r.distanceKm * 1000)} m`
+                    : `${r.distanceKm.toFixed(1)} km`}
+              </span>
+              <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
+                +{r.pointsAwarded}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -405,41 +405,58 @@ export function GameSelectScreen() {
               </>
             )}
             {game.id === 'slepi-telefoni' && (
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  marginTop: '0.75rem',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {SLEPI_ROUND_OPTIONS.map((n) => {
-                  const active = n === selectedRounds;
-                  return (
-                    <button
-                      key={n}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedRounds(n);
-                      }}
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    marginTop: '0.75rem',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {SLEPI_ROUND_OPTIONS.map((n) => {
+                    const active = n === selectedRounds;
+                    return (
+                      <button
+                        key={n}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRounds(n);
+                        }}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          background: active
+                            ? 'var(--accent)'
+                            : 'var(--bg-secondary)',
+                          color: active ? '#fff' : 'var(--text-primary)',
+                          minWidth: '36px',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+                {connectedCount > 0 &&
+                  connectedCount <= 4 &&
+                  selectedRounds >= 2 && (
+                    <p
                       style={{
-                        padding: '0.3rem 0.65rem',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        background: active
-                          ? 'var(--accent)'
-                          : 'var(--bg-secondary)',
-                        color: active ? '#fff' : 'var(--text-primary)',
-                        minWidth: '36px',
+                        marginTop: '0.5rem',
+                        fontSize: '0.78rem',
+                        lineHeight: 1.35,
+                        color: 'var(--warning, #C29B47)',
+                        textAlign: 'center',
                       }}
                     >
-                      {n}
-                    </button>
-                  );
-                })}
-              </div>
+                      {t('slepi.roundsWarning', { n: connectedCount })}
+                    </p>
+                  )}
+              </>
             )}
             {game.id === 'pogodi-godinu' && (
               <>

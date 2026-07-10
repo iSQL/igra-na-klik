@@ -249,6 +249,20 @@ export function registerRoomHandlers(
     });
   });
 
+  socket.on('player:set-name', (data) => {
+    if (!avatarThrottle()) return;
+    const { roomCode, playerId } = socket.data;
+    if (!roomCode || !playerId) return;
+    const result = roomManager.setPlayerName(roomCode, playerId, data?.name ?? '');
+    if ('error' in result) {
+      socket.emit('error', { code: 'NAME_ERROR', message: result.error });
+      return;
+    }
+    io.to(roomCode).emit('room:player-updated', {
+      player: roomManager.toPublicPlayer(result.player),
+    });
+  });
+
   // Note: the 'disconnect' handling (grey-out, grace timer, host flag)
   // lives in setup.ts — a duplicate handler here used to double-emit
   // room:player-left on every disconnect.

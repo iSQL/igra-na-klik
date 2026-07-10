@@ -215,9 +215,18 @@ export function setupSocket(
     registerGameHandlers(io, socket, gameManager, roomManager);
 
     socket.on('host:kick-player', ({ playerId }) => {
-      const { roomCode, isHost } = socket.data;
-      if (!roomCode || !isHost) return;
-      if (!playerId) return;
+      const { roomCode, playerId: requesterId, isHost } = socket.data;
+      if (!roomCode || !playerId) return;
+      const room = roomManager.getRoom(roomCode);
+      if (!room) return;
+
+      // TV host socket, or the player holding the remote-host claim (so the
+      // room can be managed from a phone on /play). Same rule as close-room.
+      const canControl =
+        isHost || (!!requesterId && room.remoteHostPlayerId === requesterId);
+      if (!canControl) return;
+      // The remote-host holder can't kick themselves — that's what leaving is.
+      if (playerId === requesterId) return;
 
       cancelGraceTimer(playerId);
 

@@ -79,24 +79,60 @@ export default function KoBiPreHost() {
         >
           👑 {host.topNames?.join(', ')}
         </motion.p>
-        <div style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {host.voteTally?.map((v) => (
-            <div key={v.playerId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ width: '9rem', textAlign: 'right', fontWeight: v.isTop ? 800 : 600 }}>
-                {v.isTop ? '👑 ' : ''}
-                {emojiFor(v.playerId)} {v.name}
-              </span>
-              <div style={{ flex: 1, height: '1.4rem', background: 'var(--bg-secondary)', borderRadius: '0.4rem', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${(v.votes / maxVotes) * 100}%`,
-                    height: '100%',
-                    background: v.avatarColor,
-                    transition: 'width 0.4s',
-                  }}
-                />
+            <div key={v.playerId} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ width: '9rem', textAlign: 'right', fontWeight: v.isTop ? 800 : 600 }}>
+                  {v.isTop ? '👑 ' : ''}
+                  {emojiFor(v.playerId)} {v.name}
+                </span>
+                <div style={{ flex: 1, height: '1.4rem', background: 'var(--bg-secondary)', borderRadius: '0.4rem', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${(v.votes / maxVotes) * 100}%`,
+                      height: '100%',
+                      background: v.avatarColor,
+                      transition: 'width 0.4s',
+                    }}
+                  />
+                </div>
+                <span style={{ width: '2rem', fontWeight: 700 }}>{v.votes}</span>
               </div>
-              <span style={{ width: '2rem', fontWeight: 700 }}>{v.votes}</span>
+              {v.voters.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', paddingLeft: '9.6rem' }}>
+                  {v.voters.map((voter) => (
+                    <span
+                      key={voter.playerId}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.15rem 0.55rem 0.15rem 0.2rem',
+                        borderRadius: '999px',
+                        background: 'var(--bg-secondary)',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '1.3rem',
+                          height: '1.3rem',
+                          borderRadius: '50%',
+                          background: voter.avatarColor,
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {voter.avatarEmoji}
+                      </span>
+                      {voter.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

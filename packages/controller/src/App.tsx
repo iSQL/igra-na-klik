@@ -74,8 +74,23 @@ function GameEndedOverlay({
         padding: '1.5rem',
       }}
     >
-      <div style={{ textAlign: 'center', animation: 'igra-pop .5s' }}>
-        <p className="display" style={{ fontSize: '2rem', fontWeight: 700 }}>
+      <div
+        style={{
+          textAlign: 'center',
+          animation: 'igra-pop .5s',
+          // Solid card so the overlay text never bleeds into the game
+          // screen still rendered behind the translucent gold gradient.
+          background: 'rgba(11,23,40,.92)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          border: '1px solid var(--line2)',
+          borderRadius: '20px',
+          padding: '1.6rem 1.5rem',
+          maxWidth: '340px',
+          boxShadow: '0 18px 50px rgba(0,0,0,.5)',
+        }}
+      >
+        <p className="display" style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
           {t('reconnect.gameEnded')}
         </p>
         {placement && (
@@ -262,9 +277,11 @@ export function App() {
     });
 
     socket.on('room:player-updated', ({ player: updated }) => {
-      usePlayerStore
-        .getState()
-        .updatePlayerAvatar(updated.id, updated.avatarColor, updated.avatarEmoji);
+      usePlayerStore.getState().updatePlayerProfile(updated.id, {
+        name: updated.name,
+        avatarColor: updated.avatarColor,
+        avatarEmoji: updated.avatarEmoji,
+      });
     });
 
     socket.on('room:player-removed', ({ playerId }) => {
@@ -393,7 +410,10 @@ export function App() {
 
     socket.on('error', ({ message }) => {
       console.error('Server error:', message);
-      if (!player) reset();
+      // Read the live store — this handler is registered once at mount, so
+      // the captured `player` is stale (null then) and would wrongly reset
+      // an in-room player on any server error (e.g. a rejected profile edit).
+      if (!usePlayerStore.getState().player) reset();
     });
 
     return () => {

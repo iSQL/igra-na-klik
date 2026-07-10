@@ -223,7 +223,8 @@ export default function FotoKvizController() {
               {myData.ownCorrect ? '✅ Tačno!' : '❌ Netačno'} ·{' '}
               <strong style={{ color: 'var(--accent)' }}>
                 +{myData.ownPoints ?? 0}
-              </strong>
+              </strong>{' '}
+              · Ukupno {(myData.totalScore ?? 0).toLocaleString('sr-Latn-RS')}
             </p>
           )}
           <div
@@ -332,12 +333,7 @@ function ResultsStatus({ myData }: { myData: FotoKvizControllerData }) {
   return (
     <Centered>
       {correct ? (
-        <>
-          <p style={{ fontSize: '2.2rem' }}>✓</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success)' }}>
-            +{points} poena
-          </p>
-        </>
+        <p style={{ fontSize: '2.2rem' }}>✓</p>
       ) : (
         <>
           <p style={{ fontSize: '2.2rem' }}>✗</p>
@@ -349,11 +345,22 @@ function ResultsStatus({ myData }: { myData: FotoKvizControllerData }) {
           </p>
         </>
       )}
+      {/* Always show both this round's points and the running total. */}
       <p
         style={{
-          fontSize: '0.85rem',
+          fontSize: '1.5rem',
+          fontWeight: 800,
+          color: points > 0 ? 'var(--success)' : 'var(--text-secondary)',
+          margin: '0.3rem 0 0',
+        }}
+      >
+        +{points} poena
+      </p>
+      <p
+        style={{
+          fontSize: '0.9rem',
           color: 'var(--text-secondary)',
-          marginTop: '0.5rem',
+          margin: 0,
         }}
       >
         Ukupno: {(myData.totalScore ?? 0).toLocaleString('sr-Latn-RS')}

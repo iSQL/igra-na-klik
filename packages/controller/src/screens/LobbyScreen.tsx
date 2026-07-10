@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AVATAR_COLORS, AVATAR_EMOJIS } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
@@ -9,6 +8,7 @@ import { CloseRoomButton } from '../components/CloseRoomButton';
 import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LobbyChat } from '../components/LobbyChat';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { AvatarPickerModal } from '../components/AvatarPickerModal';
 import { useT } from '../i18n/useT';
 
 export function LobbyScreen() {
@@ -16,6 +16,9 @@ export function LobbyScreen() {
   const setScreen = useNavStore((s) => s.setScreen);
   const lastStartPayload = useGameStore((s) => s.lastStartPayload);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [kickTarget, setKickTarget] = useState<{ id: string; name: string } | null>(
+    null
+  );
   const t = useT();
 
   if (!player || !room) return null;
@@ -265,6 +268,29 @@ export function LobbyScreen() {
                   flexShrink: 0,
                 }}
               />
+              {iAmRemoteHost && p.id !== player.id && (
+                <button
+                  onClick={() => setKickTarget({ id: p.id, name: p.name })}
+                  aria-label={t('lobby.kick', { name: p.name })}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    minWidth: '28px',
+                    minHeight: '28px',
+                    padding: 0,
+                    borderRadius: '50%',
+                    background: 'rgba(255,77,94,.14)',
+                    border: '1px solid rgba(255,77,94,.4)',
+                    color: 'var(--danger)',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
       </div>
@@ -286,163 +312,84 @@ export function LobbyScreen() {
 
       {pickerOpen && (
         <AvatarPickerModal
+          currentName={player.name}
           currentColor={player.avatarColor}
           currentEmoji={player.avatarEmoji}
           onClose={() => setPickerOpen(false)}
         />
       )}
-    </div>
-  );
-}
 
-function AvatarPickerModal({
-  currentColor,
-  currentEmoji,
-  onClose,
-}: {
-  currentColor: string;
-  currentEmoji: string;
-  onClose: () => void;
-}) {
-  const t = useT();
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem',
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'var(--bg-secondary)',
-          borderRadius: '1rem',
-          padding: '1.25rem',
-          width: '100%',
-          maxWidth: '380px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-        }}
-      >
+      {kickTarget && (
         <div
+          role="dialog"
+          aria-modal="true"
           style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 15, 35, 0.85)',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1.5rem',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{t('lobby.changeAvatar')}</h2>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close')}
-            style={{
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              border: 'none',
-              fontSize: '1.4rem',
-              cursor: 'pointer',
-              padding: '0 0.25rem',
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        <div>
-          <p
-            style={{
-              margin: 0,
-              marginBottom: '0.5rem',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            {t('avatar.color')}
-          </p>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '0.5rem',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              borderRadius: '18px',
+              padding: '1.4rem',
+              maxWidth: '22rem',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              textAlign: 'center',
+              animation: 'igra-pop .25s',
             }}
           >
-            {AVATAR_COLORS.map((color) => {
-              const active = color === currentColor;
-              return (
-                <button
-                  key={color}
-                  onClick={() =>
-                    socket.emit('player:set-avatar', { avatarColor: color })
-                  }
-                  aria-label={t('common.colorAria', { color })}
-                  style={{
-                    aspectRatio: '1',
-                    background: color,
-                    borderRadius: '0.5rem',
-                    border: active
-                      ? '3px solid #fff'
-                      : '3px solid transparent',
-                    cursor: 'pointer',
-                  }}
-                />
-              );
-            })}
+            <h2 className="display" style={{ margin: 0, fontSize: '1.25rem' }}>
+              {t('lobby.kickConfirm', { name: kickTarget.name })}
+            </h2>
+            <div style={{ display: 'flex', gap: '0.65rem' }}>
+              <button
+                onClick={() => setKickTarget(null)}
+                style={{
+                  flex: 1,
+                  padding: '0.7rem',
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  border: '1.5px solid var(--line2)',
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={() => {
+                  socket.emit('host:kick-player', { playerId: kickTarget.id });
+                  setKickTarget(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.7rem',
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  borderRadius: '12px',
+                  background: 'var(--danger)',
+                  color: '#fff',
+                  border: 'none',
+                }}
+              >
+                {t('lobby.kickAction')}
+              </button>
+            </div>
           </div>
         </div>
-
-        <div>
-          <p
-            style={{
-              margin: 0,
-              marginBottom: '0.5rem',
-              fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            {t('avatar.symbol')}
-          </p>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(6, 1fr)',
-              gap: '0.4rem',
-            }}
-          >
-            {AVATAR_EMOJIS.map((emoji) => {
-              const active = emoji === currentEmoji;
-              return (
-                <button
-                  key={emoji}
-                  onClick={() =>
-                    socket.emit('player:set-avatar', { avatarEmoji: emoji })
-                  }
-                  style={{
-                    aspectRatio: '1',
-                    background: active
-                      ? 'var(--accent)'
-                      : 'var(--bg-card)',
-                    borderRadius: '0.4rem',
-                    border: 'none',
-                    fontSize: '1.5rem',
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  {emoji}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

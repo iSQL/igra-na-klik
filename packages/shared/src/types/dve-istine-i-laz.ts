@@ -13,6 +13,7 @@ export interface DveIstineResultGuesser {
   playerId: string;
   name: string;
   avatarColor: string;
+  avatarEmoji: string;
   guessedIndex: number | null;
   correct: boolean;
 }

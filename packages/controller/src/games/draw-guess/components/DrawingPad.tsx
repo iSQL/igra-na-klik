@@ -683,6 +683,7 @@ export function DrawingPad({
         <ToolButton tool="pencil" active={tool === 'pencil'} onSelect={setTool} />
         <ToolButton tool="fill" active={tool === 'fill'} onSelect={setTool} />
         <BrushSizePicker width={width} onChange={setWidth} />
+        <ColorPicker selectedColor={color} onSelect={setColor} />
         <button
           onClick={handleUndo}
           aria-label={t('drawGuess.undo')}
@@ -718,8 +719,6 @@ export function DrawingPad({
           🗑
         </button>
       </div>
-
-      <ColorPicker selectedColor={color} onSelect={setColor} />
     </div>
   );
 }

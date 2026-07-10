@@ -169,9 +169,9 @@ export class RoomManager {
   }
 
   /**
-   * Update a player's avatar. Only allowed in lobby — once a game is
-   * running, avatars are frozen for the duration of the match so
-   * leaderboards/score chips don't shift identity mid-round. Returns
+   * Update a player's avatar. Allowed any time (lobby or mid-game) — the
+   * change is purely cosmetic and broadcast via room:player-updated; games
+   * that snapshot a colour just keep the old one for that snapshot. Returns
    * the updated player on success.
    */
   setPlayerAvatar(
@@ -181,8 +181,6 @@ export class RoomManager {
   ): { player: Player } | { error: string } {
     const room = this.rooms.get(roomCode);
     if (!room) return { error: 'Room not found' };
-    if (room.status !== 'lobby')
-      return { error: 'Avatar se može menjati samo u lobiju.' };
     const player = room.players.find((p) => p.id === playerId);
     if (!player) return { error: 'Igrač nije pronađen.' };
 
@@ -198,6 +196,26 @@ export class RoomManager {
       }
       player.avatarEmoji = avatar.avatarEmoji;
     }
+    return { player };
+  }
+
+  /**
+   * Rename a player. Allowed any time; the name is trimmed and clamped to
+   * MAX_PLAYER_NAME_LENGTH (same rule as join). Returns the updated player.
+   */
+  setPlayerName(
+    roomCode: string,
+    playerId: string,
+    rawName: string
+  ): { player: Player } | { error: string } {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Room not found' };
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return { error: 'Igrač nije pronađen.' };
+
+    const name = rawName.trim().slice(0, MAX_PLAYER_NAME_LENGTH);
+    if (!name) return { error: 'Ime ne može biti prazno.' };
+    player.name = name;
     return { player };
   }
 

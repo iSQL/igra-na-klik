@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ROOM_CODE_LENGTH } from '@igra/shared';
+import { ROOM_CODE_LENGTH, type RoomSummary } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { LanguageSwitch } from '../components/LanguageSwitch';
@@ -32,7 +32,29 @@ export function JoinScreen() {
   const [joining, setJoining] = useState(false);
   const [creating, setCreating] = useState(false);
   const [fetchingCode, setFetchingCode] = useState(false);
+  const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Public list of active rooms (same feed the landing page uses). Only in
+  // multi-room mode; single-room already auto-fills the one room's code.
+  useEffect(() => {
+    if (SINGLE_ROOM_MODE) return;
+    let alive = true;
+    const load = () => {
+      fetch('/api/rooms')
+        .then((r) => r.json())
+        .then((data: { rooms?: RoomSummary[] }) => {
+          if (alive) setRooms(data.rooms ?? []);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 5000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
 
   useEffect(() => {
     if (!SINGLE_ROOM_MODE || params.get('code')) return;
@@ -123,6 +145,15 @@ export function JoinScreen() {
     socket.emit('player:create-room', { playerName: name });
   };
 
+  // Tapping a room in the list fills its code, then joins if the name is
+  // ready or hops focus to the name field otherwise (same as typing a code).
+  const pickRoom = (code: string) => {
+    setError('');
+    setRoomCode(code);
+    if (playerName.trim()) handleJoin(code);
+    else nameInputRef.current?.focus();
+  };
+
   const errorKey = SERVER_ERROR_KEYS[error];
   const displayError = errorKey ? t(errorKey) : error;
 
@@ -132,6 +163,18 @@ export function JoinScreen() {
     fontWeight: 800,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
+  };
+
+  const roomBadgeStyle: React.CSSProperties = {
+    fontSize: '0.65rem',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    color: 'var(--amber)',
+    background: 'rgba(227,180,94,.14)',
+    padding: '3px 8px',
+    borderRadius: '7px',
+    whiteSpace: 'nowrap',
   };
 
   return (
@@ -290,6 +333,72 @@ export function JoinScreen() {
           >
             ＋ {creating ? t('join.creating') : t('join.createRoom')}
           </button>
+
+          {rooms.length > 0 && (
+            <div>
+              <label style={labelStyle}>{t('join.activeRooms')}</label>
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.4rem',
+                }}
+              >
+                {rooms.map((r) => {
+                  const joinable =
+                    r.status === 'lobby' && r.playerCount < r.maxPlayers;
+                  return (
+                    <button
+                      key={r.code}
+                      onClick={() => pickRoom(r.code)}
+                      disabled={!joinable || joining || creating}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.7rem',
+                        width: '100%',
+                        padding: '0.6rem 0.8rem',
+                        borderRadius: '14px',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--line2)',
+                        opacity: joinable ? 1 : 0.55,
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span
+                        className="display"
+                        style={{
+                          fontSize: '1.3rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.15em',
+                          color: joinable ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          minWidth: `${ROOM_CODE_LENGTH + 1}ch`,
+                        }}
+                      >
+                        {r.code}
+                      </span>
+                      <span
+                        style={{
+                          flex: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        👤 {r.playerCount}/{r.maxPlayers}
+                      </span>
+                      {r.status !== 'lobby' ? (
+                        <span style={roomBadgeStyle}>{t('join.inGame')}</span>
+                      ) : (
+                        !joinable && <span style={roomBadgeStyle}>{t('join.full')}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 

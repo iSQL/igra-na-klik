@@ -383,6 +383,7 @@ export class DveIstineModule extends BaseGameModule {
           playerId: p.id,
           name: p.name,
           avatarColor: p.avatarColor,
+          avatarEmoji: p.avatarEmoji,
           guessedIndex: g ?? null,
           correct: g !== undefined && g === this.state.lieIndex,
         };

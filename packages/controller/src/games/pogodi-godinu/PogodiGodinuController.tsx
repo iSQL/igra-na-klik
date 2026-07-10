@@ -269,6 +269,8 @@ function GuessingView({
   };
   const [value, setValue] = useState(() => snap((min + max) / 2));
   const [sent, setSent] = useState(false);
+  const pct =
+    max > min ? Math.round(((value - min) / (max - min)) * 100) : 50;
 
   const lock = () => {
     if (sent) return;
@@ -344,12 +346,13 @@ function GuessingView({
 
       <input
         type="range"
+        className="range-fat"
         min={min}
         max={max}
         step={stepSize}
         value={value}
         onChange={(e) => setValue(snap(parseFloat(e.target.value)))}
-        style={{ width: '100%', accentColor: 'var(--accent)' }}
+        style={{ ['--pct' as string]: `${pct}%` } as React.CSSProperties}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
         <span>{formatPogodiBrojValue(min, unit, valueType)}</span>

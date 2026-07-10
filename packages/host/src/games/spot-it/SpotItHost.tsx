@@ -17,6 +17,16 @@ interface RoundResult {
   pointsAwarded: Record<string, number>;
 }
 
+interface Standing {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  avatarEmoji: string;
+  roundPoints: number;
+  totalScore: number;
+  rank: number;
+}
+
 export default function SpotItHost() {
   const gameState = useGameStore((s) => s.gameState);
   const players = useRoomStore((s) => s.players);
@@ -42,6 +52,7 @@ export default function SpotItHost() {
   const totalRounds = (data.totalRounds as number) ?? 10;
   const centerCard = (data.centerCard as number[] | undefined) ?? null;
   const roundResult = (data.roundResult as RoundResult | undefined) ?? null;
+  const standings = (data.standings as Standing[] | undefined) ?? null;
   const leaderboard = (data.leaderboard as QuizLeaderboardEntry[] | undefined) ?? null;
   const tappedCount = (data.tappedCount as number | undefined) ?? 0;
   const totalPlayers = (data.totalPlayers as number | undefined) ?? 0;
@@ -203,6 +214,53 @@ export default function SpotItHost() {
               >
                 {t('spotIt.nobodyFound')}
               </p>
+            )}
+
+            {standings && standings.length > 0 && (
+              <div style={{ width: '100%', maxWidth: '460px', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <p
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center',
+                    margin: '0.25rem 0 0',
+                  }}
+                >
+                  {t('spotIt.standings')}
+                </p>
+                {standings.map((s) => (
+                  <div
+                    key={s.playerId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      padding: '0.5rem 0.85rem',
+                      background: 'var(--bg-card)',
+                      borderRadius: '0.6rem',
+                      borderLeft: `5px solid ${s.avatarColor}`,
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--accent)', minWidth: '1.6rem' }}>
+                      #{s.rank}
+                    </span>
+                    <span style={{ flex: 1, fontWeight: 600 }}>
+                      {s.avatarEmoji} {s.name}
+                    </span>
+                    {s.roundPoints > 0 && (
+                      <span style={{ fontWeight: 700, color: 'var(--success)', minWidth: '3.5ch', textAlign: 'right' }}>
+                        +{s.roundPoints}
+                      </span>
+                    )}
+                    <span style={{ fontWeight: 800, minWidth: '4ch', textAlign: 'right' }}>
+                      {s.totalScore.toLocaleString('sr-Latn-RS')}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </motion.div>
         )}

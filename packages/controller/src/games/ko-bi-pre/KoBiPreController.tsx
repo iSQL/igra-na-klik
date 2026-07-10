@@ -2,7 +2,11 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
-import type { KoBiPreControllerData, KoBiPreHostData } from '@igra/shared';
+import type {
+  KoBiPreControllerData,
+  KoBiPreHostData,
+  KoBiPreVoteTally,
+} from '@igra/shared';
 
 const wrap: React.CSSProperties = {
   display: 'flex',
@@ -110,28 +114,48 @@ export default function KoBiPreController() {
   if (phase === 'showing-results') {
     const roundScore = my?.ownRoundScore ?? 0;
     const top = host.topNames?.join(', ');
+    const tally = host.voteTally ?? [];
+
+    const summary = (
+      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Najviše glasova
+        </p>
+        <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0.15rem 0' }}>
+          👑 {top}
+        </p>
+        <p
+          style={{
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+            margin: 0,
+          }}
+        >
+          {roundScore > 0 ? `+${roundScore} · pogodio si većinu!` : '+0'}
+        </p>
+      </div>
+    );
+
     if (hostless && host.leaderboard) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ padding: '0.75rem', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Najviše glasova
-            </p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: '0.2rem 0' }}>
-              {top}
-            </p>
-            <p
-              style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
-                margin: 0,
-              }}
-            >
-              {roundScore > 0 ? `+${roundScore} (pogodio si većinu!)` : '+0'}
-            </p>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              padding: '0.9rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.7rem',
+            }}
+          >
+            {summary}
+            <VoteBreakdown tally={tally} myPlayerId={playerId} />
           </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, borderTop: '1px solid var(--line)' }}>
             <HostlessLeaderboard
               title="Rang lista"
               entries={host.leaderboard}
@@ -142,25 +166,20 @@ export default function KoBiPreController() {
       );
     }
     return (
-      <div style={wrap}>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Najviše glasova
-        </p>
-        <p style={{ fontSize: '1.7rem', fontWeight: 800 }}>{top}</p>
-        <p
-          style={{
-            fontSize: '1.3rem',
-            fontWeight: 800,
-            color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
-          }}
-        >
-          {roundScore > 0 ? `+${roundScore}` : '+0'} poena
-        </p>
-        {roundScore > 0 && (
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Pogodio si većinu!
-          </p>
-        )}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          overflowY: 'auto',
+          padding: '1rem',
+          gap: '0.8rem',
+          alignItems: 'center',
+        }}
+      >
+        {summary}
+        <VoteBreakdown tally={tally} myPlayerId={playerId} />
       </div>
     );
   }
@@ -188,4 +207,97 @@ export default function KoBiPreController() {
   }
 
   return null;
+}
+
+// Per-target breakdown of who voted for whom this round.
+function VoteBreakdown({
+  tally,
+  myPlayerId,
+}: {
+  tally: KoBiPreVoteTally[];
+  myPlayerId: string;
+}) {
+  const voted = tally.filter((t) => t.votes > 0);
+  if (voted.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        width: '100%',
+        maxWidth: '460px',
+      }}
+    >
+      {voted.map((t) => (
+        <div
+          key={t.playerId}
+          style={{
+            padding: '0.6rem 0.7rem',
+            borderRadius: '14px',
+            background: t.isTop ? 'rgba(47,224,138,.12)' : 'var(--bg-secondary)',
+            border: `1px solid ${t.isTop ? 'var(--success)' : 'var(--line2)'}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+            <span
+              style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '4px',
+                background: t.avatarColor,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ flex: 1, minWidth: 0, fontWeight: 800, fontSize: '1rem' }}>
+              {t.isTop ? '👑 ' : ''}
+              {t.name}
+              {t.playerId === myPlayerId ? ' (ti)' : ''}
+            </span>
+            <span style={{ fontWeight: 800, color: 'var(--text-secondary)' }}>
+              {t.votes}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+            {t.voters.map((v) => (
+              <span
+                key={v.playerId}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.1rem 0.45rem 0.1rem 0.15rem',
+                  borderRadius: '999px',
+                  background: 'var(--bg-card)',
+                  border:
+                    v.playerId === myPlayerId
+                      ? '1px solid var(--text-secondary)'
+                      : '1px solid var(--line2)',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                }}
+              >
+                <span
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    background: v.avatarColor,
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '0.65rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  {v.avatarEmoji}
+                </span>
+                {v.playerId === myPlayerId ? 'Ti' : v.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

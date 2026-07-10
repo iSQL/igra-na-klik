@@ -8,7 +8,8 @@ import { SpotItCard } from './components/SpotItCard';
 
 interface MyData {
   personalCard?: number[];
-  lockedUntil?: number;
+  /** Remaining lockout in ms after a wrong tap (relative, clock-skew safe). */
+  lockMs?: number;
   iWonRound?: boolean;
   iTapped?: boolean;
 }
@@ -18,6 +19,16 @@ interface RoundResult {
   winnerName: string | null;
   matchSymbolIndex: number | null;
   pointsAwarded: Record<string, number>;
+}
+
+interface Standing {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  avatarEmoji: string;
+  roundPoints: number;
+  totalScore: number;
+  rank: number;
 }
 
 interface LeaderboardEntry {
@@ -61,22 +72,25 @@ export default function SpotItController() {
       ? ((gameState.playerData[playerId] as MyData) ?? null)
       : null;
 
-  // Tick down lockout for UI countdown overlay
+  // Tick down lockout for UI countdown overlay. The server sends the
+  // remaining ms (relative); we pin it to a local deadline so the countdown
+  // runs on this device's clock — immune to client/server clock skew.
   useEffect(() => {
-    const lockedUntil = myData?.lockedUntil ?? 0;
-    if (!lockedUntil) {
+    const lockMs = myData?.lockMs ?? 0;
+    if (lockMs <= 0) {
       setLockMsLeft(0);
       return;
     }
+    const deadline = Date.now() + lockMs;
     const tick = () => {
-      const left = Math.max(0, lockedUntil - Date.now());
+      const left = Math.max(0, deadline - Date.now());
       setLockMsLeft(left);
-      if (left === 0) return;
+      if (left <= 0) return;
       raf = requestAnimationFrame(tick);
     };
     let raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [myData?.lockedUntil]);
+  }, [myData?.lockMs]);
 
   if (!gameState || !playerId) return null;
 
@@ -166,16 +180,24 @@ export default function SpotItController() {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                fontSize: '1.4rem',
-                fontWeight: 700,
-                color: 'var(--danger)',
-                background: 'rgba(0,0,0,0.7)',
-                borderRadius: '0.5rem',
-                padding: '0.6rem 1.2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.2rem',
+                fontWeight: 800,
+                color: '#fff',
+                background: 'rgba(200,40,55,0.92)',
+                borderRadius: '0.9rem',
+                padding: '0.9rem 1.6rem',
+                boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
                 pointerEvents: 'none',
+                animation: 'igra-pop .2s',
               }}
             >
-              {(lockMsLeft / 1000).toFixed(1)}s
+              <span style={{ fontSize: '2rem', lineHeight: 1 }}>✗</span>
+              <span style={{ fontSize: '2.4rem', lineHeight: 1 }}>
+                {(lockMsLeft / 1000).toFixed(1)}s
+              </span>
             </div>
           )}
         </div>
@@ -235,6 +257,7 @@ export default function SpotItController() {
 
   if (phase === 'round-results') {
     const roundResult = data.roundResult as RoundResult | undefined;
+    const standings = (data.standings as Standing[] | undefined) ?? [];
     const myPoints = roundResult?.pointsAwarded[playerId] ?? 0;
     const wonThisRound = roundResult?.winnerId === playerId;
     return (
@@ -243,36 +266,100 @@ export default function SpotItController() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
           height: '100%',
-          gap: '0.75rem',
-          padding: '0.5rem',
+          gap: '0.6rem',
+          padding: '0.6rem',
+          overflowY: 'auto',
         }}
       >
         {personalCard && (
           <SpotItCard
             symbolIndices={personalCard}
             roundNumber={roundNumber}
-            size={cardSizeRef.current * 0.85}
+            size={cardSizeRef.current * 0.55}
             highlightSymbolIndex={roundResult?.matchSymbolIndex ?? null}
           />
         )}
         <p
           style={{
-            fontSize: '1.4rem',
+            fontSize: '1.3rem',
             fontWeight: 700,
             color: wonThisRound ? 'var(--success)' : 'var(--text-secondary)',
             margin: 0,
+            flexShrink: 0,
           }}
         >
           {wonThisRound
             ? t('spotIt.pointsWon', { n: myPoints })
             : t('spotIt.zeroPoints')}
         </p>
-        {!wonThisRound && roundResult?.winnerName && (
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-            {t('spotIt.winner', { name: roundResult.winnerName })}
-          </p>
+
+        {standings.length > 0 && (
+          <div style={{ width: '100%', maxWidth: '420px', flexShrink: 0 }}>
+            <p
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--text-secondary)',
+                margin: '0 0 0.35rem',
+                textAlign: 'center',
+              }}
+            >
+              {t('spotIt.standings')}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              {standings.map((s) => {
+                const isMe = s.playerId === playerId;
+                return (
+                  <div
+                    key={s.playerId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '10px',
+                      background: isMe ? 'var(--bg-card)' : 'var(--bg-secondary)',
+                      border: isMe ? '1px solid var(--accent)' : '1px solid var(--line2)',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, color: 'var(--text-secondary)', minWidth: '1.4rem' }}>
+                      {s.rank}
+                    </span>
+                    <span
+                      className="avatar-tile"
+                      style={{ width: '22px', height: '22px', backgroundColor: s.avatarColor, fontSize: '0.8rem' }}
+                    >
+                      {s.avatarEmoji}
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontWeight: isMe ? 800 : 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {s.name}
+                    </span>
+                    {s.roundPoints > 0 && (
+                      <span style={{ fontWeight: 700, color: 'var(--success)' }}>
+                        +{s.roundPoints}
+                      </span>
+                    )}
+                    <span style={{ fontWeight: 800, minWidth: '3.5ch', textAlign: 'right' }}>
+                      {s.totalScore.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     );

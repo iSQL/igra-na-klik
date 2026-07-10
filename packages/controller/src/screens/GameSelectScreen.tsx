@@ -522,6 +522,7 @@ export function GameSelectScreen() {
                     <SlepiConfig
                       rounds={slepiRounds}
                       setRounds={setSlepiRounds}
+                      connectedCount={connectedCount}
                     />
                   )}
                   {game.id === 'quiz' && (
@@ -1222,11 +1223,15 @@ function RoundsConfig({
 function SlepiConfig({
   rounds,
   setRounds,
+  connectedCount,
 }: {
   rounds: number;
   setRounds: (n: number) => void;
+  connectedCount: number;
 }) {
   const t = useT();
+  const showWarning =
+    connectedCount > 0 && connectedCount <= 4 && rounds >= 2;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -1239,6 +1244,18 @@ function SlepiConfig({
           </Pill>
         ))}
       </div>
+      {showWarning && (
+        <p
+          style={{
+            margin: '0.15rem 0 0',
+            fontSize: '0.72rem',
+            lineHeight: 1.35,
+            color: 'var(--warning, #C29B47)',
+          }}
+        >
+          {t('slepi.roundsWarning', { n: connectedCount })}
+        </p>
+      )}
     </div>
   );
 }

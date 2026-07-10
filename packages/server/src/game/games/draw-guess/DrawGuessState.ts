@@ -37,6 +37,13 @@ export interface DrawGuessInternalState {
   drawingStartTime: number;
   /** Last hint reveal time threshold (fraction of time elapsed) */
   lastHintRevealFraction: number;
+  /**
+   * Stable shuffled order in which letter positions get revealed for the
+   * current word. Fixed once when the word is chosen so progressive hints
+   * only ever ADD letters — re-shuffling each tick made revealed letters
+   * appear to jump around / disappear.
+   */
+  hintRevealOrder: number[];
 }
 
 export const CHOOSING_WORD_DURATION = 15;

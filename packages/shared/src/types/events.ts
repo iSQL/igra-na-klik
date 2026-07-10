@@ -119,6 +119,7 @@ export interface ClientToServerEvents {
     avatarColor?: string;
     avatarEmoji?: string;
   }) => void;
+  'player:set-name': (data: { name: string }) => void;
   'game:player-action': (data: {
     action: string;
     data: Record<string, unknown>;

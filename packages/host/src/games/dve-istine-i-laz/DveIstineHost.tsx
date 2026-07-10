@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useRoomStore } from '../../store/roomStore';
 import { useSound } from '../../hooks/useSound';
-import type { DveIstineHostData, DveIstineStatement } from '@igra/shared';
+import type {
+  DveIstineHostData,
+  DveIstineResultGuesser,
+  DveIstineStatement,
+} from '@igra/shared';
 
 export default function DveIstineHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -92,31 +96,23 @@ export default function DveIstineHost() {
         <p style={{ fontSize: '1.5rem', fontWeight: 700 }}>
           {emojiFor(host.subjectId ?? '')} {host.subjectName}
         </p>
-        <StatementCards statements={host.statements ?? []} lieIndex={host.lieIndex} />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', maxWidth: '760px' }}>
-          {host.results?.map((r) => (
-            <span
-              key={r.playerId}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.35rem 0.7rem',
-                borderRadius: '0.6rem',
-                background: 'var(--bg-card)',
-                borderLeft: `4px solid ${r.avatarColor}`,
-                fontWeight: 600,
-                fontSize: '0.95rem',
-                opacity: r.guessedIndex === null ? 0.5 : 1,
-              }}
-            >
-              {emojiFor(r.playerId)} {r.name}{' '}
-              <span style={{ color: r.correct ? '#7be37b' : '#e74c3c' }}>
-                {r.guessedIndex === null ? '—' : r.correct ? '✓' : '✗'}
-              </span>
-            </span>
-          ))}
-        </div>
+        <StatementCards
+          statements={host.statements ?? []}
+          lieIndex={host.lieIndex}
+          results={host.results ?? []}
+        />
+        {host.results?.some((r) => r.guessedIndex === null) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', maxWidth: '760px', opacity: 0.6 }}>
+            <span style={{ fontSize: '1rem', fontWeight: 700 }}>Nisu glasali:</span>
+            {host.results
+              .filter((r) => r.guessedIndex === null)
+              .map((r) => (
+                <span key={r.playerId} style={{ fontSize: '1rem' }}>
+                  {r.avatarEmoji} {r.name}
+                </span>
+              ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -174,9 +170,11 @@ export default function DveIstineHost() {
 function StatementCards({
   statements,
   lieIndex,
+  results,
 }: {
   statements: DveIstineStatement[];
   lieIndex?: number;
+  results?: DveIstineResultGuesser[];
 }) {
   return (
     <div
@@ -191,6 +189,7 @@ function StatementCards({
       {statements.map((s) => {
         const revealed = lieIndex !== undefined;
         const isLie = revealed && s.index === lieIndex;
+        const voters = (results ?? []).filter((r) => r.guessedIndex === s.index);
         return (
           <div
             key={s.index}
@@ -198,7 +197,6 @@ function StatementCards({
               padding: '1.1rem 1.4rem',
               borderRadius: '14px',
               background: 'var(--bg-secondary)',
-              fontSize: '1.5rem',
               fontWeight: 600,
               border: revealed
                 ? isLie
@@ -206,23 +204,58 @@ function StatementCards({
                   : '3px solid rgba(123,227,123,0.6)'
                 : '3px solid transparent',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
+              flexDirection: 'column',
+              gap: '0.6rem',
             }}
           >
-            <span>{s.text}</span>
-            {revealed && (
-              <span
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 800,
-                  color: isLie ? '#e74c3c' : '#7be37b',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {isLie ? 'LAŽ ✗' : 'ISTINA ✓'}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>{s.text}</span>
+              {revealed && (
+                <span
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    color: isLie ? '#e74c3c' : '#7be37b',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {isLie ? 'LAŽ ✗' : 'ISTINA ✓'}
+                </span>
+              )}
+            </div>
+            {revealed && voters.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {voters.map((v) => (
+                  <span
+                    key={v.playerId}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      padding: '0.2rem 0.6rem 0.2rem 0.25rem',
+                      borderRadius: '999px',
+                      background: 'var(--bg-card)',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '1.4rem',
+                        height: '1.4rem',
+                        borderRadius: '50%',
+                        background: v.avatarColor,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {v.avatarEmoji}
+                    </span>
+                    {v.name}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         );

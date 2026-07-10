@@ -5,7 +5,7 @@ import { useT } from '../../i18n/useT';
 import { WordPicker } from './components/WordPicker';
 import { DrawingPad } from './components/DrawingPad';
 import { GuessingInput } from './components/GuessingInput';
-import { SpectatorCanvas } from './components/SpectatorCanvas';
+import { HostlessGuessing } from './components/HostlessGuessing';
 import type { DrawGuessHostData, DrawGuessLeaderboardEntry } from '@igra/shared';
 
 export default function DrawGuessController() {
@@ -74,28 +74,17 @@ export default function DrawGuessController() {
     }
 
     // In a hostless room there is no TV showing the drawing — render a
-    // read-only copy of the canvas above the guess input.
+    // half-width read-only copy of the canvas with the live feed of everyone's
+    // guesses beside it, above the guess input.
     if (hostless) {
       return (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            height: '100%',
-            padding: '0.75rem',
-            gap: '0.5rem',
-          }}
-        >
-          <SpectatorCanvas operations={host.operations} />
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <GuessingInput
-              hasGuessedCorrectly={myData?.hasGuessedCorrectly ?? false}
-              hint={host.wordHint}
-              timeRemaining={timeRemaining}
-            />
-          </div>
-        </div>
+        <HostlessGuessing
+          operations={host.operations}
+          guesses={host.guesses}
+          hint={host.wordHint}
+          timeRemaining={timeRemaining}
+          hasGuessedCorrectly={myData?.hasGuessedCorrectly ?? false}
+        />
       );
     }
 

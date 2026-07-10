@@ -16,10 +16,9 @@ interface PlayerStore {
   setReconnectToken: (token: string) => void;
   setConnected: (connected: boolean) => void;
   setRemoteHostPlayerId: (id: string | null) => void;
-  updatePlayerAvatar: (
+  updatePlayerProfile: (
     playerId: string,
-    avatarColor: string,
-    avatarEmoji: string
+    fields: { name?: string; avatarColor?: string; avatarEmoji?: string }
   ) => void;
   addChatMessage: (message: ChatMessage) => void;
   setChatMessages: (messages: ChatMessage[]) => void;
@@ -51,17 +50,17 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
         ? { room: { ...state.room, remoteHostPlayerId: id } }
         : state
     ),
-  updatePlayerAvatar: (playerId, avatarColor, avatarEmoji) =>
+  updatePlayerProfile: (playerId, fields) =>
     set((state) => {
       const player =
         state.player && state.player.id === playerId
-          ? { ...state.player, avatarColor, avatarEmoji }
+          ? { ...state.player, ...fields }
           : state.player;
       const room = state.room
         ? {
             ...state.room,
             players: state.room.players.map((p) =>
-              p.id === playerId ? { ...p, avatarColor, avatarEmoji } : p
+              p.id === playerId ? { ...p, ...fields } : p
             ),
           }
         : state.room;

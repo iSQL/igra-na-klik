@@ -46,6 +46,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'lobby.kick': 'Izbaci {name}',
     // controller lobby
     'lobby.changeAvatar': 'Promeni avatar',
+    'lobby.kickAction': 'Izbaci',
     'lobby.room': 'Soba',
     'lobby.chooseGameArrow': 'Izaberi igru →',
     'lobby.playAgain': '🔁 Igraj ponovo: {name}',
@@ -58,6 +59,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- avatar picker ---------------------------------------------------
     'avatar.color': 'Boja',
     'avatar.symbol': 'Simbol',
+    'avatar.editProfile': 'Uredi profil',
+    'avatar.name': 'Ime',
+    'avatar.saveName': 'Sačuvaj',
 
     // --- game select -----------------------------------------------------
     'gameSelect.title': 'Izaberi igru',
@@ -70,6 +74,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 
     // --- in-game overlays ------------------------------------------------
     'overlay.endGame': 'Završi igru',
+    'playerMenu.open': 'Meni igrača',
+    'playerMenu.language': 'Jezik',
     'overlay.endingGame': 'Završavam…',
     'overlay.endingGameFull': 'Završavam igru…',
     'overlay.endGameConfirmTitle': 'Završiti igru?',
@@ -123,6 +129,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.or': 'ili',
     'join.createRoom': 'Napravi sobu',
     'join.creating': 'Kreiranje...',
+    'join.activeRooms': 'Aktivne sobe',
+    'join.inGame': 'Igra u toku',
+    'join.full': 'Puna',
     'join.createRoomHint': 'Igra samo na telefonima — bez TV ekrana',
     'join.gameInProgress':
       'Igra je u toku — sačekaj da se završi, pa pokušaj ponovo.',
@@ -201,6 +210,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'drawGuess.resetZoom': 'Reset zuma',
     'drawGuess.undo': 'Korak nazad',
     'drawGuess.clearAll': 'Obriši sve',
+    'drawGuess.pickColor': 'Izaberi boju',
+    'drawGuess.customColor': 'Prilagođena boja',
 
     // --- slepi telefoni --------------------------------------------------
     'slepi.gameOver': 'Kraj igre',
@@ -209,6 +220,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'slepi.enterPromptDesc':
       'Svako unosi svoju frazu koju će sledeći igrač pokušati da nacrta.',
     'slepi.wroteCount': '{n}/{total} napisalo',
+    'slepi.roundsWarning':
+      '⚠️ Sa {n} igrača ovoliko rundi znači da isti igrači obrađuju tvoj lanac više puta i sadržaj ti se vraća. Preporuka: 1 runda.',
     'slepi.step': 'Korak {n}/{total}',
     'slepi.everyoneDraws': 'Svi crtaju',
     'slepi.everyoneGuesses': 'Svi pogađaju',
@@ -252,6 +265,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'spotIt.pointsWon': '+{n} poena!',
     'spotIt.zeroPoints': '0 poena',
     'spotIt.winner': 'Pobedio: {name}',
+    'spotIt.standings': 'Trenutni poredak',
 
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Kviz',
@@ -332,6 +346,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'lobby.kick': 'Kick {name}',
     // controller lobby
     'lobby.changeAvatar': 'Change avatar',
+    'lobby.kickAction': 'Kick',
     'lobby.room': 'Room',
     'lobby.chooseGameArrow': 'Choose a game →',
     'lobby.playAgain': '🔁 Play again: {name}',
@@ -344,6 +359,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- avatar picker ---------------------------------------------------
     'avatar.color': 'Color',
     'avatar.symbol': 'Symbol',
+    'avatar.editProfile': 'Edit profile',
+    'avatar.name': 'Name',
+    'avatar.saveName': 'Save',
 
     // --- game select -----------------------------------------------------
     'gameSelect.title': 'Choose a game',
@@ -356,6 +374,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 
     // --- in-game overlays ------------------------------------------------
     'overlay.endGame': 'End game',
+    'playerMenu.open': 'Player menu',
+    'playerMenu.language': 'Language',
     'overlay.endingGame': 'Ending…',
     'overlay.endingGameFull': 'Ending game…',
     'overlay.endGameConfirmTitle': 'End the game?',
@@ -409,6 +429,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'join.or': 'or',
     'join.createRoom': 'Create a room',
     'join.creating': 'Creating...',
+    'join.activeRooms': 'Active rooms',
+    'join.inGame': 'Game in progress',
+    'join.full': 'Full',
     'join.createRoomHint': 'Play on phones only — no TV screen',
     'join.gameInProgress':
       'A game is in progress — wait for it to finish, then try again.',
@@ -487,6 +510,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'drawGuess.resetZoom': 'Reset zoom',
     'drawGuess.undo': 'Undo',
     'drawGuess.clearAll': 'Clear all',
+    'drawGuess.pickColor': 'Pick colour',
+    'drawGuess.customColor': 'Custom colour',
 
     // --- slepi telefoni --------------------------------------------------
     'slepi.gameOver': 'Game over',
@@ -495,6 +520,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'slepi.enterPromptDesc':
       'Everyone writes a phrase that the next player will try to draw.',
     'slepi.wroteCount': '{n}/{total} wrote',
+    'slepi.roundsWarning':
+      '⚠️ With {n} players this many rounds means the same players work your chain more than once and your content loops back. Recommended: 1 round.',
     'slepi.step': 'Step {n}/{total}',
     'slepi.everyoneDraws': 'Everyone draws',
     'slepi.everyoneGuesses': 'Everyone guesses',
@@ -538,6 +565,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'spotIt.pointsWon': '+{n} points!',
     'spotIt.zeroPoints': '0 points',
     'spotIt.winner': 'Winner: {name}',
+    'spotIt.standings': 'Standings',
 
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Quiz',

@@ -162,7 +162,10 @@ export class SpotItModule extends BaseGameModule {
         const locked = this.state.round.lockedUntil.get(player.id) ?? 0;
         playerData[player.id] = {
           personalCard: hand,
-          lockedUntil: phase === 'racing' ? locked : 0,
+          // Remaining lockout in ms (relative) — NOT an absolute server
+          // timestamp, so the phone can count it down against its own clock
+          // without being thrown off by client/server clock skew.
+          lockMs: phase === 'racing' ? Math.max(0, locked - Date.now()) : 0,
           iWonRound: this.state.round.winnerId === player.id,
           iTapped: this.state.round.tappedPlayerIds.has(player.id),
         };
@@ -193,6 +196,19 @@ export class SpotItModule extends BaseGameModule {
         matchSymbolIndex,
         pointsAwarded: this.state.round.pointsAwarded,
       };
+      // Full standings for the reveal: everyone's running total plus what they
+      // earned this round, ranked.
+      data.standings = room.players
+        .map((p) => ({
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          avatarEmoji: p.avatarEmoji,
+          roundPoints: this.state.round.pointsAwarded[p.id] ?? 0,
+          totalScore: p.score,
+        }))
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .map((e, i) => ({ ...e, rank: i + 1 }));
     }
 
     if (phase === 'final-leaderboard' || phase === 'ended') {

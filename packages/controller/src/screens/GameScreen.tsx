@@ -1,13 +1,7 @@
 import { GameRouter } from '../components/GameRouter';
-import { LeaveRoomButton } from '../components/LeaveRoomButton';
-import { StopGameButton } from '../components/StopGameButton';
-import { usePlayerStore } from '../store/playerStore';
+import { PlayerMenu } from '../components/PlayerMenu';
 
 export function GameScreen() {
-  const { player, room } = usePlayerStore();
-  const iAmRemoteHost =
-    !!player && !!room && room.remoteHostPlayerId === player.id;
-
   return (
     <div
       style={{
@@ -22,15 +16,12 @@ export function GameScreen() {
       <div
         style={{
           position: 'fixed',
-          bottom: '0.6rem',
-          left: '0.6rem',
+          top: 'calc(0.6rem + var(--safe-top, 0px))',
+          left: 'calc(0.6rem + var(--safe-left, 0px))',
           zIndex: 50,
-          display: 'flex',
-          gap: '0.4rem',
         }}
       >
-        {iAmRemoteHost && <StopGameButton />}
-        <LeaveRoomButton variant="overlay" />
+        <PlayerMenu inGame />
       </div>
     </div>
   );

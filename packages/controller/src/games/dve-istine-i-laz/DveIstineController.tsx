@@ -5,6 +5,7 @@ import { socket } from '../../socket';
 import type {
   DveIstineControllerData,
   DveIstineHostData,
+  DveIstineResultGuesser,
 } from '@igra/shared';
 
 const wrap: React.CSSProperties = {
@@ -134,42 +135,92 @@ export default function DveIstineController() {
 
   if (phase === 'showing-results') {
     const statements = host.statements ?? [];
-    const lieText =
-      host.lieIndex !== undefined ? statements[host.lieIndex]?.text : '';
     const roundScore = my?.ownRoundScore ?? 0;
     const isSubject = my?.role === 'subject';
+    const results = host.results ?? [];
     return (
-      <div style={wrap}>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Laž je bila
-        </p>
-        <p style={{ fontSize: '1.3rem', fontWeight: 800 }}>„{lieText}"</p>
-        {!isSubject && (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          overflowY: 'auto',
+          padding: '1rem',
+          gap: '0.7rem',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          {!isSubject ? (
+            <p
+              style={{
+                fontSize: '1.2rem',
+                fontWeight: 800,
+                color: my?.wasCorrect ? 'var(--success)' : 'var(--danger)',
+                margin: 0,
+              }}
+            >
+              {my?.wasCorrect ? 'Pogodio si! 🎯' : 'Prevaren si 🙈'}
+            </p>
+          ) : (
+            <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+              🕵️ {host.subjectName}
+            </p>
+          )}
           <p
             style={{
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              color: my?.wasCorrect ? 'var(--success)' : 'var(--danger)',
+              fontSize: '1.05rem',
+              fontWeight: 800,
+              color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+              margin: '0.15rem 0 0',
             }}
           >
-            {my?.wasCorrect ? 'Pogodio si! 🎯' : 'Prevaren si 🙈'}
+            {roundScore > 0 ? `+${roundScore}` : '+0'} poena
+            {isSubject && roundScore > 0 ? ' · prevario si nekog!' : ''}
           </p>
-        )}
-        <p
-          style={{
-            fontSize: '1.3rem',
-            fontWeight: 800,
-            color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
-          }}
-        >
-          {isSubject && roundScore > 0 ? '🕵️ ' : ''}
-          {roundScore > 0 ? `+${roundScore}` : '+0'} poena
-        </p>
-        {isSubject && roundScore > 0 && (
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Prevario si nekog!
-          </p>
-        )}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: '460px' }}>
+          {statements.map((s) => {
+            const isLie = s.index === host.lieIndex;
+            const voters = results.filter((r) => r.guessedIndex === s.index);
+            return (
+              <div
+                key={s.index}
+                style={{
+                  padding: '0.6rem 0.7rem',
+                  borderRadius: '14px',
+                  background: isLie ? 'rgba(255,77,94,.12)' : 'var(--bg-secondary)',
+                  border: `1px solid ${isLie ? 'var(--danger)' : 'rgba(47,224,138,.5)'}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: voters.length ? '0.4rem' : 0 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: '0.98rem', lineHeight: 1.3 }}>
+                    {s.text}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      whiteSpace: 'nowrap',
+                      color: isLie ? 'var(--danger)' : 'var(--success)',
+                    }}
+                  >
+                    {isLie ? 'LAŽ ✗' : 'ISTINA ✓'}
+                  </span>
+                </div>
+                {voters.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                    {voters.map((v) => (
+                      <VoterChip key={v.playerId} voter={v} isMe={v.playerId === playerId} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -196,6 +247,46 @@ export default function DveIstineController() {
   }
 
   return null;
+}
+
+function VoterChip({
+  voter,
+  isMe,
+}: {
+  voter: DveIstineResultGuesser;
+  isMe: boolean;
+}) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.25rem',
+        padding: '0.1rem 0.45rem 0.1rem 0.15rem',
+        borderRadius: '999px',
+        background: 'var(--bg-card)',
+        border: isMe ? '1px solid var(--text-secondary)' : '1px solid var(--line2)',
+        fontSize: '0.72rem',
+        fontWeight: 700,
+      }}
+    >
+      <span
+        style={{
+          width: '18px',
+          height: '18px',
+          borderRadius: '50%',
+          background: voter.avatarColor,
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '0.65rem',
+          flexShrink: 0,
+        }}
+      >
+        {voter.avatarEmoji}
+      </span>
+      {isMe ? 'Ti' : voter.name}
+    </span>
+  );
 }
 
 function CollectForm({ timeRemaining }: { timeRemaining: number }) {
