@@ -39,6 +39,12 @@ export default function BoljiZivotController() {
   const [riskaPick, setRiskaPick] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [turnBannerId, setTurnBannerId] = useState(0);
+  // "!" dugme objedinjuje tri brze akcije: slap, Zduhać reakciju i "Zavet!".
+  // 'menu' = otvoren popup sa dostupnim akcijama; 'slap'/'zduhac' = izbor
+  // karte za tu akciju. Sve je lokalno i tiho — ostali ne vide pritisak.
+  const [bangMode, setBangMode] = useState<'menu' | 'slap' | 'zduhac' | null>(
+    null
+  );
 
   const phase = gameState?.phase ?? '';
 
@@ -47,6 +53,7 @@ export default function BoljiZivotController() {
     setBlindOwnPos(null);
     setConfirmCall(false);
     setRiskaPick(false);
+    setBangMode(null);
   }, [phase]);
 
   // "TVOJ POTEZ" — na uzlaznu ivicu (nije moj potez → jeste) zavibriraj i
@@ -81,6 +88,28 @@ export default function BoljiZivotController() {
     hadSlapRef.current = slapForMe;
   }, [slapForMe, haptics]);
 
+  // Novi slap prozor (ili zatvaranje) resetuje "!" stanje vezano za slap;
+  // Zduhać izbor u toku ne prekidamo.
+  const slapId =
+    (gameState?.data as unknown as BoljiZivotHostData | null)?.slap?.id ?? null;
+  useEffect(() => {
+    setBangMode((m) => (m === 'slap' || m === 'menu' ? null : m));
+  }, [slapId]);
+
+  // Ciljan sam Zduhać prozorom → vibracija (imam samo ~3s da reagujem).
+  const targetedNow = !!(
+    gameState &&
+    playerId &&
+    gameState.phase === 'reaction' &&
+    (gameState.playerData[playerId] as { amTargeted?: boolean } | undefined)
+      ?.amTargeted
+  );
+  const wasTargetedRef = useRef(false);
+  useEffect(() => {
+    if (targetedNow && !wasTargetedRef.current) haptics.success();
+    wasTargetedRef.current = targetedNow;
+  }, [targetedNow, haptics]);
+
   if (!gameState || !playerId) return null;
   const data = gameState.data as unknown as BoljiZivotHostData;
   const me = (gameState.playerData[playerId] ?? {}) as unknown as BoljiZivotPlayerData;
@@ -92,7 +121,7 @@ export default function BoljiZivotController() {
     return (
       <Centered>
         <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-          Igra je u toku — sačekaj sledeću partiju. 🌰
+          Igra je u toku — sačekaj sledeću partiju. 🧿
         </p>
       </Centered>
     );
@@ -133,7 +162,9 @@ export default function BoljiZivotController() {
   else if (phase === 'power-select' && me.isMyTurn && data.power?.kind === 'blind-swap')
     gridMode = 'blind-own';
   else if (phase === 'power-look' && me.isMyTurn) gridMode = 'power-swap';
-  else if (phase === 'reaction' && me.amTargeted) gridMode = 'reaction';
+  // Zduhać ide kroz "!" dugme: grid postaje tappable tek posle izbora akcije.
+  else if (phase === 'reaction' && me.amTargeted && bangMode === 'zduhac')
+    gridMode = 'reaction';
 
   const onGridTap = (pos: number) => {
     switch (gridMode) {
@@ -164,7 +195,7 @@ export default function BoljiZivotController() {
     'power-own': 'Tapni svoju kartu da je pogledaš',
     'blind-own': 'Korak 1: tapni SVOJU kartu za slepu zamenu',
     'power-swap': 'Tapni svoju kartu da je zameniš viđenom — ili ostavi',
-    reaction: 'Tapni kartu za koju veruješ da je POPARA!',
+    reaction: 'Tapni kartu za koju veruješ da je ZDUHAĆ!',
   };
 
   // Biranje tuđe karte (mete) — kada je opponents board interaktivan?
@@ -188,6 +219,13 @@ export default function BoljiZivotController() {
     }
   };
 
+  // "!" dugme — koje brze akcije su trenutno dostupne?
+  const slapAvailable = !!data.slap && me.canSlap;
+  const zduhacAvailable = phase === 'reaction' && me.amTargeted;
+  const zavetAvailable =
+    phase === 'await-draw' && me.isMyTurn && !data.calledBy;
+  const bangAvailable = slapAvailable || zduhacAvailable || zavetAvailable;
+
   // ------------------------------------------------------------ ekrani
 
   if (phase === 'final-leaderboard' || phase === 'ended') {
@@ -199,7 +237,7 @@ export default function BoljiZivotController() {
           <TutorialNextButton label="Završi igru ▸" onTap={haptics.tap} />
         )}
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Kraj partije — manje oraha je bolje!
+          Kraj partije — manje uroka je bolje!
         </p>
         {mine && (
           <>
@@ -210,7 +248,7 @@ export default function BoljiZivotController() {
               {mine.rank === 1 ? '🏆' : `#${mine.rank}`}
             </p>
             <p className="display" style={{ fontSize: '1.6rem', fontWeight: 600, margin: 0 }}>
-              {mine.score} 🌰
+              {mine.score} 🧿
             </p>
           </>
         )}
@@ -229,7 +267,7 @@ export default function BoljiZivotController() {
               >
                 <span style={{ fontWeight: 700, minWidth: '2rem' }}>#{e.rank}</span>
                 <span style={{ color: e.avatarColor, fontWeight: 600 }}>{e.name}</span>
-                <span style={{ marginLeft: 'auto', fontWeight: 700 }}>{e.score} 🌰</span>
+                <span style={{ marginLeft: 'auto', fontWeight: 700 }}>{e.score} 🧿</span>
               </div>
             ))}
           </div>
@@ -261,13 +299,13 @@ export default function BoljiZivotController() {
         >
           {reveal.callerId
             ? reveal.callerSuccess
-              ? `🏆 ${reveal.callerName} — BOLJI ŽIVOT je uspeo!`
+              ? `🏆 ${reveal.callerName} — ZAVET je uspeo!`
               : `💥 ${reveal.callerName} je pao — +20 kazne!`
             : 'Otkrivanje!'}
         </p>
         {myFam && (
           <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '0 0 0.5rem' }}>
-            Tvoja runda: <b>{myFam.roundSum} 🌰</b> (+{myFam.scoreAdded} → {myFam.totalScore})
+            Tvoja runda: <b>{myFam.roundSum} 🧿</b> (+{myFam.scoreAdded} → {myFam.totalScore})
           </p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -291,7 +329,7 @@ export default function BoljiZivotController() {
                     {fam.isCaller ? ' 📣' : ''}
                   </span>
                   <span style={{ marginLeft: 'auto', fontWeight: 700 }}>
-                    {fam.roundSum} 🌰
+                    {fam.roundSum} 🧿
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
@@ -423,8 +461,151 @@ export default function BoljiZivotController() {
         </p>
       )}
 
-      {/* SLAP prozor — uvek odvojena traka, tap na broj karte */}
-      {data.slap && me.canSlap && (
+      {/* "!" — objedinjeno dugme za brze akcije: slap / Zduhać / Zavet.
+          Klik otvara popup sa trenutno dostupnim akcijama (tiho — ostali
+          ne vide pritisak). Slap prozor nema tajmer; Zduhać ima ~3s. */}
+      {bangAvailable && bangMode === null && (
+        <button
+          onClick={tap(() => setBangMode('menu'))}
+          aria-label="Brza akcija"
+          style={{
+            position: 'fixed',
+            bottom: '4.5rem',
+            right: '1rem',
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            background: 'var(--danger)',
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: '1.9rem',
+            lineHeight: 1,
+            border: '3px solid rgba(255,255,255,0.35)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+            zIndex: 40,
+            animation: 'igra-pop .25s, igra-pulse-ring 1.2s ease-out',
+          }}
+        >
+          !
+        </button>
+      )}
+      {bangMode === 'menu' && bangAvailable && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '4.5rem',
+            right: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.4rem',
+            background: 'var(--bg-card)',
+            border: '2px solid var(--danger)',
+            borderRadius: '0.75rem',
+            padding: '0.6rem',
+            zIndex: 40,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+            animation: 'igra-pop .2s',
+            minWidth: 200,
+          }}
+        >
+          {slapAvailable && data.slap && (
+            <button
+              onClick={tap(() => setBangMode('slap'))}
+              style={{
+                padding: '0.55rem 0.8rem',
+                borderRadius: '0.5rem',
+                background: 'var(--danger)',
+                color: '#fff',
+                fontWeight: 700,
+                textAlign: 'left',
+              }}
+            >
+              ⚡ Slap — imam {data.slap.value}!
+            </button>
+          )}
+          {zduhacAvailable && (
+            <button
+              onClick={tap(() => setBangMode('zduhac'))}
+              style={{
+                padding: '0.55rem 0.8rem',
+                borderRadius: '0.5rem',
+                background: 'var(--accent)',
+                color: 'var(--bg-primary, #1D3557)',
+                fontWeight: 700,
+                textAlign: 'left',
+              }}
+            >
+              🛡️ Zduhać — presretni napad!
+            </button>
+          )}
+          {zavetAvailable &&
+            (confirmCall ? (
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button
+                  onClick={tap(() => {
+                    send('bz:call');
+                    setBangMode(null);
+                    setConfirmCall(false);
+                  })}
+                  style={{
+                    flex: 1,
+                    padding: '0.55rem 0.8rem',
+                    borderRadius: '0.5rem',
+                    background: 'var(--danger)',
+                    color: '#fff',
+                    fontWeight: 700,
+                  }}
+                >
+                  Sigurno — ZAVET!
+                </button>
+                <button
+                  onClick={tap(() => setConfirmCall(false))}
+                  style={{
+                    padding: '0.55rem 0.6rem',
+                    borderRadius: '0.5rem',
+                    background: 'transparent',
+                    border: '1px solid var(--text-secondary)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 700,
+                  }}
+                >
+                  Ne
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={tap(() => setConfirmCall(true))}
+                style={{
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '0.5rem',
+                  background: 'transparent',
+                  border: '2px solid var(--danger)',
+                  color: 'var(--danger)',
+                  fontWeight: 700,
+                  textAlign: 'left',
+                }}
+              >
+                📣 Zavet! — imam najmanje uroka
+              </button>
+            ))}
+          <button
+            onClick={tap(() => {
+              setBangMode(null);
+              setConfirmCall(false);
+            })}
+            style={{
+              padding: '0.35rem',
+              borderRadius: '0.5rem',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              fontWeight: 700,
+            }}
+          >
+            ✕ Zatvori
+          </button>
+        </div>
+      )}
+      {bangMode === 'slap' && slapAvailable && data.slap && (
         <div
           style={{
             background: 'rgba(231, 76, 60, 0.15)',
@@ -432,41 +613,20 @@ export default function BoljiZivotController() {
             borderRadius: '0.6rem',
             padding: '0.45rem',
             textAlign: 'center',
-            animation: 'igra-pop .25s, igra-pulse-ring 1s ease-out',
+            animation: 'igra-pop .25s',
           }}
         >
-          <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: '0.85rem' }}>
-            ⚡ SLAP! Imaš li {data.slap.value}?
+          <p style={{ margin: '0 0 0.4rem', fontWeight: 700, fontSize: '0.85rem' }}>
+            ⚡ Koja tvoja karta je {data.slap.value}? Promašaj = kaznena!
           </p>
-          {/* Odbrojavanje prozora — puna traka se topi ka nuli */}
           <div
             style={{
-              height: 5,
-              borderRadius: 999,
-              background: 'rgba(255,255,255,0.15)',
-              overflow: 'hidden',
-              margin: '0 0.2rem 0.4rem',
+              display: 'flex',
+              gap: '0.35rem',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
             }}
           >
-            <div
-              style={{
-                height: '100%',
-                borderRadius: 999,
-                background: 'var(--danger)',
-                width: `${Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    (data.slap.secondsLeft /
-                      Math.max(1, data.slap.windowSeconds ?? 4)) *
-                      100
-                  )
-                )}%`,
-                transition: 'width 1s linear',
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center' }}>
             {me.mySlots
               .filter((s) => s.present)
               .map((s) => (
@@ -484,11 +644,24 @@ export default function BoljiZivotController() {
                   #{s.pos + 1}
                 </button>
               ))}
+            <button
+              onClick={tap(() => setBangMode(null))}
+              style={{
+                padding: '0.4rem 0.7rem',
+                borderRadius: '0.5rem',
+                background: 'transparent',
+                border: '1px solid var(--text-secondary)',
+                color: 'var(--text-secondary)',
+                fontWeight: 700,
+              }}
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
 
-      {/* Popara prozor za mene */}
+      {/* Zduhać prozor za mene — reaguje se kroz "!" dugme (~3s) */}
       {phase === 'reaction' && me.amTargeted && data.reaction && (
         <div
           style={{
@@ -500,28 +673,37 @@ export default function BoljiZivotController() {
           }}
         >
           <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>
-            📋 {data.reaction.actorName} cilja tvoju kartu {data.reaction.targetPos + 1}!
+            🛡️ {data.reaction.actorName} cilja tvoju kartu{' '}
+            {data.reaction.targetPos + 1}! ({timeRemaining}s)
           </p>
-          <p style={{ margin: '0.2rem 0 0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            Tapni kartu za koju veruješ da je Popara — pogrešna = kaznena karta!
-          </p>
-          <button
-            onClick={tap(() => send('bz:reaction-pass'))}
-            style={{
-              padding: '0.4rem 1rem',
-              borderRadius: '0.5rem',
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-            }}
-          >
-            Pusti — nemam Poparu
-          </button>
+          {bangMode !== 'zduhac' ? (
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Imaš Zduhaća? Brzo tapni „!" pa ga označi — inače akcija prolazi.
+            </p>
+          ) : (
+            <>
+              <p style={{ margin: '0.2rem 0 0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                Tapni kartu za koju veruješ da je Zduhać — pogrešna = kaznena karta!
+              </p>
+              <button
+                onClick={tap(() => send('bz:reaction-pass'))}
+                style={{
+                  padding: '0.4rem 1rem',
+                  borderRadius: '0.5rem',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                }}
+              >
+                Pusti — nemam Zduhaća
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {/* Racija — javno otkrivene karte */}
+      {/* Grom — javno otkrivene karte */}
       {phase === 'racija-show' && data.racija && (
         <div
           style={{
@@ -532,7 +714,7 @@ export default function BoljiZivotController() {
           }}
         >
           <p style={{ margin: '0 0 0.4rem', fontWeight: 700, textAlign: 'center', fontSize: '0.9rem' }}>
-            🚨 RACIJA — karte na sto!
+            ⚡ GROM — karte na sto!
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             {data.racija.reveals.map((r) => {
@@ -550,7 +732,7 @@ export default function BoljiZivotController() {
         </div>
       )}
 
-      {/* Riska — vlasnik bira */}
+      {/* Drekavac — vlasnik bira */}
       {phase === 'riska' && me.amRiskaHolder && (
         <div
           style={{
@@ -561,11 +743,11 @@ export default function BoljiZivotController() {
             textAlign: 'center',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 700 }}>👵 Riska se oglašava — kod tebe je!</p>
+          <p style={{ margin: 0, fontWeight: 700 }}>😱 Drekavac vrišti — kod tebe je!</p>
           {!riskaPick ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
               <ActionButton onClick={tap(() => send('bz:riska-draw'))}>
-                🎴 Izvuci kartu i pošalji Risku na otpad
+                🎴 Izvuci kartu i pošalji Drekavca na otpad
               </ActionButton>
               <ActionButton onClick={tap(() => setRiskaPick(true))}>
                 😈 Uvali je drugom igraču
@@ -576,7 +758,7 @@ export default function BoljiZivotController() {
             </div>
           ) : (
             <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tapni tuđu kartu ispod — Riska ide tamo, njihova karta tebi.
+              Tapni tuđu kartu ispod — Drekavac ide tamo, njihova karta tebi.
             </p>
           )}
         </div>
@@ -641,7 +823,7 @@ export default function BoljiZivotController() {
               animation: 'igra-pop .3s',
             }}
           >
-            🌰
+            🧿
           </div>
           Špil {data.drawCount}
         </div>
@@ -689,11 +871,11 @@ export default function BoljiZivotController() {
           onTap={(pos) => tap(() => onGridTap(pos))()}
         />
         <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0' }}>
-          🌰 Moji orasi: <b>{me.myScore}</b>
+          🧿 Moji uroci: <b>{me.myScore}</b>
           {data.calledBy && (
             <>
               {' '}
-              · 📣 {data.callerName} je pozvao BOLJI ŽIVOT
+              · 📣 {data.callerName} je pozvao ZAVET
             </>
           )}
         </p>
@@ -710,21 +892,18 @@ export default function BoljiZivotController() {
               ♻️ Uzmi sa otpada: {data.discardTop.name} ({data.discardTop.v})
             </ActionButton>
           )}
-          {!data.calledBy &&
-            (confirmCall ? (
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <ActionButton danger onClick={tap(() => send('bz:call'))}>
-                  Sigurno — BOLJI ŽIVOT!
-                </ActionButton>
-                <ActionButton secondary onClick={tap(() => setConfirmCall(false))}>
-                  Ipak ne
-                </ActionButton>
-              </div>
-            ) : (
-              <ActionButton danger onClick={tap(() => setConfirmCall(true))}>
-                📣 BOLJI ŽIVOT!
-              </ActionButton>
-            ))}
+          {!data.calledBy && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                margin: 0,
+                textAlign: 'center',
+              }}
+            >
+              Misliš da nosiš najmanje uroka? Tapni „!" pa „Zavet!"
+            </p>
+          )}
         </div>
       )}
 
@@ -858,7 +1037,7 @@ function HelpSheet({ onClose }: { onClose: () => void }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
           <h2 className="display" style={{ margin: 0, fontSize: '1.15rem' }}>
-            🌰 Bolji život — podsetnik
+            🧿 Zavet — podsetnik
           </h2>
           <button
             onClick={onClose}
@@ -948,11 +1127,11 @@ function statusLine(
     case 'peek-show':
       return me.isMyTurn ? 'Zapamti!' : `${data.currentPlayerName} pamti viđeno…`;
     case 'racija-show':
-      return 'RACIJA!';
+      return 'GROM!';
     case 'reaction':
-      return me.amTargeted ? 'POPARA?' : `Čeka se ${data.reaction?.targetName}…`;
+      return me.amTargeted ? 'ZDUHAĆ?' : `Čeka se ${data.reaction?.targetName}…`;
     case 'riska':
-      return me.amRiskaHolder ? 'Riska je kod tebe!' : `${data.riska?.holderName} igra dodatni potez…`;
+      return me.amRiskaHolder ? 'Drekavac je kod tebe!' : `${data.riska?.holderName} igra dodatni potez…`;
     default:
       return '';
   }

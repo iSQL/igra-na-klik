@@ -8,6 +8,9 @@ export interface GameDefinition {
   // everything needed to play. Games without this flag can only start in
   // rooms that have a host screen.
   supportsHostless?: boolean;
+  // Score semantics: fewer points = better placement (e.g. Zavet's "uroci").
+  // Clients that rank finalScores must sort ASCENDING for these games.
+  lowerScoreWins?: boolean;
 }
 
 export type GamePhase = string;

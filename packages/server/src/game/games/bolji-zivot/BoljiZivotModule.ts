@@ -7,7 +7,6 @@ import {
   BZ_CALL_PENALTY,
   BZ_POPARA_V,
   BZ_RISKA_V,
-  BZ_SLAP_WINDOW_SECONDS,
   bzRoundSum,
 } from '@igra/shared';
 import type {
@@ -28,9 +27,10 @@ const AWAIT_DRAW_DURATION = 30;
 const HOLDING_DURATION = 25;
 const POWER_SELECT_DURATION = 20;
 const POWER_LOOK_DURATION = 15;
-const REACTION_DURATION = 7;
+// Kratko namerno: ciljani igrač ima 3s da tapne "!" i označi Zduhaća —
+// bez toga bi se svaki potez sa moći vukao dok meta ne odgovori.
+const REACTION_DURATION = 3;
 const RISKA_DURATION = 20;
-const SLAP_WINDOW_MS = BZ_SLAP_WINDOW_SECONDS * 1000;
 
 // Pauze — podesive kroz /admin/timinzi (GAME_TIMING_DEFS 'bolji-zivot').
 const PEEKING_DURATION = 20;
@@ -40,14 +40,14 @@ const REVEAL_DURATION = 15;
 const FINAL_LEADERBOARD_DURATION = 10;
 
 /**
- * Bezbednosni limit poteza po rundi — ako niko ne vikne "Bolji život!",
+ * Bezbednosni limit poteza po rundi — ako niko ne vikne "Zavet!",
  * runda se prinudno otkriva umesto da traje večno.
  */
 const MAX_TURNS_PER_PLAYER = 15;
 
 interface BZSeat {
   playerId: string;
-  // Stabilne pozicije: null = rupa (slap / Popara); kaznene karte se dodaju
+  // Stabilne pozicije: null = rupa (slap / Zduhać); kaznene karte se dodaju
   // na kraj. Pozicije se NIKAD ne premeštaju — poziciono pamćenje je igra.
   slots: (BZCardInfo | null)[];
   initialPeeksUsed: number;
@@ -72,9 +72,12 @@ type PendingTargeted =
       targetPos: number;
     };
 
+// Bez vremenskog roka: prozor se zatvara na pogodak, promenu vrha otpada ili
+// kad sledeći igrač povuče/uzme kartu. `id` raste sa svakim otvaranjem da
+// klijenti resetuju svoje lokalno "!" stanje.
 interface SlapCtx {
+  id: number;
   value: number;
-  deadlineMs: number;
   winnerId: string | null;
   winnerPos: number | null;
   failed: BZRevealedCard[];
@@ -86,8 +89,8 @@ export class BoljiZivotModule extends BaseGameModule {
   private timings: Record<string, number> = {};
 
   // Tutorial mod: fazni tajmeri ne teku — pomera ih admin ('bz:next-phase'
-  // host akcija, izvršava tačno ono što bi istek tajmera uradio). Paralelni
-  // slap prozor zadržava svoj realni rok (refleks je poenta tog mini-dela).
+  // host akcija, izvršava tačno ono što bi istek tajmera uradio). Slap
+  // prozor nema rok ni ovde — zatvaraju ga isti događaji kao u pravoj igri.
   private tutorialMode = false;
 
   private sub: BoljiZivotPhase = 'peeking';
@@ -107,6 +110,7 @@ export class BoljiZivotModule extends BaseGameModule {
   private lookCtx: { targetId: string; targetPos: number } | null = null;
   private pendingReaction: PendingTargeted | null = null;
   private slap: SlapCtx | null = null;
+  private slapCounter = 0;
   private riskaHolder: string | null = null;
   private turnsTaken = 0;
   private lastAction: string | null = null;
@@ -128,7 +132,7 @@ export class BoljiZivotModule extends BaseGameModule {
   validateStart(room: Room): string | null {
     const connected = room.players.filter((p) => p.isConnected);
     if (connected.length > 6) {
-      return 'Bolji život se igra sa najviše 6 igrača.';
+      return 'Zavet se igra sa najviše 6 igrača.';
     }
     return null;
   }
@@ -237,8 +241,8 @@ export class BoljiZivotModule extends BaseGameModule {
     this.discard.push(card);
     if (openSlap && card.v <= 9) {
       this.slap = {
+        id: ++this.slapCounter,
         value: card.v,
-        deadlineMs: Date.now() + SLAP_WINDOW_MS,
         winnerId: null,
         winnerPos: null,
         failed: [],
@@ -338,8 +342,8 @@ export class BoljiZivotModule extends BaseGameModule {
 
   private riskaPhase(room: Room): void {
     this.clearTurnScoped();
-    // Riska ne odlazi tiho: ako je u ne-pozivačevoj porodici, vlasnik dobija
-    // jedan dodatni potez da je zameni ili uvali — pre otkrivanja.
+    // Drekavac ne odlazi tiho: ako je u ne-pozivačevoj porodici, vlasnik
+    // dobija jedan dodatni potez da ga zameni ili uvali — pre otkrivanja.
     for (const id of this.turnOrder) {
       if (id === this.calledBy) continue;
       const seat = this.seats.get(id);
@@ -352,7 +356,7 @@ export class BoljiZivotModule extends BaseGameModule {
       this.sub = 'riska';
       this.timeLeft = RISKA_DURATION;
       this.announce(
-        `RISKA SE OGLAŠAVA! ${this.nameOf(room, id)} ima jedan dodatni potez`
+        `DREKAVAC VRIŠTI! ${this.nameOf(room, id)} ima jedan dodatni potez`
       );
       return;
     }
@@ -374,7 +378,7 @@ export class BoljiZivotModule extends BaseGameModule {
     void room;
   }
 
-  /** Ciljana akcija prolazi (nije poništena Poparom) — izvrši je. */
+  /** Ciljana akcija prolazi (nije je presreo Zduhać) — izvrši je. */
   private resolvePendingReaction(room: Room): void {
     const pending = this.pendingReaction;
     this.pendingReaction = null;
@@ -443,7 +447,7 @@ export class BoljiZivotModule extends BaseGameModule {
         holderSeat.slots[pending.actorPos] = targetCard;
         targetSeat.slots[pending.targetPos] = riskaCard;
         this.announce(
-          `Riska menja vlasnika! ${this.nameOf(room, pending.actorId)} je uvalio Risku igraču ${this.nameOf(room, pending.targetId)} (karta ${pending.targetPos + 1})`
+          `Drekavac menja vlasnika! ${this.nameOf(room, pending.actorId)} je uvalio Drekavca igraču ${this.nameOf(room, pending.targetId)} (karta ${pending.targetPos + 1})`
         );
         this.markChanged(pending.actorId, pending.actorPos);
         this.markChanged(pending.targetId, pending.targetPos);
@@ -539,8 +543,8 @@ export class BoljiZivotModule extends BaseGameModule {
     if (callerId) {
       this.announce(
         callerSuccess
-          ? `${this.nameOf(room, callerId)} je pozvao BOLJI ŽIVOT i USPEO!`
-          : `${this.nameOf(room, callerId)} je pozvao BOLJI ŽIVOT — i pao! +${BZ_CALL_PENALTY} kazne`
+          ? `${this.nameOf(room, callerId)} je pozvao ZAVET i USPEO!`
+          : `${this.nameOf(room, callerId)} je pozvao ZAVET — i pao! +${BZ_CALL_PENALTY} kazne`
       );
     }
   }
@@ -555,7 +559,7 @@ export class BoljiZivotModule extends BaseGameModule {
         score: p.score,
         rank: 0,
       }))
-      // Manje oraha = bolje — rastuće sortiranje, rank 1 je najmanje.
+      // Manje uroka = bolje — rastuće sortiranje, rank 1 je najmanje.
       .sort((a, b) => a.score - b.score)
       .map((entry, i) => ({ ...entry, rank: i + 1 }));
   }
@@ -656,15 +660,10 @@ export class BoljiZivotModule extends BaseGameModule {
       name: card.name,
     });
 
-    // Svi povezani igrači iskoristili peek-ove → kreni odmah.
-    const allDone = this.turnOrder.every((id) => {
-      if (!this.isConnected(room, id)) return true;
-      return (this.seats.get(id)?.initialPeeksUsed ?? 2) >= 2;
-    });
-    if (allDone) {
-      this.visible.clear();
-      this.beginTurn(room);
-    }
+    // Namerno NEMA ranog prelaza kad svi završe: karte ostaju vidljive do
+    // isteka PEEKING tajmera, inače poslednji igrač ne stigne da vidi šta je
+    // otvorio (advanceOnTimeout za 'peeking' čisti visible i kreće rundu).
+    void room;
     return true;
   }
 
@@ -685,7 +684,7 @@ export class BoljiZivotModule extends BaseGameModule {
       return false;
     }
     const slap = this.slap;
-    if (!slap || slap.winnerId || Date.now() > slap.deadlineMs) return false;
+    if (!slap || slap.winnerId) return false;
     if (seat.slapAttempted) return false;
     const pos = data.pos;
     if (typeof pos !== 'number') return false;
@@ -733,7 +732,7 @@ export class BoljiZivotModule extends BaseGameModule {
     for (let step = 1; step < this.turnOrder.length; step++) {
       this.finalQueue.push(this.turnOrder[(idx + step) % this.turnOrder.length]);
     }
-    this.announce(`${this.nameOf(room, playerId)} viče: BOLJI ŽIVOT!`);
+    this.announce(`${this.nameOf(room, playerId)} viče: ZAVET!`);
     this.beginTurn(room);
     return true;
   }
@@ -743,6 +742,8 @@ export class BoljiZivotModule extends BaseGameModule {
     if (playerId !== this.currentPlayerId) return false;
     const card = this.drawCard();
     if (!card) return false;
+    // Sledeći igrač je podigao kartu sa špila — slap prozor se zatvara.
+    this.slap = null;
     this.held = card;
     this.heldFromDiscard = false;
     this.sub = 'holding';
@@ -798,7 +799,7 @@ export class BoljiZivotModule extends BaseGameModule {
       this.sub = 'racija-show';
       this.timeLeft = this.timings.RACIJA_SHOW_DURATION ?? RACIJA_SHOW_DURATION;
       this.announce(
-        `${this.nameOf(room, playerId)} baca ${this.cardLabel(card)} — RACIJA! Svakome se otkriva po jedna karta`
+        `${this.nameOf(room, playerId)} baca ${this.cardLabel(card)} — GROM! Svakome se otkriva po jedna karta`
       );
       return true;
     }
@@ -990,11 +991,11 @@ export class BoljiZivotModule extends BaseGameModule {
     if (!card) return false;
 
     if (card.v === BZ_POPARA_V) {
-      // "Gospođice Lela, pišite odbijenicu!" — akcija poništena, Popara na otpad.
+      // Zduhać presreće napad — akcija poništena, Zduhać na otpad.
       seat.slots[pos] = null;
       this.pushToDiscard(card, false);
       this.announce(
-        `POPARA! ${this.nameOf(room, playerId)}: "Ne može — pišite odbijenicu!" Akcija poništena`
+        `ZDUHAĆ! ${this.nameOf(room, playerId)} je presreo napad — akcija poništena`
       );
       this.markChanged(playerId, pos);
       const wasRiska = pending.kind === 'riska-swap';
@@ -1006,7 +1007,7 @@ export class BoljiZivotModule extends BaseGameModule {
 
     // Promašaj: javno otkrivanje + kaznena karta, pa akcija ipak prolazi.
     this.announce(
-      `${this.nameOf(room, playerId)} pokušava odbijenicu — ali to je ${this.cardLabel(card)}! Kaznena karta`
+      `${this.nameOf(room, playerId)} zove Zduhaća — ali to je ${this.cardLabel(card)}! Kaznena karta`
     );
     this.markChanged(playerId, pos);
     this.penaltyCard(room, playerId);
@@ -1026,7 +1027,7 @@ export class BoljiZivotModule extends BaseGameModule {
     seat.slots[pos] = drawn;
     this.pushToDiscard(riska, false);
     this.announce(
-      `${this.nameOf(room, playerId)} vuče kartu i šalje Risku na otpad!`
+      `${this.nameOf(room, playerId)} vuče kartu i šalje Drekavca na otpad!`
     );
     this.markChanged(playerId, pos);
     this.doReveal(room);
@@ -1049,7 +1050,7 @@ export class BoljiZivotModule extends BaseGameModule {
     const targetSeat = this.seats.get(targetId);
     if (!targetSeat || !targetSeat.slots[targetPos]) return false;
     this.announce(
-      `${this.nameOf(room, playerId)} pokušava da uvali Risku igraču ${this.nameOf(room, targetId)} (karta ${targetPos + 1})`
+      `${this.nameOf(room, playerId)} pokušava da uvali Drekavca igraču ${this.nameOf(room, targetId)} (karta ${targetPos + 1})`
     );
     this.openReaction(room, {
       kind: 'riska-swap',
@@ -1064,13 +1065,10 @@ export class BoljiZivotModule extends BaseGameModule {
   // ---------------------------------------------------------------- tick
 
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
-    // Paralelni slap prozor ima svoj rok nezavisan od pod-faze.
-    if (this.slap && Date.now() > this.slap.deadlineMs) {
-      this.slap = null;
-    }
+    // Slap prozor nema vremenski rok — zatvara ga pogodak, promena vrha
+    // otpada ili izvlačenje sledećeg igrača (handleDraw/discardTopChanged).
 
     // Tutorial mod: fazni tajmer stoji — faze pomera admin (bz:next-phase).
-    // Tick i dalje emituje stanje da slap secondsLeft ostane svež.
     if (!this.tutorialMode) {
       this.timeLeft -= deltaMs / 1000;
       if (this.timeLeft <= 0) {
@@ -1168,7 +1166,7 @@ export class BoljiZivotModule extends BaseGameModule {
         break;
 
       case 'riska':
-        this.announce('Riska ostaje gde je...');
+        this.announce('Drekavac ostaje gde je...');
         this.doReveal(room);
         break;
 
@@ -1294,12 +1292,8 @@ export class BoljiZivotModule extends BaseGameModule {
 
     const slap = this.slap
       ? {
+          id: this.slap.id,
           value: this.slap.value,
-          secondsLeft: Math.max(
-            0,
-            Math.ceil((this.slap.deadlineMs - Date.now()) / 1000)
-          ),
-          windowSeconds: BZ_SLAP_WINDOW_SECONDS,
           winnerId: this.slap.winnerId,
           winnerName: this.slap.winnerId
             ? this.nameOf(room, this.slap.winnerId)

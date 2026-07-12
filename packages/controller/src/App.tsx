@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DrawOp } from '@igra/shared';
+import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
 import { useGameStore } from './store/gameStore';
@@ -380,7 +381,14 @@ export function App() {
         finalScores.length > 0 &&
         finalScores.some((s) => s.score !== finalScores[0].score);
       if (mine && scoresVary) {
-        const sorted = [...finalScores].sort((a, b) => b.score - a.score);
+        // Some games score inverted (Zavet: fewer "uroci" win) — the registry
+        // flag decides the ranking direction.
+        const endedGameId = useGameStore.getState().gameId;
+        const lowerWins =
+          !!endedGameId && !!GAME_DEFINITIONS[endedGameId]?.lowerScoreWins;
+        const sorted = [...finalScores].sort((a, b) =>
+          lowerWins ? a.score - b.score : b.score - a.score
+        );
         // Ties share the higher rank (two players at 1000 are both 1st).
         const rank = sorted.findIndex((s) => s.score === mine.score) + 1;
         setFinalPlacement({ rank, points: mine.score });

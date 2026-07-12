@@ -315,9 +315,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.gluvo-doba.name': 'Gluvo doba',
     'game.gluvo-doba.description':
       'Vukodlaci noću haraju selom — otkrijte ih pre nego što vas nestane!',
-    'game.bolji-zivot.name': 'Bolji život!',
+    'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
-      'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Bolji život!" kad imaš najmanje oraha u džepu!',
+      'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
   },
 
   en: {
@@ -622,9 +622,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.gluvo-doba.name': 'Dead of Night',
     'game.gluvo-doba.description':
       'Werewolves prowl the village at night — unmask them before no one is left!',
-    'game.bolji-zivot.name': 'Bolji život!',
+    'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
-      'Memory card game — 4 hidden cards, swap them, spy on others and call "Bolji život!" when you hold the fewest walnuts!',
+      'Memory card game of Slavic spirits — 4 hidden cards, swap them, spy on others and call "Zavet!" when you carry the fewest curses!',
   },
 };
 

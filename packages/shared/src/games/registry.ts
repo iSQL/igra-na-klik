@@ -119,14 +119,18 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   },
   'bolji-zivot': {
     id: 'bolji-zivot',
-    name: 'Bolji život!',
+    // Retema: prikazno ime je "Zavet" (slovenska mitologija), interni id
+    // ostaje bolji-zivot — isti presedan kao pogodi-godinu → "Pogodi broj".
+    name: 'Zavet',
     minPlayers: 3,
     maxPlayers: 6,
     description:
-      'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Bolji život!" kad imaš najmanje oraha u džepu!',
+      'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
     // Hostless-capable: sve tajno (svoje karte, peek, ruka) je ionako na
     // telefonu; hostless režim samo prikaže javni sto i na kontrolerima.
     supportsHostless: true,
+    // Uroci: manje poena = bolji plasman (rang liste sortirati rastuće).
+    lowerScoreWins: true,
   },
   'tajni-agenti': {
     id: 'tajni-agenti',

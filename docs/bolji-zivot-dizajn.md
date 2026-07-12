@@ -1,8 +1,56 @@
-# Bolji život! — dizajn igre (Omerta/Cabo varijanta sa likovima iz „Srećnih ljudi")
+# Zavet — dizajn igre (Omerta/Cabo varijanta na temu slovenske mitologije)
 
-> Status: IMPLEMENTIRANO (v1). Id igre: `bolji-zivot`. Poziv za kraj runde:
-> **„Bolji život!"**. Špil je 45 karata (ranija verzija dokumenta je pogrešno
-> sabrala 46 — sa 1 Riskom zbir je 2+16+20+7 = 45).
+> Status: IMPLEMENTIRANO (v1) + RETEMA (v2). Id igre ostaje `bolji-zivot`
+> (presedan: `pogodi-godinu` → „Pogodi broj"). Poziv za kraj runde: **„Zavet!"**.
+> Špil je 45 karata (ranija verzija dokumenta je pogrešno sabrala 46 — sa
+> 1 Drekavcem zbir je 2+16+20+7 = 45).
+
+## Retema (v2): „Bolji život" → „Zavet"
+
+Prva verzija je bila tematizovana na likove iz serije „Srećni ljudi"; igra je
+retematizovana na slovensku/srpsku mitologiju — **gameplay je nepromenjen**,
+menjana su samo imena, emoji i tekstovi. Bića se namerno preklapaju sa Gluvim
+dobom (zajednički univerzum platforme). Interni identifikatori (faza `riska`,
+akcije `bz:riska-*`, konstante `BZ_MALINA_V`/`BZ_OZREN_V`/`BZ_POPARA_V`/
+`BZ_RISKA_V`, promenljive `riskaHolder`…) namerno nose stara imena.
+
+| Vr. | Staro (v1) | Novo (v2) |
+|---|---|---|
+| 0 | Beban / Neca i Žiki | Petao 🐓 / Zora 🌅 |
+| 1 | Guza | Domaćin 🏠 |
+| 2 | Vukašin | Vila 🧚 |
+| 3 | Emilija | Rusalka 🌊 |
+| 4 | Lola | Karakondžula 🐐 |
+| 5 | Kustudić | Suđaja 🔮 |
+| 6 | Ilija Pandurović | Vračara 👁️ |
+| 7 | Aranđel Golubović | Podmenak 🔄 |
+| 8 | Inspektor Naumović | Gromovnik ⚡ (racija → „Grom") |
+| 9 | Direktor Kurčubić | Veštica 🧙 |
+| 10 | Malina Vojvodić | Vesna 🌸 |
+| 11 | Ozren Soldatović | Morana ❄️ (Vesna+Morana par = 0) |
+| 12 | Radomir Popara | Zduhać 🛡️ (odbijenica → „presreće napad") |
+| 13 | Riska Golubović | Drekavac 😱 („Drekavac vrišti!") |
+
+Poeni „orasi u džepu" → **„uroci"**; motiv na poleđini karata 🌰 → 🧿.
+Tekst ispod je originalni dizajn dokument (v1 imena) — mehanike i balans
+napomene i dalje važe, samo imena čitaj kroz tabelu iznad.
+
+## „!" dugme — brze akcije (v2 izmena mehanike)
+
+Plutajuće **„!" dugme** na telefonu objedinjuje tri brze akcije: klik otvara
+tihi popup (ostali ne vide pritisak) sa onim što je trenutno dostupno:
+
+- **Slap**: prozor **više nema vremenski rok** (v1: ~4s za sve). Otvara se kad
+  karta 0–9 padne na otpad i traje **dok sledeći igrač ne povuče/uzme kartu**
+  ili dok se vrh otpada ne promeni; prvi pogodak ga zatvara za ostale. Jedan
+  pokušaj po prozoru; promašaj = javno otkrivanje + kaznena karta
+  (nepromenjeno). `data.slap.id` raste sa svakim prozorom da klijenti resetuju
+  lokalno „!" stanje.
+- **Zduhać reakcija**: prozor je skraćen na **~3s** (v1: 7s) — meta tapne „!"
+  pa označi kartu za koju veruje da je Zduhać; ako vreme istekne, akcija se
+  finalizira sama. Ovim potez sa moći više ne čeka da meta izjavi „nemam".
+- **„Zavet!" poziv**: premešten sa zasebnog dugmeta u „!" popup (sa korakom
+  potvrde), dostupan na početku svog poteza.
 
 ## Koncept
 

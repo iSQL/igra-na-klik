@@ -141,11 +141,11 @@ export default function BoljiZivotHost() {
             fontSize: '1.1rem',
           }}
         >
-          ⚡ SLAP! Ko ima {data.slap.value} — baci je! ({data.slap.secondsLeft}s)
+          ⚡ Ko ima {data.slap.value} — tapni „!" na telefonu, dok sledeći igrač ne povuče!
         </motion.div>
       )}
 
-      {/* Popara / reaction prozor */}
+      {/* Zduhać / reaction prozor */}
       {data.reaction && (
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -160,12 +160,12 @@ export default function BoljiZivotHost() {
             textAlign: 'center',
           }}
         >
-          📋 {data.reaction.targetName} — imaš li Poparu? Odbijenica poništava
-          akciju! ({timeRemaining}s)
+          🛡️ {data.reaction.targetName} — imaš li Zduhaća? On presreće i
+          poništava akciju! ({timeRemaining}s)
         </motion.div>
       )}
 
-      {/* Riska momenat */}
+      {/* Drekavac momenat */}
       {phase === 'riska' && data.riska && (
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
@@ -179,10 +179,10 @@ export default function BoljiZivotHost() {
           }}
         >
           <p className="display" style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>
-            👵 RISKA SE OGLAŠAVA!
+            😱 DREKAVAC VRIŠTI!
           </p>
           <p style={{ margin: '0.4rem 0 0', color: 'var(--text-secondary)' }}>
-            {data.riska.holderName} ima jedan dodatni potez — Riska ne odlazi tiho
+            {data.riska.holderName} ima jedan dodatni potez — Drekavac ne odlazi tiho
           </p>
         </motion.div>
       )}
@@ -209,7 +209,7 @@ export default function BoljiZivotHost() {
               fontSize: '2rem',
             }}
           >
-            🌰
+            🧿
           </motion.div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0' }}>
             Špil · {data.drawCount}
@@ -339,11 +339,11 @@ function phaseLabel(phase: string, data: BoljiZivotHostData): string {
     case 'peek-show':
       return `${data.currentPlayerName ?? '…'} pamti viđeno…`;
     case 'racija-show':
-      return '🚨 RACIJA — karte na sto!';
+      return '⚡ GROM — karte na sto!';
     case 'reaction':
-      return 'Popara prozor';
+      return 'Zduhać prozor';
     case 'riska':
-      return 'Riska se oglašava';
+      return 'Drekavac vrišti';
     default:
       return '';
   }
@@ -414,7 +414,7 @@ function FamilyPanel({
               padding: '0.1rem 0.5rem',
             }}
           >
-            BOLJI ŽIVOT!
+            ZAVET!
           </span>
         )}
         {isCurrent && data.sub === 'holding' && (
@@ -503,8 +503,8 @@ function RevealBoard({
       <p className="display" style={{ fontSize: '1.9rem', fontWeight: 700, margin: 0 }}>
         {reveal.callerId
           ? reveal.callerSuccess
-            ? `🏆 ${reveal.callerName} — BOLJI ŽIVOT je uspeo!`
-            : `💥 ${reveal.callerName} je pao — +20 oraha kazne!`
+            ? `🏆 ${reveal.callerName} — ZAVET je uspeo!`
+            : `💥 ${reveal.callerName} je pao — +20 uroka kazne!`
           : 'Runda je istekla — otkrivanje!'}
       </p>
       {data.tutorialMode ? (
@@ -572,7 +572,7 @@ function RevealBoard({
                       color: isWinner ? 'var(--success)' : 'var(--text-primary)',
                     }}
                   >
-                    {fam.roundSum} 🌰
+                    {fam.roundSum} 🧿
                   </p>
                   <p
                     style={{
@@ -607,7 +607,7 @@ function FinalBoard({ data }: { data: BoljiZivotHostData }) {
       }}
     >
       <p className="display" style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
-        🌰 Najmanje oraha u džepu
+        🧿 Najmanje uroka
       </p>
       <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
         Manje je bolje — pobednik je na vrhu!
@@ -644,7 +644,7 @@ function FinalBoard({ data }: { data: BoljiZivotHostData }) {
               className="display"
               style={{ marginLeft: 'auto', fontWeight: 700, fontSize: '1.2rem' }}
             >
-              {e.score} 🌰
+              {e.score} 🧿
             </span>
           </motion.div>
         ))}

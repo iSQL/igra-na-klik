@@ -1,7 +1,8 @@
-// Klijentski tipovi za "Bolji život!" — oblik gameState.data (javno, stiže
-// svima kroz game:state-update) i gameState.playerData (privatni isečak).
+// Klijentski tipovi za "Zavet!" (interni id: bolji-zivot) — oblik
+// gameState.data (javno, stiže svima kroz game:state-update) i
+// gameState.playerData (privatni isečak).
 // ANTI-LEAK pravilo: u BoljiZivotHostData NIKAD ne sme lice karte koje nije
-// javno otkriveno (racija, promašen slap/Popara, otpad, završno otkrivanje).
+// javno otkriveno (grom, promašen slap/Zduhać, otpad, završno otkrivanje).
 // Privatna viđenja (peek, look-swap, karta u ruci) idu isključivo kroz
 // BoljiZivotPlayerData i žive samo dok traje pod-faza u kojoj su nastala —
 // posle isteka se NE reemituju (pamćenje je deo igre).
@@ -11,14 +12,14 @@ import type { BZCardInfo, BoljiZivotPowerKind } from '../games/bolji-zivot-deck.
 /** Pod-faza = GameState.phase (ravan string, GameRouter ne zavisi od njega). */
 export type BoljiZivotPhase =
   | 'peeking' // početno gledanje 2 svoje karte
-  | 'await-draw' // igrač na potezu bira: vuci / uzmi sa otpada / BOLJI ŽIVOT!
+  | 'await-draw' // igrač na potezu bira: vuci / uzmi sa otpada / ZAVET!
   | 'holding' // drži izvučenu kartu: zameni ili baci
   | 'power-select' // bira metu moći (5/6/7/9)
   | 'power-look' // 9: video tuđu kartu, bira zameni/ne
   | 'peek-show' // kratka pauza dok akter pamti viđeno (5/6)
-  | 'racija-show' // 8: javno otkrivene karte na stolu
-  | 'reaction' // Popara prozor za ciljanog igrača
-  | 'riska' // Riska se oglašava — dodatni potez vlasnika
+  | 'racija-show' // 8: grom — javno otkrivene karte na stolu
+  | 'reaction' // Zduhać prozor za ciljanog igrača
+  | 'riska' // Drekavac vrišti — dodatni potez vlasnika
   | 'reveal' // otkrivanje porodica + bodovi runde
   | 'final-leaderboard'
   | 'ended';
@@ -39,18 +40,21 @@ export interface BZFamilyPublic {
   isCaller: boolean;
 }
 
-/** Javno otkrivena karta (racija, promašen slap, otkrivanje). */
+/** Javno otkrivena karta (grom, promašen slap, otkrivanje). */
 export interface BZRevealedCard extends BZCardInfo {
   playerId: string;
   pos: number;
 }
 
 export interface BZSlapPublic {
+  /**
+   * Redni broj prozora — raste sa svakim novim otvaranjem; klijenti po njemu
+   * resetuju lokalno "!" stanje. Prozor nema vremenski rok: zatvara se na
+   * pogodak, promenu vrha otpada ili kad sledeći igrač povuče/uzme kartu.
+   */
+  id: number;
   /** Vrednost koju treba pogoditi (vrh otpada u trenutku otvaranja). */
   value: number;
-  secondsLeft: number;
-  /** Puna dužina prozora u sekundama — za progress bar na klijentima. */
-  windowSeconds: number;
   winnerId: string | null;
   winnerName: string | null;
   /** Promašaji — javno otkrivene karte + kaznena karta za svakog. */
@@ -71,7 +75,7 @@ export interface BZReactionPublic {
 
 export interface BZRevealFamilyCard extends BZCardInfo {
   pos: number;
-  /** Deo Malina+Ozren para → vredi 0. */
+  /** Deo Vesna+Morana para → vredi 0. */
   paired: boolean;
 }
 
@@ -81,7 +85,7 @@ export interface BZRevealFamily {
   avatarColor: string;
   cards: BZRevealFamilyCard[];
   roundSum: number;
-  /** Orasi dodati ovom rundom (0 za pobednika, zbir+20 za palog pozivača). */
+  /** Uroci dodati ovom rundom (0 za pobednika, zbir+20 za palog pozivača). */
   scoreAdded: number;
   totalScore: number;
   isCaller: boolean;
@@ -91,7 +95,7 @@ export interface BZLeaderboardEntry {
   playerId: string;
   name: string;
   avatarColor: string;
-  /** Ukupno oraha — MANJE je bolje, lista je rastuće sortirana. */
+  /** Ukupno uroka — MANJE je bolje, lista je rastuće sortirana. */
   score: number;
   rank: number;
 }
@@ -128,7 +132,7 @@ export interface BoljiZivotHostData {
   /** Paralelni slap prozor — nezavisan od pod-faze poteza. */
   slap: BZSlapPublic | null;
   reaction: BZReactionPublic | null;
-  /** Racija — javno otkrivene karte (traje koliko i racija-show). */
+  /** Grom (interno "racija") — javno otkrivene karte (traje koliko i racija-show). */
   racija: { reveals: BZRevealedCard[] } | null;
   riska: { holderId: string; holderName: string } | null;
   reveal: {
@@ -158,10 +162,10 @@ export interface BoljiZivotPlayerData {
   isMyTurn: boolean;
   /** Smem li da pokušam slap u aktivnom prozoru. */
   canSlap: boolean;
-  /** Popara prozor je moj (ja sam ciljan). */
+  /** Zduhać prozor je moj (ja sam ciljan). */
   amTargeted: boolean;
-  /** Ja sam vlasnik Riske tokom 'riska' pod-faze. */
+  /** Ja sam vlasnik Drekavca tokom 'riska' pod-faze. */
   amRiskaHolder: boolean;
-  /** Moji ukupni orasi. */
+  /** Moji ukupni uroci. */
   myScore: number;
 }

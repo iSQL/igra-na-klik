@@ -137,15 +137,15 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>`,
   },
   'bolji-zivot': {
-    emoji: '🌰',
-    body: `<p>Kartaška igra pamćenja sa likovima iz „Srećnih ljudi". Bodovi su „orasi u džepu" — cilj je imati ih <strong>što manje</strong>.</p>
+    emoji: '🧿',
+    body: `<p>Kartaška igra pamćenja sa bićima iz slovenske mitologije. Bodovi su „uroci" — cilj je nositi ih <strong>što manje</strong>.</p>
 <ul>
 <li>Svako ima 4 karte okrenute naopačke na svom telefonu — na početku runde proviriš samo 2 i pamtiš ih.</li>
 <li>Na potezu: vučeš kartu sa špila (tajno) ili uzmeš vrh otpada (javno), pa je zameniš jednom svojom ili je baciš.</li>
-<li>Karte 5–9 imaju moći <em>samo</em> kad ih izvučeš sa špila i odmah baciš: pogledaj svoju (5), pogledaj tuđu (6), slepa zamena (7), racija — svima se otkriva po jedna karta (8), pogledaj tuđu i po želji je zameni svojom (9).</li>
-<li><strong>Slap:</strong> kad na otpad padne karta 0–9, najbrži sme da baci svoju istu takvu — pogodak smanjuje porodicu, promašaj donosi kaznenu kartu.</li>
-<li>Specijalci: Malina (10) + Ozren (11) zajedno u tvojim kartama vrede 0; Radomir Popara (12) poništava akciju usmerenu na tebe („pišite odbijenicu!"); Riska (13) se oglašava posle poziva i daje vlasniku dodatni potez da je se reši.</li>
-<li>Kad misliš da imaš najmanje oraha, na početku poteza vikni <strong>„Bolji život!"</strong> — svi ostali odigraju još po jedan potez pa se karte otkrivaju. Ako si strogo najniži, runda ti nosi 0; ako nisi — svoj zbir + 20 kazne!</li>
+<li>Karte 5–9 imaju moći <em>samo</em> kad ih izvučeš sa špila i odmah baciš: Suđaja — pogledaj svoju (5), Vračara — pogledaj tuđu (6), Podmenak — slepa zamena (7), Gromovnik — grom, svima se otkriva po jedna karta (8), Veštica — pogledaj tuđu i po želji je zameni svojom (9).</li>
+<li><strong>Slap („!"):</strong> kad na otpad padne karta 0–9, tapni „!" na telefonu pa izaberi svoju kartu iste vrednosti — pogodak smanjuje porodicu, promašaj donosi kaznenu kartu. Prilika traje dok sledeći igrač ne povuče kartu; prvi pogodak je zatvara.</li>
+<li>Specijalne karte: Vesna (10) + Morana (11) zajedno u tvojim kartama vrede 0 — proleće pobeđuje zimu; Zduhać (12) presreće akciju usmerenu na tebe i poništava je (imaš ~3 sekunde da tapneš „!" i označiš ga); Drekavac (13) vrišti posle poziva i daje vlasniku dodatni potez da ga se reši.</li>
+<li>Kad misliš da nosiš najmanje uroka, na početku poteza tapni „!" i pozovi <strong>„Zavet!"</strong> — svi ostali odigraju još po jedan potez pa se karte otkrivaju. Ako si strogo najniži, runda ti nosi 0; ako nisi — svoj zbir + 20 kazne!</li>
 </ul>
 <p class="tip">Pamti pozicije: karte se nikad same ne mešaju, ali tuđa zamena tvoje karte poništava ono što si znao.</p>`,
   },

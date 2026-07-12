@@ -15,8 +15,11 @@
     "clean": "rimraf packages/*/dist packages/*/node_modules node_modules"
   },
   "devDependencies": {
+    "@types/node": "^22.13.10",
     "concurrently": "^9.1.2",
-    "typescript": "^5.7.3",
-    "@types/node": "^22.13.10"
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "clean": "^4.0.2"
   }
 }

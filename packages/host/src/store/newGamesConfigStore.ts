@@ -24,7 +24,7 @@ interface NewGamesConfigStore {
   tajniAgentiMode: TajniAgentiMode;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
-  // Bolji život: tutorial mode (guided game — hints + admin-driven phases).
+  // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
   boljiZivotTutorial: boolean;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
   // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.

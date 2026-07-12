@@ -1,13 +1,14 @@
-// "Bolji život!" — Omerta/Cabo varijanta sa likovima iz "Srećnih ljudi".
-// Špil od 45 karata: bodovi su "orasi u džepu" (0 najbolje, 13 najgore).
+// "Zavet!" — Omerta/Cabo varijanta na temu slovenske mitologije.
+// Špil od 45 karata: bodovi su "uroci" (0 najbolje, 13 najgore).
+// Interni id igre ostaje `bolji-zivot` (retema; kao pogodi-godinu → Pogodi broj).
 // Puna pravila i balans odluke: docs/bolji-zivot-dizajn.md.
 
 export type BoljiZivotPowerKind =
-  | 'peek-own' // 5 Kustudić — pogledaj jednu svoju kartu
-  | 'peek-other' // 6 Ilija Pandurović — pogledaj jednu tuđu kartu
-  | 'blind-swap' // 7 Aranđel Golubović — slepa zamena svoje i tuđe
-  | 'raid' // 8 Inspektor Naumović — svakome se otkriva nasumična karta
-  | 'look-swap'; // 9 Direktor Kurčubić — pogledaj tuđu, po želji zameni
+  | 'peek-own' // 5 Suđaja — pogledaj jednu svoju kartu
+  | 'peek-other' // 6 Vračara — pogledaj jednu tuđu kartu
+  | 'blind-swap' // 7 Podmenak — slepa zamena svoje i tuđe
+  | 'raid' // 8 Gromovnik — svakome se otkriva nasumična karta
+  | 'look-swap'; // 9 Veštica — pogledaj tuđu, po želji zameni
 
 export interface BoljiZivotCardDef {
   v: number;
@@ -18,35 +19,39 @@ export interface BoljiZivotCardDef {
 }
 
 // "Pogledaj i zameni" je najjača ciljana moć pa namerno sedi na 9 (najskuplja
-// obična karta), a racija na 8 — ne vraćati na "policija = 9" raspored.
+// obična karta), a grom (racija) na 8 — ne vraćati na "racija = 9" raspored.
 export const BOLJI_ZIVOT_DECK_DEF: readonly BoljiZivotCardDef[] = [
-  { v: 0, name: 'Beban', count: 1, emoji: '👶' },
-  { v: 0, name: 'Neca i Žiki', count: 1, emoji: '👬' },
-  { v: 1, name: 'Guza', count: 4, emoji: '🧢' },
-  { v: 2, name: 'Vukašin', count: 4, emoji: '👨‍🌾' },
-  { v: 3, name: 'Emilija', count: 4, emoji: '👩' },
-  { v: 4, name: 'Lola', count: 4, emoji: '💃' },
-  { v: 5, name: 'Kustudić', count: 4, emoji: '🚗', power: 'peek-own' },
-  { v: 6, name: 'Ilija Pandurović', count: 4, emoji: '🔓', power: 'peek-other' },
-  { v: 7, name: 'Aranđel Golubović', count: 4, emoji: '🌀', power: 'blind-swap' },
-  { v: 8, name: 'Inspektor Naumović', count: 4, emoji: '🚨', power: 'raid' },
-  { v: 9, name: 'Direktor Kurčubić', count: 4, emoji: '💼', power: 'look-swap' },
-  { v: 10, name: 'Malina Vojvodić', count: 2, emoji: '💋' },
-  { v: 11, name: 'Ozren Soldatović', count: 2, emoji: '🕴️' },
-  { v: 12, name: 'Radomir Popara', count: 2, emoji: '📋' },
-  { v: 13, name: 'Riska Golubović', count: 1, emoji: '👵' },
+  { v: 0, name: 'Petao', count: 1, emoji: '🐓' },
+  { v: 0, name: 'Zora', count: 1, emoji: '🌅' },
+  { v: 1, name: 'Domaćin', count: 4, emoji: '🏠' },
+  { v: 2, name: 'Vila', count: 4, emoji: '🧚' },
+  { v: 3, name: 'Rusalka', count: 4, emoji: '🌊' },
+  { v: 4, name: 'Karakondžula', count: 4, emoji: '🐐' },
+  { v: 5, name: 'Suđaja', count: 4, emoji: '🔮', power: 'peek-own' },
+  { v: 6, name: 'Vračara', count: 4, emoji: '👁️', power: 'peek-other' },
+  { v: 7, name: 'Podmenak', count: 4, emoji: '🔄', power: 'blind-swap' },
+  { v: 8, name: 'Gromovnik', count: 4, emoji: '⚡', power: 'raid' },
+  { v: 9, name: 'Veštica', count: 4, emoji: '🧙', power: 'look-swap' },
+  { v: 10, name: 'Vesna', count: 2, emoji: '🌸' },
+  { v: 11, name: 'Morana', count: 2, emoji: '❄️' },
+  { v: 12, name: 'Zduhać', count: 2, emoji: '🛡️' },
+  { v: 13, name: 'Drekavac', count: 1, emoji: '😱' },
 ];
 
+// Imena konstanti su iz originalne teme ("Srećni ljudi") i namerno ostaju —
+// interni identifikatori se ne diraju pri retemi: 10=Vesna, 11=Morana,
+// 12=Zduhać, 13=Drekavac.
 export const BZ_MALINA_V = 10;
 export const BZ_OZREN_V = 11;
 export const BZ_POPARA_V = 12;
 export const BZ_RISKA_V = 13;
 
-/** Kazna kad pozivač "Bolji život!" ne bude strogo najniži. */
+/** Kazna kad pozivač "Zavet!" ne bude strogo najniži. */
 export const BZ_CALL_PENALTY = 20;
 
-/** Dužina paralelnog SLAP prozora — server rok + klijentski progress bar. */
-export const BZ_SLAP_WINDOW_SECONDS = 4;
+// SLAP prozor više nema vremenski rok: otvara se kad karta 0–9 padne na
+// otpad i traje dok sledeći igrač ne povuče/uzme kartu (ili dok neko ne
+// pogodi). Igrač ga aktivira "!" dugmetom na telefonu pa bira svoju kartu.
 
 export const BZ_POWER_BY_VALUE: Readonly<
   Record<number, BoljiZivotPowerKind | undefined>
@@ -63,7 +68,7 @@ export const BZ_POWER_TEXT: Readonly<Record<BoljiZivotPowerKind, string>> = {
   'peek-own': 'Pogledaj jednu svoju kartu',
   'peek-other': 'Pogledaj jednu tuđu kartu',
   'blind-swap': 'Zameni svoju kartu sa tuđom — bez gledanja',
-  raid: 'Racija! Svakome se otkriva jedna nasumična karta',
+  raid: 'Grom! Svakome se otkriva jedna nasumična karta',
   'look-swap': 'Pogledaj tuđu kartu i po želji je zameni sa svojom',
 };
 
@@ -92,9 +97,9 @@ export function buildBoljiZivotDeck(): BZCardInfo[] {
 }
 
 /**
- * Zbir oraha jedne porodice uz Malina+Ozren pravilo: svaki Ozren (11)
- * "pokriva" tačno jednu Malinu (10) — upareni vrede 0. Vraća zbir i indekse
- * uparenih karata (za prikaz pri otkrivanju).
+ * Zbir uroka jedne porodice uz Vesna+Morana pravilo: svaka Vesna (10)
+ * "pobeđuje" tačno jednu Moranu (11) — uparene vrede 0 (proleće pobedi zimu).
+ * Vraća zbir i indekse uparenih karata (za prikaz pri otkrivanju).
  */
 export function bzRoundSum(cards: readonly BZCardInfo[]): {
   sum: number;

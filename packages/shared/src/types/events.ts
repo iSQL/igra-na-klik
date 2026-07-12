@@ -104,9 +104,10 @@ export interface ClientToServerEvents {
     // fibbage, geo-pogodi, foto-kviz, ko-sam-ja, spot-it). Each module
     // clamps it to its own range.
     roundCount?: number;
-    // Bolji život tutorial mode: shows in-game hints + the "?" rules sheet,
+    // Zavet (bolji-zivot) tutorial mode: shows in-game hints + the "?" rules sheet,
     // and phases advance on the admin's "next phase" button instead of the
-    // timers (the parallel slap window keeps its real-time deadline).
+    // timers (the parallel slap window is event-driven, no timer, so it
+    // behaves the same as in a normal game).
     boljiZivotTutorial?: boolean;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each

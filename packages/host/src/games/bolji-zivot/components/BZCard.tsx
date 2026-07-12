@@ -92,7 +92,7 @@ export function BZCardBack({ pos, size = 72, highlight, dimmed, style }: BackPro
         ...style,
       }}
     >
-      <span style={{ fontSize: size * 0.4, lineHeight: 1 }}>🌰</span>
+      <span style={{ fontSize: size * 0.4, lineHeight: 1 }}>🧿</span>
       <span
         style={{
           fontSize: size * 0.2,
