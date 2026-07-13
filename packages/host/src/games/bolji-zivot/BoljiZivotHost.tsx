@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
@@ -6,6 +6,7 @@ import { socket } from '../../socket';
 import type { BoljiZivotHostData, BZFamilyPublic } from '@igra/shared';
 import { BZ_POWER_TEXT, BZ_TUTORIAL_PHASE_TEXT } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
+import { BZFxLayer } from './components/BZFxLayer';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
 
@@ -33,6 +34,16 @@ export default function BoljiZivotHost() {
     }
   }, [gameState, data, play]);
 
+  // Drekavac vrišti → ceo sto se zatrese (~0.7s).
+  const [shaking, setShaking] = useState(false);
+  const phaseNow = gameState?.phase;
+  useEffect(() => {
+    if (phaseNow !== 'riska') return;
+    setShaking(true);
+    const t = setTimeout(() => setShaking(false), 750);
+    return () => clearTimeout(t);
+  }, [phaseNow]);
+
   if (!gameState || !data) return null;
 
   const { phase, timeRemaining } = gameState;
@@ -56,8 +67,10 @@ export default function BoljiZivotHost() {
         padding: '1.5rem',
         width: '100%',
         maxWidth: '1100px',
+        animation: shaking ? 'bz-shake 0.7s' : undefined,
       }}
     >
+      <BZFxLayer move={data.lastMove} phase={phase} />
       {/* Zaglavlje */}
       <div
         style={{
@@ -141,7 +154,7 @@ export default function BoljiZivotHost() {
             fontSize: '1.1rem',
           }}
         >
-          ⚡ Ko ima {data.slap.value} — tapni „!" na telefonu, dok sledeći igrač ne povuče!
+          ⚡ PRESEK? Ko ima {data.slap.value} — tapni „!" na telefonu dok sledeći igrač ne povuče!
         </motion.div>
       )}
 
@@ -193,6 +206,7 @@ export default function BoljiZivotHost() {
           {/* Puls na promenu broja karata = neko je upravo vukao. */}
           <motion.div
             key={data.drawCount}
+            data-bz-anchor="deck"
             initial={{ scale: 1.12, rotate: -4 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 350, damping: 18 }}
@@ -215,7 +229,7 @@ export default function BoljiZivotHost() {
             Špil · {data.drawCount}
           </p>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center' }} data-bz-anchor="discard">
           <AnimatePresence mode="popLayout" initial={false}>
             {data.discardTop ? (
               <motion.div
@@ -375,6 +389,7 @@ function FamilyPanel({
 
   return (
     <div
+      data-bz-anchor={`hand:${fam.playerId}`}
       style={{
         background: 'var(--bg-card)',
         borderRadius: '0.9rem',
@@ -441,7 +456,14 @@ function FamilyPanel({
       </div>
       <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
         {fam.slots.map((slot) => {
-          if (!slot.present) return <BZCardGap key={slot.pos} size={58} />;
+          // Svaki slot nosi data-bz-anchor sidro za flight animacije.
+          const anchor = `slot:${fam.playerId}:${slot.pos}`;
+          if (!slot.present)
+            return (
+              <div key={slot.pos} data-bz-anchor={anchor}>
+                <BZCardGap size={58} />
+              </div>
+            );
           const racija = racijaByPos.get(slot.pos);
           const failed = failedByPos.get(slot.pos);
           const face = racija ?? failed;
@@ -449,6 +471,7 @@ function FamilyPanel({
             return (
               <motion.div
                 key={slot.pos}
+                data-bz-anchor={anchor}
                 initial={{ rotateY: 90 }}
                 animate={{ rotateY: 0 }}
               >
@@ -462,6 +485,7 @@ function FamilyPanel({
             return (
               <motion.div
                 key={`${slot.pos}-${data.lastActionId}`}
+                data-bz-anchor={anchor}
                 animate={{
                   rotate: [0, -7, 7, -5, 5, 0],
                   scale: [1, 1.12, 1.12, 1.06, 1],
@@ -472,7 +496,11 @@ function FamilyPanel({
               </motion.div>
             );
           }
-          return <BZCardBack key={slot.pos} pos={slot.pos} size={58} />;
+          return (
+            <div key={slot.pos} data-bz-anchor={anchor}>
+              <BZCardBack pos={slot.pos} size={58} />
+            </div>
+          );
         })}
       </div>
     </div>
@@ -524,7 +552,7 @@ function RevealBoard({
       >
         {[...reveal.families]
           .sort((a, b) => a.roundSum - b.roundSum)
-          .map((fam) => {
+          .map((fam, famIdx) => {
             const isWinner = reveal.winnerIds.includes(fam.playerId);
             return (
               <div
@@ -552,14 +580,22 @@ function RevealBoard({
                   {fam.isCaller ? ' 📣' : ''}
                 </span>
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {fam.cards.map((c) => (
-                    <BZCardFace
+                  {fam.cards.map((c, i) => (
+                    <div
                       key={c.pos}
-                      v={c.v}
-                      name={c.name}
-                      size={52}
-                      paired={c.paired}
-                    />
+                      style={{
+                        // Otkrivanje karta-po-karta: red po red, flip sleva.
+                        animation: 'bz-flip-in 0.45s both',
+                        animationDelay: `${famIdx * 0.35 + i * 0.12}s`,
+                      }}
+                    >
+                      <BZCardFace
+                        v={c.v}
+                        name={c.name}
+                        size={52}
+                        paired={c.paired}
+                      />
+                    </div>
                   ))}
                 </div>
                 <div style={{ marginLeft: 'auto', textAlign: 'right' }}>

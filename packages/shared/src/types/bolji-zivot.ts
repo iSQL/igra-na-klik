@@ -100,6 +100,50 @@ export interface BZLeaderboardEntry {
   rank: number;
 }
 
+/**
+ * Krajnja tačka leta karte za klijentske animacije. Klijenti mapiraju
+ * endpoint na DOM sidro (data-bz-anchor): 'deck', 'discard',
+ * 'hand:<playerId>' i 'slot:<playerId>:<pos>' — sidro koje trenutno nije
+ * na ekranu se preskače bez greške.
+ */
+export type BZMoveEndpoint =
+  | { type: 'deck' }
+  | { type: 'discard' }
+  | { type: 'hand'; playerId: string }
+  | { type: 'slot'; playerId: string; pos: number };
+
+export interface BZMoveStep {
+  from: BZMoveEndpoint;
+  to: BZMoveEndpoint;
+  /**
+   * Lice karte koja leti — SME da postoji samo kad je javno poznato
+   * (otpad, slap, Zduhać, Drekavac); tajni potezi lete kao poleđina.
+   */
+  face?: BZCardInfo;
+}
+
+/** Vrsta poteza — klijenti po njoj biraju prateći efekat (npr. štit). */
+export type BZMoveKind =
+  | 'draw'
+  | 'take'
+  | 'discard'
+  | 'swap'
+  | 'blind-swap'
+  | 'look-swap'
+  | 'slap'
+  | 'penalty'
+  | 'riska'
+  | 'zduhac-block'
+  | 'auto';
+
+/** Poslednji javni pokret karata — okida animacije na TV-u i telefonima. */
+export interface BZMove {
+  /** Raste sa svakim potezom — klijent animira samo nove id-jeve. */
+  id: number;
+  kind: BZMoveKind;
+  steps: BZMoveStep[];
+}
+
 export interface BoljiZivotHostData {
   sub: BoljiZivotPhase;
   /**
@@ -122,6 +166,8 @@ export interface BoljiZivotHostData {
   lastAction: string | null;
   /** Raste sa svakim novim događajem — klijenti animiraju na promenu. */
   lastActionId: number;
+  /** Strukturisan poslednji pokret karata za flight animacije. */
+  lastMove: BZMove | null;
   /**
    * Pozicije javno dirnute poslednjom akcijom — vlasnikovo pamćenje tih
    * mesta je od sada nevažeće, klijenti ih ističu.

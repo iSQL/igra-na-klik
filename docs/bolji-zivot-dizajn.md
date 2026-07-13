@@ -40,17 +40,32 @@ napomene i dalje važe, samo imena čitaj kroz tabelu iznad.
 Plutajuće **„!" dugme** na telefonu objedinjuje tri brze akcije: klik otvara
 tihi popup (ostali ne vide pritisak) sa onim što je trenutno dostupno:
 
-- **Slap**: prozor **više nema vremenski rok** (v1: ~4s za sve). Otvara se kad
-  karta 0–9 padne na otpad i traje **dok sledeći igrač ne povuče/uzme kartu**
-  ili dok se vrh otpada ne promeni; prvi pogodak ga zatvara za ostale. Jedan
-  pokušaj po prozoru; promašaj = javno otkrivanje + kaznena karta
-  (nepromenjeno). `data.slap.id` raste sa svakim prozorom da klijenti resetuju
-  lokalno „!" stanje.
+- **Presek** (interno i dalje `slap`/`bz:slap`): prozor **više nema vremenski
+  rok** (v1: ~4s za sve). Otvara se kad karta 0–9 padne na otpad i traje **dok
+  sledeći igrač ne povuče/uzme kartu** ili dok se vrh otpada ne promeni; prvi
+  pogodak ga zatvara za ostale. Posle „!" → „Presek" igračeva 2×2 mreža se
+  uokviri crveno i tap na kartu je pokušaj preklapanja (nema zasebnog reda
+  dugmića). Jedan pokušaj po prozoru; promašaj = javno otkrivanje + kaznena
+  karta (nepromenjeno). `data.slap.id` raste sa svakim prozorom da klijenti
+  resetuju lokalno „!" stanje.
 - **Zduhać reakcija**: prozor je skraćen na **~3s** (v1: 7s) — meta tapne „!"
   pa označi kartu za koju veruje da je Zduhać; ako vreme istekne, akcija se
   finalizira sama. Ovim potez sa moći više ne čeka da meta izjavi „nemam".
 - **„Zavet!" poziv**: premešten sa zasebnog dugmeta u „!" popup (sa korakom
   potvrde), dostupan na početku svog poteza.
+
+## Animacije pokreta karata (v2)
+
+Server uz tekstualni `lastAction` emituje i strukturisan **`lastMove`**
+(`BZMove`: id + koraci `{from, to, face?}`; krajnje tačke su špil / otpad /
+`hand:<igrač>` / `slot:<igrač>:<pozicija>`). Lice karte u koraku sme da postoji
+samo kad je javno (otpad, slap, Zduhać, Drekavac) — tajni potezi lete kao
+poleđina, pa anti-leak pravilo ostaje netaknuto. Klijenti (TV i telefon) imaju
+`BZFxLayer`: duh-karta preleti između DOM sidara `data-bz-anchor` (sidro koje
+nije na ekranu se tiho preskače — npr. protivničke karte na telefonu u TV
+režimu). Prateći efekti: blesak munje preko ekrana na Grom, 🛡️ pop na Zduhać
+blok, tres celog stola kad Drekavac vrisne, i flip-otkrivanje karata jedna po
+jedna na kraju runde.
 
 ## Koncept
 

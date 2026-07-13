@@ -15,6 +15,7 @@ import {
   bzTutorialControllerHint,
 } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
+import { BZFxLayer } from './components/BZFxLayer';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
 
@@ -96,6 +97,16 @@ export default function BoljiZivotController() {
     setBangMode((m) => (m === 'slap' || m === 'menu' ? null : m));
   }, [slapId]);
 
+  // Drekavac vrišti → telefon se zatrese (~0.7s).
+  const [shaking, setShaking] = useState(false);
+  const phaseForShake = gameState?.phase;
+  useEffect(() => {
+    if (phaseForShake !== 'riska') return;
+    setShaking(true);
+    const t = setTimeout(() => setShaking(false), 750);
+    return () => clearTimeout(t);
+  }, [phaseForShake]);
+
   // Ciljan sam Zduhać prozorom → vibracija (imam samo ~3s da reagujem).
   const targetedNow = !!(
     gameState &&
@@ -153,9 +164,13 @@ export default function BoljiZivotController() {
     | 'blind-own'
     | 'power-swap'
     | 'reaction'
+    | 'slap'
     | null;
   let gridMode: GridMode = null;
-  if (phase === 'peeking' && (me.peeksLeft ?? 0) > 0) gridMode = 'peek';
+  // Presek (slap) ima prednost: naoružan "!" dugmetom, vremenski kritičan —
+  // karte se uokvire crveno i tap znači "preklopi ovu".
+  if (bangMode === 'slap' && !!data.slap && me.canSlap) gridMode = 'slap';
+  else if (phase === 'peeking' && (me.peeksLeft ?? 0) > 0) gridMode = 'peek';
   else if (phase === 'holding' && me.isMyTurn) gridMode = 'swap';
   else if (phase === 'power-select' && me.isMyTurn && data.power?.kind === 'peek-own')
     gridMode = 'power-own';
@@ -186,6 +201,10 @@ export default function BoljiZivotController() {
       case 'reaction':
         send('bz:reaction', { pos });
         break;
+      case 'slap':
+        send('bz:slap', { pos });
+        setBangMode(null);
+        break;
     }
   };
 
@@ -196,6 +215,7 @@ export default function BoljiZivotController() {
     'blind-own': 'Korak 1: tapni SVOJU kartu za slepu zamenu',
     'power-swap': 'Tapni svoju kartu da je zameniš viđenom — ili ostavi',
     reaction: 'Tapni kartu za koju veruješ da je ZDUHAĆ!',
+    slap: `⚡ PRESEK! Tapni kartu za koju misliš da je ${data.slap?.value ?? '?'} — promašaj = kaznena!`,
   };
 
   // Biranje tuđe karte (mete) — kada je opponents board interaktivan?
@@ -311,7 +331,7 @@ export default function BoljiZivotController() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {[...reveal.families]
             .sort((a, b) => a.roundSum - b.roundSum)
-            .map((fam) => (
+            .map((fam, famIdx) => (
               <div
                 key={fam.playerId}
                 style={{
@@ -333,8 +353,16 @@ export default function BoljiZivotController() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                  {fam.cards.map((c) => (
-                    <BZCardFace key={c.pos} v={c.v} name={c.name} size={44} paired={c.paired} />
+                  {fam.cards.map((c, i) => (
+                    <div
+                      key={c.pos}
+                      style={{
+                        animation: 'bz-flip-in 0.45s both',
+                        animationDelay: `${famIdx * 0.35 + i * 0.12}s`,
+                      }}
+                    >
+                      <BZCardFace v={c.v} name={c.name} size={44} paired={c.paired} />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -355,8 +383,10 @@ export default function BoljiZivotController() {
         padding: '0.6rem',
         gap: '0.5rem',
         overflowY: 'auto',
+        animation: shaking ? 'bz-shake 0.7s' : undefined,
       }}
     >
+      <BZFxLayer move={data.lastMove} phase={phase} />
       {/* Status */}
       <div
         style={{
@@ -520,7 +550,7 @@ export default function BoljiZivotController() {
                 textAlign: 'left',
               }}
             >
-              ⚡ Slap — imam {data.slap.value}!
+              ⚡ Presek — imam {data.slap.value}!
             </button>
           )}
           {zduhacAvailable && (
@@ -605,61 +635,8 @@ export default function BoljiZivotController() {
           </button>
         </div>
       )}
-      {bangMode === 'slap' && slapAvailable && data.slap && (
-        <div
-          style={{
-            background: 'rgba(231, 76, 60, 0.15)',
-            border: '2px solid var(--danger)',
-            borderRadius: '0.6rem',
-            padding: '0.45rem',
-            textAlign: 'center',
-            animation: 'igra-pop .25s',
-          }}
-        >
-          <p style={{ margin: '0 0 0.4rem', fontWeight: 700, fontSize: '0.85rem' }}>
-            ⚡ Koja tvoja karta je {data.slap.value}? Promašaj = kaznena!
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.35rem',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            {me.mySlots
-              .filter((s) => s.present)
-              .map((s) => (
-                <button
-                  key={s.pos}
-                  onClick={tap(() => send('bz:slap', { pos: s.pos }))}
-                  style={{
-                    padding: '0.4rem 0.7rem',
-                    borderRadius: '0.5rem',
-                    background: 'var(--danger)',
-                    color: '#fff',
-                    fontWeight: 700,
-                  }}
-                >
-                  #{s.pos + 1}
-                </button>
-              ))}
-            <button
-              onClick={tap(() => setBangMode(null))}
-              style={{
-                padding: '0.4rem 0.7rem',
-                borderRadius: '0.5rem',
-                background: 'transparent',
-                border: '1px solid var(--text-secondary)',
-                color: 'var(--text-secondary)',
-                fontWeight: 700,
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Presek nema poseban red — bangMode 'slap' crveno uokviri moju
+          mrežu (gridMode 'slap') i tap na kartu je pokušaj preklapanja. */}
 
       {/* Zduhać prozor za mene — reaguje se kroz "!" dugme (~3s) */}
       {phase === 'reaction' && me.amTargeted && data.reaction && (
@@ -809,6 +786,7 @@ export default function BoljiZivotController() {
           {/* Puls na promenu broja karata = neko je upravo vukao sa špila. */}
           <div
             key={data.drawCount}
+            data-bz-anchor="deck"
             style={{
               width: 46,
               height: 64,
@@ -827,7 +805,10 @@ export default function BoljiZivotController() {
           </div>
           Špil {data.drawCount}
         </div>
-        <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+        <div
+          data-bz-anchor="discard"
+          style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)' }}
+        >
           {data.discardTop ? (
             // Nova karta na vrhu otpada se "okreće" — ključ po broju + licu.
             <div
@@ -842,7 +823,10 @@ export default function BoljiZivotController() {
           Otpad {data.discardCount}
         </div>
         {phase === 'holding' && me.isMyTurn && me.held && (
-          <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}>
+          <div
+            data-bz-anchor={`hand:${playerId}`}
+            style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700 }}
+          >
             <div
               key={`${me.held.v}-${me.held.name}`}
               style={{ animation: 'igra-flip-in .4s' }}
@@ -857,17 +841,43 @@ export default function BoljiZivotController() {
       {/* Moja porodica */}
       <div style={{ textAlign: 'center' }}>
         {gridMode && (
-          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent)', margin: '0 0 0.3rem' }}>
+          <p
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: gridMode === 'slap' ? 'var(--danger)' : 'var(--accent)',
+              margin: '0 0 0.3rem',
+            }}
+          >
             {gridHint[gridMode]}
+            {gridMode === 'slap' && (
+              <button
+                onClick={tap(() => setBangMode(null))}
+                style={{
+                  marginLeft: '0.5rem',
+                  padding: '0.1rem 0.5rem',
+                  borderRadius: '0.4rem',
+                  background: 'transparent',
+                  border: '1px solid var(--text-secondary)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                }}
+              >
+                ✕ Odustani
+              </button>
+            )}
           </p>
         )}
         <MyGrid
           me={me}
+          myId={playerId}
           visible={myVisible}
           changed={myChanged}
           actionId={data.lastActionId}
           selectedPos={blindOwnPos}
           interactive={gridMode !== null}
+          slapFrame={gridMode === 'slap'}
           onTap={(pos) => tap(() => onGridTap(pos))()}
         />
         <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.3rem 0 0' }}>
@@ -1139,19 +1149,24 @@ function statusLine(
 
 function MyGrid({
   me,
+  myId,
   visible,
   changed,
   actionId,
   selectedPos,
   interactive,
+  slapFrame = false,
   onTap,
 }: {
   me: BoljiZivotPlayerData;
+  myId: string;
   visible: Map<number, { v: number; name: string }>;
   changed: Set<number>;
   actionId: number;
   selectedPos: number | null;
   interactive: boolean;
+  /** Presek: karte se uokvire crveno — tap znači "preklopi ovu". */
+  slapFrame?: boolean;
   onTap: (pos: number) => void;
 }) {
   const slots = me.mySlots;
@@ -1168,7 +1183,13 @@ function MyGrid({
       }}
     >
       {slots.map((slot) => {
-        if (!slot.present) return <BZCardGap key={slot.pos} size={size} />;
+        const anchor = `slot:${myId}:${slot.pos}`;
+        if (!slot.present)
+          return (
+            <div key={slot.pos} data-bz-anchor={anchor}>
+              <BZCardGap size={size} />
+            </div>
+          );
         const seen = visible.get(slot.pos);
         const raw = seen ? (
           <BZCardFace v={seen.v} name={seen.name} size={size} />
@@ -1192,12 +1213,32 @@ function MyGrid({
         ) : (
           raw
         );
-        if (!interactive) return <div key={slot.pos}>{inner}</div>;
+        if (!interactive)
+          return (
+            <div key={slot.pos} data-bz-anchor={anchor}>
+              {inner}
+            </div>
+          );
         return (
           <button
             key={slot.pos}
+            data-bz-anchor={anchor}
             onClick={() => onTap(slot.pos)}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              ...(slapFrame
+                ? {
+                    outline: '3px solid var(--danger)',
+                    outlineOffset: 2,
+                    borderRadius: 12,
+                    boxShadow: '0 0 12px rgba(231,76,60,0.65)',
+                    animation: 'igra-pop .2s',
+                  }
+                : null),
+            }}
           >
             {inner}
           </button>
@@ -1244,7 +1285,11 @@ function OpponentsBoard({
             .map((c) => c.pos)
         );
         return (
-          <div key={fam.playerId} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <div
+            key={fam.playerId}
+            data-bz-anchor={`hand:${fam.playerId}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+          >
             <span
               style={{
                 fontSize: '0.72rem',
@@ -1263,7 +1308,13 @@ function OpponentsBoard({
             </span>
             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
               {fam.slots.map((slot) => {
-                if (!slot.present) return <BZCardGap key={slot.pos} size={34} />;
+                const anchor = `slot:${fam.playerId}:${slot.pos}`;
+                if (!slot.present)
+                  return (
+                    <div key={slot.pos} data-bz-anchor={anchor}>
+                      <BZCardGap size={34} />
+                    </div>
+                  );
                 const inner = changed.has(slot.pos) ? (
                   <div
                     key={`c-${slot.pos}-${data.lastActionId}`}
@@ -1274,10 +1325,16 @@ function OpponentsBoard({
                 ) : (
                   <BZCardBack pos={slot.pos} size={34} />
                 );
-                if (!interactive) return <div key={slot.pos}>{inner}</div>;
+                if (!interactive)
+                  return (
+                    <div key={slot.pos} data-bz-anchor={anchor}>
+                      {inner}
+                    </div>
+                  );
                 return (
                   <button
                     key={slot.pos}
+                    data-bz-anchor={anchor}
                     onClick={() => onTap(fam.playerId, slot.pos)}
                     style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                   >

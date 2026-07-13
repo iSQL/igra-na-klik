@@ -305,6 +305,74 @@ textarea {
   }
 }
 
+/* Zavet FX (BZFxLayer) — drži u sinhronizaciji sa host/src/styles/global.css. */
+@keyframes bz-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+}
+
+@keyframes bz-shield-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+  55% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* Tres celog stola — Drekavac vrišti. */
+@keyframes bz-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-8px, 3px);
+  }
+  30% {
+    transform: translate(7px, -4px);
+  }
+  45% {
+    transform: translate(-6px, 2px);
+  }
+  60% {
+    transform: translate(5px, -2px);
+  }
+  75% {
+    transform: translate(-3px, 1px);
+  }
+}
+
+/* Otkrivanje karata na kraju runde — flip jedna po jedna. */
+@keyframes bz-flip-in {
+  0% {
+    transform: perspective(600px) rotateY(90deg) scale(1.1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
 /* Krupni "TVOJ POTEZ" baner: uleti, stoji, izbledi (ukupno ~1.8s). */
 @keyframes igra-banner {
   0% {

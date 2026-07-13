@@ -46,11 +46,11 @@ export function bzTutorialControllerHint(
     case 'await-draw':
       return opts.isMyTurn
         ? 'Tvoj potez! „Vuci sa špila“ = tajna karta. „Uzmi sa otpada“ = vidiš šta uzimaš, ali NE aktivira moć. „Zavet!“ je pod „!“ dugmetom — zovi samo ako si siguran da nosiš najmanje uroka.'
-        : 'Sačekaj svoj red — i drži oko na otpadu: kad neko baci kartu, tapni „!" ako misliš da imaš istu vrednost. Važi dok sledeći igrač ne povuče kartu!';
+        : 'Sačekaj svoj red — i drži oko na otpadu: kad neko baci kartu, a ti imaš istu takvu, tapni „!" i vikni „Presek!". Važi dok sledeći igrač ne povuče kartu!';
     case 'holding':
       return opts.isMyTurn
         ? 'Zameni: tapni SVOJU kartu — držana ulazi na njeno mesto, stara ide na otpad. Baci: karta 5–9 bačena direktno aktivira svoju moć (piše na dugmetu).'
-        : 'Igrač odlučuje šta će sa izvučenom kartom. Ako je baci, spremi se na „!" (slap)!';
+        : 'Igrač odlučuje šta će sa izvučenom kartom. Ako je baci, spremi se na „Presek!"';
     case 'power-select':
       return opts.isMyTurn
         ? 'Aktivirao si moć — izaberi metu. Ovo je besplatna informacija ili haos: iskoristi je!'
@@ -122,11 +122,11 @@ export const BZ_CHEATSHEET: BZCheatSection[] = [
     ],
   },
   {
-    title: '⚡ SLAP („!")',
+    title: '⚡ Presek („!")',
     lines: [
-      'Kad na otpad padne karta 0–9, tapni „!" pa izaberi SVOJU kartu iste vrednosti — ona odlazi na otpad (porodica ti se smanjuje!).',
+      'Kada igrač odbaci kartu (0–9) na otpad, a ti među svojim kartama imaš istu takvu — tapni „!", vikni „Presek!" i tapni tu svoju kartu: preklapaš je preko otpada (porodica ti se smanjuje!).',
       'Prilika traje dok sledeći igrač ne povuče kartu; čim neko pogodi, zatvara se za ostale. Jedan pokušaj po karti!',
-      'Promašaj: karta se javno otkriva + dobijaš kaznenu kartu. Slapuj samo kad si siguran.',
+      'Promašaj: karta se javno otkriva + dobijaš kaznenu kartu. Presecaj samo kad si siguran.',
     ],
   },
   {

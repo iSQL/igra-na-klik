@@ -143,7 +143,7 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Svako ima 4 karte okrenute naopačke na svom telefonu — na početku runde proviriš samo 2 i pamtiš ih.</li>
 <li>Na potezu: vučeš kartu sa špila (tajno) ili uzmeš vrh otpada (javno), pa je zameniš jednom svojom ili je baciš.</li>
 <li>Karte 5–9 imaju moći <em>samo</em> kad ih izvučeš sa špila i odmah baciš: Suđaja — pogledaj svoju (5), Vračara — pogledaj tuđu (6), Podmenak — slepa zamena (7), Gromovnik — grom, svima se otkriva po jedna karta (8), Veštica — pogledaj tuđu i po želji je zameni svojom (9).</li>
-<li><strong>Slap („!"):</strong> kad na otpad padne karta 0–9, tapni „!" na telefonu pa izaberi svoju kartu iste vrednosti — pogodak smanjuje porodicu, promašaj donosi kaznenu kartu. Prilika traje dok sledeći igrač ne povuče kartu; prvi pogodak je zatvara.</li>
+<li><strong>Presek („!"):</strong> kada igrač odbaci kartu (0–9) na otpad, a vi imate istu takvu među svojim kartama, tapnite „!" — viknite „Presek!" — i preklopite je preko nje. Pogodak smanjuje porodicu, promašaj donosi kaznenu kartu. Prilika traje dok sledeći igrač ne povuče kartu; prvi pogodak je zatvara.</li>
 <li>Specijalne karte: Vesna (10) + Morana (11) zajedno u tvojim kartama vrede 0 — proleće pobeđuje zimu; Zduhać (12) presreće akciju usmerenu na tebe i poništava je (imaš ~3 sekunde da tapneš „!" i označiš ga); Drekavac (13) vrišti posle poziva i daje vlasniku dodatni potez da ga se reši.</li>
 <li>Kad misliš da nosiš najmanje uroka, na početku poteza tapni „!" i pozovi <strong>„Zavet!"</strong> — svi ostali odigraju još po jedan potez pa se karte otkrivaju. Ako si strogo najniži, runda ti nosi 0; ako nisi — svoj zbir + 20 kazne!</li>
 </ul>

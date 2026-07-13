@@ -18,6 +18,9 @@ import type {
   BZRevealFamily,
   BZLeaderboardEntry,
   BZReactionPublic,
+  BZMove,
+  BZMoveKind,
+  BZMoveStep,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
@@ -116,6 +119,10 @@ export class BoljiZivotModule extends BaseGameModule {
   private lastAction: string | null = null;
   private lastActionId = 0;
   private changedSlots: { playerId: string; pos: number }[] = [];
+  // Strukturisan poslednji pokret karata — okida flight animacije. Lice u
+  // koraku SME da postoji samo kad je javno (otpad, slap, Zduhać, Drekavac).
+  private lastMove: BZMove | null = null;
+  private moveCounter = 0;
   // Privatna viđenja, striktno vezana za tekuću pod-fazu — čiste se na
   // svakom kraju poteza / izlasku iz peeking-a i NE reemituju se kasnije.
   private visible = new Map<string, BZRevealedCard[]>();
@@ -184,6 +191,7 @@ export class BoljiZivotModule extends BaseGameModule {
     this.racijaReveals = null;
     this.revealData = null;
     this.currentPlayerId = null;
+    this.lastMove = null;
     this.sub = 'peeking';
     this.timeLeft = this.timings.PEEKING_DURATION ?? PEEKING_DURATION;
     this.announce(
@@ -202,6 +210,10 @@ export class BoljiZivotModule extends BaseGameModule {
 
   private markChanged(playerId: string, pos: number): void {
     this.changedSlots.push({ playerId, pos });
+  }
+
+  private pushMove(kind: BZMoveKind, steps: BZMoveStep[]): void {
+    this.lastMove = { id: ++this.moveCounter, kind, steps };
   }
 
   private nameOf(room: Room, playerId: string | null): string {
@@ -270,6 +282,12 @@ export class BoljiZivotModule extends BaseGameModule {
     if (!card) return;
     seat.slots.push(card);
     this.markChanged(playerId, seat.slots.length - 1);
+    this.pushMove('penalty', [
+      {
+        from: { type: 'deck' },
+        to: { type: 'slot', playerId, pos: seat.slots.length - 1 },
+      },
+    ]);
     void room;
   }
 
@@ -417,6 +435,16 @@ export class BoljiZivotModule extends BaseGameModule {
         }
         actorSeat.slots[pending.actorPos] = targetCard;
         targetSeat.slots[pending.targetPos] = actorCard;
+        this.pushMove('blind-swap', [
+          {
+            from: { type: 'slot', playerId: pending.actorId, pos: pending.actorPos },
+            to: { type: 'slot', playerId: pending.targetId, pos: pending.targetPos },
+          },
+          {
+            from: { type: 'slot', playerId: pending.targetId, pos: pending.targetPos },
+            to: { type: 'slot', playerId: pending.actorId, pos: pending.actorPos },
+          },
+        ]);
         this.announce(
           `Slepa zamena: ${this.nameOf(room, pending.actorId)} (karta ${pending.actorPos + 1}) ⇄ ${this.nameOf(room, pending.targetId)} (karta ${pending.targetPos + 1})`
         );
@@ -446,6 +474,18 @@ export class BoljiZivotModule extends BaseGameModule {
         }
         holderSeat.slots[pending.actorPos] = targetCard;
         targetSeat.slots[pending.targetPos] = riskaCard;
+        // Da je karta Drekavac je javno (objava) — lice sme da leti.
+        this.pushMove('riska', [
+          {
+            from: { type: 'slot', playerId: pending.actorId, pos: pending.actorPos },
+            to: { type: 'slot', playerId: pending.targetId, pos: pending.targetPos },
+            face: riskaCard,
+          },
+          {
+            from: { type: 'slot', playerId: pending.targetId, pos: pending.targetPos },
+            to: { type: 'slot', playerId: pending.actorId, pos: pending.actorPos },
+          },
+        ]);
         this.announce(
           `Drekavac menja vlasnika! ${this.nameOf(room, pending.actorId)} je uvalio Drekavca igraču ${this.nameOf(room, pending.targetId)} (karta ${pending.targetPos + 1})`
         );
@@ -699,8 +739,15 @@ export class BoljiZivotModule extends BaseGameModule {
       this.discard.push(card);
       slap.winnerId = seat.playerId;
       slap.winnerPos = pos;
+      this.pushMove('slap', [
+        {
+          from: { type: 'slot', playerId: seat.playerId, pos },
+          to: { type: 'discard' },
+          face: card,
+        },
+      ]);
       this.announce(
-        `SLAP! ${this.nameOf(room, seat.playerId)} odbacuje ${this.cardLabel(card)} (karta ${pos + 1})`
+        `PRESEK! ${this.nameOf(room, seat.playerId)} preklapa ${this.cardLabel(card)} (karta ${pos + 1})`
       );
       this.markChanged(seat.playerId, pos);
       this.slap = null;
@@ -713,7 +760,7 @@ export class BoljiZivotModule extends BaseGameModule {
         name: card.name,
       });
       this.announce(
-        `${this.nameOf(room, seat.playerId)} promašuje slap — to je ${this.cardLabel(card)}! Kaznena karta`
+        `${this.nameOf(room, seat.playerId)} promašuje presek — to je ${this.cardLabel(card)}! Kaznena karta`
       );
       this.markChanged(seat.playerId, pos);
       this.penaltyCard(room, seat.playerId);
@@ -746,6 +793,9 @@ export class BoljiZivotModule extends BaseGameModule {
     this.slap = null;
     this.held = card;
     this.heldFromDiscard = false;
+    this.pushMove('draw', [
+      { from: { type: 'deck' }, to: { type: 'hand', playerId } },
+    ]);
     this.sub = 'holding';
     this.timeLeft = HOLDING_DURATION;
     return true;
@@ -759,6 +809,9 @@ export class BoljiZivotModule extends BaseGameModule {
     const card = this.discard.pop()!;
     this.held = card;
     this.heldFromDiscard = true;
+    this.pushMove('take', [
+      { from: { type: 'discard' }, to: { type: 'hand', playerId }, face: card },
+    ]);
     this.sub = 'holding';
     this.timeLeft = HOLDING_DURATION;
     this.announce(
@@ -774,6 +827,9 @@ export class BoljiZivotModule extends BaseGameModule {
     const card = this.held;
     this.held = null;
     this.pushToDiscard(card, true);
+    this.pushMove('discard', [
+      { from: { type: 'hand', playerId }, to: { type: 'discard' }, face: card },
+    ]);
 
     const power = BZ_POWER_BY_VALUE[card.v];
     if (!power) {
@@ -850,6 +906,14 @@ export class BoljiZivotModule extends BaseGameModule {
     this.held = null;
     this.heldFromDiscard = false;
     this.pushToDiscard(ejected, true);
+    this.pushMove('swap', [
+      { from: { type: 'hand', playerId }, to: { type: 'slot', playerId, pos } },
+      {
+        from: { type: 'slot', playerId, pos },
+        to: { type: 'discard' },
+        face: ejected,
+      },
+    ]);
     this.announce(
       `${this.nameOf(room, playerId)} menja kartu ${pos + 1} — izbacuje ${this.cardLabel(ejected)}`
     );
@@ -959,6 +1023,16 @@ export class BoljiZivotModule extends BaseGameModule {
     if (!myCard || !targetSeat || !targetCard) return false;
     mySeat.slots[ownPos] = targetCard;
     targetSeat.slots[ctx.targetPos] = myCard;
+    this.pushMove('look-swap', [
+      {
+        from: { type: 'slot', playerId, pos: ownPos },
+        to: { type: 'slot', playerId: ctx.targetId, pos: ctx.targetPos },
+      },
+      {
+        from: { type: 'slot', playerId: ctx.targetId, pos: ctx.targetPos },
+        to: { type: 'slot', playerId, pos: ownPos },
+      },
+    ]);
     this.announce(
       `${this.nameOf(room, playerId)} MENJA: svoja karta ${ownPos + 1} ⇄ ${this.nameOf(room, ctx.targetId)} karta ${ctx.targetPos + 1}`
     );
@@ -994,6 +1068,13 @@ export class BoljiZivotModule extends BaseGameModule {
       // Zduhać presreće napad — akcija poništena, Zduhać na otpad.
       seat.slots[pos] = null;
       this.pushToDiscard(card, false);
+      this.pushMove('zduhac-block', [
+        {
+          from: { type: 'slot', playerId, pos },
+          to: { type: 'discard' },
+          face: card,
+        },
+      ]);
       this.announce(
         `ZDUHAĆ! ${this.nameOf(room, playerId)} je presreo napad — akcija poništena`
       );
@@ -1026,6 +1107,14 @@ export class BoljiZivotModule extends BaseGameModule {
     const riska = seat.slots[pos]!;
     seat.slots[pos] = drawn;
     this.pushToDiscard(riska, false);
+    this.pushMove('riska', [
+      { from: { type: 'deck' }, to: { type: 'slot', playerId, pos } },
+      {
+        from: { type: 'slot', playerId, pos },
+        to: { type: 'discard' },
+        face: riska,
+      },
+    ]);
     this.announce(
       `${this.nameOf(room, playerId)} vuče kartu i šalje Drekavca na otpad!`
     );
@@ -1104,6 +1193,9 @@ export class BoljiZivotModule extends BaseGameModule {
         const card = this.drawCard();
         if (card) {
           this.pushToDiscard(card, true);
+          this.pushMove('auto', [
+            { from: { type: 'deck' }, to: { type: 'discard' }, face: card },
+          ]);
           this.announce(
             `${this.nameOf(room, this.currentPlayerId)} okleva — automatski baca ${this.cardLabel(card)}`
           );
@@ -1125,6 +1217,17 @@ export class BoljiZivotModule extends BaseGameModule {
               const ejected = seat.slots[pos]!;
               seat.slots[pos] = card;
               this.pushToDiscard(ejected, true);
+              this.pushMove('auto', [
+                {
+                  from: { type: 'hand', playerId: this.currentPlayerId! },
+                  to: { type: 'slot', playerId: this.currentPlayerId!, pos },
+                },
+                {
+                  from: { type: 'slot', playerId: this.currentPlayerId!, pos },
+                  to: { type: 'discard' },
+                  face: ejected,
+                },
+              ]);
               this.announce(
                 `${this.nameOf(room, this.currentPlayerId)} okleva — karta ulazi na mesto ${pos + 1}, izbačen ${this.cardLabel(ejected)}`
               );
@@ -1134,6 +1237,13 @@ export class BoljiZivotModule extends BaseGameModule {
             }
           } else {
             this.pushToDiscard(card, true);
+            this.pushMove('auto', [
+              {
+                from: { type: 'hand', playerId: this.currentPlayerId ?? '' },
+                to: { type: 'discard' },
+                face: card,
+              },
+            ]);
             this.announce(
               `${this.nameOf(room, this.currentPlayerId)} okleva — automatski baca ${this.cardLabel(card)}`
             );
@@ -1330,6 +1440,7 @@ export class BoljiZivotModule extends BaseGameModule {
       callerName: this.calledBy ? this.nameOf(room, this.calledBy) : null,
       lastAction: this.lastAction,
       lastActionId: this.lastActionId,
+      lastMove: this.lastMove,
       changedSlots: this.changedSlots,
       power,
       slap,

@@ -168,14 +168,16 @@ client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/t
 - **Phase machine** (`GameState.phase` === the `sub` field in data): `peeking →
   [await-draw → holding → (power-select → reaction? → peek-show/power-look/racija-show)?]
   × N → riska? → reveal → …rounds… → final-leaderboard → ended`. The **slap
-  window is parallel**, not a phase, and has **no timer** — it opens when a
+  window** (UI name: **„Presek"** — internal identifiers stay `slap`/`bz:slap`)
+  **is parallel**, not a phase, and has **no timer** — it opens when a
   0–9 card lands on the discard and closes on a correct slap, any discard-top
   change, or the next player drawing from the pile (`bz:draw`). On the phone
   the floating **"!" button is a unified quick-action hub** (local state,
   silent — others don't see the press): it opens a popup listing whichever
-  actions are live — slap (card picker; one attempt per window via
-  `seat.slapAttempted`, `data.slap.id` increments per window so clients reset
-  local state), the Zduhać reaction (the `reaction` phase timer is only
+  actions are live — Presek/slap (arms the own 2×2 grid with red frames —
+  gridMode 'slap' — and a tap on a card is the attempt; one attempt per window
+  via `seat.slapAttempted`, `data.slap.id` increments per window so clients
+  reset local state), the Zduhać reaction (the `reaction` phase timer is only
   **3s** — `REACTION_DURATION` — then the action auto-finalizes), and the
   "Zavet!" call (confirm step; there is no separate Zavet button anymore).
 - **Core rule**: powers (5 Suđaja peek-own, 6 Vračara peek-other, 7 Podmenak
@@ -202,6 +204,15 @@ client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/t
   marks this inversion for platform-level consumers: the controller's
   post-game placement badge (`game:ended` in controller App.tsx) ranks
   ascending for such games.
+- **Card-movement FX**: the module emits a structured `data.lastMove`
+  (`BZMove`: id + steps `{from, to, face?}` over endpoints deck / discard /
+  hand:<id> / slot:<id>:<pos>) alongside the textual `lastAction`. `face` may
+  only be set when the card is publicly known (discard, slap, Zduhać,
+  Drekavac) — secret moves fly as card backs. Both clients render it via
+  `BZFxLayer` (duplicated per package like BZCard): ghost cards fly between
+  `data-bz-anchor` DOM anchors (missing anchors are skipped silently), plus a
+  Grom screen flash, a Zduhać shield pop, a table shake on `riska`, and
+  staggered `bz-flip-in` reveals (keyframes `bz-*` in both global.css files).
 - All interactions ride the generic `game:player-action` event (`bz:*` actions);
   no new socket events were added. Round count uses the generic `roundCount` /
   `GAME_ROUND_CONFIG` knob; wait-phase durations are in `GAME_TIMING_DEFS`
