@@ -24,6 +24,9 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   'spot-it': { options: [5, 10, 15], default: 10, min: 3, max: 20 },
   'emoji-zagonetke': { options: [5, 10, 15, 20], default: 10, min: 3, max: 25 },
   'bolji-zivot': { options: [1, 2, 3, 4], default: 4, min: 1, max: 6 },
+  // Špijun: a "round" is one full location+spy deal (discussions are long,
+  // so the default is a single round).
+  spijun: { options: [1, 2, 3], default: 1, min: 1, max: 5 },
 };
 
 // Crtaj i pogodi: selectable per-turn drawing time (seconds). The host picks

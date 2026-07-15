@@ -43,7 +43,8 @@ import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
 import { createPogodiBrojAdminRouter } from './admin/pogodi-broj-admin.js';
 import { renderPogodiBrojEditorPage } from './admin/pogodi-broj-editor-page.js';
 import { renderEmojiEditorPage } from './admin/emoji-editor-page.js';
-import { parseGluvoDobaPack } from '@igra/shared';
+import { renderSpijunEditorPage } from './admin/spijun-editor-page.js';
+import { parseGluvoDobaPack, parseSpijunPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST_ORIGIN = process.env.HOST_ORIGIN || 'http://localhost:5173';
@@ -74,6 +75,9 @@ const TAJNI_AGENTI_PACKS_DIR = process.env.TAJNI_AGENTI_PACKS_DIR
 const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
   ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
+const SPIJUN_PACKS_DIR = process.env.SPIJUN_PACKS_DIR
+  ? path.resolve(process.env.SPIJUN_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'spijun-packs');
 // "Pogodi broj" question packs (with per-question images) live here; each
 // <id>.json has a sibling <id>/ folder served at /pogodi-images/<id>/<file>.
 const POGODI_BROJ_PACKS_DIR = process.env.POGODI_BROJ_PACKS_DIR
@@ -259,6 +263,48 @@ app.get('/api/gluvo-doba-packs', async (_req, res) => {
   }
 });
 
+// Špijun location packs — valid packs with full content (the game-select
+// sends the chosen pack inline in host:start-game; server re-validates).
+app.get('/api/spijun-packs', async (_req, res) => {
+  try {
+    const entries = await readdir(SPIJUN_PACKS_DIR, { withFileTypes: true });
+    const jsonFiles = entries.filter(
+      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
+    );
+    const packs: Array<{
+      id: string;
+      name?: string;
+      locations: Array<{ location: string; roles: string[] }>;
+    }> = [];
+    for (const entry of jsonFiles) {
+      try {
+        const raw = await readFile(
+          path.join(SPIJUN_PACKS_DIR, entry.name),
+          'utf-8'
+        );
+        const parsed = parseSpijunPack(JSON.parse(raw));
+        if (!parsed.ok) continue; // strict — drafts stay out of the game
+        packs.push({
+          id: entry.name.replace(/\.json$/i, ''),
+          name: parsed.pack.name,
+          locations: parsed.pack.locations,
+        });
+      } catch {
+        // Skip unreadable / malformed files; the rest still loads.
+      }
+    }
+    packs.sort((a, b) => a.id.localeCompare(b.id));
+    res.json({ packs });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      res.json({ packs: [] });
+      return;
+    }
+    console.error('Failed to read spijun packs directory:', err);
+    res.status(500).json({ error: 'Failed to read spijun packs' });
+  }
+});
+
 app.get('/api/ko-sam-ja-packs', async (_req, res) => {
   try {
     const entries = await readdir(KO_SAM_JA_PACKS_DIR, { withFileTypes: true });
@@ -426,6 +472,7 @@ app.use(
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
     emojiPacksDir: EMOJI_PACKS_DIR,
+    spijunPacksDir: SPIJUN_PACKS_DIR,
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
@@ -443,6 +490,7 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
   ['/admin/pogodi-broj', renderPogodiBrojEditorPage()],
   ['/admin/emoji', renderEmojiEditorPage()],
+  ['/admin/spijun', renderSpijunEditorPage()],
   ['/admin/timinzi', renderTimingEditorPage()],
 ];
 for (const [route, html] of ADMIN_EDITOR_PAGES) {
@@ -779,6 +827,7 @@ httpServer.listen(PORT, () => {
   console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
   console.log(`Pogodi broj packs dir: ${POGODI_BROJ_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
+  console.log(`Spijun packs dir: ${SPIJUN_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }

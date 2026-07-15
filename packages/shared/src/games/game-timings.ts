@@ -159,6 +159,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'spijun',
+    gameName: 'Špijun',
+    fields: [
+      { key: 'REVEAL_ROLE_DURATION', label: 'Prikaz uloge', min: 3, max: 30, def: 8 },
+      { key: 'RESULTS_DURATION', label: 'Prikaz rezultata', min: 5, max: 60, def: 14 },
+    ],
+  },
+  {
     gameId: 'gluvo-doba',
     gameName: 'Gluvo doba',
     fields: [

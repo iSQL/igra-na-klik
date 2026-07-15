@@ -10,6 +10,7 @@ import {
   parseTajniAgentiImport,
   parseGluvoDobaPack,
   parseEmojiImport,
+  parseSpijunPack,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
   TAJNI_AGENTI_MAX_WORD_LENGTH,
@@ -41,6 +42,7 @@ interface ContentDirs {
   tajniAgentiPacksDir: string;
   gluvoDobaPacksDir: string;
   emojiPacksDir: string;
+  spijunPacksDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
@@ -498,6 +500,47 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
           timeLimit: p.timeLimit,
         })),
       };
+    },
+  });
+
+  // ---------- špijun location packs -----------------------------------------
+  // File on disk: { name?, locations: [{ location, roles: string[] }] }.
+  // Writes accept drafts (0 locations, allowEmpty) — a pack under the in-game
+  // minimum stays editable but invisible in the game (strict re-check).
+
+  mountPackRoutes({
+    route: 'spijun-packs',
+    dir: dirs.spijunPacksDir,
+    listKey: 'packs',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const strict = parseSpijunPack(raw);
+      const lax = parseSpijunPack(raw, { allowEmpty: true });
+      const obj = (raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? raw
+        : {}) as Record<string, unknown>;
+      const name =
+        (lax.ok ? lax.pack.name : undefined) ??
+        (typeof obj.name === 'string' ? obj.name : undefined);
+      const locations = lax.ok
+        ? lax.pack.locations
+        : Array.isArray(obj.locations)
+          ? obj.locations
+          : [];
+      return {
+        id,
+        name,
+        count: locations.length,
+        visibleInGame: strict.ok,
+        error: strict.ok ? undefined : strict.error,
+        locations,
+      };
+    },
+    create: (_body, name) => ({ ok: true, data: { name, locations: [] } }),
+    replace: (body) => {
+      const parsed = parseSpijunPack(body, { allowEmpty: true });
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      return { ok: true, data: parsed.pack };
     },
   });
 

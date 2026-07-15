@@ -183,6 +183,10 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoTutorial': 'Tutorial mod',
     'config.gluvoTutorialHint':
       'Vođena partija za učenje: saveti, „?“ podsetnik uloga i objašnjenja na ekranima, a faze pomera voditelj dugmetom umesto tajmera.',
+    'config.spijunPack': 'Lokacije',
+    'config.spijunTutorial': 'Tutorial mod',
+    'config.spijunTutorialHint':
+      'Vođena partija za učenje: objašnjenja na ekranima, a faze pomera voditelj dugmetom umesto tajmera.',
     'config.gluvoMode': 'Mod (uloge)',
     'config.gluvoModeClassic': 'Klasik (ugrađeni balans)',
     'config.gluvoModeNote': 'Uloge dolaze iz izabranog moda — ostala pravila i dalje važe.',
@@ -326,6 +330,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
       'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
+    'game.spijun.name': 'Špijun',
+    'game.spijun.description':
+      'Svi znaju tajnu lokaciju — osim špijuna! Ispitujte se, otkrijte uljeza pre nego što on pogodi gde ste.',
     'game.hot-potato.name': 'Vruć krompir',
     'game.hot-potato.description':
       'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
@@ -503,6 +510,10 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.gluvoTutorial': 'Tutorial mode',
     'config.gluvoTutorialHint':
       'Guided game for learning: tips, the "?" roles sheet and on-screen explainers, and the moderator advances phases with a button instead of timers.',
+    'config.spijunPack': 'Locations',
+    'config.spijunTutorial': 'Tutorial mode',
+    'config.spijunTutorialHint':
+      'Guided game for learning: on-screen explainers, and the moderator advances phases with a button instead of timers.',
     'config.gluvoMode': 'Mode (roles)',
     'config.gluvoModeClassic': 'Classic (built-in balance)',
     'config.gluvoModeNote': 'Roles come from the selected mode — other rules still apply.',
@@ -647,6 +658,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
       'Memory card game of Slavic spirits — 4 hidden cards, swap them, spy on others and call "Zavet!" when you carry the fewest curses!',
+    'game.spijun.name': 'The Spy',
+    'game.spijun.description':
+      'Everyone knows the secret location — except the spy! Question each other and unmask the impostor before they guess where you are.',
     'game.hot-potato.name': 'Hot Potato',
     'game.hot-potato.description':
       'A bomb with a hidden timer goes around — say a word from the category and pass it on. Whoever holds it when it blows is out!',

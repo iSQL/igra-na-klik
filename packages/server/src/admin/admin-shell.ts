@@ -24,6 +24,7 @@ export interface AdminPageOptions {
     | 'gluvo-doba'
     | 'pogodi-broj'
     | 'emoji'
+    | 'spijun'
     | 'timinzi';
   /** Page-specific CSS appended after the base styles. */
   extraCss?: string;
@@ -41,6 +42,7 @@ export const ADMIN_NAV_LINKS: ReadonlyArray<[key: string, href: string, label: s
   ['gluvo-doba', '/admin/gluvo-doba', 'Gluvo doba'],
   ['pogodi-broj', '/admin/pogodi-broj', 'Pogodi broj'],
   ['emoji', '/admin/emoji', 'Emoji'],
+  ['spijun', '/admin/spijun', 'Špijun'],
   ['timinzi', '/admin/timinzi', 'Timinzi'],
 ];
 

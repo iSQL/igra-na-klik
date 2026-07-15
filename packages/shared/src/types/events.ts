@@ -17,6 +17,7 @@ import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 import type { HotPotatoMode } from './hot-potato.js';
 import type { EmojiImportPuzzle } from './emoji-zagonetke.js';
+import type { SpijunPack } from '../games/spijun-import.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -119,6 +120,13 @@ export interface ClientToServerEvents {
     // (default true). Round count rides the generic `roundCount` field.
     customEmojiPuzzles?: EmojiImportPuzzle[];
     emojiHints?: boolean;
+    // Špijun: discussion length in seconds (clamped server-side), an
+    // optional location pack replacing the built-in bank (re-validated
+    // server-side), and tutorial mode (phases advance on the moderator's
+    // button instead of the timers; guide texts render only then).
+    spijunDiscussionSeconds?: number;
+    spijunPack?: SpijunPack;
+    spijunTutorial?: boolean;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

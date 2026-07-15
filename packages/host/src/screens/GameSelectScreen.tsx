@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { GAME_DEFINITIONS, GAME_ROUND_CONFIG, DRAW_GUESS_TIME_OPTIONS } from '@igra/shared';
-import type { HostStartGamePayload, GluvoDobaPack } from '@igra/shared';
+import type { HostStartGamePayload, GluvoDobaPack, SpijunLocation } from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
   id: string;
+}
+
+interface SpijunPackSummary {
+  id: string;
+  name?: string;
+  locations: SpijunLocation[];
 }
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
@@ -22,6 +28,7 @@ import {
   FAKE_ARTIST_STROKE_OPTIONS,
   GLUVO_DOBA_DISCUSSION_OPTIONS,
   GLUVO_DOBA_DEATH_REVEAL_OPTIONS,
+  SPIJUN_DISCUSSION_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import { GeoPackButton } from '../components/GeoPackButton';
@@ -62,6 +69,7 @@ export function GameSelectScreen() {
   const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
     { id: string; name: string; count: number }[]
   >([]);
+  const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const t = useT();
 
   useEffect(() => {
@@ -81,6 +89,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setPogodiBrojPacks([]);
+      });
+    fetch('/api/spijun-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: SpijunPackSummary[] }) => {
+        if (!cancelled) setSpijunPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setSpijunPacks([]);
       });
     return () => {
       cancelled = true;
@@ -112,6 +128,11 @@ export function GameSelectScreen() {
     const gluvoPack =
       gameId === 'gluvo-doba'
         ? gluvoPacks.find((p) => p.id === newGamesConfig.gluvoDobaPackId)
+        : undefined;
+    // The chosen Špijun location pack — missing id → built-in bank.
+    const spijunPack =
+      gameId === 'spijun'
+        ? spijunPacks.find((p) => p.id === newGamesConfig.spijunPackId)
         : undefined;
 
     const customQuestions =
@@ -207,6 +228,13 @@ export function GameSelectScreen() {
           : undefined,
       hotPotatoMode:
         gameId === 'hot-potato' ? newGamesConfig.hotPotatoMode : undefined,
+      spijunDiscussionSeconds:
+        gameId === 'spijun' ? newGamesConfig.spijunDiscussionSeconds : undefined,
+      spijunPack: spijunPack
+        ? { name: spijunPack.name, locations: spijunPack.locations }
+        : undefined,
+      spijunTutorial:
+        gameId === 'spijun' && newGamesConfig.spijunTutorial ? true : undefined,
       customEmojiPuzzles:
         gameId === 'emoji-zagonetke'
           ? useEmojiImportStore.getState().customPuzzles ?? undefined
@@ -692,6 +720,61 @@ export function GameSelectScreen() {
                     }}
                   >
                     {t('config.gluvoModeNote')}
+                  </p>
+                )}
+              </>
+            )}
+            {game.id === 'spijun' && (
+              <>
+                <TextPillRow
+                  label={t('config.discussionSeconds')}
+                  value={String(newGamesConfig.spijunDiscussionSeconds)}
+                  options={SPIJUN_DISCUSSION_OPTIONS.map((s) => ({
+                    value: String(s),
+                    label: t('config.minutes', { n: String(s / 60) }),
+                  }))}
+                  onSelect={(v) =>
+                    newGamesConfig.setSpijunDiscussionSeconds(Number(v))
+                  }
+                />
+                {spijunPacks.length > 0 && (
+                  <TextPillRow
+                    label={t('config.spijunPack')}
+                    value={newGamesConfig.spijunPackId}
+                    options={[
+                      { value: '', label: t('config.builtInBank') },
+                      ...spijunPacks.map((p) => ({
+                        value: p.id,
+                        label: `${p.name || p.id} (${p.locations.length})`,
+                      })),
+                    ]}
+                    onSelect={newGamesConfig.setSpijunPackId}
+                  />
+                )}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    marginTop: '0.5rem',
+                    display: 'flex',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TogglePill
+                    label={`🎓 ${t('config.spijunTutorial')}`}
+                    checked={newGamesConfig.spijunTutorial}
+                    onToggle={newGamesConfig.setSpijunTutorial}
+                  />
+                </div>
+                {newGamesConfig.spijunTutorial && (
+                  <p
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      textAlign: 'center',
+                      marginTop: '0.35rem',
+                    }}
+                  >
+                    {t('config.spijunTutorialHint')}
                   </p>
                 )}
               </>

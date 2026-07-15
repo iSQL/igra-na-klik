@@ -17,6 +17,7 @@ import type {
   TajniAgentiMode,
   HotPotatoMode,
   EmojiImportPuzzle,
+  SpijunLocation,
 } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
@@ -53,6 +54,12 @@ interface GluvoDobaPackSummary extends GluvoDobaPack {
   id: string;
 }
 
+interface SpijunPackSummary {
+  id: string;
+  name?: string;
+  locations: SpijunLocation[];
+}
+
 interface EmojiPackSummary {
   id: string;
   fileName: string;
@@ -67,6 +74,7 @@ const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
 const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 const POGODI_GODINU_ROUND_OPTIONS = [5, 8, 10, 15];
 const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
+const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 
 const GAME_ICONS: Record<string, string> = {
   quiz: '🧠',
@@ -80,6 +88,7 @@ const GAME_ICONS: Record<string, string> = {
   'tajni-agenti': '🟦',
   'hot-potato': '🥔',
   'emoji-zagonetke': '🎬',
+  spijun: '🕵️',
 };
 
 export function GameSelectScreen() {
@@ -136,6 +145,10 @@ export function GameSelectScreen() {
   const [emojiImportError, setEmojiImportError] = useState<string | null>(null);
   const [emojiHints, setEmojiHints] = useState(true);
   const [bzTutorial, setBzTutorial] = useState(false);
+  const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
+  const [spijunPackId, setSpijunPackId] = useState('');
+  const [spijunDiscussion, setSpijunDiscussion] = useState(420);
+  const [spijunTutorial, setSpijunTutorial] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -185,6 +198,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setPogodiBrojPacks([]);
+      });
+    fetch('/api/spijun-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: SpijunPackSummary[] }) => {
+        if (!cancelled) setSpijunPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setSpijunPacks([]);
       });
     fetch('/api/emoji-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
@@ -280,6 +301,14 @@ export function GameSelectScreen() {
     }
     if (game.id === 'bolji-zivot' && bzTutorial) {
       payload.boljiZivotTutorial = true;
+    }
+    if (game.id === 'spijun') {
+      payload.spijunDiscussionSeconds = spijunDiscussion;
+      const pack = spijunPacks.find((p) => p.id === spijunPackId);
+      if (pack) {
+        payload.spijunPack = { name: pack.name, locations: pack.locations };
+      }
+      if (spijunTutorial) payload.spijunTutorial = true;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -868,6 +897,65 @@ export function GameSelectScreen() {
                             }}
                           >
                             {t('config.gluvoModeNote')}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {game.id === 'spijun' && (
+                    <>
+                      <RoundsConfig
+                        label={t('config.discussionSeconds')}
+                        value={spijunDiscussion}
+                        options={SPIJUN_DISCUSSION_OPTIONS}
+                        onSelect={setSpijunDiscussion}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        {spijunPacks.length > 0 && (
+                          <>
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-secondary)',
+                              }}
+                            >
+                              {t('config.spijunPack')}
+                            </span>
+                            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                              <Pill
+                                active={spijunPackId === ''}
+                                onClick={() => setSpijunPackId('')}
+                              >
+                                {t('config.builtInBank')}
+                              </Pill>
+                              {spijunPacks.map((p) => (
+                                <Pill
+                                  key={p.id}
+                                  active={spijunPackId === p.id}
+                                  onClick={() => setSpijunPackId(p.id)}
+                                >
+                                  {p.name || p.id}
+                                </Pill>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill
+                            active={spijunTutorial}
+                            onClick={() => setSpijunTutorial(!spijunTutorial)}
+                          >
+                            🎓 {t('config.spijunTutorial')}
+                          </Pill>
+                        </div>
+                        {spijunTutorial && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {t('config.spijunTutorialHint')}
                           </span>
                         )}
                       </div>

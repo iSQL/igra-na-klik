@@ -155,6 +155,17 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
       'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
     supportsHostless: true,
   },
+  spijun: {
+    id: 'spijun',
+    name: 'Špijun',
+    minPlayers: 3,
+    maxPlayers: 8,
+    description:
+      'Svi znaju tajnu lokaciju — osim špijuna! Ispitujte se, otkrijte uljeza pre nego što on pogodi gde ste.',
+    // Hostless-capable: sve tajno (uloga, lokacija) je ionako na telefonu;
+    // javna lista lokacija + optužbe + glasanje stižu i do kontrolera.
+    supportsHostless: true,
+  },
   'hot-potato': {
     id: 'hot-potato',
     name: 'Vruć krompir',

@@ -81,6 +81,9 @@ export function registerGameHandlers(
       hotPotatoMode: data.hotPotatoMode,
       customEmojiPuzzles: data.customEmojiPuzzles,
       emojiHints: data.emojiHints,
+      spijunDiscussionSeconds: data.spijunDiscussionSeconds,
+      spijunPack: data.spijunPack,
+      spijunTutorial: data.spijunTutorial,
       language: data.language,
     });
     if (result.error) {

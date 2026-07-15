@@ -34,6 +34,11 @@ interface NewGamesConfigStore {
   drawGuessTimeLimit: number;
   // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
   boljiZivotTutorial: boolean;
+  // Špijun: discussion length (seconds), location pack id ('' = built-in
+  // bank) and tutorial mode.
+  spijunDiscussionSeconds: number;
+  spijunPackId: string;
+  spijunTutorial: boolean;
   // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
   // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -53,6 +58,9 @@ interface NewGamesConfigStore {
   setEmojiHints: (v: boolean) => void;
   setDrawGuessTimeLimit: (n: number) => void;
   setBoljiZivotTutorial: (v: boolean) => void;
+  setSpijunDiscussionSeconds: (n: number) => void;
+  setSpijunPackId: (id: string) => void;
+  setSpijunTutorial: (v: boolean) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -75,6 +83,9 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       emojiHints: true,
       drawGuessTimeLimit: 60,
       boljiZivotTutorial: false,
+      spijunDiscussionSeconds: 420,
+      spijunPackId: '',
+      spijunTutorial: false,
       roundCounts: {},
       setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
@@ -93,6 +104,9 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setEmojiHints: (v) => set({ emojiHints: v }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
+      setSpijunDiscussionSeconds: (n) => set({ spijunDiscussionSeconds: n }),
+      setSpijunPackId: (id) => set({ spijunPackId: id }),
+      setSpijunTutorial: (v) => set({ spijunTutorial: v }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),
@@ -105,6 +119,7 @@ export const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 export const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
 export const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
 export const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
+export const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 export const GLUVO_DOBA_DEATH_REVEAL_OPTIONS: GluvoDobaDeathReveal[] = [
   'role',
   'team',

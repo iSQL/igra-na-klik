@@ -193,6 +193,17 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Ako je uključen hint, slova odgovora se postepeno otkrivaju.</li>
 </ul>`,
   },
+  spijun: {
+    emoji: '🕵️',
+    body: `<p>Svi znaju tajnu lokaciju — osim špijuna!</p>
+<ul>
+<li>Na telefonu svako vidi lokaciju i svoju ulogu; špijun vidi samo da je špijun.</li>
+<li>Pričate uživo — postavljate jedni drugima pitanja o lokaciji. Špijun blefira, ostali paze da ne odaju previše.</li>
+<li>Na telefonu pritisni „Sumnjiv mi je…" — kad se skupi dovoljno glasova, kreće odbrana pa tajno glasanje.</li>
+<li>Istekne li vreme, špijun se otkriva i pogađa lokaciju sa javne liste.</li>
+<li>Poeni: špijun pogodi lokaciju +300 · ostali ga razotkriju +100 svima (pokretač optužbe +200) · pogrešna optužba: špijun +200.</li>
+</ul>`,
+  },
   'hot-potato': {
     emoji: '🥔',
     body: `<p>Bomba sa skrivenim tajmerom kruži — brzo je se rešite!</p>
