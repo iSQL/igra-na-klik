@@ -163,7 +163,7 @@ LOWER IS BETTER).
 Full rules + balance rationale: [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md).
 Server module in [packages/server/src/game/games/bolji-zivot/](packages/server/src/game/games/bolji-zivot/),
 deck + scoring helpers in [packages/shared/src/games/bolji-zivot-deck.ts](packages/shared/src/games/bolji-zivot-deck.ts),
-client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/types/bolji-zivot.ts). 3–6 players, 45-card deck, hostless-capable.
+client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/types/bolji-zivot.ts). 2–6 players, 45-card deck, hostless-capable.
 
 - **Phase machine** (`GameState.phase` === the `sub` field in data): `peeking →
   [await-draw → holding → (power-select → reaction? → peek-show/power-look/racija-show)?]

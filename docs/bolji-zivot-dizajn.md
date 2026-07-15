@@ -191,8 +191,10 @@ Ako je Riska u otpadu/špilu u trenutku poziva, ništa se ne dešava.
 
 ## Ciljani opseg igrača
 
-**3–6** (registry `minPlayers: 3`, `maxPlayers: 6`). Špil od 45 karata za 6
-igrača: 24 podeljene + 22 u špilu — taman uz reshuffle otpada.
+**2–6** (registry `minPlayers: 2`, `maxPlayers: 6`). Špil od 45 karata za 6
+igrača: 24 podeljene + 22 u špilu — taman uz reshuffle otpada. Sa 2 igrača
+igra je i dalje ispravna: ciljane moći (Vračara/Podmenak/Veštica) ne mogu na
+sebe pa uvek gađaju jedinog protivnika, a špil se pravi iznova svake runde.
 
 ## Plan implementacije (5 tačaka framework-a)
 

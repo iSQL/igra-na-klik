@@ -122,7 +122,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // Retema: prikazno ime je "Zavet" (slovenska mitologija), interni id
     // ostaje bolji-zivot — isti presedan kao pogodi-godinu → "Pogodi broj".
     name: 'Zavet',
-    minPlayers: 3,
+    minPlayers: 2,
     maxPlayers: 6,
     description:
       'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
