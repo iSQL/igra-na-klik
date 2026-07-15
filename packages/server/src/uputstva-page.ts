@@ -183,6 +183,17 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Selo pobeđuje kad razotkrije sav Mrak; Mrak kad ih bude koliko i ostalih.</li>
 </ul>`,
   },
+  'hot-potato': {
+    emoji: '🥔',
+    body: `<p>Bomba sa skrivenim tajmerom kruži — brzo je se rešite!</p>
+<ul>
+<li>Kad ti je krompir, kaži naglas jednu reč iz zadate kategorije i prosledi ga dalje.</li>
+<li>Tajmer je skriven i nasumičan — niko ne zna kada će puknuti.</li>
+<li>Igrač koji drži krompir kad eksplodira — ispada iz igre.</li>
+<li>Prosleđivanje bira domaćin: sledećem po redu ili slobodan izbor kome.</li>
+<li>Poslednji preživeli pobeđuje.</li>
+</ul>`,
+  },
 };
 
 function playerRange(def: { minPlayers: number; maxPlayers: number }): string {

@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { GluvoDobaDeathReveal, TajniAgentiMode } from '@igra/shared';
+import type {
+  GluvoDobaDeathReveal,
+  HotPotatoMode,
+  TajniAgentiMode,
+} from '@igra/shared';
 
 // Host-side round / stroke config for the newer games (Pogodi godinu,
 // Ko bi pre, Lažni umetnik). Persisted so the TV remembers the operator's
@@ -22,6 +26,8 @@ interface NewGamesConfigStore {
   pogodiBrojPackId: string;
   // Tajni agenti mode: classic (2 teams), duet, or coop (see @igra/shared).
   tajniAgentiMode: TajniAgentiMode;
+  // Vruć krompir: how the bomb is passed ('sequential' | 'choose').
+  hotPotatoMode: HotPotatoMode;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
   // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
@@ -41,6 +47,7 @@ interface NewGamesConfigStore {
   setGluvoDobaTutorial: (v: boolean) => void;
   setPogodiBrojPackId: (id: string) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
+  setHotPotatoMode: (m: HotPotatoMode) => void;
   setDrawGuessTimeLimit: (n: number) => void;
   setBoljiZivotTutorial: (v: boolean) => void;
   setRoundCount: (gameId: string, n: number) => void;
@@ -61,6 +68,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaTutorial: false,
       pogodiBrojPackId: '',
       tajniAgentiMode: 'classic',
+      hotPotatoMode: 'sequential',
       drawGuessTimeLimit: 60,
       boljiZivotTutorial: false,
       roundCounts: {},
@@ -77,6 +85,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaTutorial: (v) => set({ gluvoDobaTutorial: v }),
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
+      setHotPotatoMode: (m) => set({ hotPotatoMode: m }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
       setRoundCount: (gameId, n) =>

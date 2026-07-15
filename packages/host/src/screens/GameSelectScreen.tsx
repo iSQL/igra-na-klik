@@ -47,6 +47,7 @@ export function GameSelectScreen() {
   const setTajniAgentiMode = useNewGamesConfigStore(
     (s) => s.setTajniAgentiMode
   );
+  const setHotPotatoMode = useNewGamesConfigStore((s) => s.setHotPotatoMode);
   const connectedCount = players.filter((p) => p.isConnected).length;
   // Classic needs 4+ players — with fewer, silently fall back to duet so
   // the start button can't fire a server-side validation error.
@@ -202,6 +203,8 @@ export function GameSelectScreen() {
         gameId === 'bolji-zivot' && newGamesConfig.boljiZivotTutorial
           ? true
           : undefined,
+      hotPotatoMode:
+        gameId === 'hot-potato' ? newGamesConfig.hotPotatoMode : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -410,6 +413,53 @@ export function GameSelectScreen() {
                   {t(`config.tajniModeHint.${effectiveTajniMode}`)}
                 </p>
                 <TajniAgentiImportButton />
+              </>
+            )}
+            {game.id === 'hot-potato' && (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                    marginTop: '0.75rem',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {(['sequential', 'choose'] as const).map((m) => {
+                    const active = m === newGamesConfig.hotPotatoMode;
+                    return (
+                      <button
+                        key={m}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHotPotatoMode(m);
+                        }}
+                        style={{
+                          padding: '0.3rem 0.75rem',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          background: active
+                            ? 'var(--accent)'
+                            : 'var(--bg-secondary)',
+                          color: active ? '#fff' : 'var(--text-primary)',
+                        }}
+                      >
+                        {t(`config.hotPotatoMode.${m}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p
+                  style={{
+                    fontSize: '0.75rem',
+                    marginTop: '0.4rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {t(`config.hotPotatoModeHint.${newGamesConfig.hotPotatoMode}`)}
+                </p>
               </>
             )}
             {game.id === 'slepi-telefoni' && (

@@ -14,6 +14,7 @@ import type {
   KoSamJaImportQuestion,
   KoSamJaCategory,
   TajniAgentiMode,
+  HotPotatoMode,
 } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
@@ -115,6 +116,7 @@ export function GameSelectScreen() {
   >([]);
   const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
+  const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
   const [bzTutorial, setBzTutorial] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
@@ -225,6 +227,9 @@ export function GameSelectScreen() {
     }
     if (game.id === 'tajni-agenti') {
       payload.tajniAgentiMode = effectiveTajniMode;
+    }
+    if (game.id === 'hot-potato') {
+      payload.hotPotatoMode = hotPotatoMode;
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
@@ -657,6 +662,43 @@ export function GameSelectScreen() {
                         }}
                       >
                         {t(`config.tajniModeHint.${effectiveTajniMode}`)}
+                      </span>
+                    </div>
+                  )}
+                  {game.id === 'hot-potato' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.3rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {t('config.hotPotatoMode')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        {(['sequential', 'choose'] as const).map((m) => (
+                          <Pill
+                            key={m}
+                            active={m === hotPotatoMode}
+                            onClick={() => setHotPotatoMode(m)}
+                          >
+                            {t(`config.hotPotatoMode.${m}`)}
+                          </Pill>
+                        ))}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {t(`config.hotPotatoModeHint.${hotPotatoMode}`)}
                       </span>
                     </div>
                   )}

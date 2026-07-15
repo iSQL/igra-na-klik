@@ -146,4 +146,15 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // a read-only board for waiting players — everything the TV would show.
     supportsHostless: true,
   },
+  'hot-potato': {
+    id: 'hot-potato',
+    name: 'Vruć krompir',
+    minPlayers: 2,
+    maxPlayers: 12,
+    description:
+      'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
+    // Hostless-capable: sve javno (ko drži krompir, ko je živ, kategorija)
+    // stiže i do telefona, pa se ceo tok vidi i bez TV-a.
+    supportsHostless: true,
+  },
 };

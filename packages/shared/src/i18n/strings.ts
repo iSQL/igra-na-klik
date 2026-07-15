@@ -193,6 +193,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.tajniModeHint.classic': 'Dva tima sa špijunima — najmanje 4 igrača.',
     'config.tajniModeHint.duet': 'Zajedno: svaka strana vidi svoj ključ, nađite 15 agenata za 9 poteza. Od 2 igrača.',
     'config.tajniModeHint.coop': 'Špijun + tim protiv table: nađite 9 agenata pre nego što potrošite 9 poena. Od 2 igrača.',
+    'config.hotPotatoMode': 'Prosleđivanje',
+    'config.hotPotatoMode.sequential': 'Sledeći po redu',
+    'config.hotPotatoMode.choose': 'Biraš kome',
+    'config.hotPotatoModeHint.sequential': 'Tap „Prosledi →" šalje bombu sledećem živom igraču u krugu.',
+    'config.hotPotatoModeHint.choose': 'Sam biraš kom živom igraču dodaješ bombu.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -318,6 +323,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
       'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
+    'game.hot-potato.name': 'Vruć krompir',
+    'game.hot-potato.description':
+      'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
   },
 
   en: {
@@ -499,6 +507,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.tajniModeHint.classic': 'Two teams with spymasters — at least 4 players.',
     'config.tajniModeHint.duet': 'Together: each side sees its own key — find 15 agents in 9 turns. From 2 players.',
     'config.tajniModeHint.coop': 'Spymaster + team vs the board: find 9 agents before 9 points run out. From 2 players.',
+    'config.hotPotatoMode': 'Passing',
+    'config.hotPotatoMode.sequential': 'Next in order',
+    'config.hotPotatoMode.choose': 'Pick who',
+    'config.hotPotatoModeHint.sequential': 'Tap "Pass →" to send the bomb to the next living player in the circle.',
+    'config.hotPotatoModeHint.choose': 'You choose which living player gets the bomb.',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',
@@ -625,6 +638,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bolji-zivot.name': 'Zavet',
     'game.bolji-zivot.description':
       'Memory card game of Slavic spirits — 4 hidden cards, swap them, spy on others and call "Zavet!" when you carry the fewest curses!',
+    'game.hot-potato.name': 'Hot Potato',
+    'game.hot-potato.description':
+      'A bomb with a hidden timer goes around — say a word from the category and pass it on. Whoever holds it when it blows is out!',
   },
 };
 

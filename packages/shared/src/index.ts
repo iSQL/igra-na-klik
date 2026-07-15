@@ -41,3 +41,5 @@ export * from './games/game-timings.js';
 export * from './types/bolji-zivot.js';
 export * from './games/bolji-zivot-deck.js';
 export * from './games/bolji-zivot-tutorial.js';
+export * from './types/hot-potato.js';
+export * from './games/hot-potato-categories.js';

@@ -78,6 +78,7 @@ export function registerGameHandlers(
       gluvoDobaTutorial: data.gluvoDobaTutorial,
       roundCount: data.roundCount,
       boljiZivotTutorial: data.boljiZivotTutorial,
+      hotPotatoMode: data.hotPotatoMode,
       language: data.language,
     });
     if (result.error) {

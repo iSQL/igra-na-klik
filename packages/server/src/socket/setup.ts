@@ -30,6 +30,7 @@ import { SpotItModule } from '../game/games/spot-it/SpotItModule.js';
 import { TajniAgentiModule } from '../game/games/tajni-agenti/TajniAgentiModule.js';
 import { GluvoDobaModule } from '../game/games/gluvo-doba/GluvoDobaModule.js';
 import { BoljiZivotModule } from '../game/games/bolji-zivot/BoljiZivotModule.js';
+import { HotPotatoModule } from '../game/games/hot-potato/HotPotatoModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -87,6 +88,7 @@ export function setupSocket(
   gameRegistry.register(() => new TajniAgentiModule());
   gameRegistry.register(() => new GluvoDobaModule());
   gameRegistry.register(() => new BoljiZivotModule());
+  gameRegistry.register(() => new HotPotatoModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

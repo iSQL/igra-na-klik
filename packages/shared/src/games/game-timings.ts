@@ -141,6 +141,15 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'hot-potato',
+    gameName: 'Vruć krompir',
+    fields: [
+      { key: 'INTRO_DURATION', label: 'Uvod runde', min: 1, max: 20, def: 3 },
+      { key: 'EXPLODED_DURATION', label: 'Prikaz eksplozije', min: 2, max: 20, def: 4 },
+      { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 2, max: 40, def: 10 },
+    ],
+  },
+  {
     gameId: 'gluvo-doba',
     gameName: 'Gluvo doba',
     fields: [
