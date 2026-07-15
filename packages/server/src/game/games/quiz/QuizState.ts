@@ -1,4 +1,4 @@
-import type { QuizQuestionFull } from '@igra/shared';
+import type { GeoPin, KvizQuestionFull } from '@igra/shared';
 
 export type QuizPhase =
   | 'showing-question'
@@ -7,18 +7,18 @@ export type QuizPhase =
   | 'leaderboard'
   | 'ended';
 
-export interface QuizPlayerAnswer {
-  optionIndex: number;
-  timeMs: number;
-  correct: boolean;
-}
+/** One player's answer for the current question, shaped by question type. */
+export type QuizAnswer =
+  | { kind: 'choice'; optionIndex: number; timeMs: number; correct: boolean }
+  | { kind: 'pin'; pin: GeoPin }
+  | { kind: 'value'; value: number; speedFraction: number };
 
 export interface QuizInternalState {
-  questions: QuizQuestionFull[];
+  questions: KvizQuestionFull[];
   currentQuestionIndex: number;
   phase: QuizPhase;
   phaseTimeRemaining: number;
-  answers: Map<string, QuizPlayerAnswer>;
+  answers: Map<string, QuizAnswer>;
   questionStartTime: number;
   /**
    * Snapshot of player IDs who were connected at the start of the
@@ -29,4 +29,8 @@ export interface QuizInternalState {
    * a player is removed past grace.
    */
   expectedAnswererIds: Set<string>;
+  /** Per-round points for geo/broj questions, computed at results time. */
+  lastRoundScores: Map<string, number>;
+  /** Per-player distances (km for geo, value delta for broj) at results. */
+  lastRoundDistances: Map<string, number>;
 }

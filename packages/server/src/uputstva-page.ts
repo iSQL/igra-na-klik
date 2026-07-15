@@ -23,14 +23,14 @@ interface GameRuleEntry {
 const GAME_RULES: Record<string, GameRuleEntry> = {
   quiz: {
     emoji: '🧠',
-    body: `<p>Klasičan kviz — svi igraju istovremeno sa telefona.</p>
+    body: `<p>Kviz sa više vrsta pitanja — svi igraju istovremeno sa telefona.</p>
 <ul>
-<li>TV prikazuje pitanje sa 2–4 ponuđena odgovora i tajmer.</li>
-<li>Na telefonu tapneš odgovor što brže možeš.</li>
-<li>Tačan odgovor nosi poene — što si brži, više poena.</li>
-<li>Pobednik je igrač sa najviše poena posle svih pitanja.</li>
+<li><strong>Obična pitanja</strong> (i sa slikom, pesmom 🎵 ili snimkom 🎬): 2–4 ponuđena odgovora, tapneš tačan što brže — brži tačan odgovor nosi više poena.</li>
+<li><strong>Geo pitanja</strong> 🗺️: TV pokaže fotografiju, a ti na mapi na telefonu postaviš iglu gde misliš da je slikana — bliža igla, više poena.</li>
+<li><strong>Broj pitanja</strong> 🔢: klizačem pogađaš vrednost (cenu, godinu, težinu…) — bliži i brži pogodak nosi više.</li>
+<li>Svako pitanje vredi najviše 1000 poena; pobednik je igrač sa najviše poena na kraju.</li>
 </ul>
-<p class="tip">Domaćin može da uveze svoja pitanja (JSON) na ekranu za izbor igre.</p>`,
+<p class="tip">Domaćin bira serverski pack pitanja ili uveze svoja (JSON) na ekranu za izbor igre; packovi se prave u /admin/kviz editoru.</p>`,
   },
   'draw-guess': {
     emoji: '🎨',
@@ -80,15 +80,6 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Poeni za tačno pogađanje — i za uspešno obmanjivanje ostalih.</li>
 </ul>`,
   },
-  'pogodi-godinu': {
-    emoji: '🔢',
-    body: `<p>Koliko je to?</p>
-<ul>
-<li>TV pokaže pitanje (i po potrebi sliku) — cenu, godinu, težinu, dužinu, trajanje…</li>
-<li>Na telefonu pomeriš klizač u zadatom rasponu što bliže tačnoj vrednosti.</li>
-<li>Bliži pogodak — više poena.</li>
-</ul>`,
-  },
   'slepi-telefoni': {
     emoji: '🔁',
     body: `<p>Pokvareni telefoni sa crtežima.</p>
@@ -99,24 +90,6 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Na kraju se prikaže kako se rečenica izvitoperila kroz lanac.</li>
 </ul>
 <p class="tip">Nema pobednika — igra se zbog smeha.</p>`,
-  },
-  'geo-pogodi': {
-    emoji: '🗺️',
-    body: `<p>Gde je slikana ova fotografija?</p>
-<ul>
-<li>TV pokaže fotografiju sa neke lokacije (podrazumevano u Srbiji).</li>
-<li>Na mapi na telefonu postaviš iglu gde misliš da je slikano.</li>
-<li>Bliža igla stvarnoj lokaciji — više poena.</li>
-</ul>`,
-  },
-  'foto-kviz': {
-    emoji: '📸',
-    body: `<p>Prepoznaj lokaciju sa fotografije.</p>
-<ul>
-<li>TV pokaže fotografiju i 4 ponuđene lokacije.</li>
-<li>Na telefonu izabereš tačan odgovor.</li>
-<li>Brži tačan odgovor nosi više poena.</li>
-</ul>`,
   },
   'ko-sam-ja': {
     emoji: '🙋',

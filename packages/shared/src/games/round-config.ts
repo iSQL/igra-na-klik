@@ -3,10 +3,9 @@
 // One source of truth for the selector options AND the server-side clamp,
 // so the UI and the module can never drift apart.
 //
-// "Round" means different things per game — questions (quiz, lažov, foto
-// kviz), passes where everyone draws once (crtaj i pogodi), locations
-// (pogodi gde je), subjects (ko sam ja), or match races (pronađi par) — but
-// the knob and plumbing are identical.
+// "Round" means different things per game — questions (kviz, lažov), passes
+// where everyone draws once (crtaj i pogodi), subjects (ko sam ja), or match
+// races (pronađi par) — but the knob and plumbing are identical.
 export interface GameRoundConfig {
   options: number[];
   default: number;
@@ -18,8 +17,6 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   quiz: { options: [5, 10, 15, 20], default: 10, min: 3, max: 20 },
   'draw-guess': { options: [1, 2, 3], default: 3, min: 1, max: 3 },
   fibbage: { options: [3, 5, 8, 10], default: 5, min: 3, max: 10 },
-  'geo-pogodi': { options: [5, 8, 10, 12], default: 8, min: 3, max: 15 },
-  'foto-kviz': { options: [5, 8, 10], default: 8, min: 3, max: 12 },
   'ko-sam-ja': { options: [5, 8, 10], default: 8, min: 3, max: 12 },
   'spot-it': { options: [5, 10, 15], default: 10, min: 3, max: 20 },
   'emoji-zagonetke': { options: [5, 10, 15, 20], default: 10, min: 3, max: 25 },

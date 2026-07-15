@@ -11,7 +11,7 @@ import type {
   GameDefinition,
   GluvoDobaDeathReveal,
   GluvoDobaPack,
-  QuizImportQuestion,
+  KvizImportQuestion,
   KoSamJaImportQuestion,
   KoSamJaCategory,
   TajniAgentiMode,
@@ -30,17 +30,11 @@ import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 
-interface GeoPackSummary {
-  id: string;
-  name: string;
-  count: number;
-}
-
 interface QuestionPackSummary {
   id: string;
   fileName: string;
+  name: string;
   count: number;
-  questions: QuizImportQuestion[];
 }
 
 interface KoSamJaPackSummary {
@@ -68,11 +62,9 @@ interface EmojiPackSummary {
 }
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
-const PHOTO_OPTIONS = [1, 2, 3, 4];
 const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
 const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
 const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
-const POGODI_GODINU_ROUND_OPTIONS = [5, 8, 10, 15];
 const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
 const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 
@@ -81,8 +73,6 @@ const GAME_ICONS: Record<string, string> = {
   'draw-guess': '🎨',
   fibbage: '🤥',
   'slepi-telefoni': '📝',
-  'geo-pogodi': '📍',
-  'foto-kviz': '📸',
   'ko-sam-ja': '🕵️',
   'spot-it': '🔴',
   'tajni-agenti': '🟦',
@@ -97,14 +87,12 @@ export function GameSelectScreen() {
   const t = useT();
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [geoPacks, setGeoPacks] = useState<GeoPackSummary[]>([]);
   const [quizPacks, setQuizPacks] = useState<QuestionPackSummary[]>([]);
-  const [geoMode, setGeoMode] = useState<'predefined' | 'custom'>('predefined');
-  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
   const [quizImport, setQuizImport] = useState<{
-    questions: QuizImportQuestion[];
+    questions: KvizImportQuestion[];
     fileName: string;
   } | null>(null);
+  const [quizPackId, setQuizPackId] = useState('');
   const [quizImportError, setQuizImportError] = useState<string | null>(null);
   const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
   const [koSamJaImport, setKoSamJaImport] = useState<{
@@ -116,12 +104,10 @@ export function GameSelectScreen() {
   );
   const [koSamJaCategory, setKoSamJaCategory] =
     useState<KoSamJaCategory>('family');
-  const [photosPerPlayer, setPhotosPerPlayer] = useState(2);
   const [slepiRounds, setSlepiRounds] = useState(2);
   const [fakeArtistRounds, setFakeArtistRounds] = useState(3);
   const [fakeArtistStrokes, setFakeArtistStrokes] = useState(2);
   const [koBiPreRounds, setKoBiPreRounds] = useState(8);
-  const [pogodiGodinuRounds, setPogodiGodinuRounds] = useState(10);
   const [drawGuessTimeLimit, setDrawGuessTimeLimit] = useState(60);
   const [gluvoDobaDiscussion, setGluvoDobaDiscussion] = useState(180);
   const [gluvoDeathReveal, setGluvoDeathReveal] =
@@ -131,10 +117,6 @@ export function GameSelectScreen() {
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [gluvoPackId, setGluvoPackId] = useState('');
   const [gluvoTutorial, setGluvoTutorial] = useState(false);
-  const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
-  const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
   const [emojiPacks, setEmojiPacks] = useState<EmojiPackSummary[]>([]);
@@ -149,24 +131,13 @@ export function GameSelectScreen() {
   const [spijunPackId, setSpijunPackId] = useState('');
   const [spijunDiscussion, setSpijunDiscussion] = useState(420);
   const [spijunTutorial, setSpijunTutorial] = useState(false);
-  // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
-  // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
+  // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
+  // spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/geo-packs')
-      .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: GeoPackSummary[] }) => {
-        if (cancelled) return;
-        const list = data.packs ?? [];
-        setGeoPacks(list);
-        if (list.length > 0) setSelectedPackId((prev) => prev ?? list[0].id);
-      })
-      .catch(() => {
-        if (!cancelled) setGeoPacks([]);
-      });
     fetch('/api/question-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
       .then((data: { packs?: QuestionPackSummary[] }) => {
@@ -190,14 +161,6 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setGluvoPacks([]);
-      });
-    fetch('/api/pogodi-broj-packs')
-      .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: { id: string; name: string; count: number }[] }) => {
-        if (!cancelled) setPogodiBrojPacks(data.packs ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setPogodiBrojPacks([]);
       });
     fetch('/api/spijun-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
@@ -250,14 +213,6 @@ export function GameSelectScreen() {
     const payload: Parameters<typeof socket.emit<'host:start-game'>>[1] = {
       gameId: game.id,
     };
-    if (game.id === 'geo-pogodi' || game.id === 'foto-kviz') {
-      payload.geoMode = geoMode;
-      if (geoMode === 'predefined') {
-        payload.geoPackId = selectedPackId ?? undefined;
-      } else {
-        payload.customPhotosPerPlayer = photosPerPlayer;
-      }
-    }
     if (game.id === 'slepi-telefoni') {
       payload.slepiRounds = slepiRounds;
     }
@@ -267,10 +222,6 @@ export function GameSelectScreen() {
     }
     if (game.id === 'ko-bi-pre') {
       payload.koBiPreRounds = koBiPreRounds;
-    }
-    if (game.id === 'pogodi-godinu') {
-      payload.pogodiGodinuRounds = pogodiGodinuRounds;
-      if (pogodiBrojPackId) payload.pogodiBrojPackId = pogodiBrojPackId;
     }
     if (game.id === 'tajni-agenti') {
       payload.tajniAgentiMode = effectiveTajniMode;
@@ -317,8 +268,10 @@ export function GameSelectScreen() {
     if (game.id === 'draw-guess') {
       payload.drawTimeLimit = drawGuessTimeLimit;
     }
-    if (game.id === 'quiz' && quizImport) {
-      payload.customQuestions = quizImport.questions;
+    if (game.id === 'quiz') {
+      // Server pack wins; questions stay server-side (answers never travel).
+      if (quizPackId) payload.quizPackId = quizPackId;
+      else if (quizImport) payload.customQuestions = quizImport.questions;
     }
     if (game.id === 'ko-sam-ja') {
       payload.koSamJaCategory = koSamJaCategory;
@@ -577,17 +530,6 @@ export function GameSelectScreen() {
                     gap: '0.6rem',
                   }}
                 >
-                  {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && (
-                    <GeoConfig
-                      packs={geoPacks}
-                      mode={geoMode}
-                      setMode={setGeoMode}
-                      selectedPackId={selectedPackId}
-                      setSelectedPackId={setSelectedPackId}
-                      photosPerPlayer={photosPerPlayer}
-                      setPhotosPerPlayer={setPhotosPerPlayer}
-                    />
-                  )}
                   {game.id === 'slepi-telefoni' && (
                     <SlepiConfig
                       rounds={slepiRounds}
@@ -598,6 +540,8 @@ export function GameSelectScreen() {
                   {game.id === 'quiz' && (
                     <QuizConfig
                       packs={quizPacks}
+                      packId={quizPackId}
+                      setPackId={setQuizPackId}
                       imported={quizImport}
                       setImported={setQuizImport}
                       error={quizImportError}
@@ -638,49 +582,6 @@ export function GameSelectScreen() {
                       options={KO_BI_PRE_ROUND_OPTIONS}
                       onSelect={setKoBiPreRounds}
                     />
-                  )}
-                  {game.id === 'pogodi-godinu' && (
-                    <>
-                      <RoundsConfig
-                        label={t('config.rounds')}
-                        value={pogodiGodinuRounds}
-                        options={POGODI_GODINU_ROUND_OPTIONS}
-                        onSelect={setPogodiGodinuRounds}
-                      />
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.3rem',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {t('config.questionPack')}
-                        </span>
-                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                          <Pill
-                            active={pogodiBrojPackId === ''}
-                            onClick={() => setPogodiBrojPackId('')}
-                          >
-                            {t('config.builtInBank')}
-                          </Pill>
-                          {pogodiBrojPacks.map((p) => (
-                            <Pill
-                              key={p.id}
-                              active={pogodiBrojPackId === p.id}
-                              onClick={() => setPogodiBrojPackId(p.id)}
-                            >
-                              {p.name} ({p.count})
-                            </Pill>
-                          ))}
-                        </div>
-                      </div>
-                    </>
                   )}
                   {game.id === 'tajni-agenti' && (
                     <div
@@ -1027,99 +928,21 @@ export function GameSelectScreen() {
   );
 }
 
-function GeoConfig({
-  packs,
-  mode,
-  setMode,
-  selectedPackId,
-  setSelectedPackId,
-  photosPerPlayer,
-  setPhotosPerPlayer,
-}: {
-  packs: GeoPackSummary[];
-  mode: 'predefined' | 'custom';
-  setMode: (m: 'predefined' | 'custom') => void;
-  selectedPackId: string | null;
-  setSelectedPackId: (id: string | null) => void;
-  photosPerPlayer: number;
-  setPhotosPerPlayer: (n: number) => void;
-}) {
-  const t = useT();
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <div style={{ display: 'flex', gap: '0.4rem' }}>
-        <ModeButton
-          active={mode === 'predefined'}
-          onClick={() => setMode('predefined')}
-        >
-          {t('config.predefined')}
-        </ModeButton>
-        <ModeButton active={mode === 'custom'} onClick={() => setMode('custom')}>
-          {t('config.playerPhotos')}
-        </ModeButton>
-      </div>
-      {mode === 'predefined' && (
-        <>
-          {packs.length === 0 ? (
-            <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>
-              {t('config.noPacks')}
-            </span>
-          ) : (
-            <select
-              value={selectedPackId ?? ''}
-              onChange={(e) => setSelectedPackId(e.target.value || null)}
-              style={{
-                padding: '0.6rem 0.7rem',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                borderRadius: '11px',
-                background: 'var(--bg-primary)',
-                color: 'var(--text-primary)',
-                border: '1.5px solid var(--line2)',
-              }}
-            >
-              {packs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.count})
-                </option>
-              ))}
-            </select>
-          )}
-        </>
-      )}
-      {mode === 'custom' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {t('config.photosPerPlayer')}
-          </span>
-          <div style={{ display: 'flex', gap: '0.3rem' }}>
-            {PHOTO_OPTIONS.map((n) => (
-              <Pill
-                key={n}
-                active={n === photosPerPlayer}
-                onClick={() => setPhotosPerPlayer(n)}
-              >
-                {n}
-              </Pill>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function QuizConfig({
   packs,
+  packId,
+  setPackId,
   imported,
   setImported,
   error,
   setError,
 }: {
   packs: QuestionPackSummary[];
-  imported: { questions: QuizImportQuestion[]; fileName: string } | null;
+  packId: string;
+  setPackId: (id: string) => void;
+  imported: { questions: KvizImportQuestion[]; fileName: string } | null;
   setImported: (
-    v: { questions: QuizImportQuestion[]; fileName: string } | null
+    v: { questions: KvizImportQuestion[]; fileName: string } | null
   ) => void;
   error: string | null;
   setError: (e: string | null) => void;
@@ -1127,19 +950,12 @@ function QuizConfig({
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedPackId =
-    packs.find((p) => p.fileName === imported?.fileName)?.id ?? '';
-  const isFileImport = imported !== null && selectedPackId === '';
+  const isFileImport = imported !== null && packId === '';
 
   const handlePackChange = (id: string) => {
     setError(null);
-    if (!id) {
-      setImported(null);
-      return;
-    }
-    const pack = packs.find((p) => p.id === id);
-    if (!pack) return;
-    setImported({ questions: pack.questions, fileName: pack.fileName });
+    setPackId(id);
+    if (id) setImported(null);
   };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1151,18 +967,14 @@ function QuizConfig({
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
-        const result = parseQuizImport(json);
+        const result = parseQuizImport(json, { context: 'inline' });
         if (!result.ok) {
           setError(result.error);
           return;
         }
+        setPackId('');
         setImported({
-          questions: result.questions.map((q) => ({
-            text: q.text,
-            options: q.options.map((o) => o.text),
-            correctIndex: q.correctIndex,
-            timeLimit: q.timeLimit,
-          })),
+          questions: result.manifest.questions,
           fileName: file.name,
         });
         setError(null);
@@ -1179,7 +991,7 @@ function QuizConfig({
         {t('import.questionPack')}
       </span>
       <select
-        value={selectedPackId}
+        value={packId}
         onChange={(e) => handlePackChange(e.target.value)}
         disabled={isFileImport}
         style={{
@@ -1196,7 +1008,7 @@ function QuizConfig({
         <option value="">{t('import.builtinPack')}</option>
         {packs.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.id} ({p.count})
+            {p.name} ({p.count})
           </option>
         ))}
       </select>

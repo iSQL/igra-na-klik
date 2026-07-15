@@ -10,7 +10,7 @@ import { CloseRoomButton } from '../components/CloseRoomButton';
 import { useT } from '../i18n/useT';
 
 // Lowest minPlayers across all registered games — gate the lobby on this so
-// solo-friendly games (test-game, geo-pogodi) aren't blocked by a hard 2.
+// games with a low floor aren't blocked by a hard 2.
 const MIN_PLAYERS_OVERALL = Math.min(
   ...Object.values(GAME_DEFINITIONS).map((g) => g.minPlayers)
 );

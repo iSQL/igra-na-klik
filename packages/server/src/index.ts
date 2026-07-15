@@ -17,21 +17,15 @@ import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import {
-  parseQuizImport,
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseEmojiImport,
-  SERBIAN_DISTRICTS,
 } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
 import { UPUTSTVA_PAGE_HTML } from './uputstva-page.js';
-import { listGeoPacks } from './game/games/geo-pogodi/geo-pack-resolver.js';
-import { listPogodiBrojPacks } from './game/games/pogodi-godinu/pack-resolver.js';
-import { getCustomPhoto } from './game/customPhotoStore.js';
-import { createGeoAdminRouter } from './admin/geo-admin.js';
-import { renderGeoEditorPage } from './admin/geo-editor-page.js';
+import { listQuizPackSummaries } from './game/games/quiz/quiz-pack-resolver.js';
 import { createContentAdminRouter } from './admin/content-admin.js';
 import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
@@ -40,8 +34,6 @@ import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
 import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
 import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
 import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
-import { createPogodiBrojAdminRouter } from './admin/pogodi-broj-admin.js';
-import { renderPogodiBrojEditorPage } from './admin/pogodi-broj-editor-page.js';
 import { renderEmojiEditorPage } from './admin/emoji-editor-page.js';
 import { renderSpijunEditorPage } from './admin/spijun-editor-page.js';
 import { parseGluvoDobaPack, parseSpijunPack } from '@igra/shared';
@@ -63,9 +55,6 @@ const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
 // inside the packs dir, served at /quiz-images/<file>. Packs reference them by
 // that short path so the socket payload stays tiny.
 const QUIZ_IMAGES_DIR = path.join(QUESTION_PACKS_DIR, '_images');
-const GEO_PACKS_DIR = process.env.GEO_PACKS_DIR
-  ? path.resolve(process.env.GEO_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'geo-packs');
 const KO_SAM_JA_PACKS_DIR = process.env.KO_SAM_JA_PACKS_DIR
   ? path.resolve(process.env.KO_SAM_JA_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'ko-sam-ja-packs');
@@ -78,11 +67,6 @@ const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
 const SPIJUN_PACKS_DIR = process.env.SPIJUN_PACKS_DIR
   ? path.resolve(process.env.SPIJUN_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'spijun-packs');
-// "Pogodi broj" question packs (with per-question images) live here; each
-// <id>.json has a sibling <id>/ folder served at /pogodi-images/<id>/<file>.
-const POGODI_BROJ_PACKS_DIR = process.env.POGODI_BROJ_PACKS_DIR
-  ? path.resolve(process.env.POGODI_BROJ_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'pogodi-broj-packs');
 // „Emoji zagonetke" puzzle packs (JSON-only, same flow as quiz packs).
 const EMOJI_PACKS_DIR = process.env.EMOJI_PACKS_DIR
   ? path.resolve(process.env.EMOJI_PACKS_DIR)
@@ -123,58 +107,14 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Summaries only — kviz manifests now carry answers (correctIndex, lat/lng,
+// broj answer), so full questions must never leave the server. The chosen
+// pack rides host:start-game as quizPackId and is resolved server-side.
 app.get('/api/question-packs', async (_req, res) => {
   try {
-    const entries = await readdir(QUESTION_PACKS_DIR, { withFileTypes: true });
-    const jsonFiles = entries.filter(
-      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
-    );
-
-    const packs: Array<{
-      id: string;
-      fileName: string;
-      count: number;
-      questions: Array<{
-        text: string;
-        options: string[];
-        correctIndex: number;
-        timeLimit: number;
-        imageUrl?: string;
-      }>;
-    }> = [];
-
-    for (const entry of jsonFiles) {
-      try {
-        const raw = await readFile(
-          path.join(QUESTION_PACKS_DIR, entry.name),
-          'utf-8'
-        );
-        const parsed = parseQuizImport(JSON.parse(raw));
-        if (!parsed.ok) continue;
-        packs.push({
-          id: entry.name.replace(/\.json$/i, ''),
-          fileName: entry.name,
-          count: parsed.questions.length,
-          questions: parsed.questions.map((q) => ({
-            text: q.text,
-            options: q.options.map((o) => o.text),
-            correctIndex: q.correctIndex,
-            timeLimit: q.timeLimit,
-            imageUrl: q.imageUrl,
-          })),
-        });
-      } catch {
-        // Skip unreadable or malformed files; the rest of the list still loads.
-      }
-    }
-
-    packs.sort((a, b) => a.id.localeCompare(b.id));
+    const packs = await listQuizPackSummaries(QUESTION_PACKS_DIR);
     res.json({ packs });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      res.json({ packs: [] });
-      return;
-    }
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
   }
@@ -399,70 +339,39 @@ app.get('/api/tajni-agenti-packs', async (_req, res) => {
   }
 });
 
-app.get('/api/geo-packs', async (_req, res) => {
-  try {
-    const packs = await listGeoPacks(GEO_PACKS_DIR);
-    res.json({ packs });
-  } catch (err) {
-    console.error('Failed to read geo packs directory:', err);
-    res.status(500).json({ error: 'Failed to read geo packs' });
-  }
-});
-
-app.get('/api/pogodi-broj-packs', async (_req, res) => {
-  try {
-    const packs = await listPogodiBrojPacks(POGODI_BROJ_PACKS_DIR);
-    res.json({ packs });
-  } catch (err) {
-    console.error('Failed to read pogodi-broj packs directory:', err);
-    res.status(500).json({ error: 'Failed to read pogodi-broj packs' });
-  }
-});
-
-// Player-uploaded photos (geo/foto custom modes) live in memory for the
-// duration of a game; the game state carries only these short URLs instead
-// of inline base64. Ids are immutable UUIDs, so clients may cache hard.
-app.get('/api/custom-photos/:roomCode/:photoId', (req, res) => {
-  const photo = getCustomPhoto(req.params.roomCode, req.params.photoId);
-  if (!photo) {
-    res.status(404).json({ error: 'Photo not found' });
-    return;
-  }
-  res.setHeader('Cache-Control', 'private, max-age=86400, immutable');
-  res.type(photo.mime).send(photo.data);
-});
-
-// Serve pack image folders so the host (and any browser) can render them.
-// We mount the entire packs dir under /geo-images; manifests are public anyway.
-// Mounted unconditionally: express.static tolerates a missing root, and the
-// admin editor may create GEO_PACKS_DIR after the server has started.
-app.use(
-  '/geo-images',
-  cors({ origin: corsOrigins }),
-  express.static(GEO_PACKS_DIR, { maxAge: '7d', etag: true })
-);
-
-// Quiz question images uploaded through the admin editor. Same rationale as
-// /geo-images: mounted unconditionally (express.static tolerates a missing
-// root, and the folder is created lazily on the first upload).
+// Quiz question images uploaded through the admin editor. Mounted
+// unconditionally: express.static tolerates a missing root, and the folder
+// is created lazily on the first upload.
 app.use(
   '/quiz-images',
   cors({ origin: corsOrigins }),
   express.static(QUIZ_IMAGES_DIR, { maxAge: '7d', etag: true })
 );
 
-// "Pogodi broj" pack images. Same unconditional-mount rationale as /geo-images.
+// Kviz pack assets (images/audio/custom maps) in per-pack subfolders:
+// /kviz-files/<packId>/<file>. The manifests at the dir root carry answers
+// (correctIndex, lat/lng, broj answers) — only files one level inside a
+// pack folder are ever served, and never *.json.
 app.use(
-  '/pogodi-images',
+  '/kviz-files',
   cors({ origin: corsOrigins }),
-  express.static(POGODI_BROJ_PACKS_DIR, { maxAge: '7d', etag: true })
+  (req, res, next) => {
+    if (
+      !/^\/[a-zA-Z0-9_-]+\/[^/]+$/.test(req.path) ||
+      req.path.toLowerCase().endsWith('.json')
+    ) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  },
+  express.static(QUESTION_PACKS_DIR, { maxAge: '7d', etag: true })
 );
 
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
-// (geo, kviz, ko-sam-ja, tajni-agenti packs). See ADMIN_TOKEN in
+// (kviz, ko-sam-ja, tajni-agenti… packs). See ADMIN_TOKEN in
 // the environment; without it the APIs answer 403 and the pages can't login.
-app.use('/api/admin', createGeoAdminRouter(GEO_PACKS_DIR));
 app.use(
   '/api/admin',
   createContentAdminRouter({
@@ -476,19 +385,12 @@ app.use(
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
-app.use('/api/admin', createPogodiBrojAdminRouter(POGODI_BROJ_PACKS_DIR));
-
-const GEO_EDITOR_HTML = renderGeoEditorPage(SERBIAN_DISTRICTS);
-app.get('/admin/geo', (_req, res) => {
-  res.type('html').send(GEO_EDITOR_HTML);
-});
 
 const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/kviz', renderQuizEditorPage()],
   ['/admin/ko-sam-ja', renderKoSamJaEditorPage()],
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
-  ['/admin/pogodi-broj', renderPogodiBrojEditorPage()],
   ['/admin/emoji', renderEmojiEditorPage()],
   ['/admin/spijun', renderSpijunEditorPage()],
   ['/admin/timinzi', renderTimingEditorPage()],
@@ -498,9 +400,9 @@ for (const [route, html] of ADMIN_EDITOR_PAGES) {
     res.type('html').send(html);
   });
 }
-// Bare /admin lands on the geo editor (each page carries the full nav).
-app.get('/admin', (_req, res) => res.redirect(302, '/admin/geo'));
-app.get('/admin/', (_req, res) => res.redirect(302, '/admin/geo'));
+// Bare /admin lands on the kviz editor (each page carries the full nav).
+app.get('/admin', (_req, res) => res.redirect(302, '/admin/kviz'));
+app.get('/admin/', (_req, res) => res.redirect(302, '/admin/kviz'));
 
 // The editor's map image. Served from the server package's own assets copy
 // so it exists in both dev (src/) and prod (dist/) layouts.
@@ -512,8 +414,7 @@ app.get('/admin/serbia-map.png', (_req, res) => {
 const httpServer = createServer(app);
 const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
 const { roomManager } = setupSocket(httpServer, socketOrigins, {
-  geoPacksDir: GEO_PACKS_DIR,
-  pogodiBrojPacksDir: POGODI_BROJ_PACKS_DIR,
+  questionPacksDir: QUESTION_PACKS_DIR,
 });
 
 if (SINGLE_ROOM_MODE) {
@@ -822,10 +723,8 @@ app.use(express.static(BRAND_ASSETS_DIR, { maxAge: '7d', etag: true }));
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
-  console.log(`Geo packs dir: ${GEO_PACKS_DIR}`);
   console.log(`Ko sam ja packs dir: ${KO_SAM_JA_PACKS_DIR}`);
   console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
-  console.log(`Pogodi broj packs dir: ${POGODI_BROJ_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   console.log(`Spijun packs dir: ${SPIJUN_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
@@ -833,7 +732,7 @@ httpServer.listen(PORT, () => {
   }
   console.log(
     process.env.ADMIN_TOKEN
-      ? 'Admin editors enabled at /admin (geo, kviz, ko-sam-ja, tajni-agenti)'
+      ? 'Admin editors enabled at /admin (kviz, ko-sam-ja, tajni-agenti…)'
       : 'Admin editors disabled (set ADMIN_TOKEN to enable)'
   );
 });

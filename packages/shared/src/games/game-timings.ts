@@ -43,6 +43,7 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     fields: [
       { key: 'SHOWING_QUESTION_DURATION', label: 'Odbrojavanje pre pitanja', min: 2, max: 30, def: 5 },
       { key: 'SHOWING_RESULTS_DURATION', label: 'Prikaz rezultata', min: 2, max: 30, def: 5 },
+      { key: 'RICH_RESULTS_DURATION', label: 'Prikaz rezultata (geo/broj)', min: 2, max: 40, def: 8 },
       { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 4 },
     ],
   },
@@ -77,35 +78,6 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     fields: [
       { key: 'REVEAL_ROLE_DURATION', label: 'Prikaz uloge', min: 2, max: 30, def: 6 },
       { key: 'RESULTS_DURATION', label: 'Prikaz rezultata', min: 2, max: 40, def: 12 },
-    ],
-  },
-  {
-    gameId: 'foto-kviz',
-    gameName: 'Foto kviz',
-    fields: [
-      { key: 'INTRO_DURATION', label: 'Uvod runde', min: 1, max: 20, def: 3 },
-      { key: 'SHOWING_PHOTO_DURATION', label: 'Prikaz fotografije', min: 1, max: 20, def: 3 },
-      { key: 'SHOWING_RESULTS_DURATION', label: 'Prikaz rezultata', min: 2, max: 30, def: 5 },
-      { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 2, max: 40, def: 8 },
-    ],
-  },
-  {
-    gameId: 'geo-pogodi',
-    gameName: 'Pogodi gde je',
-    fields: [
-      { key: 'INTRO_DURATION', label: 'Uvod runde', min: 1, max: 20, def: 3 },
-      { key: 'VIEWING_DURATION', label: 'Gledanje fotografije', min: 1, max: 20, def: 4 },
-      { key: 'REVEAL_DURATION', label: 'Otkrivanje lokacije', min: 2, max: 40, def: 8 },
-      { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 2, max: 40, def: 10 },
-    ],
-  },
-  {
-    gameId: 'pogodi-godinu',
-    gameName: 'Pogodi broj',
-    fields: [
-      { key: 'INTRO_DURATION', label: 'Uvod runde', min: 1, max: 20, def: 3 },
-      { key: 'REVEAL_DURATION', label: 'Otkrivanje broja', min: 2, max: 40, def: 8 },
-      { key: 'FINAL_LEADERBOARD_DURATION', label: 'Završna rang lista', min: 2, max: 40, def: 10 },
     ],
   },
   {

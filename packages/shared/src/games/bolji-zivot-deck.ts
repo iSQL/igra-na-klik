@@ -1,6 +1,6 @@
 // "Zavet!" — Omerta/Cabo varijanta na temu slovenske mitologije.
 // Špil od 45 karata: bodovi su "uroci" (0 najbolje, 13 najgore).
-// Interni id igre ostaje `bolji-zivot` (retema; kao pogodi-godinu → Pogodi broj).
+// Interni id igre ostaje `bolji-zivot` (retema — prikazno ime "Zavet").
 // Puna pravila i balans odluke: docs/bolji-zivot-dizajn.md.
 
 export type BoljiZivotPowerKind =

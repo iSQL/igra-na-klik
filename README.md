@@ -174,33 +174,31 @@ The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server
 | `PORT` | `3001` | HTTP + Socket.io port |
 | `SAME_ORIGIN_DEPLOY` | `true` in Docker | Relaxes CORS; host and controller share one origin |
 | `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so the controller auto-fills the active room |
-| `QUESTION_PACKS_DIR` | `./question-packs` | Override location of JSON question packs |
-| `GEO_PACKS_DIR` | `./geo-packs` | Override location of geo-pack manifests + image folders |
+| `QUESTION_PACKS_DIR` | `./question-packs` | Override location of kviz pack manifests + per-pack asset folders |
 | `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Override location of Ko sam ja JSON question packs |
 | `TAJNI_AGENTI_PACKS_DIR` | `./tajni-agenti-packs` | Override location of Tajni agenti JSON word packs |
-| `ADMIN_TOKEN` | unset (editors disabled) | Enables the content admin editors under `/admin` (geo, kviz, ko-sam-ja, tajni-agenti, scenariji) |
+| `ADMIN_TOKEN` | unset (editors disabled) | Enables the content admin editors under `/admin` (kviz, ko-sam-ja, tajni-agenti…) |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
 
 ### Content admin editors
 
 Set `ADMIN_TOKEN=<secret>` in `.env` and open `http://<server>:3001/admin`
-(redirects to the geo editor; every page carries a nav across all five
+(redirects to the kviz editor; every page carries a nav across all the
 editors). After entering the token once (stored in the browser) you can
 create, edit and delete content for every game — the editors write the same
 files the game reads, so changes are live immediately:
 
-- **`/admin/geo`** — geo-packs for Pogodi gde je / Foto kviz: upload photos
-  (downscaled in the browser to ≤1920px JPEG), click the location on the map
-  of Serbia, add a caption/district. Writes `geo-packs/<id>.json` + images.
-  A pack can also carry a **custom map** (city/region scale instead of the
-  whole country): in the pack detail open "Mapa packa", upload a north-up
-  OSM export image and enter its exact bbox (min/max lat/lng — the numbers
-  from the OSM Export panel). Pins are then placed on that image, distance
-  scoring automatically rescales to the map size, and the game's TV + phone
-  screens render the custom map. Don't crop the image after export — the
-  bbox must match the image edges exactly. Example: `geo-packs/zabari.json`.
-- **`/admin/kviz`** — quiz question packs: 2–4 answers, one correct, optional
-  time limit. Writes `question-packs/<id>.json`.
+- **`/admin/kviz`** — kviz packs with all five question types: obična
+  pitanja (2–4 answers, one correct, optional image), audio pitanja
+  (upload an mp3/ogg/m4a), video pitanja (YouTube id + optional start/end),
+  geo pitanja (upload a photo + click the location on the map of Serbia or a
+  pack custom map) and broj pitanja (slider range + true value). A pack can
+  carry **custom maps** (city/region scale instead of the whole country):
+  in the pack detail open "Mape packa", upload a north-up OSM export image
+  and enter its exact bbox (min/max lat/lng — the numbers from the OSM
+  Export panel). Don't crop the image after export — the bbox must match
+  the image edges exactly. Writes `question-packs/<id>.json` + a sibling
+  `<id>/` asset folder. Example: `question-packs/geo-zabari.json`.
 - **`/admin/ko-sam-ja`** — Ko sam ja packs: all four question shapes
   (fixed / peer / free / pickN) with per-shape form fields and placeholder
   hints. Writes `ko-sam-ja-packs/<id>.json`.
@@ -214,7 +212,7 @@ in the game until they validate.
 
 ## Current Status
 
-**All phases complete** — Kviz, Crtaj i pogodi, Lažov, Slepi telefoni, Pogodi gde je, Foto kviz, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support. A per-device **EN/SR language switch** covers the platform chrome and three of the games (Crtaj i pogodi, Slepi telefoni, Pronađi par).
+**All phases complete** — Kviz (with obična/audio/video/geo/broj question types — it absorbed the former Pogodi gde je, Foto kviz and Pogodi broj games), Crtaj i pogodi, Lažov, Slepi telefoni, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support. A per-device **EN/SR language switch** covers the platform chrome and three of the games (Crtaj i pogodi, Slepi telefoni, Pronađi par).
 
 - [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
 - [x] **Phase 2** — Pluggable game module framework with test game
@@ -223,8 +221,8 @@ in the game until they validate.
 - [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
 - [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
 - [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
-- [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing on a map of Serbia)
-- [x] **Phase 9** — Foto kviz (multiple-choice variant of Pogodi gde je — 4 captioned answers, speed scoring)
+- [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing — later merged into Kviz as the `geo` question type)
+- [x] **Phase 9** — Foto kviz (multiple-choice photo quiz — later retired; Kviz `obicno` questions support images directly)
 - [x] **Phase 10** — Ko sam ja (personal-question party game — players guess each other's answers, four question shapes including peer-name picks)
 - [x] **Phase 11** — Tajni agenti (Codenames-style team game — 5×5 word grid, Serbian-only content; three modes: classic two-team duel, cooperative Duet and spymaster-vs-board co-op, the latter two playable with just 2 players)
 
@@ -269,16 +267,13 @@ in the game until they validate.
 
 **Mobile admin (remote host)**
 - Any one player can claim the host's controls from their phone — useful when nobody's near the TV
-- Holder gets a phone-friendly game-select screen on the controller: start/stop games, pick mode, import question packs, choose geo-packs
+- Holder gets a phone-friendly game-select screen on the controller: start/stop games, pick mode, pick kviz packs, import question files
 - One claim at a time; releasing (or disconnecting) hands control back to the TV
 - The holder is still a normal player — not a separate spectator role
 
 **Kick / reclaim**
 - Host can remove a player with the × button on their chip in the lobby — kick invalidates the reconnect token so they can't slip back in via cached `localStorage`
 - If a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh join with the same name **reclaims** the disconnected slot — score and avatar are preserved, a new token is minted
-
-**Photo upload (Foto kviz / Pogodi gde je custom modes)**
-- Tapping the photo button opens the device's default picker (gallery on most phones, with "take photo" as a secondary option) rather than forcing the rear camera
 
 **PWA (Controller)**
 - Installable as a standalone app on Android
@@ -319,32 +314,15 @@ in the game until they validate.
 - Players cannot vote for their own fake (visually grayed out)
 - All in-game UI strings hardcoded in Serbian (Latin) — Lažov is one of the six games not covered by the EN/SR switch (see **Language switch** below)
 
-**Pogodi gde je (GeoGuessr-style)** — *Serbian-only content*
-- 1–8 players; can be played solo against a predefined pack
-- **Two modes:**
-  - **Predefinisano**: server-served location packs from `geo-packs/` (configurable via `GEO_PACKS_DIR`). Each pack is a `<id>.json` manifest plus a sibling `<id>/` folder with images. Up to 8 random rounds per game.
-  - **Slike igrača (custom)**: pre-game submission phase where each player uploads N (1–4) photos from their phone and tags each with a pin on the map. Photos are then shuffled and dealt out — players never get their own to guess.
-- **EXIF GPS auto-fill** in custom mode: when a player picks a photo, the controller reads GPS metadata in parallel with downscaling (`exifr`). If coordinates fall within Serbia, the pin is pre-placed on the map. The player gets explicit colored feedback: ✓ green ("Lokacija učitana iz fotografije"), ⚠ yellow if no GPS or out-of-Serbia, red if parsing fails. Works as a fallback to manual placement.
-- **Static SVG map of Serbia** with okrug borders ([Serbia_adm_location_map.svg](https://commons.wikimedia.org/wiki/File:Serbia_adm_location_map.svg) from Wikimedia Commons, CC BY-SA 3.0 DE). Affine projection in `packages/shared/src/games/serbia-projection.ts` matches the Wikipedia `Module:Location_map/data/Serbia` bbox (top=46.3, bottom=41.7, left=18.7, right=23.2).
-- **Pinch-zoom + pan** on the controller's map (1×–5×), so players can place pins precisely. Tap-to-place, drag-to-pan when zoomed, double-tap or ↻ button to reset.
-- **Scoring**: `points = round(5000 × exp(−distanceKm / 220))` — 0 km → 5000, 50 km → ~3990, 200 km → ~2030, 600 km → ~339. Distance computed via haversine on the truth's lat/lng vs. the controller's pin reprojected from SVG coords.
-- **Privacy**: server hides the truth's lat/lng from clients during placing (only the image URL leaks); pins from other guessers stay private until reveal.
-- Custom-mode photos are downscaled client-side (~1280px JPEG q=0.7), kept in-memory on the server for the session only.
-- Host display: photo full-screen during placing, big map with all pins + truth + connecting lines during reveal, podium animation only on the final leaderboard.
-
-**Foto kviz (multiple-choice variant of Pogodi gde je)** — *Serbian-only content*
-- 1–8 players; same geo-pack infrastructure as Pogodi gde je (shared `geo-packs/` directory + `/api/geo-packs` endpoint).
-- **Mechanic**: photo + 4 captioned answer options; players tap the one that names where the photo is from. Tap-one-of-four instead of pin-on-map.
-- **Same two modes:**
-  - **Predefinisano**: random rounds drawn from the selected pack. Correct answer is the location's `caption` field; the other 3 options are auto-picked from other captions in the same pack — no schema changes to the manifest.
-  - **Slike igrača (custom)**: each player uploads N (1–4) photos and types a short caption that becomes the correct answer. Distractors come from other players' captions. Players sit out rounds that show their own photo (auto-detected via `contributedBy`).
-- **Speed scoring** (mirrors Quiz): `points = round(1000 × timeRemaining / timeLimit)` — only awarded for correct answers, default `timeLimit = 15s`.
-- **Phase flow**: `intro (3s) → [showing-photo (3s) → answering (15s) → showing-results (5s)] × N → final-leaderboard (8s)`. No leaderboard between rounds — final scores only at the end (same convention as Pogodi gde je).
-- **Validation**:
-  - Predefined: pack must have ≥4 locations with captions (locations missing a caption fall back to "Lokacija {i}").
-  - Custom: requires ≥2 players AND `connected × customPhotosPerPlayer ≥ 4` (e.g. 2 players × 2 photos works; 1 player × any count refuses).
-- **Reuses** the same `GeoPackButton`, `useGeoConfigStore`, and `downscaleImage` helpers as Pogodi gde je — picking the same pack in either game is consistent.
-- Host display: photo with 4 colored options below during answering, options re-rendered with green outline on correct + per-player avatar chips on showing-results, podium animation only on the final leaderboard.
+**Kviz question types (geo / broj / audio / video)** — *Serbian-only content*
+- The unified Kviz plays mixed packs where every question has a `type`:
+  - **obicno** — classic 2–4-option multiple choice (optional image), speed-scored.
+  - **geo** — photo + pin-on-map (the old "Pogodi gde je"): pinch-zoom map of Serbia (or a pack's custom OSM-export map) on the phone, `points = round(1000 × exp(−distanceKm / decayKm))` with the decay scaled to the map's size; results show everyone's pins + the gold truth marker with connecting lines on the TV.
+  - **broj** — slider number guess (the old "Pogodi broj"): per-question min–max range, optional step/unit/mm:ss rendering, closeness × speed scoring (max 1000); results show a timeline of everyone's guesses.
+  - **audio** — an uploaded clip plays on the TV (on phones in hostless rooms), then multiple choice.
+  - **video** — a YouTube segment (`videoId` + optional start/end) embeds via youtube-nocookie, then multiple choice.
+- Every type caps at 1000 points per question so mixed packs stay fair.
+- **Privacy**: pack manifests carry the answers, so `GET /api/question-packs` returns summaries only and the chosen pack is resolved server-side (`quizPackId`); the `/kviz-files` mount serves only per-pack assets, never manifests.
 
 **Ko sam ja (personal questions about players)** — *Serbian-only content*
 - 3–8 players; hybrid of Kviz (multiple-choice + speed scoring) and Lažov (subject-supplied answers).
@@ -389,71 +367,35 @@ in the game until they validate.
 - Players can voluntarily leave via the controller's "Napusti sobu" button — server emits `player:leave-room`, treated like a kick. If the leaver was holding the remote-host control, the entire room is torn down (all other controllers receive `room:kicked`, host receives `room:destroyed` and immediately requests a fresh room)
 - The client side handles server-initiated `socket.disconnect(true)` by reconnecting on the `"io server disconnect"` reason — socket.io-client does not auto-reconnect in that case, and without manual reconnect the next join attempt would buffer forever
 
-### Geo Packs (Pogodi gde je)
+### Kviz Packs
 
-Predefined location packs live in `geo-packs/` at the repo root (override via `GEO_PACKS_DIR`). Each pack has the shape:
+Kviz packs live in `question-packs/` at the repo root (override via `QUESTION_PACKS_DIR`). A pack is a `<id>.json` manifest plus an optional sibling `<id>/` asset folder (images, audio, custom-map images) served at `/kviz-files/<id>/<file>`:
 
 ```
-geo-packs/
-├── branicevski.json           # manifest
-└── branicevski/
-    ├── viminacium.jpg
-    └── lepenski-vir.jpg
+question-packs/
+├── geo-zabari.json            # manifest
+└── geo-zabari/
+    ├── map.png                # custom map image (referenced by maps.main)
+    └── f253a1d3….jpg          # question photo
 ```
 
-Manifest format:
+Manifest format (mixed question types; a bare JSON array of `obicno` questions also still parses):
 
 ```json
 {
-  "name": "Braničevski okrug",
-  "description": "Lokacije iz Braničevskog okruga",
-  "locations": [
-    {
-      "imageFile": "viminacium.jpg",
-      "lat": 44.7414,
-      "lng": 21.2287,
-      "district": "branicevski",
-      "caption": "Viminacium, antički grad"
-    }
+  "name": "Mešoviti pack",
+  "maps": { "main": { "imageFile": "map.png", "bbox": { "minLat": 44.25, "maxLat": 44.52, "minLng": 21.11, "maxLng": 21.32 } } },
+  "questions": [
+    { "text": "Koji je glavni grad Srbije?", "options": ["Niš", "Beograd"], "correctIndex": 1 },
+    { "type": "geo", "imageFile": "f253a1d3….jpg", "caption": "Centar", "lat": 44.43, "lng": 21.22, "mapId": "main" },
+    { "type": "broj", "text": "Koliko km ima Dunav?", "answer": 2850, "min": 1000, "max": 4000, "unit": "km" },
+    { "type": "audio", "text": "Koja je ovo pesma?", "audioFile": "pesma.mp3", "options": ["A", "B"], "correctIndex": 0 },
+    { "type": "video", "text": "Koje boje je auto?", "videoId": "dQw4w9WgXcQ", "startSeconds": 10, "endSeconds": 25, "options": ["crven", "plav"], "correctIndex": 0 }
   ]
 }
 ```
 
-Validation (in `packages/shared/src/games/geo-import.ts`):
-- 1–100 locations per pack
-- `lat` ∈ [41.5, 46.5], `lng` ∈ [18.5, 23.5]
-- `district` is optional, must match one of the 25 Serbian okruzi (or `beograd`)
-- `caption` ≤ 200 characters
-- `imageFile` is a path relative to the pack folder; no `..` allowed
-
-Server endpoints:
-- `GET /api/geo-packs` — list of pack summaries (id, name, count) without lat/lng so clients can't peek at the answers
-- `GET /geo-images/<id>/<file>` — static image serving with 7d cache + ETag
-
-See [geo-packs/README.md](geo-packs/README.md) for the full list of valid `district` values and instructions for adding a new pack.
-
-### Custom Quiz Questions
-
-The host can import a custom question pack (JSON file) on the game-select screen. The format is:
-
-```json
-[
-  {
-    "text": "Koji je glavni grad Srbije?",
-    "options": ["Niš", "Beograd", "Novi Sad", "Kragujevac"],
-    "correctIndex": 1,
-    "timeLimit": 15
-  }
-]
-```
-
-Rules:
-- `text` — non-empty question string
-- `options` — 2–4 non-empty strings
-- `correctIndex` — 0-based index into `options`
-- `timeLimit` — optional, 5–60 seconds (defaults to 15)
-
-The imported pack replaces the built-in bank for that session. It is saved in `localStorage` on the host device and persists across page refreshes until explicitly removed.
+Validation lives in `packages/shared/src/games/quiz-import.ts` (`parseQuizImport`); geo lat/lng must fall inside the referenced map's bbox (else inside Serbia's bounds). Because manifests carry the answers, `GET /api/question-packs` returns **summaries only** — the host sends the chosen `quizPackId` and the server resolves the questions from disk. The host can still import a local `.json` file on the game-select screen (URL-based media only, no pack assets); that import persists in the host's `localStorage` until removed. Rich packs are authored in the `/admin/kviz` editor.
 
 ### Ko sam ja Packs
 
@@ -600,7 +542,7 @@ In production (Docker / Coolify) the Express server alone serves everything on p
 | `/host/` | Host bundle from `packages/host/dist` |
 | `/play/` | Controller bundle from `packages/controller/dist` |
 | `/host`, `/play` | 301 → slashed form (query string preserved) |
-| `/api/*`, `/socket.io/*`, `/geo-images/*`, `/health`, `/room-code` | Backend endpoints |
+| `/api/*`, `/socket.io/*`, `/kviz-files/*`, `/quiz-images/*`, `/health`, `/room-code` | Backend endpoints |
 
 In dev (`npm run dev`), Vite dev servers run alongside the Express server. Both `host` and `controller` are configured with `base: '/host/'` / `'/play/'` so direct Vite URLs match production. The Express server detects missing `dist/` folders (specifically a missing `index.html` — handles the case where Vite leaves an empty dist behind) and falls back to `http-proxy-middleware`, forwarding `/host/**` → Vite 5173 and `/play/**` → Vite 5174 (with `ws: true` so HMR WebSockets pass through). The proxy uses `pathFilter` instead of `app.use('/host', proxy)` to preserve the `/host` prefix — Express's mount-stripping would otherwise make Vite 302-redirect back to itself causing a loop.
 

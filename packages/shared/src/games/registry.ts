@@ -6,7 +6,8 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     name: 'Kviz',
     minPlayers: 2,
     maxPlayers: 8,
-    description: 'Pitanja na vreme — najbrži tačan odgovor nosi najviše poena!',
+    description:
+      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom ili snimkom. Najbliži i najbrži nosi poene!',
     supportsHostless: true,
   },
   'draw-guess': {
@@ -52,15 +53,6 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
       'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
     supportsHostless: true,
   },
-  'pogodi-godinu': {
-    id: 'pogodi-godinu',
-    name: 'Pogodi broj',
-    minPlayers: 1,
-    maxPlayers: 8,
-    description:
-      'Pogodi vrednost — cenu, godinu, težinu, dužinu… bliži pogodak, više poena!',
-    supportsHostless: true,
-  },
   'slepi-telefoni': {
     id: 'slepi-telefoni',
     name: 'Slepi telefoni',
@@ -68,24 +60,6 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
-    supportsHostless: true,
-  },
-  'geo-pogodi': {
-    id: 'geo-pogodi',
-    name: 'Pogodi gde je',
-    minPlayers: 1,
-    maxPlayers: 8,
-    description:
-      'Pogodi gde je u Srbiji slikana fotografija — bliža igla, više poena!',
-    supportsHostless: true,
-  },
-  'foto-kviz': {
-    id: 'foto-kviz',
-    name: 'Foto kviz',
-    minPlayers: 1,
-    maxPlayers: 8,
-    description:
-      'Pogledaj fotografiju i izaberi pravu lokaciju od 4 ponuđena odgovora!',
     supportsHostless: true,
   },
   'ko-sam-ja': {
@@ -120,7 +94,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   'bolji-zivot': {
     id: 'bolji-zivot',
     // Retema: prikazno ime je "Zavet" (slovenska mitologija), interni id
-    // ostaje bolji-zivot — isti presedan kao pogodi-godinu → "Pogodi broj".
+    // ostaje bolji-zivot.
     name: 'Zavet',
     minPlayers: 2,
     maxPlayers: 6,

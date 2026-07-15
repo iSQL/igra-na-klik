@@ -17,12 +17,10 @@ export interface AdminPageOptions {
   subtitle: string;
   /** Which nav link to highlight. */
   active:
-    | 'geo'
     | 'kviz'
     | 'ko-sam-ja'
     | 'tajni-agenti'
     | 'gluvo-doba'
-    | 'pogodi-broj'
     | 'emoji'
     | 'spijun'
     | 'timinzi';
@@ -35,12 +33,10 @@ export interface AdminPageOptions {
 }
 
 export const ADMIN_NAV_LINKS: ReadonlyArray<[key: string, href: string, label: string]> = [
-  ['geo', '/admin/geo', 'Geo'],
   ['kviz', '/admin/kviz', 'Kviz'],
   ['ko-sam-ja', '/admin/ko-sam-ja', 'Ko sam ja'],
   ['tajni-agenti', '/admin/tajni-agenti', 'Tajni agenti'],
   ['gluvo-doba', '/admin/gluvo-doba', 'Gluvo doba'],
-  ['pogodi-broj', '/admin/pogodi-broj', 'Pogodi broj'],
   ['emoji', '/admin/emoji', 'Emoji'],
   ['spijun', '/admin/spijun', 'Špijun'],
   ['timinzi', '/admin/timinzi', 'Timinzi'],

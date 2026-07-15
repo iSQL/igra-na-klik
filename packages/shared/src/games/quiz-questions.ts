@@ -9,6 +9,7 @@ function q(
   timeLimit = 15
 ): QuizQuestionFull {
   return {
+    type: 'obicno',
     id,
     text,
     options: options.map((t, i) => ({

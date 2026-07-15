@@ -16,13 +16,11 @@ import { useRoomStore } from '../store/roomStore';
 import { useGameStore } from '../store/gameStore';
 import { useQuizImportStore } from '../store/quizImportStore';
 import { useSlepiConfigStore } from '../store/slepiConfigStore';
-import { useGeoConfigStore } from '../store/geoConfigStore';
 import { useKoSamJaImportStore } from '../store/koSamJaImportStore';
 import { useKoSamJaConfigStore } from '../store/koSamJaConfigStore';
 import { useTajniAgentiImportStore } from '../store/tajniAgentiImportStore';
 import {
   useNewGamesConfigStore,
-  POGODI_GODINU_ROUND_OPTIONS,
   KO_BI_PRE_ROUND_OPTIONS,
   FAKE_ARTIST_ROUND_OPTIONS,
   FAKE_ARTIST_STROKE_OPTIONS,
@@ -31,7 +29,6 @@ import {
   SPIJUN_DISCUSSION_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
-import { GeoPackButton } from '../components/GeoPackButton';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
 import { EmojiImportButton } from '../components/EmojiImportButton';
@@ -66,9 +63,6 @@ export function GameSelectScreen() {
       : newGamesConfig.tajniAgentiMode;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
-  const [pogodiBrojPacks, setPogodiBrojPacks] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const t = useT();
 
@@ -81,14 +75,6 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setGluvoPacks([]);
-      });
-    fetch('/api/pogodi-broj-packs')
-      .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: { id: string; name: string; count: number }[] }) => {
-        if (!cancelled) setPogodiBrojPacks(data.packs ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setPogodiBrojPacks([]);
       });
     fetch('/api/spijun-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
@@ -135,25 +121,14 @@ export function GameSelectScreen() {
         ? spijunPacks.find((p) => p.id === newGamesConfig.spijunPackId)
         : undefined;
 
-    const customQuestions =
-      gameId === 'quiz'
-        ? useQuizImportStore.getState().customQuestions ?? undefined
-        : undefined;
+    const quizImport = gameId === 'quiz' ? useQuizImportStore.getState() : null;
+    const quizPackId = quizImport?.packId ?? undefined;
+    // Inline questions only when no server pack is chosen — the pack wins.
+    const customQuestions = quizPackId
+      ? undefined
+      : quizImport?.customQuestions ?? undefined;
     const slepiRounds =
       gameId === 'slepi-telefoni' ? selectedRounds : undefined;
-
-    let geoPackId: string | undefined;
-    let geoMode: 'predefined' | 'custom' | undefined;
-    let customPhotosPerPlayer: number | undefined;
-    if (gameId === 'geo-pogodi' || gameId === 'foto-kviz') {
-      const geo = useGeoConfigStore.getState();
-      geoMode = geo.mode;
-      if (geo.mode === 'predefined') {
-        geoPackId = geo.selectedPackId ?? undefined;
-      } else {
-        customPhotosPerPlayer = geo.customPhotosPerPlayer;
-      }
-    }
 
     const customKoSamJaQuestions =
       gameId === 'ko-sam-ja'
@@ -169,10 +144,8 @@ export function GameSelectScreen() {
     const payload: HostStartGamePayload = {
       gameId,
       customQuestions,
+      quizPackId,
       slepiRounds,
-      geoPackId,
-      geoMode,
-      customPhotosPerPlayer,
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
       customTajniAgentiPack,
@@ -209,14 +182,6 @@ export function GameSelectScreen() {
       gluvoDobaTutorial:
         gameId === 'gluvo-doba' && newGamesConfig.gluvoDobaTutorial
           ? true
-          : undefined,
-      pogodiGodinuRounds:
-        gameId === 'pogodi-godinu'
-          ? newGamesConfig.pogodiGodinuRounds
-          : undefined,
-      pogodiBrojPackId:
-        gameId === 'pogodi-godinu' && newGamesConfig.pogodiBrojPackId
-          ? newGamesConfig.pogodiBrojPackId
           : undefined,
       roundCount: GAME_ROUND_CONFIG[gameId]
         ? newGamesConfig.roundCounts[gameId] ??
@@ -358,7 +323,6 @@ export function GameSelectScreen() {
                   })}
             </p>
             {game.id === 'quiz' && <QuizImportButton />}
-            {(game.id === 'geo-pogodi' || game.id === 'foto-kviz') && <GeoPackButton />}
             {game.id === 'ko-sam-ja' && (
               <>
                 <div
@@ -589,28 +553,6 @@ export function GameSelectScreen() {
                       {t('slepi.roundsWarning', { n: connectedCount })}
                     </p>
                   )}
-              </>
-            )}
-            {game.id === 'pogodi-godinu' && (
-              <>
-                <PillRow
-                  label={t('config.rounds')}
-                  value={newGamesConfig.pogodiGodinuRounds}
-                  options={POGODI_GODINU_ROUND_OPTIONS}
-                  onSelect={newGamesConfig.setPogodiGodinuRounds}
-                />
-                <TextPillRow
-                  label={t('config.questionPack')}
-                  value={newGamesConfig.pogodiBrojPackId}
-                  options={[
-                    { value: '', label: t('config.builtInBank') },
-                    ...pogodiBrojPacks.map((p) => ({
-                      value: p.id,
-                      label: `${p.name} (${p.count})`,
-                    })),
-                  ]}
-                  onSelect={newGamesConfig.setPogodiBrojPackId}
-                />
               </>
             )}
             {game.id === 'ko-bi-pre' && (

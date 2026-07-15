@@ -20,11 +20,8 @@ import { DrawGuessModule } from '../game/games/draw-guess/DrawGuessModule.js';
 import { FakeArtistModule } from '../game/games/fake-artist/FakeArtistModule.js';
 import { KoBiPreModule } from '../game/games/ko-bi-pre/KoBiPreModule.js';
 import { DveIstineModule } from '../game/games/dve-istine-i-laz/DveIstineModule.js';
-import { PogodiGodinuModule } from '../game/games/pogodi-godinu/PogodiGodinuModule.js';
 import { FibbageModule } from '../game/games/fibbage/FibbageModule.js';
 import { SlepiTelefoniModule } from '../game/games/slepi-telefoni/SlepiTelefoniModule.js';
-import { GeoGuessModule } from '../game/games/geo-pogodi/GeoGuessModule.js';
-import { FotoKvizModule } from '../game/games/foto-kviz/FotoKvizModule.js';
 import { KoSamJaModule } from '../game/games/ko-sam-ja/KoSamJaModule.js';
 import { SpotItModule } from '../game/games/spot-it/SpotItModule.js';
 import { TajniAgentiModule } from '../game/games/tajni-agenti/TajniAgentiModule.js';
@@ -41,7 +38,7 @@ import { hostRoom, playerRoom } from './rooms.js';
 export function setupSocket(
   httpServer: HttpServer,
   corsOrigins: string | string[],
-  options?: { geoPacksDir?: string; pogodiBrojPacksDir?: string }
+  options?: { questionPacksDir?: string }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
@@ -62,9 +59,9 @@ export function setupSocket(
     pingInterval: 25_000,
     pingTimeout: 60_000,
     // Cap incoming socket messages well below socket.io's 1MB default.
-    // The largest legitimate payload is a downscaled custom-photo upload
-    // (~1280px JPEG q=0.7 as base64, typically 200-400KB); everything else
-    // is tiny. Keeps message floods cheap to reject.
+    // The largest legitimate payload is an inline quiz import whose data:
+    // image URLs are capped at 400KB by the shared validator; everything
+    // else is tiny. Keeps message floods cheap to reject.
     maxHttpBufferSize: 512 * 1024,
   });
 
@@ -72,19 +69,15 @@ export function setupSocket(
   // Factories, not instances: GameManager creates a fresh module per game
   // so concurrent rooms playing the same game don't share mutable state.
   const gameRegistry = new GameRegistry();
-  const geoPacksDir = options?.geoPacksDir ?? '';
-  const pogodiBrojPacksDir = options?.pogodiBrojPacksDir ?? '';
+  const questionPacksDir = options?.questionPacksDir ?? '';
   gameRegistry.register(() => new TestGameModule());
-  gameRegistry.register(() => new QuizGameModule());
+  gameRegistry.register(() => new QuizGameModule(questionPacksDir));
   gameRegistry.register(() => new DrawGuessModule());
   gameRegistry.register(() => new FakeArtistModule());
   gameRegistry.register(() => new KoBiPreModule());
   gameRegistry.register(() => new DveIstineModule());
-  gameRegistry.register(() => new PogodiGodinuModule(pogodiBrojPacksDir));
   gameRegistry.register(() => new FibbageModule());
   gameRegistry.register(() => new SlepiTelefoniModule());
-  gameRegistry.register(() => new GeoGuessModule(geoPacksDir));
-  gameRegistry.register(() => new FotoKvizModule(geoPacksDir));
   gameRegistry.register(() => new KoSamJaModule());
   gameRegistry.register(() => new SpotItModule());
   gameRegistry.register(() => new TajniAgentiModule());

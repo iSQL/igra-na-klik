@@ -288,7 +288,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Kviz',
     'game.quiz.description':
-      'Pitanja na vreme — najbrži tačan odgovor nosi najviše poena!',
+      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom ili snimkom. Najbliži i najbrži nosi poene!',
     'game.draw-guess.name': 'Crtaj i pogodi',
     'game.draw-guess.description': 'Crtajte redom — ostali pogađaju reč!',
     'game.fake-artist.name': 'Lažni umetnik',
@@ -303,18 +303,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.dve-istine-i-laz.name': 'Dve istine i laž',
     'game.dve-istine-i-laz.description':
       'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
-    'game.pogodi-godinu.name': 'Pogodi broj',
-    'game.pogodi-godinu.description':
-      'Pogodi vrednost — cenu, godinu, težinu, dužinu… bliži pogodak, više poena!',
     'game.slepi-telefoni.name': 'Slepi telefoni',
     'game.slepi-telefoni.description':
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
-    'game.geo-pogodi.name': 'Pogodi gde je',
-    'game.geo-pogodi.description':
-      'Pogodi gde je u Srbiji slikana fotografija — bliža igla, više poena!',
-    'game.foto-kviz.name': 'Foto kviz',
-    'game.foto-kviz.description':
-      'Pogledaj fotografiju i izaberi pravu lokaciju od 4 ponuđena odgovora!',
     'game.ko-sam-ja.name': 'Ko sam ja?',
     'game.ko-sam-ja.description':
       'Lična pitanja o igračima — koliko dobro poznajete jedni druge?',
@@ -615,7 +606,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Quiz',
     'game.quiz.description':
-      'Timed questions — the fastest correct answer scores the most!',
+      'Timed questions — classic, picture, map-pin, number, song or video clip. Closest and fastest scores the most!',
     'game.fake-artist.name': 'Fake Artist',
     'game.fake-artist.description':
       'Everyone draws the same word one stroke at a time — except the impostor who does not know it. Find the fake!',
@@ -628,21 +619,12 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.dve-istine-i-laz.name': 'Two Truths & a Lie',
     'game.dve-istine-i-laz.description':
       'Everyone writes two truths and one lie about themselves — the rest guess the lie!',
-    'game.pogodi-godinu.name': 'Guess the Number',
-    'game.pogodi-godinu.description':
-      'Guess the value — a price, year, weight, distance… the closer you are, the more points!',
     'game.fibbage.name': 'Liar',
     'game.fibbage.description':
       'Write a fake answer, find the real one, fool everyone else!',
     'game.slepi-telefoni.name': 'Blind Telephone',
     'game.slepi-telefoni.description':
       'Write a phrase, the next person draws it, then someone guesses — watch the sentence mutate!',
-    'game.geo-pogodi.name': 'Guess Where',
-    'game.geo-pogodi.description':
-      'Guess where in Serbia the photo was taken — the closer your pin, the more points!',
-    'game.foto-kviz.name': 'Photo Quiz',
-    'game.foto-kviz.description':
-      'Look at the photo and pick the right location from 4 options!',
     'game.ko-sam-ja.name': 'Who Am I?',
     'game.ko-sam-ja.description':
       'Personal questions about the players — how well do you know each other?',

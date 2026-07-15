@@ -2,10 +2,13 @@ import { Router, type Response } from 'express';
 import express from 'express';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises';
+import { mkdir, readdir, readFile, rm, unlink, writeFile } from 'fs/promises';
 import type { Dirent } from 'fs';
 import {
   parseQuizImport,
+  kvizTypeCounts,
+  packLatLngToPin,
+  packPinToLatLng,
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseGluvoDobaPack,
@@ -15,6 +18,7 @@ import {
   TAJNI_AGENTI_MAX_WORDS,
   TAJNI_AGENTI_MAX_WORD_LENGTH,
 } from '@igra/shared';
+import type { GeoMapBBox, GeoPackMapDef } from '@igra/shared';
 import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './admin-common.js';
 
 /**
@@ -46,13 +50,14 @@ interface ContentDirs {
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
+const MAX_AUDIO_BASE64 = 14_000_000; // ~10 MB binary after decode
 
 const MAX_NAME_LENGTH = 80;
 
 export function createContentAdminRouter(dirs: ContentDirs): Router {
   const router = Router();
-  // Quiz image uploads ride inside JSON as base64, so allow a large body.
-  router.use(express.json({ limit: '10mb' }));
+  // Image/audio uploads ride inside JSON as base64, so allow a large body.
+  router.use(express.json({ limit: '16mb' }));
   router.use(requireAdmin);
 
   // ---------- generic helpers ------------------------------------------------
@@ -141,6 +146,8 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     replace: (
       body: Record<string, unknown>
     ) => { ok: true; data: unknown } | { ok: false; error: string };
+    /** Extra cleanup after a successful DELETE (e.g. the pack's asset folder). */
+    afterDelete?: (id: string) => Promise<void>;
   }) {
     const filePath = (id: string) => path.join(opts.dir, `${id}.json`);
 
@@ -214,29 +221,55 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
         res.status(404).json({ error: 'Pack ne postoji.' });
         return;
       }
+      if (opts.afterDelete) {
+        try {
+          await opts.afterDelete(id);
+        } catch (err) {
+          console.error(`content-admin: afterDelete cleanup failed for ${id}:`, err);
+        }
+      }
       res.json({ ok: true });
     });
   }
 
-  // ---------- quiz question packs ---------------------------------------------
-  // File on disk: array of {text, options: string[], correctIndex, timeLimit?}.
+  // ---------- kviz question packs -----------------------------------------------
+  // File on disk: manifest { name?, description?, maps?, questions: [...] }
+  // (legacy bare-array packs still parse and upgrade to the object format on
+  // the first save). Questions are type-discriminated: obicno/geo/broj/audio/
+  // video — validated by the shared parseQuizImport in 'pack' context.
 
-  function quizQuestionsToFile(questions: unknown[]):
-    | { ok: true; data: unknown }
-    | { ok: false; error: string } {
-    if (questions.length === 0) return { ok: true, data: [] };
-    const parsed = parseQuizImport(questions);
-    if (!parsed.ok) return { ok: false, error: parsed.error };
+  function describeQuizPack(id: string, raw: unknown): Record<string, unknown> {
+    const lax = parseQuizImport(raw, { context: 'pack', allowEmpty: true });
+    const strict = parseQuizImport(raw, { context: 'pack' });
+    // Even when lax parsing fails, surface the raw fields so a broken pack
+    // can be opened and repaired in the editor.
+    const obj = (Array.isArray(raw) ? { questions: raw } : (raw ?? {})) as Record<
+      string,
+      unknown
+    >;
+    const questions = lax.ok
+      ? lax.manifest.questions
+      : Array.isArray(obj.questions)
+        ? obj.questions
+        : [];
     return {
-      ok: true,
-      data: parsed.questions.map((q) => ({
-        text: q.text,
-        options: q.options.map((o) => o.text),
-        correctIndex: q.correctIndex,
-        timeLimit: q.timeLimit,
-        // Only persist the field when set — keeps text-only packs unchanged.
-        ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
-      })),
+      id,
+      name: lax.ok
+        ? lax.manifest.name
+        : typeof obj.name === 'string'
+          ? obj.name
+          : undefined,
+      description: lax.ok
+        ? lax.manifest.description
+        : typeof obj.description === 'string'
+          ? obj.description
+          : undefined,
+      maps: lax.ok ? (lax.manifest.maps ?? {}) : (obj.maps ?? {}),
+      count: questions.length,
+      types: lax.ok ? kvizTypeCounts(lax.manifest.questions) : {},
+      visibleInGame: strict.ok,
+      error: strict.ok ? undefined : strict.error,
+      questions,
     };
   }
 
@@ -245,66 +278,159 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     dir: dirs.questionPacksDir,
     listKey: 'packs',
     nameRequiredOnCreate: true,
-    describe: (id, raw) => {
-      const questions = Array.isArray(raw) ? raw : [];
-      const strict =
-        questions.length > 0 ? parseQuizImport(questions) : { ok: false as const };
+    describe: describeQuizPack,
+    create: (_body, name) => ({ ok: true, data: { name, questions: [] } }),
+    replace: (body) => {
+      const parsed = parseQuizImport(body, { context: 'pack', allowEmpty: true });
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      const m = parsed.manifest;
       return {
-        id,
-        count: questions.length,
-        visibleInGame: strict.ok === true,
-        error: strict.ok === false && questions.length > 0
-          ? (strict as { error?: string }).error
-          : undefined,
-        questions,
+        ok: true,
+        data: {
+          ...(m.name ? { name: m.name } : {}),
+          ...(m.description ? { description: m.description } : {}),
+          ...(m.maps && Object.keys(m.maps).length > 0 ? { maps: m.maps } : {}),
+          questions: m.questions,
+        },
       };
     },
-    create: () => ({ ok: true, data: [] }),
-    replace: (body) => {
-      if (!Array.isArray(body.questions))
-        return { ok: false, error: 'Polje "questions" mora biti niz.' };
-      return quizQuestionsToFile(body.questions);
+    afterDelete: async (id) => {
+      // Remove the pack's asset folder (images/audio/maps) alongside the json.
+      await rm(path.join(dirs.questionPacksDir, id), {
+        recursive: true,
+        force: true,
+      });
     },
   });
 
-  // ---------- quiz image upload -------------------------------------------------
-  // POST { imageBase64 } → writes a downscaled JPEG/PNG into quizImagesDir and
-  // returns { imageUrl: '/quiz-images/<uuid>.<ext>' }. The editor then stores
-  // that short path on the question and saves the pack via the whole-file PUT.
-  // Images are shared across packs (flat store); deleting a pack leaves its
-  // images behind — harmless for a self-hosted tool.
-  router.post('/quiz-image', async (req, res) => {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const imageBase64 = body.imageBase64;
-    if (typeof imageBase64 !== 'string' || imageBase64.length === 0) {
-      res.status(400).json({ error: 'Nedostaje slika.' });
-      return;
+  function decodeBase64Media(
+    raw: unknown,
+    kind: 'image' | 'audio'
+  ): { ok: true; ext: string; data: Buffer } | { ok: false; error: string } {
+    if (typeof raw !== 'string' || raw.length === 0) {
+      return { ok: false, error: kind === 'image' ? 'Nedostaje slika.' : 'Nedostaje audio fajl.' };
     }
-    if (imageBase64.length > MAX_IMAGE_BASE64) {
-      res.status(400).json({ error: 'Slika je prevelika (max ~6 MB).' });
-      return;
+    const cap = kind === 'image' ? MAX_IMAGE_BASE64 : MAX_AUDIO_BASE64;
+    if (raw.length > cap) {
+      return {
+        ok: false,
+        error: kind === 'image' ? 'Slika je prevelika (max ~6 MB).' : 'Audio je prevelik (max ~10 MB).',
+      };
     }
-    const match = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/.exec(imageBase64);
+    const match =
+      kind === 'image'
+        ? /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/.exec(raw)
+        : /^data:audio\/(mpeg|mp3|ogg|mp4|x-m4a|aac);base64,(.+)$/.exec(raw);
     if (!match) {
-      res.status(400).json({ error: 'Nevažeći format slike.' });
-      return;
+      return { ok: false, error: kind === 'image' ? 'Nevažeći format slike.' : 'Nevažeći audio format (mp3/ogg/m4a).' };
     }
-    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const extMap: Record<string, string> = {
+      jpeg: 'jpg',
+      jpg: 'jpg',
+      png: 'png',
+      webp: 'webp',
+      mpeg: 'mp3',
+      mp3: 'mp3',
+      ogg: 'ogg',
+      mp4: 'm4a',
+      'x-m4a': 'm4a',
+      aac: 'm4a',
+    };
     let data: Buffer;
     try {
       data = Buffer.from(match[2], 'base64');
     } catch {
-      res.status(400).json({ error: 'Neispravan base64 sadržaj.' });
+      return { ok: false, error: 'Neispravan base64 sadržaj.' };
+    }
+    if (data.length === 0) return { ok: false, error: 'Prazan fajl.' };
+    return { ok: true, ext: extMap[match[1]], data };
+  }
+
+  // ---------- kviz pack asset upload ---------------------------------------------
+  // POST /quiz-packs/:id/file { kind: 'image'|'audio', dataBase64 } → writes
+  // <uuid>.<ext> into the pack's asset folder and returns { file, url }. The
+  // editor stores the filename on the question (imageFile/audioFile) and saves
+  // the manifest via the whole-file PUT. Orphaned files after edits/deletes
+  // are harmless for a self-hosted tool.
+  router.post('/quiz-packs/:id/file', async (req, res) => {
+    const id = req.params.id;
+    if (!PACK_ID_RE.test(id)) {
+      badId(res);
       return;
     }
-    if (data.length === 0) {
-      res.status(400).json({ error: 'Prazna slika.' });
+    if (!(await fileExists(path.join(dirs.questionPacksDir, `${id}.json`)))) {
+      res.status(404).json({ error: 'Pack ne postoji.' });
       return;
     }
-    const fileName = `${randomUUID()}.${ext}`;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const kind = body.kind === 'audio' ? 'audio' : 'image';
+    const decoded = decodeBase64Media(body.dataBase64, kind);
+    if (!decoded.ok) {
+      res.status(400).json({ error: decoded.error });
+      return;
+    }
+    const fileName = `${randomUUID()}.${decoded.ext}`;
+    try {
+      const packDir = path.join(dirs.questionPacksDir, id);
+      await mkdir(packDir, { recursive: true });
+      await writeFile(path.join(packDir, fileName), decoded.data);
+    } catch (err) {
+      console.error('content-admin: failed to write kviz pack file:', err);
+      res.status(500).json({ error: 'Ne mogu da sačuvam fajl.' });
+      return;
+    }
+    res.status(201).json({ file: fileName, url: `/kviz-files/${id}/${fileName}` });
+  });
+
+  // ---------- pin ↔ lat/lng conversion --------------------------------------------
+  // Stateless helper for the kviz editor's geo question picker — the page does
+  // no geo math (same policy as the old geo editor). Pass `bbox` for a custom
+  // mercator map; omit it for the bundled Serbia map projection.
+  router.post('/pin-convert', (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    let map: GeoPackMapDef | undefined;
+    if (body.bbox !== undefined && body.bbox !== null) {
+      const b = body.bbox as Record<string, unknown>;
+      const nums: Partial<GeoMapBBox> = {};
+      for (const key of ['minLat', 'maxLat', 'minLng', 'maxLng'] as const) {
+        if (typeof b[key] !== 'number' || !Number.isFinite(b[key])) {
+          res.status(400).json({ error: 'Nevažeći bbox.' });
+          return;
+        }
+        nums[key] = b[key] as number;
+      }
+      map = { imageFile: '_', bbox: nums as GeoMapBBox };
+    }
+
+    const pin = body.pin as { x?: unknown; y?: unknown } | undefined;
+    if (pin && typeof pin.x === 'number' && typeof pin.y === 'number') {
+      const x = Math.max(0, Math.min(1, pin.x));
+      const y = Math.max(0, Math.min(1, pin.y));
+      res.json({ latLng: packPinToLatLng(map, x, y) });
+      return;
+    }
+    if (typeof body.lat === 'number' && typeof body.lng === 'number') {
+      res.json({ pin: packLatLngToPin(map, body.lat, body.lng) });
+      return;
+    }
+    res.status(400).json({ error: 'Pošalji { pin } ili { lat, lng }.' });
+  });
+
+  // ---------- legacy flat quiz image upload ---------------------------------------
+  // POST { imageBase64 } → writes into quizImagesDir, served at
+  // /quiz-images/<file>. Kept for images shared across packs and for inline
+  // (host file upload) question sets that can't use pack folders.
+  router.post('/quiz-image', async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const decoded = decodeBase64Media(body.imageBase64, 'image');
+    if (!decoded.ok) {
+      res.status(400).json({ error: decoded.error });
+      return;
+    }
+    const fileName = `${randomUUID()}.${decoded.ext}`;
     try {
       await mkdir(dirs.quizImagesDir, { recursive: true });
-      await writeFile(path.join(dirs.quizImagesDir, fileName), data);
+      await writeFile(path.join(dirs.quizImagesDir, fileName), decoded.data);
     } catch (err) {
       console.error('content-admin: failed to write quiz image:', err);
       res.status(500).json({ error: 'Ne mogu da sačuvam sliku.' });

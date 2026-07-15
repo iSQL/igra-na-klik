@@ -1,32 +1,49 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseQuizImport } from '@igra/shared';
-import type { QuizImportQuestion } from '@igra/shared';
+import type { KvizQuestionType } from '@igra/shared';
 import { useQuizImportStore } from '../store/quizImportStore';
 import { useT } from '../i18n/useT';
 
-interface BuiltinPack {
+interface PackSummary {
   id: string;
   fileName: string;
+  name: string;
   count: number;
-  questions: QuizImportQuestion[];
+  types: Partial<Record<KvizQuestionType, number>>;
+}
+
+const TYPE_BADGES: Record<KvizQuestionType, string> = {
+  obicno: '❓',
+  geo: '🗺️',
+  broj: '🔢',
+  audio: '🎵',
+  video: '🎬',
+};
+
+function typeSummary(types: Partial<Record<KvizQuestionType, number>>): string {
+  return (Object.keys(TYPE_BADGES) as KvizQuestionType[])
+    .filter((t) => (types[t] ?? 0) > 0)
+    .map((t) => `${TYPE_BADGES[t]}${types[t]}`)
+    .join(' ');
 }
 
 export function QuizImportButton() {
-  const { customQuestions, fileName, setCustom, clear } = useQuizImportStore();
+  const { packId, packName, customQuestions, fileName, setPack, setCustom, clear } =
+    useQuizImportStore();
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [builtinPacks, setBuiltinPacks] = useState<BuiltinPack[]>([]);
+  const [packs, setPacks] = useState<PackSummary[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/question-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: BuiltinPack[] }) => {
-        if (!cancelled) setBuiltinPacks(data.packs ?? []);
+      .then((data: { packs?: PackSummary[] }) => {
+        if (!cancelled) setPacks(data.packs ?? []);
       })
       .catch(() => {
-        if (!cancelled) setBuiltinPacks([]);
+        if (!cancelled) setPacks([]);
       });
     return () => {
       cancelled = true;
@@ -49,22 +66,13 @@ export function QuizImportButton() {
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
-        const result = parseQuizImport(json);
+        const result = parseQuizImport(json, { context: 'inline' });
         if (!result.ok) {
           setError(result.error);
           return;
         }
-        // Store the raw import shape (re-validated on server).
-        setCustom(
-          result.questions.map((q) => ({
-            text: q.text,
-            options: q.options.map((o) => o.text),
-            correctIndex: q.correctIndex,
-            timeLimit: q.timeLimit,
-            imageUrl: q.imageUrl,
-          })),
-          file.name
-        );
+        // Store the validated wire shape (re-validated on server).
+        setCustom(result.manifest.questions, file.name);
         setError(null);
       } catch {
         setError(t('import.invalidJson'));
@@ -73,13 +81,16 @@ export function QuizImportButton() {
     reader.readAsText(file);
   };
 
-  const handleBuiltinChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handlePackChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     e.stopPropagation();
     const id = e.target.value;
-    if (!id) return;
-    const pack = builtinPacks.find((p) => p.id === id);
+    if (!id) {
+      clear();
+      return;
+    }
+    const pack = packs.find((p) => p.id === id);
     if (!pack) return;
-    setCustom(pack.questions, pack.fileName);
+    setPack(pack.id, pack.name);
     setError(null);
   };
 
@@ -89,9 +100,7 @@ export function QuizImportButton() {
     setError(null);
   };
 
-  // If the currently loaded pack matches a built-in by fileName, preselect it.
-  const selectedBuiltinId =
-    builtinPacks.find((p) => p.fileName === fileName)?.id ?? '';
+  const selectedPack = packs.find((p) => p.id === packId);
 
   return (
     <div
@@ -112,10 +121,10 @@ export function QuizImportButton() {
         style={{ display: 'none' }}
       />
 
-      {builtinPacks.length > 0 && (
+      {packs.length > 0 && (
         <select
-          value={selectedBuiltinId}
-          onChange={handleBuiltinChange}
+          value={packId ?? ''}
+          onChange={handlePackChange}
           onClick={(e) => e.stopPropagation()}
           style={{
             padding: '0.4rem 0.6rem',
@@ -128,15 +137,40 @@ export function QuizImportButton() {
           }}
         >
           <option value="">{t('import.choosePack')}</option>
-          {builtinPacks.map((p) => (
+          {packs.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.id} ({p.count})
+              {p.name} ({p.count})
             </option>
           ))}
         </select>
       )}
 
-      {customQuestions ? (
+      {packId ? (
+        <>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)', margin: 0 }}>
+            {t('import.loaded')}: <strong>{packName ?? packId}</strong>
+            {selectedPack ? ` (${selectedPack.count})` : ''}
+          </p>
+          {selectedPack && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+              {typeSummary(selectedPack.types)}
+            </p>
+          )}
+          <button
+            onClick={handleClear}
+            style={{
+              padding: '0.35rem 0.9rem',
+              fontSize: '0.8rem',
+              borderRadius: '0.5rem',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            {t('common.remove')}
+          </button>
+        </>
+      ) : customQuestions ? (
         <>
           <p
             style={{

@@ -7,7 +7,7 @@ import type {
 } from './room.js';
 import type { GameState } from './game.js';
 import type { DrawOp } from './draw-guess.js';
-import type { QuizImportQuestion } from '../games/quiz-import.js';
+import type { KvizImportQuestion } from '../games/quiz-import.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiMode } from './tajni-agenti.js';
@@ -68,11 +68,11 @@ export interface ClientToServerEvents {
   'player:create-room': (data: { playerName: string }) => void;
   'host:start-game': (data: {
     gameId: string;
-    customQuestions?: QuizImportQuestion[];
+    customQuestions?: KvizImportQuestion[];
+    // Selected kviz question pack (id from GET /api/question-packs).
+    // Resolved server-side so answers never travel to clients.
+    quizPackId?: string;
     slepiRounds?: number;
-    geoPackId?: string;
-    geoMode?: 'predefined' | 'custom';
-    customPhotosPerPlayer?: number;
     koSamJaCategory?: KoSamJaCategory;
     customKoSamJaQuestions?: KoSamJaImportQuestion[];
     customTajniAgentiPack?: TajniAgentiImportPack;
@@ -99,13 +99,8 @@ export interface ClientToServerEvents {
     koBiPreRounds?: number;
     // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
     drawTimeLimit?: number;
-    pogodiGodinuRounds?: number;
-    // Selected "Pogodi broj" question pack (id from GET /api/pogodi-broj-packs).
-    // Empty/absent → the built-in question bank.
-    pogodiBrojPackId?: string;
     // Generic round count for games in GAME_ROUND_CONFIG (quiz, draw-guess,
-    // fibbage, geo-pogodi, foto-kviz, ko-sam-ja, spot-it). Each module
-    // clamps it to its own range.
+    // fibbage, ko-sam-ja, spot-it). Each module clamps it to its own range.
     roundCount?: number;
     // Zavet (bolji-zivot) tutorial mode: shows in-game hints + the "?" rules sheet,
     // and phases advance on the admin's "next phase" button instead of the

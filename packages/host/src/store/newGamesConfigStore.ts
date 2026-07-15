@@ -6,11 +6,10 @@ import type {
   TajniAgentiMode,
 } from '@igra/shared';
 
-// Host-side round / stroke config for the newer games (Pogodi godinu,
-// Ko bi pre, Lažni umetnik). Persisted so the TV remembers the operator's
+// Host-side round / stroke config for the newer games (Ko bi pre,
+// Lažni umetnik…). Persisted so the TV remembers the operator's
 // preferred settings between sessions — same idea as slepiConfigStore.
 interface NewGamesConfigStore {
-  pogodiGodinuRounds: number;
   koBiPreRounds: number;
   fakeArtistRounds: number;
   fakeArtistStrokes: number;
@@ -22,8 +21,6 @@ interface NewGamesConfigStore {
   gluvoDobaPackId: string;
   // Gluvo doba: tutorial mode (guided game — hints + moderator-driven phases).
   gluvoDobaTutorial: boolean;
-  // Selected "Pogodi broj" question pack id ('' = built-in question bank).
-  pogodiBrojPackId: string;
   // Tajni agenti mode: classic (2 teams), duet, or coop (see @igra/shared).
   tajniAgentiMode: TajniAgentiMode;
   // Vruć krompir: how the bomb is passed ('sequential' | 'choose').
@@ -39,10 +36,9 @@ interface NewGamesConfigStore {
   spijunDiscussionSeconds: number;
   spijunPackId: string;
   spijunTutorial: boolean;
-  // Generic per-game round count (quiz, draw-guess, fibbage, geo-pogodi,
-  // foto-kviz, ko-sam-ja, spot-it). Missing key → use GAME_ROUND_CONFIG default.
+  // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
+  // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
-  setPogodiGodinuRounds: (n: number) => void;
   setKoBiPreRounds: (n: number) => void;
   setFakeArtistRounds: (n: number) => void;
   setFakeArtistStrokes: (n: number) => void;
@@ -52,7 +48,6 @@ interface NewGamesConfigStore {
   setGluvoDobaBajacica: (v: boolean) => void;
   setGluvoDobaPackId: (id: string) => void;
   setGluvoDobaTutorial: (v: boolean) => void;
-  setPogodiBrojPackId: (id: string) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setHotPotatoMode: (m: HotPotatoMode) => void;
   setEmojiHints: (v: boolean) => void;
@@ -67,7 +62,6 @@ interface NewGamesConfigStore {
 export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
   persist(
     (set) => ({
-      pogodiGodinuRounds: 10,
       koBiPreRounds: 8,
       fakeArtistRounds: 3,
       fakeArtistStrokes: 2,
@@ -77,7 +71,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaBajacica: false,
       gluvoDobaPackId: '',
       gluvoDobaTutorial: false,
-      pogodiBrojPackId: '',
       tajniAgentiMode: 'classic',
       hotPotatoMode: 'sequential',
       emojiHints: true,
@@ -87,7 +80,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       spijunPackId: '',
       spijunTutorial: false,
       roundCounts: {},
-      setPogodiGodinuRounds: (n) => set({ pogodiGodinuRounds: n }),
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
       setFakeArtistStrokes: (n) => set({ fakeArtistStrokes: n }),
@@ -98,7 +90,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaBajacica: (v) => set({ gluvoDobaBajacica: v }),
       setGluvoDobaPackId: (id) => set({ gluvoDobaPackId: id }),
       setGluvoDobaTutorial: (v) => set({ gluvoDobaTutorial: v }),
-      setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setHotPotatoMode: (m) => set({ hotPotatoMode: m }),
       setEmojiHints: (v) => set({ emojiHints: v }),
@@ -114,7 +105,6 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
   )
 );
 
-export const POGODI_GODINU_ROUND_OPTIONS = [5, 8, 10, 15];
 export const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 export const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
 export const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];

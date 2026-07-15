@@ -1,8 +1,8 @@
 /**
  * Projection between geographic (lat, lng) coordinates over Serbia and
  * normalized map coordinates {x, y} ∈ [0, 1] over the bundled raster map
- * `packages/<host|controller>/src/games/geo-pogodi/assets/serbia-map.png`
- * (UN-style map, 1901×2386 px).
+ * `packages/<host|controller>/src/games/quiz/assets/serbia-map.png`
+ * (UN-style map, 1901×2386 px) — used by the Kviz geo question type.
  *
  * Calibrated against the map's own graticule ticks (18°–23°E across the
  * top/bottom edges, 42°–46°N down the left/right edges), measured
@@ -22,8 +22,8 @@
  * If you swap the map image, re-measure the graticule and update the
  * calibration constants below plus MAP_W/MAP_H, then update the wrapper
  * dimensions in
- *   packages/host/src/games/geo-pogodi/components/SerbiaMap.tsx
- *   packages/controller/src/games/geo-pogodi/components/SerbiaMap.tsx
+ *   packages/host/src/games/quiz/components/GeoMap.tsx
+ *   packages/controller/src/games/quiz/components/GeoMap.tsx
  * to keep the pin overlay aligned with the rendered map.
  */
 

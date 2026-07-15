@@ -1,0 +1,41 @@
+{
+  "name": "Test paket",
+  "description": "Mali test paket za smoke test. Slike su placeholder — zameni svojim.",
+  "questions": [
+    {
+      "type": "geo",
+      "imageFile": "kalemegdan.jpg",
+      "caption": "Kalemegdan, Beograd",
+      "lat": 44.823,
+      "lng": 20.451
+    },
+    {
+      "type": "geo",
+      "imageFile": "djavolja-varos.jpg",
+      "caption": "Đavolja varoš",
+      "lat": 43.005,
+      "lng": 21.371
+    },
+    {
+      "type": "geo",
+      "imageFile": "uvac.jpg",
+      "caption": "Uvac, meandri",
+      "lat": 43.397,
+      "lng": 19.838
+    },
+    {
+      "type": "geo",
+      "imageFile": "fruska-gora.jpg",
+      "caption": "Fruska gora",
+      "lat": 45.15,
+      "lng": 19.7167
+    },
+    {
+      "type": "geo",
+      "imageFile": "kopaonik.jpg",
+      "caption": "Kopaonik",
+      "lat": 43.2858,
+      "lng": 20.8117
+    }
+  ]
+}

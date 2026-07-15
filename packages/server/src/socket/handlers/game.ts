@@ -56,10 +56,8 @@ export function registerGameHandlers(
 
     const result = gameManager.startGame(roomCode, data.gameId, {
       customQuestions: data.customQuestions,
+      quizPackId: data.quizPackId,
       slepiRounds: data.slepiRounds,
-      geoPackId: data.geoPackId,
-      geoMode: data.geoMode,
-      customPhotosPerPlayer: data.customPhotosPerPlayer,
       koSamJaCategory: data.koSamJaCategory,
       customKoSamJaQuestions: data.customKoSamJaQuestions,
       customTajniAgentiPack: data.customTajniAgentiPack,
@@ -68,8 +66,6 @@ export function registerGameHandlers(
       fakeArtistStrokes: data.fakeArtistStrokes,
       koBiPreRounds: data.koBiPreRounds,
       drawTimeLimit: data.drawTimeLimit,
-      pogodiGodinuRounds: data.pogodiGodinuRounds,
-      pogodiBrojPackId: data.pogodiBrojPackId,
       gluvoDobaDiscussionSeconds: data.gluvoDobaDiscussionSeconds,
       gluvoDobaDeathReveal: data.gluvoDobaDeathReveal,
       gluvoDobaFirstNightPeace: data.gluvoDobaFirstNightPeace,

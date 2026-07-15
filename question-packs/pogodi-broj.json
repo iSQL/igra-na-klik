@@ -1,0 +1,590 @@
+{
+  "name": "Pogodi broj",
+  "description": "Migrirana ugrađena pitanja stare igre „Pogodi broj\".",
+  "questions": [
+    {
+      "type": "broj",
+      "text": "Prvi čovek na Mesecu",
+      "answer": 1969,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🚀"
+    },
+    {
+      "type": "broj",
+      "text": "Pad Berlinskog zida",
+      "answer": 1989,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🧱"
+    },
+    {
+      "type": "broj",
+      "text": "Potonuće Titanika",
+      "answer": 1912,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🚢"
+    },
+    {
+      "type": "broj",
+      "text": "Početak Prvog svetskog rata",
+      "answer": 1914,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "⚔️"
+    },
+    {
+      "type": "broj",
+      "text": "Kraj Drugog svetskog rata",
+      "answer": 1945,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🕊️"
+    },
+    {
+      "type": "broj",
+      "text": "Jurij Gagarin — prvi čovek u svemiru",
+      "answer": 1961,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "👨‍🚀"
+    },
+    {
+      "type": "broj",
+      "text": "Černobiljska katastrofa",
+      "answer": 1986,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "☢️"
+    },
+    {
+      "type": "broj",
+      "text": "Zimske olimpijske igre u Sarajevu",
+      "answer": 1984,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "⛷️"
+    },
+    {
+      "type": "broj",
+      "text": "NATO bombardovanje SRJ",
+      "answer": 1999,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "✈️"
+    },
+    {
+      "type": "broj",
+      "text": "Predstavljen prvi iPhone",
+      "answer": 2007,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📱"
+    },
+    {
+      "type": "broj",
+      "text": "Osnovan Facebook",
+      "answer": 2004,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "👍"
+    },
+    {
+      "type": "broj",
+      "text": "Pokrenut YouTube",
+      "answer": 2005,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "▶️"
+    },
+    {
+      "type": "broj",
+      "text": "Osnovan Google",
+      "answer": 1998,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🔍"
+    },
+    {
+      "type": "broj",
+      "text": "Pokrenuta Vikipedija",
+      "answer": 2001,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📚"
+    },
+    {
+      "type": "broj",
+      "text": "Aleksandar Fleming otkrio penicilin",
+      "answer": 1928,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "💊"
+    },
+    {
+      "type": "broj",
+      "text": "Prvi let braće Rajt",
+      "answer": 1903,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🛩️"
+    },
+    {
+      "type": "broj",
+      "text": "Ford Model T stigao na tržište",
+      "answer": 1908,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🚗"
+    },
+    {
+      "type": "broj",
+      "text": "Smrt Josipa Broza Tita",
+      "answer": 1980,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🕯️"
+    },
+    {
+      "type": "broj",
+      "text": "Crvena zvezda osvojila Kup šampiona",
+      "answer": 1991,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "⚽"
+    },
+    {
+      "type": "broj",
+      "text": "Jugoslavija prvak sveta u košarci",
+      "answer": 2002,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🏀"
+    },
+    {
+      "type": "broj",
+      "text": "Novak Đoković osvojio prvi Grend slem",
+      "answer": 2008,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎾"
+    },
+    {
+      "type": "broj",
+      "text": "Novak Đoković prvi put broj 1 na svetu",
+      "answer": 2011,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🏆"
+    },
+    {
+      "type": "broj",
+      "text": "Početak pandemije korona virusa",
+      "answer": 2020,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "😷"
+    },
+    {
+      "type": "broj",
+      "text": "Atomska bomba bačena na Hirošimu",
+      "answer": 1945,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "💥"
+    },
+    {
+      "type": "broj",
+      "text": "Ubistvo Džona Kenedija",
+      "answer": 1963,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎯"
+    },
+    {
+      "type": "broj",
+      "text": "Prva presađena ljudsko srce (Barnard)",
+      "answer": 1967,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "❤️"
+    },
+    {
+      "type": "broj",
+      "text": "Otkrivena struktura DNK",
+      "answer": 1953,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🧬"
+    },
+    {
+      "type": "broj",
+      "text": "Prvi mobilni telefonski poziv",
+      "answer": 1973,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📞"
+    },
+    {
+      "type": "broj",
+      "text": "Izašao prvi Windows",
+      "answer": 1985,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🪟"
+    },
+    {
+      "type": "broj",
+      "text": "Premijera prvog „Ratovi zvezda\" filma",
+      "answer": 1977,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "⭐"
+    },
+    {
+      "type": "broj",
+      "text": "Premijera filma „Titanik\"",
+      "answer": 1997,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎬"
+    },
+    {
+      "type": "broj",
+      "text": "Objavljena prva knjiga o Hariju Poteru",
+      "answer": 1997,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "⚡"
+    },
+    {
+      "type": "broj",
+      "text": "Prva epizoda „Simpsonovih\"",
+      "answer": 1989,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📺"
+    },
+    {
+      "type": "broj",
+      "text": "Prvi festival EXIT",
+      "answer": 2000,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎵"
+    },
+    {
+      "type": "broj",
+      "text": "Univerzijada u Beogradu",
+      "answer": 2009,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🏅"
+    },
+    {
+      "type": "broj",
+      "text": "Referendum o Bregzitu",
+      "answer": 2016,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🇬🇧"
+    },
+    {
+      "type": "broj",
+      "text": "Barak Obama izabran za predsednika SAD",
+      "answer": 2008,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🇺🇸"
+    },
+    {
+      "type": "broj",
+      "text": "Lansiran ChatGPT",
+      "answer": 2022,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🤖"
+    },
+    {
+      "type": "broj",
+      "text": "Pokémon GO postao svetski hit",
+      "answer": 2016,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎮"
+    },
+    {
+      "type": "broj",
+      "text": "Uveden evro kao gotovina",
+      "answer": 2002,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "💶"
+    },
+    {
+      "type": "broj",
+      "text": "Ajnštajnova opšta teorija relativnosti",
+      "answer": 1915,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🧠"
+    },
+    {
+      "type": "broj",
+      "text": "Srbija postala samostalna država",
+      "answer": 2006,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🇷🇸"
+    },
+    {
+      "type": "broj",
+      "text": "Valentina Tereškova — prva žena u svemiru",
+      "answer": 1963,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "👩‍🚀"
+    },
+    {
+      "type": "broj",
+      "text": "Smrt Majkla Džeksona",
+      "answer": 2009,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎤"
+    },
+    {
+      "type": "broj",
+      "text": "Svetsko prvenstvo u fudbalu u Nemačkoj",
+      "answer": 2006,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🏆"
+    },
+    {
+      "type": "broj",
+      "text": "Letnje olimpijske igre u Pekingu",
+      "answer": 2008,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🥇"
+    },
+    {
+      "type": "broj",
+      "text": "Otkriće Amerike (Kolumbo)",
+      "answer": 1492,
+      "min": 1000,
+      "max": 1900,
+      "unit": "god.",
+      "emoji": "⛵"
+    },
+    {
+      "type": "broj",
+      "text": "Gutenberg izumeo štampariju",
+      "answer": 1440,
+      "min": 1300,
+      "max": 1600,
+      "unit": "god.",
+      "emoji": "🖨️"
+    },
+    {
+      "type": "broj",
+      "text": "Ukupna dužina reke Dunav",
+      "answer": 2850,
+      "min": 500,
+      "max": 4000,
+      "step": 10,
+      "unit": "km",
+      "emoji": "🌊"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina reke Save",
+      "answer": 990,
+      "min": 200,
+      "max": 2000,
+      "step": 10,
+      "unit": "km",
+      "emoji": "🏞️"
+    },
+    {
+      "type": "broj",
+      "text": "Visina Ajfelove kule",
+      "answer": 330,
+      "min": 100,
+      "max": 600,
+      "step": 5,
+      "unit": "m",
+      "emoji": "🗼"
+    },
+    {
+      "type": "broj",
+      "text": "Visina najvišeg vrha Kopaonika (Pančićev vrh)",
+      "answer": 2017,
+      "min": 500,
+      "max": 3000,
+      "step": 10,
+      "unit": "m",
+      "emoji": "⛰️"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina maratonske trke",
+      "answer": 42,
+      "min": 10,
+      "max": 100,
+      "unit": "km",
+      "emoji": "🏃"
+    },
+    {
+      "type": "broj",
+      "text": "Prosečna težina odraslog slona",
+      "answer": 5000,
+      "min": 500,
+      "max": 10000,
+      "step": 100,
+      "unit": "kg",
+      "emoji": "🐘"
+    },
+    {
+      "type": "broj",
+      "text": "Temperatura ključanja vode",
+      "answer": 100,
+      "min": 0,
+      "max": 300,
+      "unit": "°C",
+      "emoji": "🌡️"
+    },
+    {
+      "type": "broj",
+      "text": "Prosečna cena vekne hleba u Srbiji",
+      "answer": 60,
+      "min": 20,
+      "max": 200,
+      "step": 5,
+      "unit": "din",
+      "emoji": "🍞"
+    },
+    {
+      "type": "broj",
+      "text": "Broj kostiju u odraslom ljudskom telu",
+      "answer": 206,
+      "min": 50,
+      "max": 400,
+      "unit": "kostiju",
+      "emoji": "🦴"
+    },
+    {
+      "type": "broj",
+      "text": "Broj dana u godini",
+      "answer": 365,
+      "min": 100,
+      "max": 500,
+      "unit": "dana",
+      "emoji": "📆"
+    },
+    {
+      "type": "broj",
+      "text": "Broj dirki na klaviru",
+      "answer": 88,
+      "min": 20,
+      "max": 150,
+      "unit": "dirki",
+      "emoji": "🎹"
+    },
+    {
+      "type": "broj",
+      "text": "Broj žica na klasičnoj gitari",
+      "answer": 6,
+      "min": 1,
+      "max": 20,
+      "unit": "žica",
+      "emoji": "🎸"
+    },
+    {
+      "type": "broj",
+      "text": "Broj fudbalera jednog tima na terenu",
+      "answer": 11,
+      "min": 1,
+      "max": 30,
+      "unit": "igrača",
+      "emoji": "⚽"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko slova „A\" ima u reči „ananas\"",
+      "answer": 3,
+      "min": 0,
+      "max": 8,
+      "unit": "slova",
+      "emoji": "🅰️"
+    },
+    {
+      "type": "broj",
+      "text": "Trajanje pesme „Bohemian Rhapsody\"",
+      "answer": 355,
+      "min": 60,
+      "max": 480,
+      "step": 5,
+      "valueType": "duration",
+      "emoji": "🎵"
+    },
+    {
+      "type": "broj",
+      "text": "Trajanje pesme „Đurđevdan\" (Bijelo dugme)",
+      "answer": 275,
+      "min": 60,
+      "max": 480,
+      "step": 5,
+      "valueType": "duration",
+      "emoji": "🎶"
+    }
+  ]
+}
