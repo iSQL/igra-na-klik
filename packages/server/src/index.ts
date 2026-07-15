@@ -29,13 +29,7 @@ import { listQuizPackSummaries } from './game/games/quiz/quiz-pack-resolver.js';
 import { createContentAdminRouter } from './admin/content-admin.js';
 import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
-import { renderTimingEditorPage } from './admin/timing-editor-page.js';
-import { renderQuizEditorPage } from './admin/quiz-editor-page.js';
-import { renderKoSamJaEditorPage } from './admin/ko-sam-ja-editor-page.js';
-import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js';
-import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
-import { renderEmojiEditorPage } from './admin/emoji-editor-page.js';
-import { renderSpijunEditorPage } from './admin/spijun-editor-page.js';
+import { renderAdminApp } from './admin/admin-app.js';
 import { parseGluvoDobaPack, parseSpijunPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -386,23 +380,25 @@ app.use(
 );
 app.use('/api/admin', createTimingAdminRouter());
 
-const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
-  ['/admin/kviz', renderQuizEditorPage()],
-  ['/admin/ko-sam-ja', renderKoSamJaEditorPage()],
-  ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
-  ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
-  ['/admin/emoji', renderEmojiEditorPage()],
-  ['/admin/spijun', renderSpijunEditorPage()],
-  ['/admin/timinzi', renderTimingEditorPage()],
+// Unified admin SPA at /admin — one page covers every content editor, with a
+// client-side game switch (see admin/admin-app.ts). The former per-game pages
+// (/admin/kviz, /admin/ko-sam-ja, …) now 302 here for backwards-compatible
+// bookmarks.
+const ADMIN_APP_HTML = renderAdminApp();
+app.get('/admin', (_req, res) => res.type('html').send(ADMIN_APP_HTML));
+app.get('/admin/', (_req, res) => res.type('html').send(ADMIN_APP_HTML));
+const LEGACY_ADMIN_ROUTES = [
+  '/admin/kviz',
+  '/admin/ko-sam-ja',
+  '/admin/tajni-agenti',
+  '/admin/gluvo-doba',
+  '/admin/emoji',
+  '/admin/spijun',
+  '/admin/timinzi',
 ];
-for (const [route, html] of ADMIN_EDITOR_PAGES) {
-  app.get(route, (_req, res) => {
-    res.type('html').send(html);
-  });
+for (const route of LEGACY_ADMIN_ROUTES) {
+  app.get(route, (_req, res) => res.redirect(302, '/admin'));
 }
-// Bare /admin lands on the kviz editor (each page carries the full nav).
-app.get('/admin', (_req, res) => res.redirect(302, '/admin/kviz'));
-app.get('/admin/', (_req, res) => res.redirect(302, '/admin/kviz'));
 
 // The editor's map image. Served from the server package's own assets copy
 // so it exists in both dev (src/) and prod (dist/) layouts.

@@ -1,0 +1,12 @@
+{
+  "name": "test",
+  "locations": [
+    {
+      "location": "Aerodrom",
+      "roles": [
+        "Čistačica",
+        "das"
+      ]
+    }
+  ]
+}
