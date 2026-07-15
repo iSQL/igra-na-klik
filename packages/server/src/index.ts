@@ -20,6 +20,7 @@ import {
   parseQuizImport,
   parseKoSamJaImport,
   parseTajniAgentiImport,
+  parseEmojiImport,
   SERBIAN_DISTRICTS,
 } from '@igra/shared';
 import type { KoSamJaImportQuestion } from '@igra/shared';
@@ -41,6 +42,7 @@ import { renderTajniAgentiEditorPage } from './admin/tajni-agenti-editor-page.js
 import { renderGluvoDobaEditorPage } from './admin/gluvo-doba-editor-page.js';
 import { createPogodiBrojAdminRouter } from './admin/pogodi-broj-admin.js';
 import { renderPogodiBrojEditorPage } from './admin/pogodi-broj-editor-page.js';
+import { renderEmojiEditorPage } from './admin/emoji-editor-page.js';
 import { parseGluvoDobaPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -77,6 +79,10 @@ const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
 const POGODI_BROJ_PACKS_DIR = process.env.POGODI_BROJ_PACKS_DIR
   ? path.resolve(process.env.POGODI_BROJ_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'pogodi-broj-packs');
+// „Emoji zagonetke" puzzle packs (JSON-only, same flow as quiz packs).
+const EMOJI_PACKS_DIR = process.env.EMOJI_PACKS_DIR
+  ? path.resolve(process.env.EMOJI_PACKS_DIR)
+  : path.resolve(__dirname, '../../..', 'emoji-packs');
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = process.env.TIMING_CONFIG_FILE
   ? path.resolve(process.env.TIMING_CONFIG_FILE)
@@ -167,6 +173,47 @@ app.get('/api/question-packs', async (_req, res) => {
     }
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
+  }
+});
+
+// „Emoji zagonetke" packs — same shape/flow as quiz packs: the host fetches
+// full puzzles and sends them as customEmojiPuzzles (re-validated server-side).
+app.get('/api/emoji-packs', async (_req, res) => {
+  try {
+    const entries = await readdir(EMOJI_PACKS_DIR, { withFileTypes: true });
+    const jsonFiles = entries.filter(
+      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
+    );
+    const packs: Array<{
+      id: string;
+      fileName: string;
+      count: number;
+      puzzles: Array<{ emojis: string; answer: string; accept?: string[]; timeLimit?: number }>;
+    }> = [];
+    for (const entry of jsonFiles) {
+      try {
+        const raw = await readFile(path.join(EMOJI_PACKS_DIR, entry.name), 'utf-8');
+        const parsed = parseEmojiImport(JSON.parse(raw));
+        if (!parsed.ok) continue;
+        packs.push({
+          id: entry.name.replace(/\.json$/i, ''),
+          fileName: entry.name,
+          count: parsed.puzzles.length,
+          puzzles: parsed.puzzles,
+        });
+      } catch {
+        // Skip unreadable/malformed files; the rest of the list still loads.
+      }
+    }
+    packs.sort((a, b) => a.id.localeCompare(b.id));
+    res.json({ packs });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      res.json({ packs: [] });
+      return;
+    }
+    console.error('Failed to read emoji packs directory:', err);
+    res.status(500).json({ error: 'Failed to read emoji packs' });
   }
 });
 
@@ -378,6 +425,7 @@ app.use(
     koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
+    emojiPacksDir: EMOJI_PACKS_DIR,
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
@@ -394,6 +442,7 @@ const ADMIN_EDITOR_PAGES: Array<[route: string, html: string]> = [
   ['/admin/tajni-agenti', renderTajniAgentiEditorPage()],
   ['/admin/gluvo-doba', renderGluvoDobaEditorPage()],
   ['/admin/pogodi-broj', renderPogodiBrojEditorPage()],
+  ['/admin/emoji', renderEmojiEditorPage()],
   ['/admin/timinzi', renderTimingEditorPage()],
 ];
 for (const [route, html] of ADMIN_EDITOR_PAGES) {

@@ -198,6 +198,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.hotPotatoMode.choose': 'Biraš kome',
     'config.hotPotatoModeHint.sequential': 'Tap „Prosledi →" šalje bombu sledećem živom igraču u krugu.',
     'config.hotPotatoModeHint.choose': 'Sam biraš kom živom igraču dodaješ bombu.',
+    'config.emojiHints': 'Postepeni hint (slova)',
+    'config.emojiHintsOn': 'Slova se otkrivaju',
+    'config.emojiHintsOff': 'Bez slova',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
@@ -326,6 +329,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Vruć krompir',
     'game.hot-potato.description':
       'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
+    'game.emoji-zagonetke.name': 'Emoji zagonetke',
+    'game.emoji-zagonetke.description':
+      'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
   },
 
   en: {
@@ -512,6 +518,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.hotPotatoMode.choose': 'Pick who',
     'config.hotPotatoModeHint.sequential': 'Tap "Pass →" to send the bomb to the next living player in the circle.',
     'config.hotPotatoModeHint.choose': 'You choose which living player gets the bomb.',
+    'config.emojiHints': 'Progressive hint (letters)',
+    'config.emojiHintsOn': 'Reveal letters',
+    'config.emojiHintsOff': 'No letters',
 
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',
@@ -641,6 +650,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Hot Potato',
     'game.hot-potato.description':
       'A bomb with a hidden timer goes around — say a word from the category and pass it on. Whoever holds it when it blows is out!',
+    'game.emoji-zagonetke.name': 'Emoji Riddles',
+    'game.emoji-zagonetke.description':
+      'A string of emojis hides a movie, saying or thing — everyone types the answer, faster correct scores more!',
   },
 };
 

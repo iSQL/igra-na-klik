@@ -5,6 +5,7 @@ import {
   DRAW_GUESS_TIME_OPTIONS,
   parseKoSamJaImport,
   parseQuizImport,
+  parseEmojiImport,
 } from '@igra/shared';
 import type {
   GameDefinition,
@@ -15,6 +16,7 @@ import type {
   KoSamJaCategory,
   TajniAgentiMode,
   HotPotatoMode,
+  EmojiImportPuzzle,
 } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
@@ -51,6 +53,13 @@ interface GluvoDobaPackSummary extends GluvoDobaPack {
   id: string;
 }
 
+interface EmojiPackSummary {
+  id: string;
+  fileName: string;
+  count: number;
+  puzzles: EmojiImportPuzzle[];
+}
+
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 const PHOTO_OPTIONS = [1, 2, 3, 4];
 const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
@@ -69,6 +78,8 @@ const GAME_ICONS: Record<string, string> = {
   'ko-sam-ja': '🕵️',
   'spot-it': '🔴',
   'tajni-agenti': '🟦',
+  'hot-potato': '🥔',
+  'emoji-zagonetke': '🎬',
 };
 
 export function GameSelectScreen() {
@@ -117,6 +128,13 @@ export function GameSelectScreen() {
   const [pogodiBrojPackId, setPogodiBrojPackId] = useState('');
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
+  const [emojiPacks, setEmojiPacks] = useState<EmojiPackSummary[]>([]);
+  const [emojiImport, setEmojiImport] = useState<{
+    puzzles: EmojiImportPuzzle[];
+    fileName: string;
+  } | null>(null);
+  const [emojiImportError, setEmojiImportError] = useState<string | null>(null);
+  const [emojiHints, setEmojiHints] = useState(true);
   const [bzTutorial, setBzTutorial] = useState(false);
   // Generic per-game round count (quiz, draw-guess, fibbage, geo, foto,
   // ko-sam-ja, spot-it); missing key → GAME_ROUND_CONFIG default.
@@ -167,6 +185,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setPogodiBrojPacks([]);
+      });
+    fetch('/api/emoji-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: EmojiPackSummary[] }) => {
+        if (!cancelled) setEmojiPacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setEmojiPacks([]);
       });
     return () => {
       cancelled = true;
@@ -230,6 +256,10 @@ export function GameSelectScreen() {
     }
     if (game.id === 'hot-potato') {
       payload.hotPotatoMode = hotPotatoMode;
+    }
+    if (game.id === 'emoji-zagonetke') {
+      payload.emojiHints = emojiHints;
+      if (emojiImport) payload.customEmojiPuzzles = emojiImport.puzzles;
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
@@ -702,6 +732,42 @@ export function GameSelectScreen() {
                       </span>
                     </div>
                   )}
+                  {game.id === 'emoji-zagonetke' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.3rem',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        {t('config.emojiHints')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        {([true, false] as const).map((on) => (
+                          <Pill
+                            key={String(on)}
+                            active={on === emojiHints}
+                            onClick={() => setEmojiHints(on)}
+                          >
+                            {t(on ? 'config.emojiHintsOn' : 'config.emojiHintsOff')}
+                          </Pill>
+                        ))}
+                      </div>
+                      <EmojiConfig
+                        packs={emojiPacks}
+                        imported={emojiImport}
+                        setImported={setEmojiImport}
+                        error={emojiImportError}
+                        setError={setEmojiImportError}
+                      />
+                    </div>
+                  )}
                   {game.id === 'gluvo-doba' && (
                     <>
                       <RoundsConfig
@@ -1070,6 +1136,154 @@ function QuizConfig({
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
             {imported!.questions.length})
+          </span>
+          <button
+            onClick={() => {
+              setImported(null);
+              setError(null);
+            }}
+            style={{
+              padding: '0.25rem 0.6rem',
+              fontSize: '0.75rem',
+              borderRadius: '0.35rem',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--text-secondary)',
+            }}
+          >
+            {t('common.remove')}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            padding: '0.6rem 0.7rem',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            borderRadius: '11px',
+            background: 'transparent',
+            color: 'var(--cyan)',
+            border: '1.5px dashed var(--line2)',
+          }}
+        >
+          {t('import.importQuestionsFile')}
+        </button>
+      )}
+      {error && (
+        <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{error}</span>
+      )}
+    </div>
+  );
+}
+
+function EmojiConfig({
+  packs,
+  imported,
+  setImported,
+  error,
+  setError,
+}: {
+  packs: EmojiPackSummary[];
+  imported: { puzzles: EmojiImportPuzzle[]; fileName: string } | null;
+  setImported: (
+    v: { puzzles: EmojiImportPuzzle[]; fileName: string } | null
+  ) => void;
+  error: string | null;
+  setError: (e: string | null) => void;
+}) {
+  const t = useT();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedPackId =
+    packs.find((p) => p.fileName === imported?.fileName)?.id ?? '';
+  const isFileImport = imported !== null && selectedPackId === '';
+
+  const handlePackChange = (id: string) => {
+    setError(null);
+    if (!id) {
+      setImported(null);
+      return;
+    }
+    const pack = packs.find((p) => p.id === id);
+    if (!pack) return;
+    setImported({ puzzles: pack.puzzles, fileName: pack.fileName });
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => setError(t('import.fileReadError'));
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string);
+        const result = parseEmojiImport(json);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        setImported({ puzzles: result.puzzles, fileName: file.name });
+        setError(null);
+      } catch {
+        setError(t('import.invalidJson'));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        {t('import.questionPack')}
+      </span>
+      <select
+        value={selectedPackId}
+        onChange={(e) => handlePackChange(e.target.value)}
+        disabled={isFileImport}
+        style={{
+          padding: '0.6rem 0.7rem',
+          fontSize: '0.9rem',
+          fontWeight: 700,
+          borderRadius: '11px',
+          background: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
+          border: '1.5px solid var(--line2)',
+          opacity: isFileImport ? 0.5 : 1,
+        }}
+      >
+        <option value="">{t('import.builtinPack')}</option>
+        {packs.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.id} ({p.count})
+          </option>
+        ))}
+      </select>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={handleFile}
+        style={{ display: 'none' }}
+      />
+      {isFileImport ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+            padding: '0.4rem 0.6rem',
+            background: 'var(--bg-secondary)',
+            borderRadius: '0.4rem',
+            border: '1px solid var(--bg-card)',
+            fontSize: '0.8rem',
+          }}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
+            {imported!.puzzles.length})
           </span>
           <button
             onClick={() => {

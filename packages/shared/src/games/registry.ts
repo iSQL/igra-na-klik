@@ -146,6 +146,15 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // a read-only board for waiting players — everything the TV would show.
     supportsHostless: true,
   },
+  'emoji-zagonetke': {
+    id: 'emoji-zagonetke',
+    name: 'Emoji zagonetke',
+    minPlayers: 2,
+    maxPlayers: 10,
+    description:
+      'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
+    supportsHostless: true,
+  },
   'hot-potato': {
     id: 'hot-potato',
     name: 'Vruć krompir',

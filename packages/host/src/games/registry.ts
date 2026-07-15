@@ -20,6 +20,7 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'gluvo-doba': () => import('./gluvo-doba/GluvoDobaHost'),
   'bolji-zivot': () => import('./bolji-zivot/BoljiZivotHost'),
   'hot-potato': () => import('./hot-potato/HotPotatoHost'),
+  'emoji-zagonetke': () => import('./emoji-zagonetke/EmojiZagonetkeHost'),
 };
 
 let prefetchStarted = false;

@@ -16,6 +16,7 @@ import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 import type { HotPotatoMode } from './hot-potato.js';
+import type { EmojiImportPuzzle } from './emoji-zagonetke.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -113,6 +114,11 @@ export interface ClientToServerEvents {
     // Vruć krompir: how the bomb is passed on ('sequential' = next in order,
     // 'choose' = holder picks). Defaults to 'sequential' server-side.
     hotPotatoMode?: HotPotatoMode;
+    // Emoji zagonetke: optional imported puzzle pack (replaces the built-in
+    // bank for the session) + whether progressive letter hints are enabled
+    // (default true). Round count rides the generic `roundCount` field.
+    customEmojiPuzzles?: EmojiImportPuzzle[];
+    emojiHints?: boolean;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

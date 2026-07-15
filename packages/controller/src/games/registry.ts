@@ -20,6 +20,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'gluvo-doba': () => import('./gluvo-doba/GluvoDobaController'),
   'bolji-zivot': () => import('./bolji-zivot/BoljiZivotController'),
   'hot-potato': () => import('./hot-potato/HotPotatoController'),
+  'emoji-zagonetke': () => import('./emoji-zagonetke/EmojiZagonetkeController'),
 };
 
 let prefetchStarted = false;

@@ -274,10 +274,11 @@ For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5
 - `QUESTION_PACKS_DIR` — directory of `.json` quiz packs (default `question-packs/`).
 - `GEO_PACKS_DIR` — directory of geo-pack manifests + image folders (default `geo-packs/`).
 - `KO_SAM_JA_PACKS_DIR` — directory of `.json` Ko sam ja packs (default `ko-sam-ja-packs/`).
-- `ADMIN_TOKEN` — enables the admin editors under `/admin` (geo, kviz, ko-sam-ja, tajni-agenti, pogodi-broj, timinzi; unset = disabled).
+- `ADMIN_TOKEN` — enables the admin editors under `/admin` (geo, kviz, ko-sam-ja, tajni-agenti, pogodi-broj, emoji, timinzi; unset = disabled).
 - `TAJNI_AGENTI_PACKS_DIR` — directory of Tajni agenti word packs (default `tajni-agenti-packs/`).
 - `GLUVO_DOBA_PACKS_DIR` — directory of Gluvo doba role packs (default `gluvo-doba-packs/`).
 - `POGODI_BROJ_PACKS_DIR` — directory of "Pogodi broj" question packs (default `pogodi-broj-packs/`); each `<id>.json` has a sibling `<id>/` image folder served at `/pogodi-images/<id>/<file>`.
+- `EMOJI_PACKS_DIR` — directory of "Emoji zagonetke" puzzle packs (default `emoji-packs/`); JSON-only (`<id>.json` = array of `{emojis, answer, accept?, timeLimit?}`), same flow as quiz packs (`GET /api/emoji-packs`, admin editor `/admin/emoji`).
 - `TIMING_CONFIG_FILE` — JSON file of admin-configured wait-phase durations (default `timing-config.json` at repo root; gitignored, edited via `/admin/timinzi`).
 - `HOST_ORIGIN` / `CONTROLLER_ORIGIN` — CORS origins for LAN play.
 - `SAME_ORIGIN_DEPLOY=true` — single-container deploy (host + controller served from server).

@@ -28,6 +28,8 @@ interface NewGamesConfigStore {
   tajniAgentiMode: TajniAgentiMode;
   // Vruć krompir: how the bomb is passed ('sequential' | 'choose').
   hotPotatoMode: HotPotatoMode;
+  // Emoji zagonetke: progressive letter hints on/off (default on).
+  emojiHints: boolean;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
   // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
@@ -48,6 +50,7 @@ interface NewGamesConfigStore {
   setPogodiBrojPackId: (id: string) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setHotPotatoMode: (m: HotPotatoMode) => void;
+  setEmojiHints: (v: boolean) => void;
   setDrawGuessTimeLimit: (n: number) => void;
   setBoljiZivotTutorial: (v: boolean) => void;
   setRoundCount: (gameId: string, n: number) => void;
@@ -69,6 +72,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       pogodiBrojPackId: '',
       tajniAgentiMode: 'classic',
       hotPotatoMode: 'sequential',
+      emojiHints: true,
       drawGuessTimeLimit: 60,
       boljiZivotTutorial: false,
       roundCounts: {},
@@ -86,6 +90,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setPogodiBrojPackId: (id) => set({ pogodiBrojPackId: id }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setHotPotatoMode: (m) => set({ hotPotatoMode: m }),
+      setEmojiHints: (v) => set({ emojiHints: v }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
       setRoundCount: (gameId, n) =>

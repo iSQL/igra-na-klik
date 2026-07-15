@@ -22,6 +22,7 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   'foto-kviz': { options: [5, 8, 10], default: 8, min: 3, max: 12 },
   'ko-sam-ja': { options: [5, 8, 10], default: 8, min: 3, max: 12 },
   'spot-it': { options: [5, 10, 15], default: 10, min: 3, max: 20 },
+  'emoji-zagonetke': { options: [5, 10, 15, 20], default: 10, min: 3, max: 25 },
   'bolji-zivot': { options: [1, 2, 3, 4], default: 4, min: 1, max: 6 },
 };
 

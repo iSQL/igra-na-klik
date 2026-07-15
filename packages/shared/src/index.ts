@@ -43,3 +43,6 @@ export * from './games/bolji-zivot-deck.js';
 export * from './games/bolji-zivot-tutorial.js';
 export * from './types/hot-potato.js';
 export * from './games/hot-potato-categories.js';
+export * from './types/emoji-zagonetke.js';
+export * from './games/emoji-import.js';
+export * from './games/emoji-riddles.js';

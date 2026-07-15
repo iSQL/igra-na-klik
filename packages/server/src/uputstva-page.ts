@@ -183,6 +183,16 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Selo pobeđuje kad razotkrije sav Mrak; Mrak kad ih bude koliko i ostalih.</li>
 </ul>`,
   },
+  'emoji-zagonetke': {
+    emoji: '🎬',
+    body: `<p>Niz emojija krije film, izreku ili pojam.</p>
+<ul>
+<li>Na ekranu se pojavi zagonetka od emojija (🎬🦁👑 = Kralj lavova).</li>
+<li>Svi istovremeno kucaju odgovor na telefonu — može više pokušaja.</li>
+<li>Brži tačan odgovor nosi više poena; svako ko pogodi dobija poene.</li>
+<li>Ako je uključen hint, slova odgovora se postepeno otkrivaju.</li>
+</ul>`,
+  },
   'hot-potato': {
     emoji: '🥔',
     body: `<p>Bomba sa skrivenim tajmerom kruži — brzo je se rešite!</p>

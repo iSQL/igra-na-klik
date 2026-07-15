@@ -79,6 +79,8 @@ export function registerGameHandlers(
       roundCount: data.roundCount,
       boljiZivotTutorial: data.boljiZivotTutorial,
       hotPotatoMode: data.hotPotatoMode,
+      customEmojiPuzzles: data.customEmojiPuzzles,
+      emojiHints: data.emojiHints,
       language: data.language,
     });
     if (result.error) {

@@ -9,6 +9,7 @@ import {
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseGluvoDobaPack,
+  parseEmojiImport,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
   TAJNI_AGENTI_MAX_WORD_LENGTH,
@@ -39,6 +40,7 @@ interface ContentDirs {
   koSamJaPacksDir: string;
   tajniAgentiPacksDir: string;
   gluvoDobaPacksDir: string;
+  emojiPacksDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
@@ -454,6 +456,48 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
       const parsed = parseGluvoDobaPack(body);
       if (!parsed.ok) return { ok: false, error: parsed.error };
       return { ok: true, data: parsed.pack };
+    },
+  });
+
+  // ---------- emoji zagonetke packs ---------------------------------------------
+  // File on disk: array of {emojis, answer, accept?: string[], timeLimit?}.
+
+  mountPackRoutes({
+    route: 'emoji-packs',
+    dir: dirs.emojiPacksDir,
+    listKey: 'packs',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const puzzles = Array.isArray(raw) ? raw : [];
+      const strict =
+        puzzles.length > 0 ? parseEmojiImport(puzzles) : { ok: false as const };
+      return {
+        id,
+        count: puzzles.length,
+        visibleInGame: strict.ok === true,
+        error:
+          strict.ok === false && puzzles.length > 0
+            ? (strict as { error?: string }).error
+            : undefined,
+        puzzles,
+      };
+    },
+    create: () => ({ ok: true, data: [] }),
+    replace: (body) => {
+      if (!Array.isArray(body.puzzles))
+        return { ok: false, error: 'Polje "puzzles" mora biti niz.' };
+      if (body.puzzles.length === 0) return { ok: true, data: [] };
+      const parsed = parseEmojiImport(body.puzzles);
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      return {
+        ok: true,
+        data: parsed.puzzles.map((p) => ({
+          emojis: p.emojis,
+          answer: p.answer,
+          ...(p.accept ? { accept: p.accept } : {}),
+          timeLimit: p.timeLimit,
+        })),
+      };
     },
   });
 

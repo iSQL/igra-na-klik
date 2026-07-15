@@ -23,6 +23,7 @@ export interface AdminPageOptions {
     | 'tajni-agenti'
     | 'gluvo-doba'
     | 'pogodi-broj'
+    | 'emoji'
     | 'timinzi';
   /** Page-specific CSS appended after the base styles. */
   extraCss?: string;
@@ -39,6 +40,7 @@ export const ADMIN_NAV_LINKS: ReadonlyArray<[key: string, href: string, label: s
   ['tajni-agenti', '/admin/tajni-agenti', 'Tajni agenti'],
   ['gluvo-doba', '/admin/gluvo-doba', 'Gluvo doba'],
   ['pogodi-broj', '/admin/pogodi-broj', 'Pogodi broj'],
+  ['emoji', '/admin/emoji', 'Emoji'],
   ['timinzi', '/admin/timinzi', 'Timinzi'],
 ];
 
