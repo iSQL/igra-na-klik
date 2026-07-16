@@ -128,6 +128,7 @@ app.get('/api/question-packs', async (_req, res) => {
           id: KVIZ_BANK_PACK_ID,
           fileName: '',
           name: 'Ugrađena pitanja',
+          category: 'opste',
           count: QUIZ_QUESTION_BANK.length,
           types: BANK_TYPE_COUNTS,
         },

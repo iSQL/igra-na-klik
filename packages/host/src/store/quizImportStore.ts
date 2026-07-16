@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import type { KvizImportQuestion, KvizQuestionType } from '@igra/shared';
+import type {
+  KvizCategoryId,
+  KvizImportQuestion,
+  KvizQuestionType,
+} from '@igra/shared';
 
 const STORAGE_KEY = 'igra-quiz-custom';
 
@@ -55,6 +59,7 @@ export interface QuizPackSummary {
   fileName: string;
   name: string;
   description?: string;
+  category?: KvizCategoryId;
   count: number;
   types: Partial<Record<KvizQuestionType, number>>;
 }

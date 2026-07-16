@@ -22,6 +22,7 @@ import {
   GLUVO_DOBA_TEAM_NAMES,
   GLUVO_DOBA_MIN_WOLVES,
   GLUVO_DOBA_MAX_WOLVES,
+  KVIZ_CATEGORIES,
   type GluvoDobaRoleId,
 } from '@igra/shared';
 
@@ -42,6 +43,9 @@ const GLUVO_ROLE_META_JSON = JSON.stringify(
     desc: GLUVO_DOBA_ROLES[id].description,
   }))
 );
+
+/** Kviz category taxonomy injected once into the page as a JSON literal. */
+const KVIZ_CATEGORIES_JSON = JSON.stringify(KVIZ_CATEGORIES);
 
 export function renderAdminApp(): string {
   return `<!DOCTYPE html>
@@ -168,6 +172,7 @@ input,textarea,select{font:inherit}
 .pk-opt .o-meta{display:block;font-size:.75rem;color:var(--muted)}
 .pk-opt .o-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .pk-sep{border-top:1px solid rgba(29,53,87,.1);margin:.35rem 0}
+.pk-cat{font-size:.7rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:.5rem .6rem .2rem}
 .pk-new{width:100%;display:flex;align-items:center;gap:.5rem;background:transparent;border-radius:10px;padding:.55rem .6rem;color:var(--navy);font-weight:800}
 .pk-new:hover{background:rgba(194,155,71,.10)}
 .badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:800;padding:4px 11px;border-radius:20px}
@@ -267,6 +272,13 @@ var Admin = (function(){
     getToken:getToken, setToken:setToken, clearToken:clearToken };
 })();
 
+/* Kviz category taxonomy (shared with the in-game picker). */
+var KVIZ_CATS = ${KVIZ_CATEGORIES_JSON};
+function kvizCatById(id){
+  for (var i=0;i<KVIZ_CATS.length;i++) if (KVIZ_CATS[i].id===id) return KVIZ_CATS[i];
+  return KVIZ_CATS[KVIZ_CATS.length-1]; /* 'ostalo' fallback */
+}
+
 /* ============ App core ============ */
 (function(){
   'use strict';
@@ -348,12 +360,23 @@ var Admin = (function(){
       if (packs.length === 0){
         html += '<div class="empty" style="padding:1rem">Nema packova.</div>';
       }
-      packs.forEach(function(p){
-        html += '<button class="pk-opt' + (p.id===curPackId()?' on':'') + '" data-pk="' + esc(p.id) + '">'
+      function packOpt(p){
+        return '<button class="pk-opt' + (p.id===curPackId()?' on':'') + '" data-pk="' + esc(p.id) + '">'
           + '<span style="flex:1;min-width:0"><span class="o-name">' + esc(packDisplayName(p)) + '</span>'
           + '<span class="o-meta">' + esc(packMetaText(p, g)) + '</span></span>'
           + '<span class="o-dot" style="background:' + (p.visibleInGame?'#3E7D57':'#A07D2E') + '"></span></button>';
-      });
+      }
+      if (g.id === 'kviz'){
+        // Group by category, in KVIZ_CATS order; skip empty sections.
+        KVIZ_CATS.forEach(function(cat){
+          var inCat = packs.filter(function(p){ return kvizCatById(p.category).id === cat.id; });
+          if (!inCat.length) return;
+          html += '<div class="pk-cat">' + esc(cat.icon + ' ' + cat.label) + '</div>';
+          inCat.forEach(function(p){ html += packOpt(p); });
+        });
+      } else {
+        packs.forEach(function(p){ html += packOpt(p); });
+      }
       html += '<div class="pk-sep"></div><button class="pk-new" id="pk-new">＋ Novi pack</button></div>';
     }
     html += '</div>';
@@ -677,6 +700,7 @@ var Admin = (function(){
     if (g.id==='kviz'){
       body={ name: p.name || p.id, questions: questions };
       if (p.description) body.description=p.description;
+      if (p.category) body.category=p.category;
       var maps=packMaps(ctx); if (Object.keys(maps).length) body.maps=maps;
     } else { body={ questions: questions }; }
     return ctx.putPack(body, okMsg);
@@ -1074,6 +1098,10 @@ var Admin = (function(){
       +'<div style="flex:1;min-width:0"><strong>'+esc(id)+'</strong><div class="hint" style="margin:0">bbox '+m.bbox.minLat+'…'+m.bbox.maxLat+' / '+m.bbox.minLng+'…'+m.bbox.maxLng+'</div></div>'
       +'<button class="btn btn-danger btn-sm" data-delmap="'+esc(id)+'">Obriši</button></div>'; });
 
+    var curCat=kvizCatById(ctx.pack.category).id;
+    var catOpts='';
+    KVIZ_CATS.forEach(function(c){ catOpts+='<option value="'+esc(c.id)+'"'+(c.id===curCat?' selected':'')+'>'+esc(c.icon+' '+c.label)+'</option>'; });
+
     sheet.innerHTML=
       '<div class="sheet-head"><div style="display:flex;align-items:center;gap:.6rem"><div style="flex:1">'
       + '<div class="sheet-eyebrow">Podaci o packu</div><div class="sheet-title">'+esc(ctx.pack.name||ctx.pack.id)+'</div></div>'
@@ -1081,6 +1109,8 @@ var Admin = (function(){
       + '<div class="sheet-body">'
       + '<label class="lbl">Naziv</label><input class="field" id="pk-name" maxlength="80" value="'+esc(ctx.pack.name||'')+'">'
       + '<label class="lbl">Opis (opciono)</label><input class="field" id="pk-desc" maxlength="200" value="'+esc(ctx.pack.description||'')+'">'
+      + '<label class="lbl">Kategorija</label><select class="field" id="pk-category">'+catOpts+'</select>'
+      + '<p class="hint" style="margin-top:0">Određuje pod kojom sekcijom se pack pojavljuje u igri.</p>'
       + '<div style="margin-top:.9rem"><button class="btn btn-ghost btn-sm" id="pk-save-meta">Sačuvaj podatke</button></div>'
       + '<label class="lbl" style="margin-top:1.4rem">Mape packa (za geo pitanja)</label>'
       + '<p class="hint" style="margin-top:0">Custom mapa = north-up Web Mercator izvoz + bbox brojevi sa ivica slike.</p>'
@@ -1102,9 +1132,10 @@ var Admin = (function(){
     function downscale(file,maxDim,quality){ return new Promise(function(resolve){ var url=URL.createObjectURL(file); var img=new Image(); img.onload=function(){ try{ var scale=Math.min(1,maxDim/Math.max(img.width,img.height)); var w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale)); var c=document.createElement('canvas'); c.width=w;c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg',quality)); }catch(e){ URL.revokeObjectURL(url); resolve(null); } }; img.onerror=function(){ URL.revokeObjectURL(url); resolve(null); }; img.src=url; }); }
 
     $('sh-x').onclick=close; $('sh-done').onclick=close;
+    function selCat(){ var el=$('pk-category'); return el?el.value:(ctx.pack.category||''); }
     $('pk-save-meta').onclick=function(){
       var body={ name:$('pk-name').value.trim()||ctx.pack.id, questions:ctx.pack.questions||[] };
-      var d=$('pk-desc').value.trim(); if(d)body.description=d; var mm=packMaps(ctx); if(Object.keys(mm).length)body.maps=mm;
+      var d=$('pk-desc').value.trim(); if(d)body.description=d; var c=selCat(); if(c)body.category=c; var mm=packMaps(ctx); if(Object.keys(mm).length)body.maps=mm;
       ctx.putPack(body,'Sačuvano.').then(close).catch(function(e){ showErr(e.message); });
     };
     $('toggle-map-form').onclick=function(){ var f=$('map-form'); f.style.display=f.style.display==='none'?'block':'none'; };
@@ -1119,7 +1150,7 @@ var Admin = (function(){
       $('save-map').disabled=true;
       var up=pendMap?api('POST','/api/admin/quiz-packs/'+ctx.pack.id+'/file',{kind:'image',dataBase64:pendMap}).then(function(d){ return d.file; }):Promise.resolve(existing.imageFile);
       up.then(function(imageFile){ var m={}; var all=packMaps(ctx); for(var k in all)m[k]=all[k]; m[mapId]={imageFile:imageFile,bbox:bbox};
-        var body={ name:ctx.pack.name||ctx.pack.id, questions:ctx.pack.questions||[], maps:m }; if(ctx.pack.description)body.description=ctx.pack.description;
+        var body={ name:ctx.pack.name||ctx.pack.id, questions:ctx.pack.questions||[], maps:m }; if(ctx.pack.description)body.description=ctx.pack.description; var c=selCat(); if(c)body.category=c;
         return ctx.putPack(body,'Mapa sačuvana.').then(close);
       }).catch(function(e){ showErr(e.message); }).then(function(){ var b=$('save-map'); if(b)b.disabled=false; });
     };
@@ -1130,7 +1161,7 @@ var Admin = (function(){
       if(used){ showErr('Mapa "'+id+'" se koristi u geo pitanjima — prvo ih prebaci ili obriši.'); return; }
       if(!window.confirm('Obrisati mapu "'+id+'"?'))return;
       var m={}; var all=packMaps(ctx); for(var k in all)if(k!==id)m[k]=all[k];
-      var body={ name:ctx.pack.name||ctx.pack.id, questions:ctx.pack.questions||[], maps:m }; if(ctx.pack.description)body.description=ctx.pack.description;
+      var body={ name:ctx.pack.name||ctx.pack.id, questions:ctx.pack.questions||[], maps:m }; if(ctx.pack.description)body.description=ctx.pack.description; if(ctx.pack.category)body.category=ctx.pack.category;
       ctx.putPack(body,'Mapa obrisana.').then(close).catch(function(e){ showErr(e.message); });
     };
   }

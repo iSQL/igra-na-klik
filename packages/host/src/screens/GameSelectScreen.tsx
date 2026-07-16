@@ -34,6 +34,7 @@ import {
   availableQuestionCount,
   effectivePackIds,
 } from '../store/quizImportStore';
+import { recordRecentPacks } from '../store/quizRecentStore';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
@@ -145,6 +146,7 @@ export function GameSelectScreen() {
           return;
         }
         quizPackIds = ids;
+        recordRecentPacks(ids);
       }
       // Omit the filter when every type is checked.
       if (

@@ -262,6 +262,11 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
         : typeof obj.description === 'string'
           ? obj.description
           : undefined,
+      category: lax.ok
+        ? lax.manifest.category
+        : typeof obj.category === 'string'
+          ? obj.category
+          : undefined,
       maps: lax.ok ? (lax.manifest.maps ?? {}) : (obj.maps ?? {}),
       count: questions.length,
       types: lax.ok ? kvizTypeCounts(lax.manifest.questions) : {},
@@ -287,6 +292,7 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
         data: {
           ...(m.name ? { name: m.name } : {}),
           ...(m.description ? { description: m.description } : {}),
+          ...(m.category ? { category: m.category } : {}),
           ...(m.maps && Object.keys(m.maps).length > 0 ? { maps: m.maps } : {}),
           questions: m.questions,
         },

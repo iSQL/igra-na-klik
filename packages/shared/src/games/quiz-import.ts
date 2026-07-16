@@ -5,6 +5,8 @@ import type {
   QuizOption,
 } from '../types/quiz.js';
 import type { GeoMapBBox, GeoPackMapDef } from '../types/geo-guess.js';
+import { KVIZ_CATEGORY_IDS } from './quiz-categories.js';
+import type { KvizCategoryId } from './quiz-categories.js';
 
 /**
  * Human-friendly wire formats for kviz pack questions. A pack manifest is
@@ -94,6 +96,8 @@ export type KvizImportQuestion =
 export interface KvizPackManifest {
   name?: string;
   description?: string;
+  /** Grouping category id (see KVIZ_CATEGORIES); unknown/missing = 'ostalo'. */
+  category?: KvizCategoryId;
   maps?: Record<string, GeoPackMapDef>;
   questions: KvizImportQuestion[];
 }
@@ -390,6 +394,13 @@ export function parseQuizImport(
       return { ok: false, error: '"description" mora biti string.' };
     }
     description = rawManifest.description.trim() || undefined;
+  }
+
+  // Category — lax: a non-string or unknown id is silently dropped (falls back
+  // to 'ostalo' on display), never a validation error.
+  let category: KvizCategoryId | undefined;
+  if (typeof rawManifest.category === 'string' && KVIZ_CATEGORY_IDS.has(rawManifest.category)) {
+    category = rawManifest.category as KvizCategoryId;
   }
 
   // Maps (pack context only).
@@ -765,7 +776,7 @@ export function parseQuizImport(
 
   return {
     ok: true,
-    manifest: { name, description, maps, questions },
+    manifest: { name, description, category, maps, questions },
   };
 }
 

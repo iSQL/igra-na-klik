@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
+  KVIZ_CATEGORIES,
+  kvizCategory,
+  normalizeEmojiAnswer,
   parseKoSamJaImport,
   parseQuizImport,
 } from '@igra/shared';
@@ -12,6 +15,7 @@ import type {
   GameDefinition,
   GluvoDobaDeathReveal,
   GluvoDobaPack,
+  KvizCategoryId,
   KvizImportQuestion,
   KvizQuestionType,
   KoSamJaImportQuestion,
@@ -20,6 +24,10 @@ import type {
   HotPotatoMode,
   SpijunLocation,
 } from '@igra/shared';
+import {
+  getRecentPackIds,
+  recordRecentPacks,
+} from '../store/quizRecentStore';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
@@ -35,6 +43,8 @@ interface QuestionPackSummary {
   id: string;
   fileName: string;
   name: string;
+  description?: string;
+  category?: KvizCategoryId;
   count: number;
   types: Partial<Record<KvizQuestionType, number>>;
 }
@@ -382,6 +392,7 @@ export function GameSelectScreen() {
           return;
         }
         payload.quizPackIds = ids;
+        recordRecentPacks(ids);
       }
       if (quizTypes && quizTypes.length < KVIZ_ALL_TYPES.length) {
         payload.quizTypes = quizTypes;
@@ -1451,6 +1462,33 @@ function QuizConfig({
   const checkedIds = effectiveQuizPackIds(packs, selectedIds);
   const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
   const available = availableQuizCount(packs, selectedIds, selectedTypes);
+  const [search, setSearch] = useState('');
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const q = normalizeEmojiAnswer(search);
+  const matchesSearch = (p: QuestionPackSummary) =>
+    !q ||
+    normalizeEmojiAnswer(p.name).includes(q) ||
+    normalizeEmojiAnswer(p.description ?? '').includes(q);
+
+  // Packs grouped by category, in KVIZ_CATEGORIES order, empty groups dropped.
+  const groups = useMemo(() => {
+    const visible = packs.filter(matchesSearch);
+    return KVIZ_CATEGORIES.map((cat) => ({
+      cat,
+      items: visible.filter((p) => kvizCategory(p.category).id === cat.id),
+    })).filter((g) => g.items.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packs, q]);
+
+  const recent = useMemo(() => {
+    if (q) return [];
+    const byId = new Map(packs.map((p) => [p.id, p]));
+    return getRecentPackIds()
+      .map((id) => byId.get(id))
+      .filter((p): p is QuestionPackSummary => !!p)
+      .slice(0, 6);
+  }, [packs, q]);
 
   const togglePack = (id: string) => {
     const next = checkedIds.includes(id)
@@ -1459,6 +1497,21 @@ function QuizConfig({
     // Everything checked collapses back to null so new packs auto-include.
     setSelectedIds(next.length === packs.length ? null : next);
   };
+
+  const setPacksChecked = (ids: string[], on: boolean) => {
+    const cur = new Set(checkedIds);
+    ids.forEach((id) => (on ? cur.add(id) : cur.delete(id)));
+    const next = [...cur];
+    setSelectedIds(next.length === packs.length ? null : next);
+  };
+
+  const toggleCollapse = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const toggleType = (ty: KvizQuestionType) => {
     const next = checkedTypes.includes(ty)
@@ -1523,6 +1576,43 @@ function QuizConfig({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       {!isFileImport && packs.length > 0 && (
         <>
+          {/* Search */}
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('quizConfig.search')}
+            style={{
+              padding: '0.45rem 0.6rem',
+              fontSize: '0.85rem',
+              borderRadius: '10px',
+              border: '1.5px solid var(--line2)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+            }}
+          />
+
+          {/* Recently used */}
+          {recent.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                🕘 {t('quizConfig.recent')}
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                {recent.map((p) => (
+                  <Pill
+                    key={p.id}
+                    active={checkedIds.includes(p.id)}
+                    onClick={() => togglePack(p.id)}
+                  >
+                    {checkedIds.includes(p.id) ? '✓ ' : ''}
+                    {p.name}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          )}
+
           {labelRow(
             t('quizConfig.packs'),
             () => setSelectedIds(null),
@@ -1532,8 +1622,8 @@ function QuizConfig({
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.25rem',
-              maxHeight: '150px',
+              gap: '0.1rem',
+              maxHeight: '220px',
               overflowY: 'auto',
               padding: '0.4rem 0.5rem',
               background: 'var(--bg-primary)',
@@ -1541,30 +1631,76 @@ function QuizConfig({
               border: '1.5px solid var(--line2)',
             }}
           >
-            {packs.map((p) => {
-              const on = checkedIds.includes(p.id);
+            {groups.length === 0 && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--dim)' }}>
+                {t('quizConfig.noResults', { q: search })}
+              </span>
+            )}
+            {groups.map(({ cat, items }) => {
+              const ids = items.map((p) => p.id);
+              const selInSection = ids.filter((id) => checkedIds.includes(id)).length;
+              const allOn = selInSection === ids.length;
+              const isCollapsed = collapsed.has(cat.id);
               return (
-                <label
-                  key={p.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    color: on ? 'var(--text-primary)' : 'var(--dim)',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={() => togglePack(p.id)}
-                    style={{ minHeight: 'auto', width: '17px', height: '17px' }}
-                  />
-                  <span style={{ flex: 1 }}>
-                    {p.name} ({p.count})
-                  </span>
-                </label>
+                <div key={cat.id}>
+                  <div
+                    onClick={() => toggleCollapse(cat.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      cursor: 'pointer',
+                      padding: '0.3rem 0',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.65rem', color: 'var(--dim)', width: '10px' }}>
+                      {isCollapsed ? '▸' : '▾'}
+                    </span>
+                    <span style={{ flex: 1, fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                      {cat.icon} {cat.label}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--dim)' }}>
+                      {selInSection}/{ids.length}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPacksChecked(ids, !allOn);
+                      }}
+                      style={bulkBtnStyle}
+                    >
+                      {t('quizConfig.selectAll')}
+                    </button>
+                  </div>
+                  {!isCollapsed &&
+                    items.map((p) => {
+                      const on = checkedIds.includes(p.id);
+                      return (
+                        <label
+                          key={p.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            color: on ? 'var(--text-primary)' : 'var(--dim)',
+                            padding: '0.12rem 0 0.12rem 1.1rem',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => togglePack(p.id)}
+                            style={{ minHeight: 'auto', width: '17px', height: '17px' }}
+                          />
+                          <span style={{ flex: 1 }}>
+                            {p.name} ({p.count})
+                          </span>
+                        </label>
+                      );
+                    })}
+                </div>
               );
             })}
           </div>
@@ -1586,16 +1722,22 @@ function QuizConfig({
             ))}
           </div>
 
-          <span
-            style={{
-              fontSize: '0.72rem',
-              color: available > 0 ? 'var(--text-secondary)' : 'var(--danger)',
-            }}
-          >
-            {available > 0
-              ? t('quizConfig.available', { n: available })
-              : t('quizConfig.emptySelection')}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span
+              style={{
+                flex: 1,
+                fontSize: '0.72rem',
+                color: available > 0 ? 'var(--text-secondary)' : 'var(--danger)',
+              }}
+            >
+              {available > 0
+                ? t('quizConfig.selectedSummary', { packs: checkedIds.length, questions: available })
+                : t('quizConfig.emptySelection')}
+            </span>
+            <button onClick={() => setSelectedIds([])} style={bulkBtnStyle}>
+              {t('quizConfig.clear')}
+            </button>
+          </div>
         </>
       )}
       <input

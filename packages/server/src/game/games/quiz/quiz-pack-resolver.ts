@@ -1,6 +1,7 @@
 import path from 'path';
 import { readFile, readdir } from 'fs/promises';
 import type {
+  KvizCategoryId,
   KvizImportQuestion,
   KvizPackManifest,
   KvizQuestionFull,
@@ -19,6 +20,8 @@ export interface QuizPackSummary {
   fileName: string;
   name: string;
   description?: string;
+  /** Grouping category id (undefined = treated as 'ostalo' on display). */
+  category?: KvizCategoryId;
   count: number;
   /** Per-type question counts, e.g. { obicno: 10, geo: 3 }. */
   types: Partial<Record<KvizQuestionType, number>>;
@@ -166,6 +169,7 @@ export async function listQuizPackSummaries(
         fileName: entry.name,
         name: parsed.manifest.name ?? id,
         description: parsed.manifest.description,
+        category: parsed.manifest.category,
         count: parsed.manifest.questions.length,
         types: kvizTypeCounts(parsed.manifest.questions),
       });
