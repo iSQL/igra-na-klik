@@ -14,33 +14,38 @@ export function HostlessLeaderboard({
   title,
   entries,
   myPlayerId,
+  embedded,
 }: {
   title: string;
   entries: LeaderboardEntry[];
   myPlayerId: string;
+  /** Rendered inside another scrolling screen — no own height/scroll/padding. */
+  embedded?: boolean;
 }) {
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
         gap: '0.75rem',
-        padding: '1rem',
-        overflowY: 'auto',
+        ...(embedded
+          ? { padding: '0.5rem 0' }
+          : { height: '100%', padding: '1rem', overflowY: 'auto' }),
       }}
     >
-      <p
-        className="display"
-        style={{
-          textAlign: 'center',
-          fontSize: '1.25rem',
-          fontWeight: 600,
-          margin: 0,
-        }}
-      >
-        {title}
-      </p>
+      {title && (
+        <p
+          className="display"
+          style={{
+            textAlign: 'center',
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            margin: 0,
+          }}
+        >
+          {title}
+        </p>
+      )}
       {entries.map((entry) => {
         const isMe = entry.playerId === myPlayerId;
         const rankColor =

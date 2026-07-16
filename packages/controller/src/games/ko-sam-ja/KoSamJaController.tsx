@@ -399,26 +399,23 @@ export default function KoSamJaController() {
       );
     }
 
+    // TV mode: own rank as the hero, with the full standings underneath so
+    // the phone shows everyone's placement too.
     return (
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
           height: '100%',
-          gap: '1rem',
-          textAlign: 'center',
+          width: '100%',
+          padding: '1rem',
+          gap: '0.25rem',
+          overflowY: 'auto',
         }}
       >
         {myEntry && (
-          <>
-            <p
-              style={{
-                fontSize: '1rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
               {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
             <p
@@ -426,15 +423,22 @@ export default function KoSamJaController() {
                 fontSize: '3rem',
                 fontWeight: 800,
                 color: 'var(--accent)',
+                margin: 0,
               }}
             >
               #{myEntry.rank}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
+            <p style={{ fontSize: '1.3rem', fontWeight: 600, margin: 0 }}>
               {myEntry.score.toLocaleString()} poena
             </p>
-          </>
+          </div>
         )}
+        <HostlessLeaderboard
+          title=""
+          entries={leaderboard}
+          myPlayerId={playerId}
+          embedded
+        />
       </div>
     );
   }

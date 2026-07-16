@@ -344,20 +344,22 @@ export default function QuizGameController() {
       );
     }
 
+    // TV mode: own rank as the hero, with the full standings underneath so
+    // the phone shows everyone's placement too.
     return (
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
           height: '100%',
-          gap: '1rem',
-          textAlign: 'center',
+          width: '100%',
+          padding: '1rem',
+          gap: '0.25rem',
+          overflowY: 'auto',
         }}
       >
         {myEntry && (
-          <>
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
             <p
               style={{
                 fontSize: '0.85rem',
@@ -365,22 +367,37 @@ export default function QuizGameController() {
                 color: 'var(--text-secondary)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
+                margin: 0,
               }}
             >
               {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
             <p
               className="display text-grad"
-              style={{ fontSize: '4rem', fontWeight: 700, animation: 'igra-pop .5s' }}
+              style={{
+                fontSize: '3rem',
+                fontWeight: 700,
+                animation: 'igra-pop .5s',
+                margin: 0,
+              }}
             >
               #{myEntry.rank}
             </p>
-            <p className="display" style={{ fontSize: '1.6rem', fontWeight: 600 }}>
+            <p
+              className="display"
+              style={{ fontSize: '1.3rem', fontWeight: 600, margin: 0 }}
+            >
               {myEntry.score.toLocaleString()}{' '}
-              <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>poena</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>poena</span>
             </p>
-          </>
+          </div>
         )}
+        <HostlessLeaderboard
+          title=""
+          entries={leaderboard}
+          myPlayerId={playerId}
+          embedded
+        />
       </div>
     );
   }

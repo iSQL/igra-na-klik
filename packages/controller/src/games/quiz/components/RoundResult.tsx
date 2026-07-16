@@ -74,11 +74,11 @@ export function RoundResult({ results }: RoundResultProps) {
           {correct ? '✓' : '✗'}
         </div>
         <div style={{ textAlign: 'left' }}>
+          {/* Manrope (no .display): Fredoka renders the Serbian "č" badly. */}
           <p
-            className="display"
             style={{
               fontSize: '1.4rem',
-              fontWeight: 700,
+              fontWeight: 800,
               color: correct ? 'var(--success)' : 'var(--danger)',
               margin: 0,
               lineHeight: 1.1,

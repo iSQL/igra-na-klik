@@ -58,9 +58,20 @@ function ReconnectingOverlay() {
 function GameEndedOverlay({
   placement,
 }: {
-  placement: { rank: number; points: number } | null;
+  placement: {
+    rank: number;
+    points: number;
+    standings: {
+      playerId: string;
+      name: string;
+      avatarColor: string;
+      score: number;
+      rank: number;
+    }[];
+  } | null;
 }) {
   const t = useT();
+  const myId = usePlayerStore.getState().player?.id;
   return (
     <div
       style={{
@@ -117,6 +128,82 @@ function GameEndedOverlay({
               points: placement.points,
             })}
           </p>
+        )}
+        {placement && placement.standings.length > 0 && (
+          <div
+            style={{
+              marginTop: '0.9rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.3rem',
+              maxHeight: '38vh',
+              overflowY: 'auto',
+              textAlign: 'left',
+            }}
+          >
+            {placement.standings.map((s) => {
+              const isMe = s.playerId === myId;
+              const rankColor =
+                s.rank === 1
+                  ? 'var(--amber)'
+                  : s.rank === 2
+                    ? '#C9CCE0'
+                    : s.rank === 3
+                      ? '#D8916A'
+                      : 'var(--dim)';
+              return (
+                <div
+                  key={s.playerId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.35rem 0.6rem',
+                    background: isMe
+                      ? 'rgba(194,155,71,.16)'
+                      : 'var(--bg-secondary)',
+                    border: `1px solid ${isMe ? 'var(--accent)' : 'var(--line)'}`,
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  <span
+                    className="display"
+                    style={{
+                      fontWeight: 700,
+                      color: rankColor,
+                      minWidth: '1.3rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {s.rank}
+                  </span>
+                  <span
+                    className="avatar-tile"
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: s.avatarColor,
+                    }}
+                  />
+                  <span
+                    style={{
+                      flex: 1,
+                      fontWeight: isMe ? 800 : 600,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {s.name}
+                  </span>
+                  <span className="display" style={{ fontWeight: 700 }}>
+                    {s.score.toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
         <p
           style={{
@@ -201,6 +288,14 @@ export function App() {
   const [finalPlacement, setFinalPlacement] = useState<{
     rank: number;
     points: number;
+    /** Everyone's final placement — rendered under the own-rank badge. */
+    standings: {
+      playerId: string;
+      name: string;
+      avatarColor: string;
+      score: number;
+      rank: number;
+    }[];
   } | null>(null);
   const [kickNotice, setKickNotice] = useState<string | null>(null);
 
@@ -391,16 +486,31 @@ export function App() {
         );
         // Ties share the higher rank (two players at 1000 are both 1st).
         const rank = sorted.findIndex((s) => s.score === mine.score) + 1;
-        setFinalPlacement({ rank, points: mine.score });
+        // Full standings with names/colors joined from the room roster, so
+        // the overlay can show everyone's placement, not just our own.
+        const roomPlayers = usePlayerStore.getState().room?.players ?? [];
+        const standings = sorted.map((s, i) => {
+          const p = roomPlayers.find((rp) => rp.id === s.playerId);
+          return {
+            playerId: s.playerId,
+            name: p?.name ?? '???',
+            avatarColor: p?.avatarColor ?? '#666',
+            score: s.score,
+            rank: sorted.findIndex((x) => x.score === s.score) + 1 || i + 1,
+          };
+        });
+        setFinalPlacement({ rank, points: mine.score, standings });
       } else {
         setFinalPlacement(null);
       }
       setGameEndedNotice(true);
+      // With the full standings list there's more to read — hold longer.
+      const holdMs = mine && scoresVary ? 7000 : 4000;
       setTimeout(() => {
         setGameEndedNotice(false);
         setFinalPlacement(null);
         resetGame();
-      }, 4000);
+      }, holdMs);
     });
 
     socket.on('room:kicked', ({ reason }) => {

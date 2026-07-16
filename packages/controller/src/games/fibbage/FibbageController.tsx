@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
+import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
 import { AnswerInput } from './components/AnswerInput';
 import { VoteOptions } from './components/VoteOptions';
 import { WaitingScreen } from './components/WaitingScreen';
@@ -170,31 +171,46 @@ export default function FibbageController() {
     const leaderboard = data.leaderboard as FibbageLeaderboardEntry[];
     const myEntry = leaderboard.find((e) => e.playerId === playerId);
 
+    // TV mode: own rank as the hero, with the full standings underneath so
+    // the phone shows everyone's placement too.
     return (
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
           height: '100%',
-          gap: '1rem',
-          textAlign: 'center',
+          width: '100%',
+          padding: '1rem',
+          gap: '0.25rem',
+          overflowY: 'auto',
         }}
       >
         {myEntry && (
-          <>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
               {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
             </p>
-            <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
+            <p
+              style={{
+                fontSize: '3rem',
+                fontWeight: 800,
+                color: 'var(--accent)',
+                margin: 0,
+              }}
+            >
               #{myEntry.rank}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 600 }}>
+            <p style={{ fontSize: '1.3rem', fontWeight: 600, margin: 0 }}>
               {myEntry.score.toLocaleString()} poena
             </p>
-          </>
+          </div>
         )}
+        <HostlessLeaderboard
+          title=""
+          entries={leaderboard}
+          myPlayerId={playerId}
+          embedded
+        />
       </div>
     );
   }
