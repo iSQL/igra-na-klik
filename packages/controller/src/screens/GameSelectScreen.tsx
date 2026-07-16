@@ -1098,6 +1098,7 @@ export function GameSelectScreen() {
               <button
                 className="btn-primary"
                 onClick={() => handleStart(selectedGame)}
+                style={{ display: 'block', width: '100%' }}
               >
                 ▶ {t('gameSelect.start')} {t(`game.${selectedGame.id}.name`)}
               </button>
@@ -1492,13 +1493,41 @@ function QuizConfig({
     reader.readAsText(file);
   };
 
+  // Tiny "Sve / Ništa" bulk-select buttons next to a section label.
+  const bulkBtnStyle: CSSProperties = {
+    padding: '0.1rem 0.55rem',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    borderRadius: '999px',
+    border: '1px solid var(--line2)',
+    background: 'transparent',
+    color: 'var(--text-secondary)',
+    minHeight: '24px',
+    minWidth: 'auto',
+  };
+  const labelRow = (label: string, onAll: () => void, onNone: () => void) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <span style={{ flex: 1, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+        {label}
+      </span>
+      <button onClick={onAll} style={bulkBtnStyle}>
+        {t('quizConfig.selectAll')}
+      </button>
+      <button onClick={onNone} style={bulkBtnStyle}>
+        {t('quizConfig.selectNone')}
+      </button>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
       {!isFileImport && packs.length > 0 && (
         <>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {t('quizConfig.packs')}
-          </span>
+          {labelRow(
+            t('quizConfig.packs'),
+            () => setSelectedIds(null),
+            () => setSelectedIds([])
+          )}
           <div
             style={{
               display: 'flex',
@@ -1540,9 +1569,11 @@ function QuizConfig({
             })}
           </div>
 
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {t('quizConfig.types')}
-          </span>
+          {labelRow(
+            t('quizConfig.types'),
+            () => setSelectedTypes(null),
+            () => setSelectedTypes([])
+          )}
           <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
             {KVIZ_ALL_TYPES.map((ty) => (
               <Pill

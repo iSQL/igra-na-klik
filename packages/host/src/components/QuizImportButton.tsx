@@ -34,6 +34,8 @@ export function QuizImportButton() {
     setPacks,
     togglePack,
     toggleType,
+    setSelectedPackIds,
+    setSelectedTypes,
     setCustom,
     clearCustom,
   } = useQuizImportStore();
@@ -86,6 +88,56 @@ export function QuizImportButton() {
   const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
   const available = availableQuestionCount(packs, selectedPackIds, selectedTypes);
   const isFileImport = customQuestions !== null;
+
+  // Tiny "Sve / Ništa" bulk-select buttons next to a section label.
+  const bulkBtnStyle: React.CSSProperties = {
+    padding: '0.1rem 0.5rem',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    borderRadius: '999px',
+    border: '1px solid var(--line2)',
+    background: 'transparent',
+    color: 'var(--text-secondary)',
+    minHeight: '22px',
+    minWidth: 'auto',
+  };
+
+  const labelRow = (
+    label: string,
+    onAll: () => void,
+    onNone: () => void
+  ) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        marginTop: '0.2rem',
+      }}
+    >
+      <span style={{ flex: 1, fontSize: '0.72rem', color: 'var(--dim)', fontWeight: 700, textAlign: 'left' }}>
+        {label}
+      </span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onAll();
+        }}
+        style={bulkBtnStyle}
+      >
+        {t('quizConfig.selectAll')}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onNone();
+        }}
+        style={bulkBtnStyle}
+      >
+        {t('quizConfig.selectNone')}
+      </button>
+    </div>
+  );
 
   const chipStyle = (on: boolean): React.CSSProperties => ({
     padding: '0.3rem 0.6rem',
@@ -148,9 +200,11 @@ export function QuizImportButton() {
         <>
           {packs.length > 0 && (
             <>
-              <p style={{ fontSize: '0.72rem', color: 'var(--dim)', margin: 0, fontWeight: 700 }}>
-                {t('quizConfig.packs')}
-              </p>
+              {labelRow(
+                t('quizConfig.packs'),
+                () => setSelectedPackIds(null),
+                () => setSelectedPackIds([])
+              )}
               <div
                 style={{
                   display: 'flex',
@@ -189,9 +243,11 @@ export function QuizImportButton() {
                 })}
               </div>
 
-              <p style={{ fontSize: '0.72rem', color: 'var(--dim)', margin: '0.2rem 0 0', fontWeight: 700 }}>
-                {t('quizConfig.types')}
-              </p>
+              {labelRow(
+                t('quizConfig.types'),
+                () => setSelectedTypes(null),
+                () => setSelectedTypes([])
+              )}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
                 {KVIZ_ALL_TYPES.map((ty) => (
                   <button

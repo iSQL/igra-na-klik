@@ -72,6 +72,9 @@ interface QuizImportStore {
   setPacks: (packs: QuizPackSummary[]) => void;
   togglePack: (packId: string) => void;
   toggleType: (type: KvizQuestionType) => void;
+  /** Bulk set: null = all, [] = none. */
+  setSelectedPackIds: (v: string[] | null) => void;
+  setSelectedTypes: (v: KvizQuestionType[] | null) => void;
   setCustom: (questions: KvizImportQuestion[], fileName: string) => void;
   clearCustom: () => void;
 }
@@ -151,6 +154,26 @@ export const useQuizImportStore = create<QuizImportStore>((set, get) => ({
       questions: customQuestions,
     });
     set({ selectedTypes: value });
+  },
+  setSelectedPackIds: (v) => {
+    const { selectedTypes, fileName, customQuestions } = get();
+    persist({
+      selectedPackIds: v,
+      selectedTypes,
+      fileName,
+      questions: customQuestions,
+    });
+    set({ selectedPackIds: v });
+  },
+  setSelectedTypes: (v) => {
+    const { selectedPackIds, fileName, customQuestions } = get();
+    persist({
+      selectedPackIds,
+      selectedTypes: v,
+      fileName,
+      questions: customQuestions,
+    });
+    set({ selectedTypes: v });
   },
   setCustom: (questions, fileName) => {
     const { selectedPackIds, selectedTypes } = get();
