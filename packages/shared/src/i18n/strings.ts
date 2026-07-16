@@ -330,6 +330,99 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.emoji-zagonetke.name': 'Emoji zagonetke',
     'game.emoji-zagonetke.description':
       'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
+
+    // --- game-select cards: tags, short blurbs, "how to play" -------------
+    'gameSelect.howToPlay': 'Kako se igra →',
+    'gameSelect.howToPlayLabel': 'Kako se igra',
+    'gameSelect.noConfig': 'Nema dodatnih podešavanja — samo pokreni ✨',
+    'gameSelect.filterAll': 'Sve',
+    'gameSelect.noGamesForFilter': 'Nema igara za izabrane filtere.',
+    'gameTag.quiz': 'Kviz',
+    'gameTag.drawing': 'Crtanje',
+    'gameTag.drawing-bluff': 'Crtanje · Blef',
+    'gameTag.bluff': 'Blef',
+    'gameTag.party': 'Društvena',
+    'gameTag.speed': 'Brzina',
+    'gameTag.team': 'Timska',
+    'gameTag.cards': 'Kartaška',
+
+    'game.quiz.blurb': 'Pitanja na vreme — najbrži nosi poene.',
+    'game.quiz.rule1':
+      'Pitanja se prikazuju na vreme — brži tačan odgovor nosi više poena.',
+    'game.quiz.rule2': 'Tipovi: obična, sa slikom, mapa, broj, pesma i video.',
+    'game.quiz.rule3': 'Posle svake runde ide animirana tabela rezultata.',
+    'game.draw-guess.blurb': 'Crtaj reč — ostali je pogađaju.',
+    'game.draw-guess.rule1':
+      'Igrači redom crtaju zadatu reč, ostali kucaju pogađanja.',
+    'game.draw-guess.rule2':
+      'Brže pogađanje = više poena; crtač dobija poene po svakom pogotku.',
+    'game.draw-guess.rule3': 'Vremenom se otkrivaju slova kao pomoć.',
+    'game.fake-artist.blurb': 'Nađi uljeza koji ne zna reč.',
+    'game.fake-artist.rule1':
+      'Svi crtaju istu reč po jedan potez — osim uljeza.',
+    'game.fake-artist.rule2': 'Posle crtanja glasate ko je lažni umetnik.',
+    'game.fake-artist.rule3':
+      'Uljez pobeđuje ako ostane neotkriven ili pogodi reč.',
+    'game.fibbage.blurb': 'Napiši lažan odgovor, prevari ekipu.',
+    'game.fibbage.rule1': 'Napišite ubedljiv lažan odgovor na pitanje.',
+    'game.fibbage.rule2':
+      '+500 za pronalazak istine, +100 za svakog koga prevarite.',
+    'game.fibbage.rule3': 'Ne možete glasati za sopstveni odgovor.',
+    'game.ko-bi-pre.blurb': 'Ko bi pre uradio nešto?',
+    'game.ko-bi-pre.rule1': 'Za svako pitanje glasate ko bi pre nešto uradio.',
+    'game.ko-bi-pre.rule2': 'Poeni onima koji pogode odgovor većine.',
+    'game.ko-bi-pre.rule3': 'Brza, lagana društvena igra.',
+    'game.dve-istine-i-laz.blurb': 'Dve istine i jedna laž.',
+    'game.dve-istine-i-laz.rule1': 'Svako napiše dve istine i jednu laž o sebi.',
+    'game.dve-istine-i-laz.rule2': 'Ostali pogađaju koja tvrdnja je laž.',
+    'game.dve-istine-i-laz.rule3': 'Poeni za tačno pogađanje i za dobru laž.',
+    'game.slepi-telefoni.blurb': 'Fraza koja se izvitoperi.',
+    'game.slepi-telefoni.rule1':
+      'Napišete frazu; sledeći je crta; naredni pogađa nacrtano.',
+    'game.slepi-telefoni.rule2': 'Lanac se okreće u krug kroz sve igrače.',
+    'game.slepi-telefoni.rule3':
+      'Na kraju gledate sve lance i glasate za najsmešniji.',
+    'game.ko-sam-ja.blurb': 'Koliko se dobro poznajete?',
+    'game.ko-sam-ja.rule1':
+      'Lično pitanje o jednom igraču — on tajno odgovara.',
+    'game.ko-sam-ja.rule2': 'Ostali pogađaju šta je izabrao.',
+    'game.ko-sam-ja.rule3': 'Igrač dobija poene kad ga niko ne pogodi.',
+    'game.spot-it.blurb': 'Nađi isti simbol prvi.',
+    'game.spot-it.rule1':
+      'Tvoja i centralna karta dele tačno jedan isti simbol.',
+    'game.spot-it.rule2': 'Prvi ko ga pronađe i tapne osvaja kartu.',
+    'game.spot-it.rule3': 'Najviše skupljenih karata na kraju pobeđuje.',
+    'game.gluvo-doba.blurb': 'Otkrij vukodlake pre zore.',
+    'game.gluvo-doba.rule1':
+      'Vukodlaci noću biraju žrtvu; selo danju glasa koga da protera.',
+    'game.gluvo-doba.rule2': 'Posebne uloge imaju moći (vidar, vidovnjak…).',
+    'game.gluvo-doba.rule3': 'Selo pobeđuje kad otkrije sve vukove.',
+    'game.bolji-zivot.blurb': 'Kartaška igra pamćenja.',
+    'game.bolji-zivot.rule1':
+      'Imaš 4 skrivene karte — cilj je najmanji zbir uroka.',
+    'game.bolji-zivot.rule2':
+      'Menjaj karte, špijuniraj protivnike, pamti šta je gde.',
+    'game.bolji-zivot.rule3': 'Vikni „Zavet!" kad misliš da si najniži.',
+    'game.tajni-agenti.blurb': 'Špijun daje šifru, čuvaj se ubice.',
+    'game.tajni-agenti.rule1': 'Špijun daje šifru: jedna reč + broj.',
+    'game.tajni-agenti.rule2':
+      'Tim pogađa svoje reči na tabli, ali pazi na ubicu.',
+    'game.tajni-agenti.rule3': 'Modovi: Klasik (2 tima), Duet i kooperativni.',
+    'game.emoji-zagonetke.blurb': 'Pogodi pojam iz niza emojija.',
+    'game.emoji-zagonetke.rule1': 'Niz emojija krije film, izreku ili pojam.',
+    'game.emoji-zagonetke.rule2':
+      'Svi kucaju odgovor — brži tačan nosi više poena.',
+    'game.emoji-zagonetke.rule3':
+      'Slova se mogu postepeno otkrivati kao pomoć.',
+    'game.spijun.blurb': 'Otkrij uljeza među vama.',
+    'game.spijun.rule1': 'Svi znaju tajnu lokaciju — osim špijuna.',
+    'game.spijun.rule2':
+      'Ispitujte se da otkrijete uljeza; špijun pokušava da pogodi lokaciju.',
+    'game.spijun.rule3': 'Glasanjem otkrivate ko je špijun.',
+    'game.hot-potato.blurb': 'Prosledi bombu pre eksplozije.',
+    'game.hot-potato.rule1': 'Bomba sa skrivenim tajmerom kruži među igračima.',
+    'game.hot-potato.rule2': 'Kaži reč iz zadate kategorije i prosledi dalje.',
+    'game.hot-potato.rule3': 'Kod koga „pukne" — ispada iz igre.',
   },
 
   en: {
@@ -649,6 +742,104 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.emoji-zagonetke.name': 'Emoji Riddles',
     'game.emoji-zagonetke.description':
       'A string of emojis hides a movie, saying or thing — everyone types the answer, faster correct scores more!',
+
+    // --- game-select cards: tags, short blurbs, "how to play" -------------
+    'gameSelect.howToPlay': 'How to play →',
+    'gameSelect.howToPlayLabel': 'How to play',
+    'gameSelect.noConfig': 'No extra settings — just start ✨',
+    'gameSelect.filterAll': 'All',
+    'gameSelect.noGamesForFilter': 'No games for the selected filters.',
+    'gameTag.quiz': 'Quiz',
+    'gameTag.drawing': 'Drawing',
+    'gameTag.drawing-bluff': 'Drawing · Bluff',
+    'gameTag.bluff': 'Bluff',
+    'gameTag.party': 'Party',
+    'gameTag.speed': 'Speed',
+    'gameTag.team': 'Team',
+    'gameTag.cards': 'Cards',
+
+    'game.quiz.blurb': 'Timed questions — fastest scores the most.',
+    'game.quiz.rule1':
+      'Questions are shown on a timer — a faster correct answer scores more.',
+    'game.quiz.rule2': 'Types: classic, picture, map, number, song and video.',
+    'game.quiz.rule3': 'An animated scoreboard follows every round.',
+    'game.draw-guess.blurb': 'Draw the word — everyone else guesses it.',
+    'game.draw-guess.rule1':
+      'Players take turns drawing the given word; the rest type guesses.',
+    'game.draw-guess.rule2':
+      'Faster guessing = more points; the drawer scores on every hit.',
+    'game.draw-guess.rule3': 'Letters are revealed over time as a hint.',
+    'game.fake-artist.blurb': 'Find the impostor who does not know the word.',
+    'game.fake-artist.rule1':
+      'Everyone draws the same word one stroke at a time — except the impostor.',
+    'game.fake-artist.rule2': 'After drawing you vote on who the fake artist is.',
+    'game.fake-artist.rule3':
+      'The impostor wins if they stay hidden or guess the word.',
+    'game.fibbage.blurb': 'Write a fake answer, fool the crew.',
+    'game.fibbage.rule1': 'Write a convincing fake answer to the question.',
+    'game.fibbage.rule2':
+      '+500 for finding the truth, +100 for everyone you fool.',
+    'game.fibbage.rule3': 'You cannot vote for your own answer.',
+    'game.ko-bi-pre.blurb': 'Who would do it first?',
+    'game.ko-bi-pre.rule1': 'For each question you vote who would do it first.',
+    'game.ko-bi-pre.rule2': 'Points for those who match the majority answer.',
+    'game.ko-bi-pre.rule3': 'A quick, light party game.',
+    'game.dve-istine-i-laz.blurb': 'Two truths and one lie.',
+    'game.dve-istine-i-laz.rule1':
+      'Everyone writes two truths and one lie about themselves.',
+    'game.dve-istine-i-laz.rule2': 'The rest guess which statement is the lie.',
+    'game.dve-istine-i-laz.rule3':
+      'Points for guessing right and for a good lie.',
+    'game.slepi-telefoni.blurb': 'A phrase that mutates.',
+    'game.slepi-telefoni.rule1':
+      'You write a phrase; the next draws it; the next guesses the drawing.',
+    'game.slepi-telefoni.rule2': 'The chain loops around through all players.',
+    'game.slepi-telefoni.rule3':
+      'At the end you view all chains and vote for the funniest.',
+    'game.ko-sam-ja.blurb': 'How well do you know each other?',
+    'game.ko-sam-ja.rule1':
+      'A personal question about one player — they answer secretly.',
+    'game.ko-sam-ja.rule2': 'The rest guess what they picked.',
+    'game.ko-sam-ja.rule3': 'The player scores when no one guesses right.',
+    'game.spot-it.blurb': 'Spot the matching symbol first.',
+    'game.spot-it.rule1':
+      'Your card and the center card share exactly one symbol.',
+    'game.spot-it.rule2': 'The first to find and tap it wins the card.',
+    'game.spot-it.rule3': 'Most cards collected at the end wins.',
+    'game.gluvo-doba.blurb': 'Unmask the werewolves before dawn.',
+    'game.gluvo-doba.rule1':
+      'Werewolves pick a victim at night; by day the village votes to banish.',
+    'game.gluvo-doba.rule2': 'Special roles have powers (healer, seer…).',
+    'game.gluvo-doba.rule3': 'The village wins by unmasking all the wolves.',
+    'game.bolji-zivot.blurb': 'A memory card game.',
+    'game.bolji-zivot.rule1':
+      'You have 4 hidden cards — the goal is the lowest curse sum.',
+    'game.bolji-zivot.rule2':
+      'Swap cards, spy on opponents, remember what is where.',
+    'game.bolji-zivot.rule3':
+      'Call "Zavet!" when you think you are the lowest.',
+    'game.tajni-agenti.blurb': 'The spy gives a clue, beware the assassin.',
+    'game.tajni-agenti.rule1': 'The spy gives a clue: one word + a number.',
+    'game.tajni-agenti.rule2':
+      'The team guesses its words on the board, but beware the assassin.',
+    'game.tajni-agenti.rule3': 'Modes: Classic (2 teams), Duet and co-op.',
+    'game.emoji-zagonetke.blurb': 'Guess the thing from a string of emojis.',
+    'game.emoji-zagonetke.rule1':
+      'A string of emojis hides a movie, saying or thing.',
+    'game.emoji-zagonetke.rule2':
+      'Everyone types the answer — a faster correct one scores more.',
+    'game.emoji-zagonetke.rule3':
+      'Letters can be revealed gradually as a hint.',
+    'game.spijun.blurb': 'Unmask the impostor among you.',
+    'game.spijun.rule1': 'Everyone knows the secret location — except the spy.',
+    'game.spijun.rule2':
+      'Question each other to unmask the impostor; the spy tries to guess the location.',
+    'game.spijun.rule3': 'A vote reveals who the spy is.',
+    'game.hot-potato.blurb': 'Pass the bomb before it blows.',
+    'game.hot-potato.rule1':
+      'A bomb with a hidden timer passes among the players.',
+    'game.hot-potato.rule2': 'Say a word from the given category and pass it on.',
+    'game.hot-potato.rule3': 'Whoever it "blows" on — is out of the game.',
   },
 };
 

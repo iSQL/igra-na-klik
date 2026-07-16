@@ -3,7 +3,7 @@
  * separate server-rendered editor pages (kviz, ko-sam-ja, tajni-agenti,
  * gluvo-doba, emoji, spijun, timinzi) with one page: a navy sidebar of games,
  * a client-side view switch, a pack-picker dropdown, a searchable/filterable
- * drag-reorderable table for kviz + ko-sam-ja, a slide-in editor sheet, and
+ * table for kviz + ko-sam-ja, a slide-in editor sheet, and
  * tailored views for the other content types.
  *
  * The backend API (content-admin.ts + timing-admin.ts) is unchanged; this page
@@ -109,7 +109,11 @@ input,textarea,select{font:inherit}
 .app-main{padding:1.6rem 2rem 5rem;min-width:0;overflow-x:hidden}
 .eyebrow{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);font-weight:800;margin-bottom:.3rem}
 @media (max-width:860px){
-  .app-shell{grid-template-columns:1fr}
+  /* Single column → header + main become grid ROWS. Pin the header row to its
+     content (auto) and let main take the rest; otherwise align-content's
+     default "stretch" distributes the min-height:100vh leftover space to BOTH
+     rows, inflating the header whenever a view's content is short (e.g. Špijun). */
+  .app-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .app-side{position:sticky;top:0;z-index:20;flex-direction:row;align-items:center;overflow-x:auto;height:auto;min-height:0;padding:.6rem .8rem;gap:.5rem}
   .app-side .side-label,.side-foot,.side-spacer{display:none}
   .app-nav{flex-direction:row;flex-wrap:nowrap;gap:.35rem}
@@ -209,7 +213,7 @@ ${ADMIN_VIEW_CSS}
 
   <main class="app-main">
     <div class="eyebrow" id="eyebrow"></div>
-    <div id="picker-bar"></div>
+    <div id="picker-bar" class="picker-bar"></div>
     <div id="view-host"></div>
   </main>
 </div>
@@ -353,12 +357,6 @@ var Admin = (function(){
       html += '<div class="pk-sep"></div><button class="pk-new" id="pk-new">＋ Novi pack</button></div>';
     }
     html += '</div>';
-    // badge + actions
-    if (cur){
-      html += '<span class="badge ' + (cur.visibleInGame?'badge-ok':'badge-draft') + '">● '
-        + (cur.visibleInGame?'Vidljiv u igri':'Nevidljiv (draft)') + '</span>';
-    }
-    html += '<span style="flex:1"></span>';
     if (cur){
       var pmod = MODULES[g.kind];
       var showSet = pmod && pmod.hasSettings && pmod.hasSettings(g);
@@ -561,7 +559,6 @@ var Admin = (function(){
 
   // table state persists across re-renders; reset when switching game.
   var tv = { game:null, search:'', filter:'all' };
-  var dragIdx = null;
 
   function packMaps(ctx){ var p=ctx.pack; return (p && p.maps && typeof p.maps==='object')?p.maps:{}; }
   function fileUrl(ctx,name){ return '/kviz-files/'+ctx.pack.id+'/'+name; }
@@ -632,14 +629,13 @@ var Admin = (function(){
       var mtHtml = mt ? '<span class="t-mtag" style="color:'+m.color+';background:'+m.bg+'">'+mt+'</span>' : '';
       var catHtml = (g.id!=='kviz' && q.category) ? '<span class="t-mtag'+(q.category==='nsfw'?' tag-nsfw':'')+'" style="background:var(--surface2);color:var(--muted)">'+esc(q.category)+'</span>' : '';
       var text = q.text || (t==='geo'?'Gde je ovo slikano?':'(bez teksta)');
-      rowsHtml += '<div class="tbl-row" draggable="true" data-idx="'+idx+'">'
-        + '<span class="drag-h" title="Prevuci za redosled">⠿</span>'
+      rowsHtml += '<div class="tbl-row" data-idx="'+idx+'">'
         + '<div class="t-type"><span class="ti">'+m.icon+'</span><span class="tl" style="color:'+m.color+'">'+esc(m.label)+'</span></div>'
         + '<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
         + '<span class="t-text">'+esc(text)+'</span>'+mtHtml+catHtml+'</div>'
         + '<div class="t-ans">'+answerLine(g,q)+'</div></div>'
         + '<div class="t-acts">'
-        + (q.timeLimit?'<span class="t-time">⏱ '+esc(q.timeLimit)+'s</span>':'')
+        + (q.timeLimit && g.id!=='kviz' ? '<span class="t-time">⏱ '+esc(q.timeLimit)+'s</span>' : '')
         + '<button class="iconbtn dup" title="Dupliraj" data-idx="'+idx+'">⧉</button>'
         + '<button class="iconbtn edit" title="Izmeni" data-idx="'+idx+'">✎</button>'
         + '<button class="iconbtn del" title="Obriši" data-idx="'+idx+'">🗑</button></div></div>';
@@ -651,7 +647,7 @@ var Admin = (function(){
       + '<div class="tbl-search"><span>🔎</span><input class="field" id="tbl-q" placeholder="Pretraži pitanja…" value="'+esc(tv.search)+'"></div>'
       + '<div class="tbl-filters">'+filtersHtml+'</div>'
       + '<button class="btn btn-primary" id="tbl-new">＋ Novo pitanje</button></div>'
-      + '<div class="tbl"><div class="tbl-head"><span></span><span>Tip</span><span>Pitanje</span><span style="text-align:right">Radnje</span></div>'
+      + '<div class="tbl'+(g.id==='kviz'?' tbl-icont':'')+'"><div class="tbl-head"><span>Tip</span><span>Pitanje</span><span style="text-align:right">Radnje</span></div>'
       + rowsHtml + '</div>'
       + '<button class="add-row" id="tbl-add">＋ Dodaj pitanje</button>';
 
@@ -668,14 +664,6 @@ var Admin = (function(){
     for (var d=0;d<dups.length;d++) dups[d].onclick=function(){ dupQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
     var dels=host.querySelectorAll('.iconbtn.del');
     for (var x=0;x<dels.length;x++) dels[x].onclick=function(){ delQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
-    var rows=host.querySelectorAll('.tbl-row');
-    for (var r=0;r<rows.length;r++){
-      var row=rows[r];
-      row.ondragstart=function(){ dragIdx=parseInt(this.getAttribute('data-idx'),10); };
-      row.ondragover=function(ev){ ev.preventDefault(); this.classList.add('dragover'); };
-      row.ondragleave=function(){ this.classList.remove('dragover'); };
-      row.ondrop=function(ev){ ev.preventDefault(); this.classList.remove('dragover'); dropRow(ctx, parseInt(this.getAttribute('data-idx'),10)); };
-    }
   }
 
   function saveQuestions(ctx, questions, okMsg){
@@ -696,12 +684,6 @@ var Admin = (function(){
     if(!window.confirm('Obrisati ovo pitanje?'))return;
     var arr=(ctx.pack.questions||[]).slice(); arr.splice(idx,1);
     saveQuestions(ctx, arr, 'Pitanje obrisano.').catch(function(e){ showErr(e.message); });
-  }
-  function dropRow(ctx, target){
-    if (dragIdx==null||dragIdx===target)return;
-    var arr=(ctx.pack.questions||[]).slice();
-    var m=arr.splice(dragIdx,1)[0]; arr.splice(target,0,m); dragIdx=null;
-    saveQuestions(ctx, arr, 'Redosled sačuvan.').catch(function(e){ showErr(e.message); });
   }
 
   // ---------- sheet chrome ----------
@@ -755,8 +737,8 @@ var Admin = (function(){
       + '<div class="hint" id="q-audio-name" style="margin:.2rem 0"></div>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="q-audio-pick">Izaberi audio</button>'
       + '<button type="button" class="btn btn-danger btn-sm" id="q-audio-remove" style="display:none">Ukloni</button></div></div>'
-      + '<div id="grp-video"><label class="lbl">YouTube video ID (11 znakova)</label>'
-      + '<input class="field" id="q-video-id" maxlength="11" placeholder="npr. dQw4w9WgXcQ">'
+      + '<div id="grp-video"><label class="lbl">YouTube link ili video ID</label>'
+      + '<input class="field" id="q-video-id" placeholder="npr. https://youtu.be/dQw4w9WgXcQ ili dQw4w9WgXcQ">'
       + '<img id="q-video-thumb" class="q-thumb" style="display:none" alt="">'
       + '<div class="num-grid" style="margin-top:.5rem"><label><span class="sub">Start (s, opciono)</span>'
       + '<input class="field" type="number" id="q-video-start" min="0" step="1" placeholder="0"></label>'
@@ -783,7 +765,7 @@ var Admin = (function(){
       + '<div style="margin-top:.5rem"><button type="button" class="btn btn-ghost btn-sm" id="q-img-pick">Dodaj sliku</button>'
       + '<button type="button" class="btn btn-danger btn-sm" id="q-img-remove" style="display:none">Ukloni</button></div></div></div>'
       + '<label class="lbl">Vreme u sekundama (opciono, 5–60)</label>'
-      + '<input class="field" type="number" id="q-time" min="5" max="60" step="1" style="max-width:140px"></div>'
+      + '<input class="field" type="number" id="q-time" min="5" max="60" step="1" placeholder="15" style="width:72px;text-align:center"></div>'
       + sheetFoot(editIndex==null);
 
     // --- setType ---
@@ -840,9 +822,19 @@ var Admin = (function(){
       reader.onload=function(){ var b=String(reader.result||''); if(b.length>14000000){ showErr('Audio je prevelik (max ~10 MB).'); return; } $('q-audio-pick').disabled=true; uploadFile('audio',b).then(function(d){ setAudio(d.file,null); showOk('Audio dodat.'); }).catch(function(e){ showErr(e.message); }).then(function(){ $('q-audio-pick').disabled=false; }); };
       reader.readAsDataURL(file);
     }
+    // Accept a full YouTube URL (watch?v=, youtu.be/, /embed/, /shorts/, /v/)
+    // or a bare 11-char ID; return the ID or '' if none found.
+    function ytId(v){
+      v=(v||'').trim();
+      if(/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+      // Char classes [.]/[/] instead of \.\/ — this JS lives inside a TS
+      // template literal that would strip the backslashes.
+      var m=v.match(/(?:youtu[.]be[/]|[?&]v=|[/]embed[/]|[/]shorts[/]|[/]v[/])([A-Za-z0-9_-]{11})/);
+      return m?m[1]:'';
+    }
     function updateVideoThumb(){
-      var id=$('q-video-id').value.trim(); var img=$('q-video-thumb');
-      if(/^[A-Za-z0-9_-]{11}$/.test(id)){ img.src='https://img.youtube.com/vi/'+id+'/hqdefault.jpg'; img.style.display='block'; } else img.style.display='none';
+      var id=ytId($('q-video-id').value); var img=$('q-video-thumb');
+      if(id){ img.src='https://img.youtube.com/vi/'+id+'/hqdefault.jpg'; img.style.display='block'; } else img.style.display='none';
     }
     // --- geo map ---
     function currentBBox(){ var m=packMaps(ctx); return geo.mapId&&m[geo.mapId]?m[geo.mapId].bbox:null; }
@@ -880,7 +872,7 @@ var Admin = (function(){
       var q={ type:qType };
       if(qType==='obicno'){ if(!buildChoiceCore(q))return null; attachImage(q); }
       else if(qType==='audio'){ if(!buildChoiceCore(q))return null; if(!pend.audioFile&&!pend.audioUrl){ showErr('Dodaj audio fajl.'); return null; } if(pend.audioFile)q.audioFile=pend.audioFile; else q.audioUrl=pend.audioUrl; attachImage(q); }
-      else if(qType==='video'){ if(!buildChoiceCore(q))return null; var vid=$('q-video-id').value.trim(); if(!/^[A-Za-z0-9_-]{11}$/.test(vid)){ showErr('YouTube ID mora imati tačno 11 znakova.'); return null; } q.videoId=vid; var vs=$('q-video-start').value.trim(),ve=$('q-video-end').value.trim(); if(vs)q.startSeconds=parseInt(vs,10); if(ve)q.endSeconds=parseInt(ve,10); if(q.startSeconds!=null&&q.endSeconds!=null&&q.endSeconds<=q.startSeconds){ showErr('Kraj mora biti posle starta.'); return null; } }
+      else if(qType==='video'){ if(!buildChoiceCore(q))return null; var vid=ytId($('q-video-id').value); if(!vid){ showErr('Unesi ispravan YouTube link ili ID (11 znakova).'); return null; } q.videoId=vid; var vs=$('q-video-start').value.trim(),ve=$('q-video-end').value.trim(); if(vs)q.startSeconds=parseInt(vs,10); if(ve)q.endSeconds=parseInt(ve,10); if(q.startSeconds!=null&&q.endSeconds!=null&&q.endSeconds<=q.startSeconds){ showErr('Kraj mora biti posle starta.'); return null; } }
       else if(qType==='broj'){ var text=$('q-text').value.trim(); if(!text){ showErr('Unesi tekst pitanja.'); return null; } q.text=text; var answer=parseFloat($('q-broj-answer').value),mn=parseFloat($('q-broj-min').value),mx=parseFloat($('q-broj-max').value); if(isNaN(answer)||isNaN(mn)||isNaN(mx)){ showErr('Popuni odgovor, min i max.'); return null; } if(mn>=mx){ showErr('Min mora biti manji od max.'); return null; } if(answer<mn||answer>mx){ showErr('Odgovor mora biti između min i max.'); return null; } q.answer=answer;q.min=mn;q.max=mx; var st=$('q-broj-step').value.trim(); if(st){ var stn=parseFloat(st); if(isNaN(stn)||stn<=0){ showErr('Korak mora biti pozitivan broj.'); return null; } q.step=stn; } var unit=$('q-broj-unit').value.trim(); if(unit)q.unit=unit; if($('q-broj-valuetype').value)q.valueType=$('q-broj-valuetype').value; var em=$('q-broj-emoji').value.trim(); if(em)q.emoji=em; attachImage(q); }
       else if(qType==='geo'){ var gt=$('q-text').value.trim(); if(gt)q.text=gt; if(!pend.imageFile&&!pend.imageUrl){ showErr('Geo pitanje mora imati sliku.'); return null; } attachImage(q); var cap=$('q-caption').value.trim(); if(cap)q.caption=cap; if(geo.lat==null||geo.lng==null){ showErr('Postavi pin na mapu.'); return null; } q.lat=geo.lat;q.lng=geo.lng; if(geo.mapId)q.mapId=geo.mapId; }
       if(!attachTime(q))return null; return q;
@@ -913,6 +905,7 @@ var Admin = (function(){
     $('q-audio-file').onchange=function(e){ var f=e.target.files&&e.target.files[0]; e.target.value=''; if(f)handleAudioFile(f); };
     $('q-audio-remove').onclick=function(){ setAudio(null,null); };
     $('q-video-id').addEventListener('input',updateVideoThumb);
+    $('q-video-id').addEventListener('change',function(){ var id=ytId(this.value); if(id&&id!==this.value)this.value=id; updateVideoThumb(); });
     $('sh-save').onclick=function(){ doSave(false); };
     var sa=$('sh-save-again'); if(sa)sa.onclick=function(){ doSave(true); };
     $('sh-cancel').onclick=close;
@@ -1260,7 +1253,8 @@ var Admin = (function(){
       + '<input class="field" id="em-answer" placeholder="Rešenje…" value="'+esc(ed?ed.answer:'')+'" style="flex:1;min-width:140px"></div>'
       + '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">'
       + '<input class="field" id="em-accept" placeholder="Alternativni odgovori (zarezom)" value="'+esc(ed&&ed.accept?ed.accept.join(', '):'')+'" style="flex:1;min-width:180px">'
-      + '<input class="field" type="number" id="em-time" min="5" max="60" placeholder="Vreme (s, podr. 20)" value="'+esc(ed&&ed.timeLimit?ed.timeLimit:'')+'" style="width:170px"></div>'
+      + '<label style="display:flex;align-items:center;gap:.4rem"><span class="hint" style="margin:0;white-space:nowrap">Vreme (s)</span>'
+      + '<input class="field" type="number" id="em-time" min="5" max="60" placeholder="20" value="'+esc(ed&&ed.timeLimit?ed.timeLimit:'')+'" style="width:72px;text-align:center"></label></div>'
       + '<div style="margin-top:.6rem"><button class="btn btn-primary" id="em-save">'+(ed?'Sačuvaj izmene':'＋ Dodaj')+'</button>'
       + (ed?' <button class="btn btn-ghost" id="em-cancel">Otkaži</button>':'')+'</div></div>'
       + '<div class="tbl"><div class="tbl-head emoji-head"><span>Emoji</span><span>Rešenje</span><span style="text-align:right">Radnje</span></div>'
@@ -1414,14 +1408,15 @@ const ADMIN_VIEW_CSS = `
   font-weight:700;font-size:.82rem;padding:.38rem .7rem;border-radius:20px;white-space:nowrap;cursor:pointer}
 .chip-f.on{background:var(--navy);color:#F5EBE0;border-color:var(--navy)}
 .chip-f .c-n{opacity:.7;font-weight:800}
-.tbl{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(29,53,87,.05)}
-.tbl-head{display:grid;grid-template-columns:38px 52px 1fr auto;gap:.6rem;align-items:center;padding:.6rem 1rem;background:var(--surface2);
+.tbl{display:flex;flex-direction:column;gap:.4rem}
+.tbl-head{display:grid;grid-template-columns:52px 1fr auto;gap:.6rem;align-items:center;padding:.5rem 1rem;background:var(--surface2);border-radius:12px;
   font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--muted)}
-.tbl-row{display:grid;grid-template-columns:38px 52px 1fr auto;gap:.6rem;align-items:center;padding:.8rem 1rem;
-  border-top:1px solid rgba(29,53,87,.08);background:var(--surface)}
+.tbl-row{display:grid;grid-template-columns:52px 1fr auto;gap:.6rem;align-items:center;padding:.7rem 1rem;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 4px rgba(29,53,87,.04)}
 .tbl-row:hover{background:var(--surface3)}
-.tbl-row.dragover{background:rgba(194,155,71,.14)}
-.drag-h{cursor:grab;color:#C7BDB0;font-size:1.15rem;text-align:center;user-select:none;line-height:1}
+/* Compact type column (kviz): icon only, narrow first column. */
+.tbl-icont .tbl-head,.tbl-icont .tbl-row{grid-template-columns:40px 1fr auto}
+.tbl-icont .t-type .tl{display:none}
 .t-type{display:flex;flex-direction:column;align-items:center;gap:2px}
 .t-type .ti{font-size:1.15rem;line-height:1}
 .t-type .tl{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;text-align:center}
@@ -1515,4 +1510,15 @@ const ADMIN_VIEW_CSS = `
 .tim-field .b{color:var(--dim);font-size:.72rem;font-weight:600}
 .tim-field input{max-width:96px;text-align:center}
 .tim-field input.changed{border-color:var(--gold);background:#FFF9EC}
+
+/* On phones, stack the table toolbar: filters on their own row, search on
+   its own row, "Novo pitanje" last — instead of cramming all three. */
+@media (max-width:860px){
+  .tbl-tools{flex-direction:column;flex-wrap:nowrap;align-items:stretch}
+  .tbl-filters{order:1;flex-wrap:nowrap;overflow-x:auto;min-width:0}
+  .tbl-filters::-webkit-scrollbar{height:0}
+  .chip-f{flex:none}
+  .tbl-search{order:2;max-width:none}
+  .tbl-tools .btn-primary{order:3}
+}
 `;

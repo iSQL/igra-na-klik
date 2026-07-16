@@ -8,6 +8,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom ili snimkom. Najbliži i najbrži nosi poene!',
+    icon: '🧠',
+    accent: 'violet',
+    category: 'quiz',
+    estimatedMinutes: 10,
     supportsHostless: true,
   },
   'draw-guess': {
@@ -16,6 +20,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 2,
     maxPlayers: 8,
     description: 'Crtajte redom — ostali pogađaju reč!',
+    icon: '🎨',
+    accent: 'cyan',
+    category: 'drawing',
+    estimatedMinutes: 10,
     supportsHostless: true,
   },
   'fake-artist': {
@@ -25,6 +33,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Svi crtaju istu reč po jedan potez — osim uljeza koji je ne zna. Pronađite lažnjaka!',
+    icon: '🖌️',
+    accent: 'pink',
+    category: 'drawing-bluff',
+    estimatedMinutes: 8,
     supportsHostless: true,
   },
   fibbage: {
@@ -33,6 +45,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 2,
     maxPlayers: 8,
     description: 'Napiši lažan odgovor, pronađi pravi, prevari ostale!',
+    icon: '🤥',
+    accent: 'amber',
+    category: 'bluff',
+    estimatedMinutes: 10,
     supportsHostless: true,
   },
   'ko-bi-pre': {
@@ -42,6 +58,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Glasajte ko bi pre uradio nešto — poeni onima koji pogode većinu!',
+    icon: '🤔',
+    accent: 'lime',
+    category: 'party',
+    estimatedMinutes: 8,
     supportsHostless: true,
   },
   'dve-istine-i-laz': {
@@ -51,6 +71,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Svako napiše dve istine i jednu laž o sebi — ostali pogađaju šta je laž!',
+    icon: '🎭',
+    accent: 'pink',
+    category: 'party',
+    estimatedMinutes: 8,
     supportsHostless: true,
   },
   'slepi-telefoni': {
@@ -60,6 +84,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Napiši frazu, sledeći je crta, zatim sledeći pogađa — pogledajte kako se rečenica izvitoperi!',
+    icon: '📝',
+    accent: 'cyan',
+    category: 'drawing',
+    estimatedMinutes: 12,
     supportsHostless: true,
   },
   'ko-sam-ja': {
@@ -69,6 +97,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Lična pitanja o igračima — koliko dobro poznajete jedni druge?',
+    icon: '🫂',
+    accent: 'violet',
+    category: 'party',
+    estimatedMinutes: 10,
     supportsHostless: true,
   },
   'spot-it': {
@@ -78,6 +110,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 12,
     description:
       'Tvoja karta i centralna karta dele tačno jedan simbol — pronađi ga prvi!',
+    icon: '🔎',
+    accent: 'danger',
+    category: 'speed',
+    estimatedMinutes: 5,
     // Hostless-capable: in a hostless room the phone stacks the center card
     // above the player's own card (see SpotItController), so no TV is needed.
     supportsHostless: true,
@@ -89,6 +125,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 15,
     description:
       'Vukodlaci noću haraju selom — otkrijte ih pre nego što vas nestane!',
+    icon: '🐺',
+    accent: 'blue',
+    category: 'team',
+    estimatedMinutes: 20,
     supportsHostless: true,
   },
   'bolji-zivot': {
@@ -100,6 +140,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 6,
     description:
       'Kartaška igra pamćenja — 4 skrivene karte, menjaj ih, špijuniraj i vikni "Zavet!" kad nosiš najmanje uroka!',
+    icon: '🃏',
+    accent: 'amber',
+    category: 'cards',
+    estimatedMinutes: 15,
     // Hostless-capable: sve tajno (svoje karte, peek, ruka) je ionako na
     // telefonu; hostless režim samo prikaže javni sto i na kontrolerima.
     supportsHostless: true,
@@ -115,6 +159,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Špijun daje šifru — pogađaj reči, ali pazi na ubicu! Klasik, Duet ili kooperativni mod — može i sa 2 igrača.',
+    icon: '🕵️',
+    accent: 'blue',
+    category: 'team',
+    estimatedMinutes: 15,
     // Hostless-capable: the controller renders the full board (interactive for
     // the active guesser, secret key for spymasters) and, in hostless rooms,
     // a read-only board for waiting players — everything the TV would show.
@@ -127,6 +175,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 10,
     description:
       'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
+    icon: '🎬',
+    accent: 'lime',
+    category: 'speed',
+    estimatedMinutes: 8,
     supportsHostless: true,
   },
   spijun: {
@@ -136,6 +188,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 8,
     description:
       'Svi znaju tajnu lokaciju — osim špijuna! Ispitujte se, otkrijte uljeza pre nego što on pogodi gde ste.',
+    icon: '🎩',
+    accent: 'violet',
+    category: 'bluff',
+    estimatedMinutes: 12,
     // Hostless-capable: sve tajno (uloga, lokacija) je ionako na telefonu;
     // javna lista lokacija + optužbe + glasanje stižu i do kontrolera.
     supportsHostless: true,
@@ -147,6 +203,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     maxPlayers: 12,
     description:
       'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
+    icon: '🥔',
+    accent: 'amber',
+    category: 'speed',
+    estimatedMinutes: 6,
     // Hostless-capable: sve javno (ko drži krompir, ko je živ, kategorija)
     // stiže i do telefona, pa se ceo tok vidi i bez TV-a.
     supportsHostless: true,

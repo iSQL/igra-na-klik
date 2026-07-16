@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
@@ -8,6 +8,8 @@ import {
   parseEmojiImport,
 } from '@igra/shared';
 import type {
+  GameAccent,
+  GameCategory,
   GameDefinition,
   GluvoDobaDeathReveal,
   GluvoDobaPack,
@@ -68,18 +70,86 @@ const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
 const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 
-const GAME_ICONS: Record<string, string> = {
-  quiz: '🧠',
-  'draw-guess': '🎨',
-  fibbage: '🤥',
-  'slepi-telefoni': '📝',
-  'ko-sam-ja': '🕵️',
-  'spot-it': '🔴',
-  'tajni-agenti': '🟦',
-  'hot-potato': '🥔',
-  'emoji-zagonetke': '🎬',
-  spijun: '🕵️',
+// Accent hex per token — hex (not CSS var) because the card tiles/tags append
+// alpha suffixes (e.g. '2b'/'55'/'22'), which var() can't do. Values mirror
+// the brand palette in global.css.
+const ACCENT_HEX: Record<GameAccent, string> = {
+  gold: '#c29b47',
+  pink: '#d97b6c',
+  violet: '#8fa3d9',
+  cyan: '#6fc2bb',
+  lime: '#a9c46c',
+  amber: '#e3b45e',
+  danger: '#e06a5e',
+  blue: '#6d9bd1',
 };
+
+// Per-category tag color — every game with the same category tag shows the
+// same color (independent of the per-game icon accent), so "Crtanje" is never
+// two different colors.
+const CATEGORY_COLOR: Record<GameCategory, string> = {
+  quiz: '#8fa3d9', // violet
+  drawing: '#6fc2bb', // cyan
+  'drawing-bluff': '#d97b6c', // pink
+  bluff: '#e3b45e', // amber
+  party: '#a9c46c', // lime
+  speed: '#e06a5e', // danger
+  team: '#6d9bd1', // blue
+  cards: '#c29b47', // gold
+};
+
+// Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
+const FILTER_CATEGORIES: GameCategory[] = [
+  'quiz',
+  'drawing',
+  'bluff',
+  'party',
+  'speed',
+  'team',
+  'cards',
+];
+
+// A game matches a selected filter category if it equals it, or — for the
+// compound 'drawing-bluff' category — if either half is selected.
+function gameInCategory(game: GameDefinition, cat: GameCategory): boolean {
+  if (game.category === cat) return true;
+  if (game.category === 'drawing-bluff')
+    return cat === 'drawing' || cat === 'bluff';
+  return false;
+}
+
+// Colored icon pill (mockup's "tile") — accent hex with alpha wash + border.
+function tileStyle(accent: GameAccent, size: number): CSSProperties {
+  const hex = ACCENT_HEX[accent];
+  return {
+    width: size,
+    height: size,
+    borderRadius: 14,
+    background: hex + '2b',
+    border: '1px solid ' + hex + '55',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: size * 0.5,
+    flexShrink: 0,
+    lineHeight: 1,
+  };
+}
+
+// Category chip — colored by category so the same tag is always one color.
+function tagStyle(category: GameCategory): CSSProperties {
+  const hex = CATEGORY_COLOR[category];
+  return {
+    fontSize: '0.66rem',
+    fontWeight: 800,
+    color: hex,
+    background: hex + '22',
+    padding: '3px 8px',
+    borderRadius: 7,
+    textTransform: 'uppercase',
+    letterSpacing: '.04em',
+  };
+}
 
 export function GameSelectScreen() {
   const room = usePlayerStore((s) => s.room);
@@ -87,6 +157,9 @@ export function GameSelectScreen() {
   const t = useT();
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [rulesGameId, setRulesGameId] = useState<string | null>(null);
+  // Single category filter — null means "Sve" (no filtering).
+  const [activeCat, setActiveCat] = useState<GameCategory | null>(null);
   const [quizPacks, setQuizPacks] = useState<QuestionPackSummary[]>([]);
   const [quizImport, setQuizImport] = useState<{
     questions: KvizImportQuestion[];
@@ -203,6 +276,12 @@ export function GameSelectScreen() {
 
   const connectedCount = room.players.filter((p) => p.isConnected).length;
   const games: GameDefinition[] = Object.values(GAME_DEFINITIONS);
+  const visibleGames =
+    activeCat === null
+      ? games
+      : games.filter((g) => gameInCategory(g, activeCat));
+  const selectedGame = games.find((g) => g.id === selectedGameId) ?? null;
+  const rulesGame = games.find((g) => g.id === rulesGameId) ?? null;
   // Tajni agenti: classic needs 4+ players — with fewer, silently fall
   // back to duet so start can't fire a server-side validation error.
   const effectiveTajniMode: TajniAgentiMode =
@@ -416,120 +495,198 @@ export function GameSelectScreen() {
 
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '0.65rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.4rem',
         }}
       >
-        {games.map((game) => {
-          const needsTv = room.hostless && !game.supportsHostless;
-          const minPlayers = game.minPlayers;
-          const lacking = connectedCount < minPlayers;
-          const disabled = lacking || needsTv;
-          const expanded = selectedGameId === game.id;
-          return (
-            <div
+        <FilterChip
+          label={t('gameSelect.filterAll')}
+          active={activeCat === null}
+          color="#c29b47"
+          onClick={() => setActiveCat(null)}
+        />
+        {FILTER_CATEGORIES.map((cat) => (
+          <FilterChip
+            key={cat}
+            label={t(`gameTag.${cat}`)}
+            active={activeCat === cat}
+            color={CATEGORY_COLOR[cat]}
+            onClick={() => setActiveCat(cat)}
+          />
+        ))}
+      </div>
+
+      {visibleGames.length === 0 ? (
+        <p
+          style={{
+            fontSize: '0.85rem',
+            color: 'var(--dim)',
+            textAlign: 'center',
+            padding: '1.5rem 0',
+          }}
+        >
+          {t('gameSelect.noGamesForFilter')}
+        </p>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.65rem',
+          }}
+        >
+          {visibleGames.map((game) => (
+            <GameCard
               key={game.id}
+              game={game}
+              connectedCount={connectedCount}
+              hostless={!!room.hostless}
+              onOpen={() => setSelectedGameId(game.id)}
+              onRules={() => setRulesGameId(game.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {selectedGame && (
+        <div
+          onClick={() => setSelectedGameId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(11,22,40,.62)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 40,
+            animation: 'igra-fade .18s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 0,
+              transform: 'translateX(-50%)',
+              width: '100%',
+              maxWidth: '480px',
+              maxHeight: '90%',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              borderBottom: 'none',
+              borderRadius: '24px 24px 0 0',
+              boxShadow: '0 -18px 50px rgba(0,0,0,.45)',
+              animation: 'igra-sheet-up .26s cubic-bezier(.22,1,.36,1)',
+            }}
+          >
+            <div
               style={{
-                gridColumn: expanded ? '1 / -1' : 'auto',
-                borderRadius: '16px',
-                background: expanded
-                  ? 'linear-gradient(150deg, rgba(217,123,108,.22), var(--bg-secondary))'
-                  : 'var(--bg-secondary)',
-                border: expanded
-                  ? '1px solid rgba(217,123,108,.4)'
-                  : '1px solid var(--line)',
-                padding: '0.75rem',
-                opacity: disabled ? 0.55 : 1,
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '10px 0 2px',
               }}
             >
-              <button
-                onClick={() => {
-                  if (disabled) return;
-                  setSelectedGameId(expanded ? null : game.id);
-                }}
-                disabled={disabled}
+              <div
                 style={{
-                  width: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  gap: '0.45rem',
-                  background: 'transparent',
-                  color: 'var(--text-primary)',
-                  cursor: disabled ? 'not-allowed' : 'pointer',
-                  padding: 0,
-                  textAlign: 'left',
+                  width: '40px',
+                  height: '4px',
+                  borderRadius: '99px',
+                  background: 'var(--line2)',
                 }}
-              >
-                <span
-                  style={{
-                    fontSize: '1.5rem',
-                    filter: disabled ? 'grayscale(1)' : 'none',
-                    lineHeight: 1,
-                  }}
-                >
-                  {GAME_ICONS[game.id] ?? '🎮'}
-                </span>
-                <span style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                  <strong style={{ fontSize: '0.95rem', fontWeight: 800 }}>
-                    {t(`game.${game.id}.name`)}
-                  </strong>
-                  <span
+              />
+            </div>
+            <div
+              style={{
+                padding: '4px 18px 14px',
+                borderBottom: '1px solid var(--line)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={tileStyle(selectedGame.accent, 46)}>
+                  {selectedGame.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
                     style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-secondary)',
-                      fontWeight: 700,
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      lineHeight: 1.05,
                     }}
                   >
-                    {game.minPlayers}–{game.maxPlayers}
-                    {expanded && (
-                      <> · {t(`game.${game.id}.description`)}</>
-                    )}
-                  </span>
-                  {needsTv && (
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        color: 'var(--amber)',
-                      }}
-                    >
-                      🔒 {t('gameSelect.needsTv')}
+                    {t(`game.${selectedGame.id}.name`)}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: 'var(--dim)',
+                      marginTop: '3px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span style={tagStyle(selectedGame.category)}>
+                      {t(`gameTag.${selectedGame.category}`)}
                     </span>
-                  )}
-                  {!needsTv && lacking && (
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        color: 'var(--danger)',
-                      }}
-                    >
-                      {t('gameSelect.needMore', {
-                        n: minPlayers - connectedCount,
-                        noun: t(
-                          minPlayers - connectedCount === 1
-                            ? 'common.player.one'
-                            : 'common.player.many'
-                        ),
+                    <span>
+                      👥 {selectedGame.minPlayers}–{selectedGame.maxPlayers}
+                    </span>
+                    <span>
+                      ⏱{' '}
+                      {t('config.minutes', {
+                        n: String(selectedGame.estimatedMinutes),
                       })}
                     </span>
-                  )}
-                </span>
+                  </div>
+                </div>
+              </div>
+              <p
+                style={{
+                  margin: '11px 0 0',
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {t(`game.${selectedGame.id}.description`)}
+              </p>
+              <button
+                onClick={() => setRulesGameId(selectedGame.id)}
+                style={{
+                  marginTop: '9px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontFamily: 'inherit',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  color: 'var(--cyan)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '3px',
+                }}
+              >
+                {t('gameSelect.howToPlay')}
               </button>
-
-              {expanded && !disabled && (
-                <div
-                  style={{
-                    marginTop: '0.75rem',
-                    paddingTop: '0.75rem',
-                    borderTop: '1px solid var(--line)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.6rem',
-                  }}
-                >
+            </div>
+            <div
+              style={{
+                overflowY: 'auto',
+                padding: '16px 18px 6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+              }}
+            >
+              {((game: GameDefinition) => (
+                <>
                   {game.id === 'slepi-telefoni' && (
                     <SlepiConfig
                       rounds={slepiRounds}
@@ -915,14 +1072,348 @@ export function GameSelectScreen() {
                       </div>
                     </div>
                   )}
-                  <button className="btn-primary" onClick={() => handleStart(game)}>
-                    ▶ {t('gameSelect.start')}
-                  </button>
-                </div>
-              )}
+                  {game.id === 'dve-istine-i-laz' && (
+                    <div
+                      style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--dim)',
+                        textAlign: 'center',
+                        padding: '6px 0',
+                      }}
+                    >
+                      {t('gameSelect.noConfig')}
+                    </div>
+                  )}
+                </>
+              ))(selectedGame)}
             </div>
-          );
-        })}
+            <div
+              style={{
+                padding:
+                  '12px 18px calc(16px + env(safe-area-inset-bottom))',
+                borderTop: '1px solid var(--line)',
+              }}
+            >
+              <button
+                className="btn-primary"
+                onClick={() => handleStart(selectedGame)}
+              >
+                ▶ {t('gameSelect.start')} {t(`game.${selectedGame.id}.name`)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rulesGame && (
+        <RulesModal game={rulesGame} onClose={() => setRulesGameId(null)} />
+      )}
+    </div>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  color,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 12px',
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        fontFamily: 'inherit',
+        borderRadius: 999,
+        cursor: 'pointer',
+        textTransform: 'uppercase',
+        letterSpacing: '.03em',
+        color: active ? color : 'var(--dim)',
+        background: active ? color + '22' : 'transparent',
+        border: '1px solid ' + (active ? color + '77' : 'var(--line2)'),
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function GameCard({
+  game,
+  connectedCount,
+  hostless,
+  onOpen,
+  onRules,
+}: {
+  game: GameDefinition;
+  connectedCount: number;
+  hostless: boolean;
+  onOpen: () => void;
+  onRules: () => void;
+}) {
+  const t = useT();
+  const needsTv = hostless && !game.supportsHostless;
+  const lacking = connectedCount < game.minPlayers;
+  const disabled = lacking || needsTv;
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--line)',
+        borderRadius: 18,
+        padding: 13,
+        opacity: disabled ? 0.5 : 1,
+        boxShadow: '0 2px 10px rgba(0,0,0,.14)',
+      }}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRules();
+        }}
+        title="Pravila"
+        style={{
+          position: 'absolute',
+          top: 9,
+          right: 9,
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          border: '1px solid var(--line2)',
+          background: 'rgba(22,46,78,.5)',
+          color: 'var(--text-secondary)',
+          fontSize: 12,
+          fontWeight: 800,
+          fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 2,
+        }}
+      >
+        ?
+      </button>
+      <button
+        onClick={() => {
+          if (!disabled) onOpen();
+        }}
+        disabled={disabled}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          width: '100%',
+          height: '100%',
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left',
+          color: 'var(--text-primary)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        <div style={tileStyle(game.accent, 44)}>{game.icon}</div>
+        <div
+          style={{
+            fontSize: '0.97rem',
+            fontWeight: 800,
+            lineHeight: 1.1,
+            paddingRight: 22,
+          }}
+        >
+          {t(`game.${game.id}.name`)}
+        </div>
+        <div
+          style={{
+            fontSize: '0.72rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.3,
+            flex: 1,
+          }}
+        >
+          {t(`game.${game.id}.blurb`)}
+        </div>
+        <div>
+          <span style={tagStyle(game.category)}>
+            {t(`gameTag.${game.category}`)}
+          </span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            color: 'var(--dim)',
+          }}
+        >
+          <span>
+            👥 {game.minPlayers}–{game.maxPlayers}
+          </span>
+          <span>·</span>
+          <span>
+            ⏱ {t('config.minutes', { n: String(game.estimatedMinutes) })}
+          </span>
+        </div>
+        {needsTv && (
+          <div
+            style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--amber)' }}
+          >
+            🔒 {t('gameSelect.needsTv')}
+          </div>
+        )}
+        {!needsTv && lacking && (
+          <div
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: 'var(--danger)',
+            }}
+          >
+            {t('gameSelect.needMore', {
+              n: game.minPlayers - connectedCount,
+              noun: t(
+                game.minPlayers - connectedCount === 1
+                  ? 'common.player.one'
+                  : 'common.player.many'
+              ),
+            })}
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function RulesModal({
+  game,
+  onClose,
+}: {
+  game: GameDefinition;
+  onClose: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(11,22,40,.66)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 22,
+        animation: 'igra-fade .16s ease',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 340,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--line2)',
+          borderRadius: 22,
+          padding: 22,
+          boxShadow: '0 24px 60px rgba(0,0,0,.5)',
+          animation: 'igra-pop .24s cubic-bezier(.22,1,.36,1)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={tileStyle(game.accent, 46)}>{game.icon}</div>
+          <div>
+            <div
+              style={{ fontSize: '1.15rem', fontWeight: 800, lineHeight: 1.05 }}
+            >
+              {t(`game.${game.id}.name`)}
+            </div>
+            <div
+              style={{
+                fontSize: '0.66rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '.05em',
+                color: 'var(--accent)',
+                marginTop: 2,
+              }}
+            >
+              {t('gameSelect.howToPlayLabel')}
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 11,
+            margin: '18px 0 20px',
+          }}
+        >
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}
+            >
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: 'rgba(194,155,71,.18)',
+                  color: 'var(--accent)',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 1,
+                }}
+              >
+                {n}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.45,
+                }}
+              >
+                {t(`game.${game.id}.rule${n}`)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%',
+            minHeight: 48,
+            borderRadius: 14,
+            border: '1px solid var(--line2)',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            fontFamily: 'inherit',
+            fontWeight: 800,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+          }}
+        >
+          {t('common.close')}
+        </button>
       </div>
     </div>
   );
