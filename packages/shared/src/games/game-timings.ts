@@ -113,15 +113,6 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
-    gameId: 'emoji-zagonetke',
-    gameName: 'Emoji zagonetke',
-    fields: [
-      { key: 'SHOWING_EMOJIS_DURATION', label: 'Prikaz emojija pre pogađanja', min: 1, max: 20, def: 4 },
-      { key: 'SHOWING_RESULTS_DURATION', label: 'Prikaz rezultata', min: 2, max: 40, def: 7 },
-      { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 5 },
-    ],
-  },
-  {
     gameId: 'hot-potato',
     gameName: 'Vruć krompir',
     fields: [

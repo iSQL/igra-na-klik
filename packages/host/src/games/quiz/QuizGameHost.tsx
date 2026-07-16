@@ -14,6 +14,7 @@ import { MediaPanel } from './components/MediaPanel';
 import { formatBrojValue } from '@igra/shared';
 import type {
   KvizBrojRoundResult,
+  KvizEmojiRoundResult,
   KvizGeoRoundResult,
   KvizQuestionType,
   KvizValueType,
@@ -124,6 +125,65 @@ export default function QuizGameHost() {
           </>
         )}
       </Column>
+    );
+  }
+
+  if (
+    questionType === 'emoji' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions} ·{' '}
+          {questionText ?? 'Šta se krije iza emojija?'}
+        </p>
+        <motion.p
+          key={`${questionIndex}-${data.emojis as string}`}
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          style={{
+            fontSize: 'clamp(4rem, 12vw, 8rem)',
+            lineHeight: 1.2,
+            textAlign: 'center',
+            margin: 0,
+          }}
+        >
+          {data.emojis as string}
+        </motion.p>
+        {phase === 'showing-question' ? (
+          <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+            Spremi se...
+          </p>
+        ) : (
+          <>
+            {typeof data.hint === 'string' && data.hint.length > 0 && (
+              <p
+                style={{
+                  fontSize: '1.8rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.15em',
+                  color: 'var(--accent)',
+                  textAlign: 'center',
+                  fontFamily: 'monospace',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {data.hint as string}
+              </p>
+            )}
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Kucaj odgovor na telefonu · {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
     );
   }
 
@@ -246,6 +306,10 @@ export default function QuizGameHost() {
 
       {phase === 'showing-results' && data.brojResult != null && (
         <BrojResults result={data.brojResult as KvizBrojRoundResult} />
+      )}
+
+      {phase === 'showing-results' && data.emojiResult != null && (
+        <EmojiResults result={data.emojiResult as KvizEmojiRoundResult} />
       )}
 
       {phase === 'showing-results' && data.results != null && (
@@ -564,6 +628,78 @@ function BrojResults({ result }: { result: KvizBrojRoundResult }) {
             </span>
             <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right', fontSize: '0.85rem' }}>
               {r.distance === null ? '' : `±${fmt(r.distance)}`}
+            </span>
+            <span
+              style={{
+                fontWeight: 800,
+                minWidth: '3.5rem',
+                textAlign: 'right',
+                color: r.roundScore > 0 ? '#7be37b' : 'var(--text-secondary)',
+              }}
+            >
+              +{r.roundScore}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmojiResults({ result }: { result: KvizEmojiRoundResult }) {
+  const players = useRoomStore((s) => s.players);
+  const emojiFor = (id: string) =>
+    players.find((p) => p.id === id)?.avatarEmoji ?? '👤';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem',
+        width: '100%',
+        overflowY: 'auto',
+      }}
+    >
+      <p style={{ fontSize: '3rem', margin: 0 }}>{result.emojis}</p>
+      <motion.p
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        style={{
+          fontSize: '2.6rem',
+          fontWeight: 800,
+          color: 'var(--accent)',
+          margin: 0,
+          textAlign: 'center',
+        }}
+      >
+        {result.answer}
+      </motion.p>
+
+      <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => (
+          <div
+            key={r.playerId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.4rem 0.7rem',
+              background: 'var(--bg-secondary)',
+              borderRadius: '0.5rem',
+              borderLeft: `5px solid ${r.avatarColor}`,
+            }}
+          >
+            <span style={{ flex: 1, fontWeight: 600 }}>
+              {emojiFor(r.playerId)} {r.name}
+            </span>
+            <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right', fontSize: '0.9rem' }}>
+              {r.solved
+                ? r.timeMs != null
+                  ? `${(r.timeMs / 1000).toFixed(1)}s`
+                  : '✓'
+                : '—'}
             </span>
             <span
               style={{

@@ -29,10 +29,13 @@ import {
   SPIJUN_DISCUSSION_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
+import {
+  KVIZ_ALL_TYPES,
+  availableQuestionCount,
+  effectivePackIds,
+} from '../store/quizImportStore';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
-import { EmojiImportButton } from '../components/EmojiImportButton';
-import { useEmojiImportStore } from '../store/emojiImportStore';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useLanguageStore } from '../store/languageStore';
 import { useT } from '../i18n/useT';
@@ -122,11 +125,35 @@ export function GameSelectScreen() {
         : undefined;
 
     const quizImport = gameId === 'quiz' ? useQuizImportStore.getState() : null;
-    const quizPackId = quizImport?.packId ?? undefined;
-    // Inline questions only when no server pack is chosen — the pack wins.
-    const customQuestions = quizPackId
-      ? undefined
-      : quizImport?.customQuestions ?? undefined;
+    // Inline file import wins over the pack multi-select.
+    const customQuestions = quizImport?.customQuestions ?? undefined;
+    let quizPackIds: string[] | undefined;
+    let quizTypes: HostStartGamePayload['quizTypes'];
+    if (quizImport) {
+      if (!customQuestions) {
+        const ids = effectivePackIds(quizImport.packs, quizImport.selectedPackIds);
+        // Empty selection would start with 0 questions — refuse client-side.
+        if (
+          ids.length === 0 ||
+          availableQuestionCount(
+            quizImport.packs,
+            quizImport.selectedPackIds,
+            quizImport.selectedTypes
+          ) === 0
+        ) {
+          setErrorMessage(t('quizConfig.emptySelection'));
+          return;
+        }
+        quizPackIds = ids;
+      }
+      // Omit the filter when every type is checked.
+      if (
+        quizImport.selectedTypes &&
+        quizImport.selectedTypes.length < KVIZ_ALL_TYPES.length
+      ) {
+        quizTypes = quizImport.selectedTypes;
+      }
+    }
     const slepiRounds =
       gameId === 'slepi-telefoni' ? selectedRounds : undefined;
 
@@ -144,7 +171,8 @@ export function GameSelectScreen() {
     const payload: HostStartGamePayload = {
       gameId,
       customQuestions,
-      quizPackId,
+      quizPackIds,
+      quizTypes,
       slepiRounds,
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
@@ -200,12 +228,6 @@ export function GameSelectScreen() {
         : undefined,
       spijunTutorial:
         gameId === 'spijun' && newGamesConfig.spijunTutorial ? true : undefined,
-      customEmojiPuzzles:
-        gameId === 'emoji-zagonetke'
-          ? useEmojiImportStore.getState().customPuzzles ?? undefined
-          : undefined,
-      emojiHints:
-        gameId === 'emoji-zagonetke' ? newGamesConfig.emojiHints : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -460,45 +482,6 @@ export function GameSelectScreen() {
                 >
                   {t(`config.hotPotatoModeHint.${newGamesConfig.hotPotatoMode}`)}
                 </p>
-              </>
-            )}
-            {game.id === 'emoji-zagonetke' && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    marginTop: '0.75rem',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {([true, false] as const).map((on) => {
-                    const active = on === newGamesConfig.emojiHints;
-                    return (
-                      <button
-                        key={String(on)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          newGamesConfig.setEmojiHints(on);
-                        }}
-                        style={{
-                          padding: '0.3rem 0.75rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: active
-                            ? 'var(--accent)'
-                            : 'var(--bg-secondary)',
-                          color: active ? '#fff' : 'var(--text-primary)',
-                        }}
-                      >
-                        {t(on ? 'config.emojiHintsOn' : 'config.emojiHintsOff')}
-                      </button>
-                    );
-                  })}
-                </div>
-                <EmojiImportButton />
               </>
             )}
             {game.id === 'slepi-telefoni' && (

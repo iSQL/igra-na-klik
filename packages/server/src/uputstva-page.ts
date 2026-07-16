@@ -28,9 +28,10 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li><strong>Obična pitanja</strong> (i sa slikom, pesmom 🎵 ili snimkom 🎬): 2–4 ponuđena odgovora, tapneš tačan što brže — brži tačan odgovor nosi više poena.</li>
 <li><strong>Geo pitanja</strong> 🗺️: TV pokaže fotografiju, a ti na mapi na telefonu postaviš iglu gde misliš da je slikana — bliža igla, više poena.</li>
 <li><strong>Broj pitanja</strong> 🔢: klizačem pogađaš vrednost (cenu, godinu, težinu…) — bliži i brži pogodak nosi više.</li>
+<li><strong>Emoji zagonetke</strong> 😀: niz emojija krije film, izreku ili pojam — kucaš odgovor (može više pokušaja), a slova se postepeno otkrivaju kao hint.</li>
 <li>Svako pitanje vredi najviše 1000 poena; pobednik je igrač sa najviše poena na kraju.</li>
 </ul>
-<p class="tip">Domaćin bira serverski pack pitanja ili uveze svoja (JSON) na ekranu za izbor igre; packovi se prave u /admin/kviz editoru.</p>`,
+<p class="tip">Domaćin štiklira jedan ili više packova pitanja (i vrste pitanja) na ekranu za izbor igre, ili uveze svoja pitanja (JSON); packovi se prave u /admin editoru.</p>`,
   },
   'draw-guess': {
     emoji: '🎨',
@@ -154,16 +155,6 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Noću Sile Mraka biraju žrtvu, a posebne uloge koriste svoje moći.</li>
 <li>Danju selo raspravlja uživo i glasa koga da obesi.</li>
 <li>Selo pobeđuje kad razotkrije sav Mrak; Mrak kad ih bude koliko i ostalih.</li>
-</ul>`,
-  },
-  'emoji-zagonetke': {
-    emoji: '🎬',
-    body: `<p>Niz emojija krije film, izreku ili pojam.</p>
-<ul>
-<li>Na ekranu se pojavi zagonetka od emojija (🎬🦁👑 = Kralj lavova).</li>
-<li>Svi istovremeno kucaju odgovor na telefonu — može više pokušaja.</li>
-<li>Brži tačan odgovor nosi više poena; svako ko pogodi dobija poene.</li>
-<li>Ako je uključen hint, slova odgovora se postepeno otkrivaju.</li>
 </ul>`,
   },
   spijun: {

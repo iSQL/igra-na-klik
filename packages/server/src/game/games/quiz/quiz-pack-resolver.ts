@@ -7,6 +7,7 @@ import type {
   KvizQuestionType,
 } from '@igra/shared';
 import {
+  KVIZ_EMOJI_DEFAULT_TEXT,
   KVIZ_GEO_DEFAULT_TEXT,
   kvizOptionsFromStrings,
   kvizTypeCounts,
@@ -80,6 +81,19 @@ export function importQuestionsToRuntime(
         valueType: broj.valueType,
         answer: broj.answer,
         timeLimit: broj.timeLimit!,
+      };
+    }
+
+    if (type === 'emoji') {
+      const emoji = q as Extract<KvizImportQuestion, { type: 'emoji' }>;
+      return {
+        type: 'emoji',
+        id,
+        text: emoji.text ?? KVIZ_EMOJI_DEFAULT_TEXT,
+        emojis: emoji.emojis,
+        answer: emoji.answer,
+        accept: emoji.accept,
+        timeLimit: emoji.timeLimit!,
       };
     }
 

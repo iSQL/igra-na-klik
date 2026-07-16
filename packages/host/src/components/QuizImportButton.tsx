@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseQuizImport } from '@igra/shared';
 import type { KvizQuestionType } from '@igra/shared';
-import { useQuizImportStore } from '../store/quizImportStore';
+import {
+  KVIZ_ALL_TYPES,
+  availableQuestionCount,
+  effectivePackIds,
+  useQuizImportStore,
+} from '../store/quizImportStore';
+import type { QuizPackSummary } from '../store/quizImportStore';
 import { useT } from '../i18n/useT';
-
-interface PackSummary {
-  id: string;
-  fileName: string;
-  name: string;
-  count: number;
-  types: Partial<Record<KvizQuestionType, number>>;
-}
 
 const TYPE_BADGES: Record<KvizQuestionType, string> = {
   obicno: '❓',
@@ -18,28 +16,36 @@ const TYPE_BADGES: Record<KvizQuestionType, string> = {
   broj: '🔢',
   audio: '🎵',
   video: '🎬',
+  emoji: '😀',
 };
 
-function typeSummary(types: Partial<Record<KvizQuestionType, number>>): string {
-  return (Object.keys(TYPE_BADGES) as KvizQuestionType[])
-    .filter((t) => (types[t] ?? 0) > 0)
-    .map((t) => `${TYPE_BADGES[t]}${types[t]}`)
-    .join(' ');
-}
-
+/**
+ * Kviz question-source picker: a multi-select of server packs (the built-in
+ * bank arrives as the '__bank__' pseudo-pack from /api/question-packs) plus
+ * a question-type filter, or a local .json file inlined as customQuestions.
+ */
 export function QuizImportButton() {
-  const { packId, packName, customQuestions, fileName, setPack, setCustom, clear } =
-    useQuizImportStore();
+  const {
+    packs,
+    selectedPackIds,
+    selectedTypes,
+    customQuestions,
+    fileName,
+    setPacks,
+    togglePack,
+    toggleType,
+    setCustom,
+    clearCustom,
+  } = useQuizImportStore();
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [packs, setPacks] = useState<PackSummary[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     fetch('/api/question-packs')
       .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: PackSummary[] }) => {
+      .then((data: { packs?: QuizPackSummary[] }) => {
         if (!cancelled) setPacks(data.packs ?? []);
       })
       .catch(() => {
@@ -48,12 +54,7 @@ export function QuizImportButton() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const handlePick = () => {
-    setError(null);
-    inputRef.current?.click();
-  };
+  }, [setPacks]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,26 +82,22 @@ export function QuizImportButton() {
     reader.readAsText(file);
   };
 
-  const handlePackChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    e.stopPropagation();
-    const id = e.target.value;
-    if (!id) {
-      clear();
-      return;
-    }
-    const pack = packs.find((p) => p.id === id);
-    if (!pack) return;
-    setPack(pack.id, pack.name);
-    setError(null);
-  };
+  const checkedIds = effectivePackIds(packs, selectedPackIds);
+  const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
+  const available = availableQuestionCount(packs, selectedPackIds, selectedTypes);
+  const isFileImport = customQuestions !== null;
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    clear();
-    setError(null);
-  };
-
-  const selectedPack = packs.find((p) => p.id === packId);
+  const chipStyle = (on: boolean): React.CSSProperties => ({
+    padding: '0.3rem 0.6rem',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    borderRadius: '999px',
+    border: `1px solid ${on ? 'var(--accent)' : 'var(--line2)'}`,
+    background: on ? 'rgba(194,155,71,0.18)' : 'transparent',
+    color: on ? 'var(--text-primary)' : 'var(--dim)',
+    minHeight: '32px',
+    minWidth: 'auto',
+  });
 
   return (
     <div
@@ -109,8 +106,9 @@ export function QuizImportButton() {
         marginTop: '0.75rem',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        gap: '0.4rem',
+        alignItems: 'stretch',
+        gap: '0.45rem',
+        maxWidth: '320px',
       }}
     >
       <input
@@ -121,43 +119,18 @@ export function QuizImportButton() {
         style={{ display: 'none' }}
       />
 
-      {packs.length > 0 && (
-        <select
-          value={packId ?? ''}
-          onChange={handlePackChange}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            padding: '0.4rem 0.6rem',
-            fontSize: '0.8rem',
-            borderRadius: '0.5rem',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--text-secondary)',
-            maxWidth: '220px',
-          }}
-        >
-          <option value="">{t('import.choosePack')}</option>
-          {packs.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.count})
-            </option>
-          ))}
-        </select>
-      )}
-
-      {packId ? (
+      {isFileImport ? (
         <>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)', margin: 0 }}>
-            {t('import.loaded')}: <strong>{packName ?? packId}</strong>
-            {selectedPack ? ` (${selectedPack.count})` : ''}
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-primary)', margin: 0, textAlign: 'center' }}>
+            {t('import.loaded')}: <strong>{fileName}</strong> ({customQuestions.length}{' '}
+            {t('import.questions')})
           </p>
-          {selectedPack && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-              {typeSummary(selectedPack.types)}
-            </p>
-          )}
           <button
-            onClick={handleClear}
+            onClick={(e) => {
+              e.stopPropagation();
+              clearCustom();
+              setError(null);
+            }}
             style={{
               padding: '0.35rem 0.9rem',
               fontSize: '0.8rem',
@@ -165,53 +138,108 @@ export function QuizImportButton() {
               background: 'transparent',
               color: 'var(--text-secondary)',
               border: '1px solid var(--text-secondary)',
-            }}
-          >
-            {t('common.remove')}
-          </button>
-        </>
-      ) : customQuestions ? (
-        <>
-          <p
-            style={{
-              fontSize: '0.8rem',
-              color: 'var(--text-primary)',
-              margin: 0,
-            }}
-          >
-            {t('import.loaded')}: <strong>{fileName}</strong> ({customQuestions.length} {t('import.questions')})
-          </p>
-          <button
-            onClick={handleClear}
-            style={{
-              padding: '0.35rem 0.9rem',
-              fontSize: '0.8rem',
-              borderRadius: '0.5rem',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              border: '1px solid var(--text-secondary)',
+              alignSelf: 'center',
             }}
           >
             {t('common.remove')}
           </button>
         </>
       ) : (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePick();
-          }}
-          style={{
-            padding: '0.45rem 1rem',
-            fontSize: '0.85rem',
-            borderRadius: '0.5rem',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--text-secondary)',
-          }}
-        >
-          {t('import.importQuestions')}
-        </button>
+        <>
+          {packs.length > 0 && (
+            <>
+              <p style={{ fontSize: '0.72rem', color: 'var(--dim)', margin: 0, fontWeight: 700 }}>
+                {t('quizConfig.packs')}
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                  textAlign: 'left',
+                }}
+              >
+                {packs.map((p) => {
+                  const on = checkedIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        fontSize: '0.82rem',
+                        color: on ? 'var(--text-primary)' : 'var(--dim)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => togglePack(p.id)}
+                        style={{ minHeight: 'auto', width: '16px', height: '16px' }}
+                      />
+                      <span style={{ flex: 1 }}>
+                        {p.name} ({p.count})
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <p style={{ fontSize: '0.72rem', color: 'var(--dim)', margin: '0.2rem 0 0', fontWeight: 700 }}>
+                {t('quizConfig.types')}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                {KVIZ_ALL_TYPES.map((ty) => (
+                  <button
+                    key={ty}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleType(ty);
+                    }}
+                    style={chipStyle(checkedTypes.includes(ty))}
+                  >
+                    {TYPE_BADGES[ty]} {t(`quizType.${ty}`)}
+                  </button>
+                ))}
+              </div>
+
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  margin: 0,
+                  color: available > 0 ? 'var(--text-secondary)' : 'var(--danger)',
+                }}
+              >
+                {available > 0
+                  ? t('quizConfig.available', { n: available })
+                  : t('quizConfig.emptySelection')}
+              </p>
+            </>
+          )}
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setError(null);
+              inputRef.current?.click();
+            }}
+            style={{
+              padding: '0.45rem 1rem',
+              fontSize: '0.85rem',
+              borderRadius: '0.5rem',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--text-secondary)',
+              alignSelf: 'center',
+            }}
+          >
+            {t('import.importQuestions')}
+          </button>
+        </>
       )}
 
       {error && (
@@ -220,7 +248,8 @@ export function QuizImportButton() {
             fontSize: '0.75rem',
             color: 'var(--danger)',
             margin: 0,
-            maxWidth: '200px',
+            maxWidth: '260px',
+            alignSelf: 'center',
           }}
         >
           {error}

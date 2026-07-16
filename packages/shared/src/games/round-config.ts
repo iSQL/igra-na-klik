@@ -19,7 +19,6 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   fibbage: { options: [3, 5, 8, 10], default: 5, min: 3, max: 10 },
   'ko-sam-ja': { options: [5, 8, 10], default: 8, min: 3, max: 12 },
   'spot-it': { options: [5, 10, 15], default: 10, min: 3, max: 20 },
-  'emoji-zagonetke': { options: [5, 10, 15, 20], default: 10, min: 3, max: 25 },
   'bolji-zivot': { options: [1, 2, 3, 4], default: 4, min: 1, max: 6 },
   // Špijun: a "round" is one full location+spy deal (discussions are long,
   // so the default is a single round).

@@ -5,7 +5,6 @@ import {
   DRAW_GUESS_TIME_OPTIONS,
   parseKoSamJaImport,
   parseQuizImport,
-  parseEmojiImport,
 } from '@igra/shared';
 import type {
   GameAccent,
@@ -14,11 +13,11 @@ import type {
   GluvoDobaDeathReveal,
   GluvoDobaPack,
   KvizImportQuestion,
+  KvizQuestionType,
   KoSamJaImportQuestion,
   KoSamJaCategory,
   TajniAgentiMode,
   HotPotatoMode,
-  EmojiImportPuzzle,
   SpijunLocation,
 } from '@igra/shared';
 import { socket } from '../socket';
@@ -37,6 +36,51 @@ interface QuestionPackSummary {
   fileName: string;
   name: string;
   count: number;
+  types: Partial<Record<KvizQuestionType, number>>;
+}
+
+// Kviz question-type filter chips (order = display order).
+const KVIZ_ALL_TYPES: KvizQuestionType[] = [
+  'obicno',
+  'audio',
+  'video',
+  'geo',
+  'broj',
+  'emoji',
+];
+const KVIZ_TYPE_BADGES: Record<KvizQuestionType, string> = {
+  obicno: '❓',
+  audio: '🎵',
+  video: '🎬',
+  geo: '🗺️',
+  broj: '🔢',
+  emoji: '😀',
+};
+
+/** Effective checked pack ids (null = all) restricted to loaded packs. */
+function effectiveQuizPackIds(
+  packs: QuestionPackSummary[],
+  selected: string[] | null
+): string[] {
+  const all = packs.map((p) => p.id);
+  if (selected === null) return all;
+  return selected.filter((id) => all.includes(id));
+}
+
+/** How many questions the current pack × type selection yields. */
+function availableQuizCount(
+  packs: QuestionPackSummary[],
+  selectedIds: string[] | null,
+  selectedTypes: KvizQuestionType[] | null
+): number {
+  const ids = new Set(effectiveQuizPackIds(packs, selectedIds));
+  const types = selectedTypes ?? KVIZ_ALL_TYPES;
+  let n = 0;
+  for (const p of packs) {
+    if (!ids.has(p.id)) continue;
+    for (const ty of types) n += p.types?.[ty] ?? 0;
+  }
+  return n;
 }
 
 interface KoSamJaPackSummary {
@@ -54,13 +98,6 @@ interface SpijunPackSummary {
   id: string;
   name?: string;
   locations: SpijunLocation[];
-}
-
-interface EmojiPackSummary {
-  id: string;
-  fileName: string;
-  count: number;
-  puzzles: EmojiImportPuzzle[];
 }
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
@@ -165,7 +202,9 @@ export function GameSelectScreen() {
     questions: KvizImportQuestion[];
     fileName: string;
   } | null>(null);
-  const [quizPackId, setQuizPackId] = useState('');
+  // Checked packs / question types; null = all (default).
+  const [quizPackIds, setQuizPackIds] = useState<string[] | null>(null);
+  const [quizTypes, setQuizTypes] = useState<KvizQuestionType[] | null>(null);
   const [quizImportError, setQuizImportError] = useState<string | null>(null);
   const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
   const [koSamJaImport, setKoSamJaImport] = useState<{
@@ -192,13 +231,6 @@ export function GameSelectScreen() {
   const [gluvoTutorial, setGluvoTutorial] = useState(false);
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
-  const [emojiPacks, setEmojiPacks] = useState<EmojiPackSummary[]>([]);
-  const [emojiImport, setEmojiImport] = useState<{
-    puzzles: EmojiImportPuzzle[];
-    fileName: string;
-  } | null>(null);
-  const [emojiImportError, setEmojiImportError] = useState<string | null>(null);
-  const [emojiHints, setEmojiHints] = useState(true);
   const [bzTutorial, setBzTutorial] = useState(false);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const [spijunPackId, setSpijunPackId] = useState('');
@@ -242,14 +274,6 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setSpijunPacks([]);
-      });
-    fetch('/api/emoji-packs')
-      .then((r) => (r.ok ? r.json() : { packs: [] }))
-      .then((data: { packs?: EmojiPackSummary[] }) => {
-        if (!cancelled) setEmojiPacks(data.packs ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setEmojiPacks([]);
       });
     return () => {
       cancelled = true;
@@ -308,10 +332,6 @@ export function GameSelectScreen() {
     if (game.id === 'hot-potato') {
       payload.hotPotatoMode = hotPotatoMode;
     }
-    if (game.id === 'emoji-zagonetke') {
-      payload.emojiHints = emojiHints;
-      if (emojiImport) payload.customEmojiPuzzles = emojiImport.puzzles;
-    }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
       payload.gluvoDobaDeathReveal = gluvoDeathReveal;
@@ -348,9 +368,24 @@ export function GameSelectScreen() {
       payload.drawTimeLimit = drawGuessTimeLimit;
     }
     if (game.id === 'quiz') {
-      // Server pack wins; questions stay server-side (answers never travel).
-      if (quizPackId) payload.quizPackId = quizPackId;
-      else if (quizImport) payload.customQuestions = quizImport.questions;
+      // Inline file import wins; otherwise the pack multi-select travels as
+      // ids (questions stay server-side — answers never reach clients).
+      if (quizImport) {
+        payload.customQuestions = quizImport.questions;
+      } else {
+        const ids = effectiveQuizPackIds(quizPacks, quizPackIds);
+        if (
+          ids.length === 0 ||
+          availableQuizCount(quizPacks, quizPackIds, quizTypes) === 0
+        ) {
+          setErrorMessage(t('quizConfig.emptySelection'));
+          return;
+        }
+        payload.quizPackIds = ids;
+      }
+      if (quizTypes && quizTypes.length < KVIZ_ALL_TYPES.length) {
+        payload.quizTypes = quizTypes;
+      }
     }
     if (game.id === 'ko-sam-ja') {
       payload.koSamJaCategory = koSamJaCategory;
@@ -697,8 +732,10 @@ export function GameSelectScreen() {
                   {game.id === 'quiz' && (
                     <QuizConfig
                       packs={quizPacks}
-                      packId={quizPackId}
-                      setPackId={setQuizPackId}
+                      selectedIds={quizPackIds}
+                      setSelectedIds={setQuizPackIds}
+                      selectedTypes={quizTypes}
+                      setSelectedTypes={setQuizTypes}
                       imported={quizImport}
                       setImported={setQuizImport}
                       error={quizImportError}
@@ -817,42 +854,6 @@ export function GameSelectScreen() {
                       >
                         {t(`config.hotPotatoModeHint.${hotPotatoMode}`)}
                       </span>
-                    </div>
-                  )}
-                  {game.id === 'emoji-zagonetke' && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.3rem',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {t('config.emojiHints')}
-                      </span>
-                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                        {([true, false] as const).map((on) => (
-                          <Pill
-                            key={String(on)}
-                            active={on === emojiHints}
-                            onClick={() => setEmojiHints(on)}
-                          >
-                            {t(on ? 'config.emojiHintsOn' : 'config.emojiHintsOff')}
-                          </Pill>
-                        ))}
-                      </div>
-                      <EmojiConfig
-                        packs={emojiPacks}
-                        imported={emojiImport}
-                        setImported={setEmojiImport}
-                        error={emojiImportError}
-                        setError={setEmojiImportError}
-                      />
                     </div>
                   )}
                   {game.id === 'gluvo-doba' && (
@@ -1421,16 +1422,20 @@ function RulesModal({
 
 function QuizConfig({
   packs,
-  packId,
-  setPackId,
+  selectedIds,
+  setSelectedIds,
+  selectedTypes,
+  setSelectedTypes,
   imported,
   setImported,
   error,
   setError,
 }: {
   packs: QuestionPackSummary[];
-  packId: string;
-  setPackId: (id: string) => void;
+  selectedIds: string[] | null;
+  setSelectedIds: (v: string[] | null) => void;
+  selectedTypes: KvizQuestionType[] | null;
+  setSelectedTypes: (v: KvizQuestionType[] | null) => void;
   imported: { questions: KvizImportQuestion[]; fileName: string } | null;
   setImported: (
     v: { questions: KvizImportQuestion[]; fileName: string } | null
@@ -1441,12 +1446,24 @@ function QuizConfig({
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isFileImport = imported !== null && packId === '';
+  const isFileImport = imported !== null;
+  const checkedIds = effectiveQuizPackIds(packs, selectedIds);
+  const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
+  const available = availableQuizCount(packs, selectedIds, selectedTypes);
 
-  const handlePackChange = (id: string) => {
-    setError(null);
-    setPackId(id);
-    if (id) setImported(null);
+  const togglePack = (id: string) => {
+    const next = checkedIds.includes(id)
+      ? checkedIds.filter((x) => x !== id)
+      : [...checkedIds, id];
+    // Everything checked collapses back to null so new packs auto-include.
+    setSelectedIds(next.length === packs.length ? null : next);
+  };
+
+  const toggleType = (ty: KvizQuestionType) => {
+    const next = checkedTypes.includes(ty)
+      ? checkedTypes.filter((x) => x !== ty)
+      : [...checkedTypes, ty];
+    setSelectedTypes(next.length === KVIZ_ALL_TYPES.length ? null : next);
   };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1463,7 +1480,6 @@ function QuizConfig({
           setError(result.error);
           return;
         }
-        setPackId('');
         setImported({
           questions: result.manifest.questions,
           fileName: file.name,
@@ -1478,31 +1494,79 @@ function QuizConfig({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        {t('import.questionPack')}
-      </span>
-      <select
-        value={packId}
-        onChange={(e) => handlePackChange(e.target.value)}
-        disabled={isFileImport}
-        style={{
-          padding: '0.6rem 0.7rem',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          borderRadius: '11px',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          border: '1.5px solid var(--line2)',
-          opacity: isFileImport ? 0.5 : 1,
-        }}
-      >
-        <option value="">{t('import.builtinPack')}</option>
-        {packs.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.count})
-          </option>
-        ))}
-      </select>
+      {!isFileImport && packs.length > 0 && (
+        <>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            {t('quizConfig.packs')}
+          </span>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              maxHeight: '150px',
+              overflowY: 'auto',
+              padding: '0.4rem 0.5rem',
+              background: 'var(--bg-primary)',
+              borderRadius: '11px',
+              border: '1.5px solid var(--line2)',
+            }}
+          >
+            {packs.map((p) => {
+              const on = checkedIds.includes(p.id);
+              return (
+                <label
+                  key={p.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: on ? 'var(--text-primary)' : 'var(--dim)',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => togglePack(p.id)}
+                    style={{ minHeight: 'auto', width: '17px', height: '17px' }}
+                  />
+                  <span style={{ flex: 1 }}>
+                    {p.name} ({p.count})
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            {t('quizConfig.types')}
+          </span>
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            {KVIZ_ALL_TYPES.map((ty) => (
+              <Pill
+                key={ty}
+                active={checkedTypes.includes(ty)}
+                onClick={() => toggleType(ty)}
+              >
+                {KVIZ_TYPE_BADGES[ty]} {t(`quizType.${ty}`)}
+              </Pill>
+            ))}
+          </div>
+
+          <span
+            style={{
+              fontSize: '0.72rem',
+              color: available > 0 ? 'var(--text-secondary)' : 'var(--danger)',
+            }}
+          >
+            {available > 0
+              ? t('quizConfig.available', { n: available })
+              : t('quizConfig.emptySelection')}
+          </span>
+        </>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -1527,154 +1591,6 @@ function QuizConfig({
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
             {imported!.questions.length})
-          </span>
-          <button
-            onClick={() => {
-              setImported(null);
-              setError(null);
-            }}
-            style={{
-              padding: '0.25rem 0.6rem',
-              fontSize: '0.75rem',
-              borderRadius: '0.35rem',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              border: '1px solid var(--text-secondary)',
-            }}
-          >
-            {t('common.remove')}
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          style={{
-            padding: '0.6rem 0.7rem',
-            fontSize: '0.8rem',
-            fontWeight: 800,
-            borderRadius: '11px',
-            background: 'transparent',
-            color: 'var(--cyan)',
-            border: '1.5px dashed var(--line2)',
-          }}
-        >
-          {t('import.importQuestionsFile')}
-        </button>
-      )}
-      {error && (
-        <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{error}</span>
-      )}
-    </div>
-  );
-}
-
-function EmojiConfig({
-  packs,
-  imported,
-  setImported,
-  error,
-  setError,
-}: {
-  packs: EmojiPackSummary[];
-  imported: { puzzles: EmojiImportPuzzle[]; fileName: string } | null;
-  setImported: (
-    v: { puzzles: EmojiImportPuzzle[]; fileName: string } | null
-  ) => void;
-  error: string | null;
-  setError: (e: string | null) => void;
-}) {
-  const t = useT();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const selectedPackId =
-    packs.find((p) => p.fileName === imported?.fileName)?.id ?? '';
-  const isFileImport = imported !== null && selectedPackId === '';
-
-  const handlePackChange = (id: string) => {
-    setError(null);
-    if (!id) {
-      setImported(null);
-      return;
-    }
-    const pack = packs.find((p) => p.id === id);
-    if (!pack) return;
-    setImported({ puzzles: pack.puzzles, fileName: pack.fileName });
-  };
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onerror = () => setError(t('import.fileReadError'));
-    reader.onload = () => {
-      try {
-        const json = JSON.parse(reader.result as string);
-        const result = parseEmojiImport(json);
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-        setImported({ puzzles: result.puzzles, fileName: file.name });
-        setError(null);
-      } catch {
-        setError(t('import.invalidJson'));
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        {t('import.questionPack')}
-      </span>
-      <select
-        value={selectedPackId}
-        onChange={(e) => handlePackChange(e.target.value)}
-        disabled={isFileImport}
-        style={{
-          padding: '0.6rem 0.7rem',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          borderRadius: '11px',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          border: '1.5px solid var(--line2)',
-          opacity: isFileImport ? 0.5 : 1,
-        }}
-      >
-        <option value="">{t('import.builtinPack')}</option>
-        {packs.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.id} ({p.count})
-          </option>
-        ))}
-      </select>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
-        onChange={handleFile}
-        style={{ display: 'none' }}
-      />
-      {isFileImport ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem',
-            padding: '0.4rem 0.6rem',
-            background: 'var(--bg-secondary)',
-            borderRadius: '0.4rem',
-            border: '1px solid var(--bg-card)',
-            fontSize: '0.8rem',
-          }}
-        >
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {t('import.fromFile')}: <strong>{imported!.fileName}</strong> (
-            {imported!.puzzles.length})
           </span>
           <button
             onClick={() => {

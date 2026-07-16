@@ -1,0 +1,16 @@
+{
+  "name": "Emoji: filmovi i crtani",
+  "description": "Emoji zagonetke — pogodi film ili crtani iz niza emojija.",
+  "questions": [
+    { "type": "emoji", "emojis": "🦁👑", "answer": "Kralj lavova", "accept": ["The Lion King"] },
+    { "type": "emoji", "emojis": "❄️👸⛄", "answer": "Zaleđeno kraljevstvo", "accept": ["Frozen"] },
+    { "type": "emoji", "emojis": "🚢🧊💔", "answer": "Titanik", "accept": ["Titanic"] },
+    { "type": "emoji", "emojis": "🦖🏝️", "answer": "Park iz doba jure", "accept": ["Jurassic Park"] },
+    { "type": "emoji", "emojis": "🐠🔍", "answer": "Potraga za Nemom", "accept": ["Finding Nemo", "Nemo"] },
+    { "type": "emoji", "emojis": "🤖❤️🌱", "answer": "Vol-i", "accept": ["Wall-E", "WALL-E", "Voli"] },
+    { "type": "emoji", "emojis": "🕷️🧑", "answer": "Spajdermen", "accept": ["Spiderman", "Spider-Man", "Čovek pauk"] },
+    { "type": "emoji", "emojis": "🦇🧑", "answer": "Betmen", "accept": ["Batman"] },
+    { "type": "emoji", "emojis": "🚗⚡👦", "answer": "Munjeviti", "accept": ["Cars", "Automobili", "Munjeviti Blic"] },
+    { "type": "emoji", "emojis": "🍫🏭🎫", "answer": "Čarli i fabrika čokolade", "accept": ["Charlie and the Chocolate Factory"] }
+  ]
+}

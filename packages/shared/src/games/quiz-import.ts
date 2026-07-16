@@ -72,12 +72,24 @@ export interface KvizImportBroj {
   timeLimit?: number;
 }
 
+export interface KvizImportEmoji {
+  type: 'emoji';
+  /** Prompt text; defaults to KVIZ_EMOJI_DEFAULT_TEXT. */
+  text?: string;
+  emojis: string;
+  answer: string;
+  /** Accepted alternate answers (fuzzy-matched like the main answer). */
+  accept?: string[];
+  timeLimit?: number;
+}
+
 export type KvizImportQuestion =
   | KvizImportObicno
   | KvizImportAudio
   | KvizImportVideo
   | KvizImportGeo
-  | KvizImportBroj;
+  | KvizImportBroj
+  | KvizImportEmoji;
 
 export interface KvizPackManifest {
   name?: string;
@@ -104,6 +116,7 @@ export const KVIZ_DEFAULT_TIME_LIMIT: Record<KvizQuestionType, number> = {
   video: 15,
   geo: 30,
   broj: 25,
+  emoji: 20,
 };
 
 const MIN_TIME_LIMIT = 5;
@@ -134,6 +147,45 @@ const SERBIA_MIN_LNG = 18.5;
 const SERBIA_MAX_LNG = 23.5;
 
 export const KVIZ_GEO_DEFAULT_TEXT = 'Gde je ovo slikano?';
+export const KVIZ_EMOJI_DEFAULT_TEXT = 'Šta se krije iza emojija?';
+
+/**
+ * Pseudo pack id representing the built-in question bank in the pack
+ * multi-select (quizPackIds) — clients render it as a regular list item,
+ * the server maps it to QUIZ_QUESTION_BANK.
+ */
+export const KVIZ_BANK_PACK_ID = '__bank__';
+
+// Emoji riddle limits (carried over from the absorbed "Emoji zagonetke").
+const MAX_EMOJIS_LENGTH = 40;
+const MAX_EMOJI_ANSWER_LENGTH = 60;
+const MAX_EMOJI_ACCEPT = 8;
+
+/**
+ * Normalize a free-text answer for comparison: lowercase, fold Serbian
+ * diacritics, drop punctuation and collapse whitespace, so
+ * "Kralj Lavova!" == "kralj lavova". Used by emoji questions.
+ */
+export function normalizeEmojiAnswer(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/đ/g, 'dj')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip combining accents (c-caron etc.)
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** True if `guess` matches the riddle's answer or any accepted alternate. */
+export function checkEmojiGuess(
+  guess: string,
+  riddle: { answer: string; accept?: string[] }
+): boolean {
+  const g = normalizeEmojiAnswer(guess);
+  if (!g) return false;
+  if (g === normalizeEmojiAnswer(riddle.answer)) return true;
+  return (riddle.accept ?? []).some((a) => normalizeEmojiAnswer(a) === g);
+}
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
@@ -387,11 +439,11 @@ export function parseQuizImport(
     if (raw.type !== undefined) {
       if (
         typeof raw.type !== 'string' ||
-        !['obicno', 'geo', 'broj', 'audio', 'video'].includes(raw.type)
+        !['obicno', 'geo', 'broj', 'audio', 'video', 'emoji'].includes(raw.type)
       ) {
         return {
           ok: false,
-          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video).`,
+          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video/emoji).`,
         };
       }
       type = raw.type as KvizQuestionType;
@@ -475,6 +527,62 @@ export function parseQuizImport(
         lat: raw.lat,
         lng: raw.lng,
         mapId,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'emoji') {
+      if (!isNonEmptyString(raw.emojis)) {
+        return { ok: false, error: `${label}: nedostaju emojiji.` };
+      }
+      const emojis = (raw.emojis as string).trim();
+      if (emojis.length > MAX_EMOJIS_LENGTH) {
+        return { ok: false, error: `${label}: emojiji su predugački.` };
+      }
+      if (!isNonEmptyString(raw.answer)) {
+        return { ok: false, error: `${label}: nedostaje odgovor.` };
+      }
+      const answer = (raw.answer as string).trim();
+      if (answer.length > MAX_EMOJI_ANSWER_LENGTH) {
+        return { ok: false, error: `${label}: odgovor je predugačak.` };
+      }
+      let text: string | undefined;
+      if (raw.text !== undefined) {
+        if (typeof raw.text !== 'string') {
+          return { ok: false, error: `${label}: "text" mora biti string.` };
+        }
+        text = raw.text.trim() || undefined;
+        if (text && text.length > MAX_TEXT_LENGTH) {
+          return { ok: false, error: `${label}: tekst predugačak (max ${MAX_TEXT_LENGTH} znakova).` };
+        }
+      }
+      let accept: string[] | undefined;
+      if (raw.accept !== undefined && raw.accept !== null) {
+        if (!Array.isArray(raw.accept)) {
+          return { ok: false, error: `${label}: "accept" mora biti niz.` };
+        }
+        if (raw.accept.length > MAX_EMOJI_ACCEPT) {
+          return { ok: false, error: `${label}: previše alternativnih odgovora.` };
+        }
+        const cleaned: string[] = [];
+        for (const a of raw.accept) {
+          if (!isNonEmptyString(a)) {
+            return { ok: false, error: `${label}: prazan alternativni odgovor.` };
+          }
+          if ((a as string).trim().length > MAX_EMOJI_ANSWER_LENGTH) {
+            return { ok: false, error: `${label}: alternativni odgovor je predugačak.` };
+          }
+          cleaned.push((a as string).trim());
+        }
+        if (cleaned.length > 0) accept = cleaned;
+      }
+      questions.push({
+        type: 'emoji',
+        text,
+        emojis,
+        answer,
+        accept,
         timeLimit: time.timeLimit,
       });
       continue;

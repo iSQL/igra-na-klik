@@ -19,9 +19,10 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import {
   parseKoSamJaImport,
   parseTajniAgentiImport,
-  parseEmojiImport,
+  KVIZ_BANK_PACK_ID,
+  QUIZ_QUESTION_BANK,
 } from '@igra/shared';
-import type { KoSamJaImportQuestion } from '@igra/shared';
+import type { KoSamJaImportQuestion, KvizQuestionType } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
 import { UPUTSTVA_PAGE_HTML } from './uputstva-page.js';
@@ -61,10 +62,6 @@ const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
 const SPIJUN_PACKS_DIR = process.env.SPIJUN_PACKS_DIR
   ? path.resolve(process.env.SPIJUN_PACKS_DIR)
   : path.resolve(__dirname, '../../..', 'spijun-packs');
-// „Emoji zagonetke" puzzle packs (JSON-only, same flow as quiz packs).
-const EMOJI_PACKS_DIR = process.env.EMOJI_PACKS_DIR
-  ? path.resolve(process.env.EMOJI_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'emoji-packs');
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = process.env.TIMING_CONFIG_FILE
   ? path.resolve(process.env.TIMING_CONFIG_FILE)
@@ -103,55 +100,31 @@ app.get('/health', (_req, res) => {
 
 // Summaries only — kviz manifests now carry answers (correctIndex, lat/lng,
 // broj answer), so full questions must never leave the server. The chosen
-// pack rides host:start-game as quizPackId and is resolved server-side.
+// packs ride host:start-game as quizPackIds and resolve server-side. The
+// built-in bank is prepended as a pseudo-pack so the multi-select can treat
+// it like any other list item.
+const BANK_TYPE_COUNTS: Partial<Record<KvizQuestionType, number>> = {};
+for (const q of QUIZ_QUESTION_BANK) {
+  BANK_TYPE_COUNTS[q.type] = (BANK_TYPE_COUNTS[q.type] ?? 0) + 1;
+}
 app.get('/api/question-packs', async (_req, res) => {
   try {
     const packs = await listQuizPackSummaries(QUESTION_PACKS_DIR);
-    res.json({ packs });
+    res.json({
+      packs: [
+        {
+          id: KVIZ_BANK_PACK_ID,
+          fileName: '',
+          name: 'Ugrađena pitanja',
+          count: QUIZ_QUESTION_BANK.length,
+          types: BANK_TYPE_COUNTS,
+        },
+        ...packs,
+      ],
+    });
   } catch (err) {
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
-  }
-});
-
-// „Emoji zagonetke" packs — same shape/flow as quiz packs: the host fetches
-// full puzzles and sends them as customEmojiPuzzles (re-validated server-side).
-app.get('/api/emoji-packs', async (_req, res) => {
-  try {
-    const entries = await readdir(EMOJI_PACKS_DIR, { withFileTypes: true });
-    const jsonFiles = entries.filter(
-      (e) => e.isFile() && e.name.toLowerCase().endsWith('.json')
-    );
-    const packs: Array<{
-      id: string;
-      fileName: string;
-      count: number;
-      puzzles: Array<{ emojis: string; answer: string; accept?: string[]; timeLimit?: number }>;
-    }> = [];
-    for (const entry of jsonFiles) {
-      try {
-        const raw = await readFile(path.join(EMOJI_PACKS_DIR, entry.name), 'utf-8');
-        const parsed = parseEmojiImport(JSON.parse(raw));
-        if (!parsed.ok) continue;
-        packs.push({
-          id: entry.name.replace(/\.json$/i, ''),
-          fileName: entry.name,
-          count: parsed.puzzles.length,
-          puzzles: parsed.puzzles,
-        });
-      } catch {
-        // Skip unreadable/malformed files; the rest of the list still loads.
-      }
-    }
-    packs.sort((a, b) => a.id.localeCompare(b.id));
-    res.json({ packs });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      res.json({ packs: [] });
-      return;
-    }
-    console.error('Failed to read emoji packs directory:', err);
-    res.status(500).json({ error: 'Failed to read emoji packs' });
   }
 });
 
@@ -374,7 +347,6 @@ app.use(
     koSamJaPacksDir: KO_SAM_JA_PACKS_DIR,
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
-    emojiPacksDir: EMOJI_PACKS_DIR,
     spijunPacksDir: SPIJUN_PACKS_DIR,
   })
 );
@@ -392,7 +364,6 @@ const LEGACY_ADMIN_ROUTES = [
   '/admin/ko-sam-ja',
   '/admin/tajni-agenti',
   '/admin/gluvo-doba',
-  '/admin/emoji',
   '/admin/spijun',
   '/admin/timinzi',
 ];

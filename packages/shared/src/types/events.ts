@@ -8,6 +8,7 @@ import type {
 import type { GameState } from './game.js';
 import type { DrawOp } from './draw-guess.js';
 import type { KvizImportQuestion } from '../games/quiz-import.js';
+import type { KvizQuestionType } from './quiz.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiMode } from './tajni-agenti.js';
@@ -16,7 +17,6 @@ import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 import type { HotPotatoMode } from './hot-potato.js';
-import type { EmojiImportPuzzle } from './emoji-zagonetke.js';
 import type { SpijunPack } from '../games/spijun-import.js';
 
 export interface ServerToClientEvents {
@@ -69,9 +69,14 @@ export interface ClientToServerEvents {
   'host:start-game': (data: {
     gameId: string;
     customQuestions?: KvizImportQuestion[];
-    // Selected kviz question pack (id from GET /api/question-packs).
-    // Resolved server-side so answers never travel to clients.
-    quizPackId?: string;
+    // Selected kviz question packs (ids from GET /api/question-packs — the
+    // round pools questions from every selected pack). Resolved server-side
+    // so answers never travel to clients. The pseudo-id KVIZ_BANK_PACK_ID
+    // ('__bank__') selects the built-in question bank.
+    quizPackIds?: string[];
+    // Question-type filter applied to the pooled questions. Undefined or
+    // empty = all types.
+    quizTypes?: KvizQuestionType[];
     slepiRounds?: number;
     koSamJaCategory?: KoSamJaCategory;
     customKoSamJaQuestions?: KoSamJaImportQuestion[];
@@ -110,11 +115,6 @@ export interface ClientToServerEvents {
     // Vruć krompir: how the bomb is passed on ('sequential' = next in order,
     // 'choose' = holder picks). Defaults to 'sequential' server-side.
     hotPotatoMode?: HotPotatoMode;
-    // Emoji zagonetke: optional imported puzzle pack (replaces the built-in
-    // bank for the session) + whether progressive letter hints are enabled
-    // (default true). Round count rides the generic `roundCount` field.
-    customEmojiPuzzles?: EmojiImportPuzzle[];
-    emojiHints?: boolean;
     // Špijun: discussion length in seconds (clamped server-side), an
     // optional location pack replacing the built-in bank (re-validated
     // server-side), and tutorial mode (phases advance on the moderator's

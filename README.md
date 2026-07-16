@@ -321,8 +321,10 @@ in the game until they validate.
   - **broj** — slider number guess (the old "Pogodi broj"): per-question min–max range, optional step/unit/mm:ss rendering, closeness × speed scoring (max 1000); results show a timeline of everyone's guesses.
   - **audio** — an uploaded clip plays on the TV (on phones in hostless rooms), then multiple choice.
   - **video** — a YouTube segment (`videoId` + optional start/end) embeds via youtube-nocookie, then multiple choice.
+  - **emoji** — an emoji string hides a movie/saying/thing (the old "Emoji zagonetke"): everyone types the answer (fuzzy match + accept list, retries allowed), letters reveal progressively as a hint, speed scoring.
 - Every type caps at 1000 points per question so mixed packs stay fair.
-- **Privacy**: pack manifests carry the answers, so `GET /api/question-packs` returns summaries only and the chosen pack is resolved server-side (`quizPackId`); the `/kviz-files` mount serves only per-pack assets, never manifests.
+- **Pack selection is a multi-select**: the round pools questions from every checked pack (the built-in bank is a regular list item) and an optional question-type filter narrows the pool.
+- **Privacy**: pack manifests carry the answers, so `GET /api/question-packs` returns summaries only and the chosen packs are resolved server-side (`quizPackIds`); the `/kviz-files` mount serves only per-pack assets, never manifests.
 
 **Ko sam ja (personal questions about players)** — *Serbian-only content*
 - 3–8 players; hybrid of Kviz (multiple-choice + speed scoring) and Lažov (subject-supplied answers).
@@ -390,12 +392,13 @@ Manifest format (mixed question types; a bare JSON array of `obicno` questions a
     { "type": "geo", "imageFile": "f253a1d3….jpg", "caption": "Centar", "lat": 44.43, "lng": 21.22, "mapId": "main" },
     { "type": "broj", "text": "Koliko km ima Dunav?", "answer": 2850, "min": 1000, "max": 4000, "unit": "km" },
     { "type": "audio", "text": "Koja je ovo pesma?", "audioFile": "pesma.mp3", "options": ["A", "B"], "correctIndex": 0 },
-    { "type": "video", "text": "Koje boje je auto?", "videoId": "dQw4w9WgXcQ", "startSeconds": 10, "endSeconds": 25, "options": ["crven", "plav"], "correctIndex": 0 }
+    { "type": "video", "text": "Koje boje je auto?", "videoId": "dQw4w9WgXcQ", "startSeconds": 10, "endSeconds": 25, "options": ["crven", "plav"], "correctIndex": 0 },
+    { "type": "emoji", "emojis": "🦁👑", "answer": "Kralj lavova", "accept": ["The Lion King"] }
   ]
 }
 ```
 
-Validation lives in `packages/shared/src/games/quiz-import.ts` (`parseQuizImport`); geo lat/lng must fall inside the referenced map's bbox (else inside Serbia's bounds). Because manifests carry the answers, `GET /api/question-packs` returns **summaries only** — the host sends the chosen `quizPackId` and the server resolves the questions from disk. The host can still import a local `.json` file on the game-select screen (URL-based media only, no pack assets); that import persists in the host's `localStorage` until removed. Rich packs are authored in the `/admin/kviz` editor.
+Validation lives in `packages/shared/src/games/quiz-import.ts` (`parseQuizImport`); geo lat/lng must fall inside the referenced map's bbox (else inside Serbia's bounds). Because manifests carry the answers, `GET /api/question-packs` returns **summaries only** — the host sends the checked `quizPackIds` (multi-select; the built-in bank is the pseudo-pack `__bank__`) plus an optional `quizTypes` type filter, and the server resolves the questions from disk. The host can still import a local `.json` file on the game-select screen (URL-based media only, no pack assets); that import persists in the host's `localStorage` until removed. Rich packs are authored in the `/admin` Kviz editor.
 
 ### Ko sam ja Packs
 

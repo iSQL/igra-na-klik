@@ -56,7 +56,8 @@ export function registerGameHandlers(
 
     const result = gameManager.startGame(roomCode, data.gameId, {
       customQuestions: data.customQuestions,
-      quizPackId: data.quizPackId,
+      quizPackIds: data.quizPackIds,
+      quizTypes: data.quizTypes,
       slepiRounds: data.slepiRounds,
       koSamJaCategory: data.koSamJaCategory,
       customKoSamJaQuestions: data.customKoSamJaQuestions,
@@ -75,8 +76,6 @@ export function registerGameHandlers(
       roundCount: data.roundCount,
       boljiZivotTutorial: data.boljiZivotTutorial,
       hotPotatoMode: data.hotPotatoMode,
-      customEmojiPuzzles: data.customEmojiPuzzles,
-      emojiHints: data.emojiHints,
       spijunDiscussionSeconds: data.spijunDiscussionSeconds,
       spijunPack: data.spijunPack,
       spijunTutorial: data.spijunTutorial,

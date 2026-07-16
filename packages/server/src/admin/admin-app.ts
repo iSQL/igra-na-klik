@@ -1,7 +1,7 @@
 /**
- * Unified admin single-page app, served at GET /admin. Replaces the seven
+ * Unified admin single-page app, served at GET /admin. Replaces the
  * separate server-rendered editor pages (kviz, ko-sam-ja, tajni-agenti,
- * gluvo-doba, emoji, spijun, timinzi) with one page: a navy sidebar of games,
+ * gluvo-doba, spijun, timinzi) with one page: a navy sidebar of games,
  * a client-side view switch, a pack-picker dropdown, a searchable/filterable
  * table for kviz + ko-sam-ja, a slide-in editor sheet, and
  * tailored views for the other content types.
@@ -279,7 +279,6 @@ var Admin = (function(){
     { id:'ko-sam-ja',    label:'Ko sam ja',    icon:'🧠', route:'ko-sam-ja-packs',    listKey:'packs', kind:'table',  itemNoun:'pitanja' },
     { id:'tajni-agenti', label:'Tajni agenti', icon:'🕵️', route:'tajni-agenti-packs', listKey:'packs', kind:'tajni',  itemNoun:'reči' },
     { id:'gluvo-doba',   label:'Gluvo doba',   icon:'🌙', route:'gluvo-doba-packs',   listKey:'packs', kind:'gluvo',  itemNoun:'uloga' },
-    { id:'emoji',        label:'Emoji',        icon:'😀', route:'emoji-packs',        listKey:'packs', kind:'emoji',  itemNoun:'zagonetki' },
     { id:'spijun',       label:'Špijun',       icon:'🔍', route:'spijun-packs',       listKey:'packs', kind:'spijun', itemNoun:'lokacija' },
     { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' }
   ];
@@ -542,7 +541,8 @@ var Admin = (function(){
     audio: {icon:'🎵',label:'Audio', color:'#3E7F7B',bg:'rgba(62,127,123,.13)'},
     video: {icon:'🎬',label:'Video', color:'#B85C4F',bg:'rgba(184,92,79,.13)'},
     geo:   {icon:'🗺️',label:'Geo',   color:'#3E7D57',bg:'rgba(62,125,87,.13)'},
-    broj:  {icon:'🔢',label:'Broj',  color:'#A07D2E',bg:'rgba(160,125,46,.14)'}
+    broj:  {icon:'🔢',label:'Broj',  color:'#A07D2E',bg:'rgba(160,125,46,.14)'},
+    emoji: {icon:'😀',label:'Emoji', color:'#8A5CA6',bg:'rgba(138,92,166,.13)'}
   };
   var KO_TYPES = {
     fixed:{icon:'📌',label:'Fiksno',   color:'#5C6FA6',bg:'rgba(92,111,166,.13)'},
@@ -550,7 +550,7 @@ var Admin = (function(){
     peer: {icon:'👥',label:'Igrač',    color:'#B85C4F',bg:'rgba(184,92,79,.13)'},
     pickN:{icon:'☑️',label:'Izaberi N',color:'#A07D2E',bg:'rgba(160,125,46,.14)'}
   };
-  var TIME_DEFAULTS = { obicno:15, audio:15, video:15, geo:30, broj:25 };
+  var TIME_DEFAULTS = { obicno:15, audio:15, video:15, geo:30, broj:25, emoji:20 };
   function typesFor(g){ return g.id==='kviz'?KVIZ_TYPES:KO_TYPES; }
   function discKey(g){ return g.id==='kviz'?'type':'shape'; }
   function typeOf(g,q){ return q[discKey(g)] || (g.id==='kviz'?'obicno':'fixed'); }
@@ -583,6 +583,10 @@ var Admin = (function(){
       if (t==='broj'){
         return '<span class="ok">✔ '+esc(String(q.answer))+'</span>'+(q.unit?' '+esc(q.unit):'')
           +' · opseg '+esc(String(q.min))+'–'+esc(String(q.max))+(q.valueType==='duration'?' · mm:ss':'');
+      }
+      if (t==='emoji'){
+        var acc=(Array.isArray(q.accept)&&q.accept.length)?' · prihvata: '+q.accept.map(esc).join(', '):'';
+        return esc(q.emojis||'')+' → <span class="ok">✔ '+esc(q.answer||'')+'</span>'+acc;
       }
       var opts=Array.isArray(q.options)?q.options:[]; var out='';
       for (var j=0;j<opts.length;j++){ if(j>0)out+=' · '; out += (j===q.correctIndex)?('<span class="ok">✓ '+esc(opts[j])+'</span>'):esc(opts[j]); }
@@ -622,13 +626,14 @@ var Admin = (function(){
     list.forEach(function(q,idx){
       var t=typeOf(g,q);
       if (tv.filter!=='all' && t!==tv.filter) return;
-      if (s && (q.text||'').toLowerCase().indexOf(s)<0 && (q.caption||'').toLowerCase().indexOf(s)<0) return;
+      if (s && (q.text||'').toLowerCase().indexOf(s)<0 && (q.caption||'').toLowerCase().indexOf(s)<0
+        && String(q.answer||'').toLowerCase().indexOf(s)<0 && (q.emojis||'').toLowerCase().indexOf(s)<0) return;
       shown++;
       var m=TM[t]||{icon:'•',label:t,color:'#6E6A5E',bg:'#eee'};
       var mt=mediaTagFor(g,q,ctx);
       var mtHtml = mt ? '<span class="t-mtag" style="color:'+m.color+';background:'+m.bg+'">'+mt+'</span>' : '';
       var catHtml = (g.id!=='kviz' && q.category) ? '<span class="t-mtag'+(q.category==='nsfw'?' tag-nsfw':'')+'" style="background:var(--surface2);color:var(--muted)">'+esc(q.category)+'</span>' : '';
-      var text = q.text || (t==='geo'?'Gde je ovo slikano?':'(bez teksta)');
+      var text = q.text || (t==='geo'?'Gde je ovo slikano?':(t==='emoji'?'Šta se krije iza emojija?':'(bez teksta)'));
       rowsHtml += '<div class="tbl-row" data-idx="'+idx+'">'
         + '<div class="t-type"><span class="ti">'+m.icon+'</span><span class="tl" style="color:'+m.color+'">'+esc(m.label)+'</span></div>'
         + '<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
@@ -752,6 +757,13 @@ var Admin = (function(){
       + '<label><span class="sub">Jedinica (din, kg…)</span><input class="field" id="q-broj-unit" maxlength="20"></label>'
       + '<label><span class="sub">Tip prikaza</span><select class="field" id="q-broj-valuetype"><option value="">Broj</option><option value="duration">Trajanje (mm:ss)</option></select></label>'
       + '<label><span class="sub">Emoji (opciono)</span><input class="field" id="q-broj-emoji" maxlength="8"></label></div></div>'
+      + '<div id="grp-emoji"><label class="lbl">Emoji zagonetka</label>'
+      + '<input class="field" id="q-emoji-emojis" maxlength="40" placeholder="npr. 🦁👑" style="font-size:1.3rem">'
+      + '<label class="lbl">Rešenje</label>'
+      + '<input class="field" id="q-emoji-answer" maxlength="60" placeholder="npr. Kralj lavova">'
+      + '<label class="lbl">Prihvaćeni odgovori (opciono, zarezom, do 8)</label>'
+      + '<input class="field" id="q-emoji-accept" placeholder="npr. The Lion King, Lion King">'
+      + '<p class="hint">Poređenje ignoriše velika/mala slova, kvačice i interpunkciju. Slova rešenja se u igri postepeno otkrivaju kao hint.</p></div>'
       + '<div id="grp-geo"><label class="lbl">Caption / naziv lokacije</label>'
       + '<input class="field" id="q-caption" maxlength="200" placeholder="npr. Đavolja varoš">'
       + '<label class="lbl">Mapa</label><select class="field" id="geo-map-select">'+mapOpts+'</select>'
@@ -779,9 +791,10 @@ var Admin = (function(){
       $('grp-video').style.display=t==='video'?'block':'none';
       $('grp-broj').style.display=t==='broj'?'block':'none';
       $('grp-geo').style.display=t==='geo'?'block':'none';
-      $('grp-image').style.display=t==='video'?'none':'block';
+      $('grp-emoji').style.display=t==='emoji'?'block':'none';
+      $('grp-image').style.display=(t==='video'||t==='emoji')?'none':'block';
       $('q-img-label').textContent=t==='geo'?'Slika (obavezno — to je pitanje)':'Slika (opciono)';
-      $('q-text-label').textContent=t==='geo'?'Tekst (opciono — „Gde je ovo slikano?")':'Tekst pitanja';
+      $('q-text-label').textContent=t==='geo'?'Tekst (opciono — „Gde je ovo slikano?")':(t==='emoji'?'Tekst (opciono — „Šta se krije iza emojija?")':'Tekst pitanja');
       $('q-time').placeholder=String(TIME_DEFAULTS[t]||15);
       $('sh-title').textContent=TM[t].icon+' '+TM[t].label+' pitanje';
       if (t==='geo') syncMapImage();
@@ -875,6 +888,7 @@ var Admin = (function(){
       else if(qType==='video'){ if(!buildChoiceCore(q))return null; var vid=ytId($('q-video-id').value); if(!vid){ showErr('Unesi ispravan YouTube link ili ID (11 znakova).'); return null; } q.videoId=vid; var vs=$('q-video-start').value.trim(),ve=$('q-video-end').value.trim(); if(vs)q.startSeconds=parseInt(vs,10); if(ve)q.endSeconds=parseInt(ve,10); if(q.startSeconds!=null&&q.endSeconds!=null&&q.endSeconds<=q.startSeconds){ showErr('Kraj mora biti posle starta.'); return null; } }
       else if(qType==='broj'){ var text=$('q-text').value.trim(); if(!text){ showErr('Unesi tekst pitanja.'); return null; } q.text=text; var answer=parseFloat($('q-broj-answer').value),mn=parseFloat($('q-broj-min').value),mx=parseFloat($('q-broj-max').value); if(isNaN(answer)||isNaN(mn)||isNaN(mx)){ showErr('Popuni odgovor, min i max.'); return null; } if(mn>=mx){ showErr('Min mora biti manji od max.'); return null; } if(answer<mn||answer>mx){ showErr('Odgovor mora biti između min i max.'); return null; } q.answer=answer;q.min=mn;q.max=mx; var st=$('q-broj-step').value.trim(); if(st){ var stn=parseFloat(st); if(isNaN(stn)||stn<=0){ showErr('Korak mora biti pozitivan broj.'); return null; } q.step=stn; } var unit=$('q-broj-unit').value.trim(); if(unit)q.unit=unit; if($('q-broj-valuetype').value)q.valueType=$('q-broj-valuetype').value; var em=$('q-broj-emoji').value.trim(); if(em)q.emoji=em; attachImage(q); }
       else if(qType==='geo'){ var gt=$('q-text').value.trim(); if(gt)q.text=gt; if(!pend.imageFile&&!pend.imageUrl){ showErr('Geo pitanje mora imati sliku.'); return null; } attachImage(q); var cap=$('q-caption').value.trim(); if(cap)q.caption=cap; if(geo.lat==null||geo.lng==null){ showErr('Postavi pin na mapu.'); return null; } q.lat=geo.lat;q.lng=geo.lng; if(geo.mapId)q.mapId=geo.mapId; }
+      else if(qType==='emoji'){ var et=$('q-text').value.trim(); if(et)q.text=et; var ems=$('q-emoji-emojis').value.trim(); if(!ems){ showErr('Unesi emoji zagonetku.'); return null; } q.emojis=ems; var ans=$('q-emoji-answer').value.trim(); if(!ans){ showErr('Unesi rešenje.'); return null; } q.answer=ans; var accRaw=$('q-emoji-accept').value.trim(); if(accRaw){ var acc=accRaw.split(',').map(function(a){return a.trim();}).filter(function(a){return a.length>0;}); if(acc.length>8){ showErr('Najviše 8 prihvaćenih odgovora.'); return null; } if(acc.length)q.accept=acc; } }
       if(!attachTime(q))return null; return q;
     }
     function resetForNew(){
@@ -882,6 +896,7 @@ var Admin = (function(){
       $('q-time').value=''; $('q-video-id').value=''; $('q-video-start').value=''; $('q-video-end').value=''; updateVideoThumb();
       $('q-broj-answer').value='';$('q-broj-min').value='';$('q-broj-max').value='';$('q-broj-step').value='';$('q-broj-unit').value='';$('q-broj-valuetype').value='';$('q-broj-emoji').value='';
       $('q-caption').value=''; geo.pin=null;geo.lat=null;geo.lng=null;geo.mapId=''; $('geo-map-select').value=''; updatePinUi(); syncMapImage();
+      $('q-emoji-emojis').value='';$('q-emoji-answer').value='';$('q-emoji-accept').value='';
       setImage(null,null); setAudio(null,null);
       $('sh-eyebrow').textContent='Novo pitanje';
     }
@@ -923,6 +938,7 @@ var Admin = (function(){
       if(qType==='video'){ $('q-video-id').value=existing.videoId||''; $('q-video-start').value=existing.startSeconds!=null?String(existing.startSeconds):''; $('q-video-end').value=existing.endSeconds!=null?String(existing.endSeconds):''; updateVideoThumb(); }
       if(qType==='broj'){ $('q-broj-answer').value=String(existing.answer);$('q-broj-min').value=String(existing.min);$('q-broj-max').value=String(existing.max);$('q-broj-step').value=existing.step!=null?String(existing.step):'';$('q-broj-unit').value=existing.unit||'';$('q-broj-valuetype').value=existing.valueType||'';$('q-broj-emoji').value=existing.emoji||''; }
       if(qType==='geo'){ $('q-caption').value=existing.caption||''; geo.mapId=existing.mapId||''; $('geo-map-select').value=geo.mapId; syncMapImage(); if(typeof existing.lat==='number'&&typeof existing.lng==='number')pinFromLatLng(existing.lat,existing.lng); }
+      if(qType==='emoji'){ $('q-emoji-emojis').value=existing.emojis||''; $('q-emoji-answer').value=existing.answer||''; $('q-emoji-accept').value=Array.isArray(existing.accept)?existing.accept.join(', '):''; }
     } else {
       $('sh-eyebrow').textContent='Novo pitanje';
       setType('obicno');
@@ -1127,7 +1143,7 @@ var Admin = (function(){
 </script>
 
 <script>
-/* ============ Simple views: tajni-agenti, gluvo-doba, emoji, spijun, timinzi ============ */
+/* ============ Simple views: tajni-agenti, gluvo-doba, spijun, timinzi ============ */
 (function(){
   'use strict';
   var $ = Admin.$, esc = Admin.esc, api = Admin.api;
@@ -1226,57 +1242,6 @@ var Admin = (function(){
       $('gl-save').disabled=true;
       ctx.putPack(body,'Pack sačuvan.').catch(function(e){ showErr(e.message); }).then(function(){ var b=$('gl-save'); if(b)b.disabled=false; });
     };
-  }
-
-  // ---------- emoji (puzzles) ----------
-  var emojiEdit={};  // pack.id -> index being edited (or null)
-  function renderEmoji(host, ctx){
-    var p=ctx.pack;
-    if(!p){ host.innerHTML='<div class="empty">Napravi pack da dodaš zagonetke.</div>'; return; }
-    var puzzles=p.puzzles||[];
-    var editIdx=(emojiEdit[p.id]!=null)?emojiEdit[p.id]:null;
-    var ed=editIdx!=null?puzzles[editIdx]:null;
-    var rows='';
-    puzzles.forEach(function(q,i){
-      var meta=[];
-      if(Array.isArray(q.accept)&&q.accept.length) meta.push('alt: '+esc(q.accept.join(', ')));
-      if(q.timeLimit) meta.push('⏱ '+esc(q.timeLimit)+'s');
-      rows+='<div class="tbl-row emoji-row" data-i="'+i+'">'
-        + '<span class="em">'+esc(q.emojis)+'</span>'
-        + '<div class="t-main"><div class="t-text">'+esc(q.answer)+'</div>'+(meta.length?'<div class="t-ans">'+meta.join(' · ')+'</div>':'')+'</div>'
-        + '<div class="t-acts"><button class="iconbtn edit" data-i="'+i+'">✎</button><button class="iconbtn del" data-i="'+i+'">🗑</button></div></div>';
-    });
-    host.innerHTML=
-      '<div class="panel" style="margin-bottom:1rem"><div style="font-weight:800;color:var(--navy);margin-bottom:.6rem">'+(ed?'Izmena zagonetke':'Nova zagonetka')+'</div>'
-      + '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'
-      + '<input class="field" id="em-emojis" placeholder="Emoji 🦁👑" value="'+esc(ed?ed.emojis:'')+'" style="width:150px;font-size:1.1rem">'
-      + '<input class="field" id="em-answer" placeholder="Rešenje…" value="'+esc(ed?ed.answer:'')+'" style="flex:1;min-width:140px"></div>'
-      + '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">'
-      + '<input class="field" id="em-accept" placeholder="Alternativni odgovori (zarezom)" value="'+esc(ed&&ed.accept?ed.accept.join(', '):'')+'" style="flex:1;min-width:180px">'
-      + '<label style="display:flex;align-items:center;gap:.4rem"><span class="hint" style="margin:0;white-space:nowrap">Vreme (s)</span>'
-      + '<input class="field" type="number" id="em-time" min="5" max="60" placeholder="20" value="'+esc(ed&&ed.timeLimit?ed.timeLimit:'')+'" style="width:72px;text-align:center"></label></div>'
-      + '<div style="margin-top:.6rem"><button class="btn btn-primary" id="em-save">'+(ed?'Sačuvaj izmene':'＋ Dodaj')+'</button>'
-      + (ed?' <button class="btn btn-ghost" id="em-cancel">Otkaži</button>':'')+'</div></div>'
-      + '<div class="tbl"><div class="tbl-head emoji-head"><span>Emoji</span><span>Rešenje</span><span style="text-align:right">Radnje</span></div>'
-      + (rows||'<div class="empty">Još nema zagonetki.</div>')+'</div>';
-
-    $('em-save').onclick=function(){
-      var emojis=$('em-emojis').value.trim(), answer=$('em-answer').value.trim();
-      if(!emojis||!answer){ showErr('Popuni emoji i rešenje.'); return; }
-      var q={ emojis:emojis, answer:answer };
-      var acc=$('em-accept').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-      if(acc.length)q.accept=acc;
-      var t=$('em-time').value.trim(); if(t){ var n=parseInt(t,10); if(isNaN(n)||n<5||n>60){ showErr('Vreme 5–60 s.'); return; } q.timeLimit=n; }
-      var next=puzzles.slice();
-      if(editIdx!=null)next[editIdx]=q; else next.push(q);
-      emojiEdit[p.id]=null;
-      ctx.putPack({puzzles:next}, editIdx!=null?'Zagonetka izmenjena.':'Zagonetka dodata.').catch(function(e){ showErr(e.message); });
-    };
-    var cc=$('em-cancel'); if(cc)cc.onclick=function(){ emojiEdit[p.id]=null; ctx.renderAll(); };
-    var eds=host.querySelectorAll('.emoji-row .edit');
-    for(var e=0;e<eds.length;e++) eds[e].onclick=function(){ emojiEdit[p.id]=parseInt(this.getAttribute('data-i'),10); ctx.renderAll(); };
-    var dels=host.querySelectorAll('.emoji-row .del');
-    for(var d=0;d<dels.length;d++) dels[d].onclick=function(){ if(!window.confirm('Obrisati zagonetku?'))return; var i=parseInt(this.getAttribute('data-i'),10); var next=puzzles.slice(); next.splice(i,1); if(emojiEdit[p.id]===i)emojiEdit[p.id]=null; ctx.putPack({puzzles:next},'Zagonetka obrisana.').catch(function(er){ showErr(er.message); }); };
   }
 
   // ---------- spijun (locations + roles) ----------
@@ -1384,7 +1349,6 @@ var Admin = (function(){
 
   window.AdminApp.register('tajni',   { renderMain: renderTajni });
   window.AdminApp.register('gluvo',   { renderMain: renderGluvo });
-  window.AdminApp.register('emoji',   { renderMain: renderEmoji });
   window.AdminApp.register('spijun',  { renderMain: renderSpijun });
   window.AdminApp.register('timinzi', { renderMain: renderTiminzi });
 })();
@@ -1497,10 +1461,6 @@ const ADMIN_VIEW_CSS = `
 .stepper{display:flex;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1rem}
 .stepper button{border:1.5px solid var(--line2);background:var(--surface3);width:38px;height:38px;border-radius:10px;font-size:1.1rem;font-weight:800;color:var(--navy)}
 .stepper .val{font-family:'Fredoka';font-size:1.5rem;font-weight:700;color:var(--navy);min-width:2ch;text-align:center}
-
-/* ---- emoji (table layout) ---- */
-.emoji-head,.emoji-row{grid-template-columns:64px 1fr auto !important}
-.emoji-row .em{font-size:1.6rem;text-align:center;line-height:1}
 
 /* ---- timinzi ---- */
 .tim-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:.9rem;max-width:680px}

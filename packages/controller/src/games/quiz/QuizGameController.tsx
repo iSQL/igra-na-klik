@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
@@ -13,6 +15,7 @@ import { formatBrojValue } from '@igra/shared';
 import type {
   GeoPin,
   KvizBrojRoundResult,
+  KvizEmojiRoundResult,
   KvizGeoRoundResult,
   KvizQuestionType,
   KvizValueType,
@@ -156,13 +159,20 @@ export default function QuizGameController() {
         {questionText && <QuestionCard text={questionText} />}
         {imageUrl && questionType !== 'geo' && <QuestionImage src={imageUrl} />}
         {questionType === 'geo' && imageUrl && <QuestionImage src={imageUrl} />}
+        {questionType === 'emoji' && data.emojis != null && (
+          <p style={{ fontSize: '3.4rem', lineHeight: 1.2, margin: 0 }}>
+            {data.emojis as string}
+          </p>
+        )}
         <CountdownRing timeRemaining={timeRemaining} duration={previewDuration} />
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
           {questionType === 'geo'
             ? 'Mapa se pojavljuje za...'
             : questionType === 'broj'
               ? 'Klizač se pojavljuje za...'
-              : 'Odgovori se pojavljuju za...'}
+              : questionType === 'emoji'
+                ? 'Kucanje počinje za...'
+                : 'Odgovori se pojavljuju za...'}
         </p>
       </div>
     );
@@ -215,6 +225,25 @@ export default function QuizGameController() {
           unit={data.unit as string | undefined}
           valueType={data.valueType as KvizValueType | undefined}
           timeRemaining={timeRemaining}
+        />
+      );
+    }
+
+    if (questionType === 'emoji') {
+      const emojiMy = playerData[playerId] as
+        | { hasAnswered?: boolean; ownGuess?: string | null; lastWrong?: string | null; ownPoints?: number }
+        | undefined;
+      return (
+        <EmojiAnswerScreen
+          key={data.questionIndex as number}
+          emojis={(data.emojis as string) ?? ''}
+          hint={hostless ? ((data.hint as string) ?? '') : ''}
+          questionText={questionText}
+          timeRemaining={timeRemaining}
+          hasSolved={emojiMy?.hasAnswered ?? false}
+          lastWrong={emojiMy?.lastWrong ?? null}
+          ownPoints={emojiMy?.ownPoints ?? 0}
+          headerData={data}
         />
       );
     }
@@ -277,6 +306,19 @@ export default function QuizGameController() {
       <BrojResultView
         result={data.brojResult as KvizBrojRoundResult}
         my={playerData[playerId] as MyResultData | undefined}
+        playerId={playerId}
+      />
+    );
+  }
+
+  if (phase === 'showing-results' && data.emojiResult) {
+    const emojiMy = playerData[playerId] as
+      | { ownPoints?: number; hasSolved?: boolean; ownGuess?: string | null }
+      | undefined;
+    return (
+      <EmojiResultView
+        result={data.emojiResult as KvizEmojiRoundResult}
+        my={emojiMy}
         playerId={playerId}
       />
     );
@@ -608,6 +650,236 @@ function BrojResultView({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// --- emoji answering / result screens ----------------------------------------
+
+// Free-text answer input for emoji questions. Wrong guesses may retry until
+// the clock runs out; a correct one locks the round for this player.
+function EmojiAnswerScreen({
+  emojis,
+  hint,
+  questionText,
+  timeRemaining,
+  hasSolved,
+  lastWrong,
+  ownPoints,
+  headerData,
+}: {
+  emojis: string;
+  hint: string;
+  questionText?: string;
+  timeRemaining: number;
+  hasSolved: boolean;
+  lastWrong: string | null;
+  ownPoints: number;
+  headerData: Record<string, unknown>;
+}) {
+  const [text, setText] = useState('');
+
+  const submit = () => {
+    const v = text.trim();
+    if (!v) return;
+    socket.emit('game:player-action', { action: 'quiz:text', data: { text: v } });
+    setText('');
+  };
+
+  if (hasSolved) {
+    return (
+      <Centered>
+        <p style={{ fontSize: '2.6rem', margin: 0 }}>✅</p>
+        <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Pogodak!</p>
+        <p style={{ fontSize: '1rem', color: 'var(--success)', fontWeight: 800, margin: 0 }}>
+          +{ownPoints}
+        </p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Čekamo ostale...
+        </p>
+      </Centered>
+    );
+  }
+
+  const wrong = lastWrong;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        padding: '0.75rem',
+        gap: '0.75rem',
+      }}
+    >
+      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+        <QuestionHeader data={headerData} />
+        {questionText && <QuestionCard text={questionText} compact />}
+      </div>
+      <p style={{ fontSize: '2.8rem', lineHeight: 1.2, margin: 0, textAlign: 'center' }}>
+        {emojis}
+      </p>
+      {hint && (
+        <p
+          style={{
+            fontSize: '1.1rem',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: 'var(--accent)',
+            fontFamily: 'monospace',
+            textAlign: 'center',
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {hint}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submit();
+          }}
+          placeholder="Tvoj odgovor…"
+          autoFocus
+          style={{
+            flex: 1,
+            padding: '0.6rem 0.8rem',
+            fontWeight: 700,
+            borderRadius: '12px',
+            border: '1.5px solid var(--line2)',
+            background: 'var(--bg-primary)',
+            color: 'var(--text-primary)',
+          }}
+        />
+        <button
+          onClick={submit}
+          disabled={!text.trim()}
+          className="btn-primary"
+          style={{ minWidth: '84px', minHeight: '48px', fontSize: '0.95rem' }}
+        >
+          Pošalji
+        </button>
+      </div>
+      {wrong && (
+        <p style={{ fontSize: '0.85rem', color: 'var(--danger)', textAlign: 'center', margin: 0 }}>
+          „{wrong}" nije to — probaj opet!
+        </p>
+      )}
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
+        {Math.ceil(timeRemaining)}s
+      </p>
+    </div>
+  );
+}
+
+function EmojiResultView({
+  result,
+  my,
+  playerId,
+}: {
+  result: KvizEmojiRoundResult;
+  my?: { ownPoints?: number; hasSolved?: boolean };
+  playerId: string;
+}) {
+  const pts = my?.ownPoints ?? 0;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        padding: '1rem',
+        gap: '0.75rem',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '2.2rem', margin: 0 }}>{result.emojis}</p>
+        <p
+          style={{
+            fontSize: '1.7rem',
+            fontWeight: 800,
+            color: 'var(--accent)',
+            margin: '0.2rem 0',
+          }}
+        >
+          {result.answer}
+        </p>
+        <p style={{ fontSize: '1rem', margin: 0 }}>
+          {my?.hasSolved ? 'Pogodio si! 🎯' : 'Nisi pogodio'}
+          {' · '}
+          <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+            +{pts}
+          </strong>
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => {
+          const isMe = r.playerId === playerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.6rem',
+                background: isMe ? 'rgba(194,155,71,.16)' : 'var(--bg-secondary)',
+                border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                borderRadius: '0.5rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: r.avatarColor,
+                  flex: 'none',
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: isMe ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', textAlign: 'right', fontSize: '0.78rem' }}>
+                {r.solved
+                  ? r.timeMs != null
+                    ? `${(r.timeMs / 1000).toFixed(1)}s`
+                    : '✓'
+                  : '—'}
+              </span>
+              <span
+                style={{
+                  fontWeight: 800,
+                  minWidth: '3ch',
+                  textAlign: 'right',
+                  color: r.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                +{r.roundScore}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -13,8 +13,10 @@ export interface QuizOption {
  *  - 'video'  — a YouTube embed plays, then multiple choice.
  *  - 'geo'    — pin-on-map guess (photo + map, distance scoring).
  *  - 'broj'   — slider number guess (closeness × speed scoring).
+ *  - 'emoji'  — emoji string riddle, free-text answer (speed scoring,
+ *               progressive letter hints — absorbed "Emoji zagonetke").
  */
-export type KvizQuestionType = 'obicno' | 'geo' | 'broj' | 'audio' | 'video';
+export type KvizQuestionType = 'obicno' | 'geo' | 'broj' | 'audio' | 'video' | 'emoji';
 
 /** How a numeric value is rendered on screen. `duration` shows mm:ss. */
 export type KvizValueType = 'number' | 'duration';
@@ -82,7 +84,26 @@ export interface KvizBrojQuestion {
   timeLimit: number;
 }
 
-export type KvizQuestion = KvizChoiceQuestion | KvizGeoQuestion | KvizBrojQuestion;
+/**
+ * Emoji riddle question — client-safe shape; the answer + accept list stay
+ * server-side. Players type free text; `hint` (progressive letter reveal) is
+ * public and rides in the shared host data, not here.
+ */
+export interface KvizEmojiQuestion {
+  type: 'emoji';
+  id: string;
+  /** Prompt text (default "Šta se krije iza emojija?"). */
+  text: string;
+  /** The emoji string that IS the riddle. */
+  emojis: string;
+  timeLimit: number;
+}
+
+export type KvizQuestion =
+  | KvizChoiceQuestion
+  | KvizGeoQuestion
+  | KvizBrojQuestion
+  | KvizEmojiQuestion;
 
 /** Full questions with answers — only used server-side and in results. */
 export type KvizChoiceQuestionFull = KvizChoiceQuestion & { correctIndex: number };
@@ -93,10 +114,15 @@ export type KvizGeoQuestionFull = KvizGeoQuestion & {
   map?: GeoPackMapDef;
 };
 export type KvizBrojQuestionFull = KvizBrojQuestion & { answer: number };
+export type KvizEmojiQuestionFull = KvizEmojiQuestion & {
+  answer: string;
+  accept?: string[];
+};
 export type KvizQuestionFull =
   | KvizChoiceQuestionFull
   | KvizGeoQuestionFull
-  | KvizBrojQuestionFull;
+  | KvizBrojQuestionFull
+  | KvizEmojiQuestionFull;
 
 /** Legacy aliases — the choice shape is what the original quiz always was. */
 export type QuizQuestion = KvizChoiceQuestion;
@@ -159,6 +185,24 @@ export interface KvizBrojRoundResult {
   valueType?: KvizValueType;
   /** Sorted by roundScore desc. */
   results: KvizBrojRoundResultEntry[];
+}
+
+/** showing-results payload for emoji questions. */
+export interface KvizEmojiRoundResultEntry {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  solved: boolean;
+  timeMs: number | null;
+  roundScore: number;
+  totalScore: number;
+}
+
+export interface KvizEmojiRoundResult {
+  emojis: string;
+  answer: string;
+  /** Sorted by roundScore desc. */
+  results: KvizEmojiRoundResultEntry[];
 }
 
 export interface QuizLeaderboardEntry {

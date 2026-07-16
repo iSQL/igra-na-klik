@@ -7,7 +7,7 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     minPlayers: 2,
     maxPlayers: 8,
     description:
-      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom ili snimkom. Najbliži i najbrži nosi poene!',
+      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom, snimkom ili emoji zagonetkom. Najbliži i najbrži nosi poene!',
     icon: '🧠',
     accent: 'violet',
     category: 'quiz',
@@ -166,19 +166,6 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // Hostless-capable: the controller renders the full board (interactive for
     // the active guesser, secret key for spymasters) and, in hostless rooms,
     // a read-only board for waiting players — everything the TV would show.
-    supportsHostless: true,
-  },
-  'emoji-zagonetke': {
-    id: 'emoji-zagonetke',
-    name: 'Emoji zagonetke',
-    minPlayers: 2,
-    maxPlayers: 10,
-    description:
-      'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
-    icon: '🎬',
-    accent: 'lime',
-    category: 'speed',
-    estimatedMinutes: 8,
     supportsHostless: true,
   },
   spijun: {

@@ -147,6 +147,16 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'import.fileReadError': 'Greška pri čitanju fajla.',
     'import.invalidJson': 'Nevažeći JSON.',
     'import.choosePack': 'Izaberi paket…',
+    'quizConfig.packs': 'Packovi pitanja',
+    'quizConfig.types': 'Vrste pitanja',
+    'quizConfig.available': '{n} pitanja u izboru',
+    'quizConfig.emptySelection': 'Izaberi bar jedan pack i jednu vrstu pitanja.',
+    'quizType.obicno': 'Obično',
+    'quizType.audio': 'Audio',
+    'quizType.video': 'Video',
+    'quizType.geo': 'Geo',
+    'quizType.broj': 'Broj',
+    'quizType.emoji': 'Emoji',
     'import.builtinPack': 'Ugrađeni paket',
     'import.builtinWords': 'Ugrađene reči',
     'import.loaded': 'Učitano',
@@ -202,10 +212,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.hotPotatoMode.choose': 'Biraš kome',
     'config.hotPotatoModeHint.sequential': 'Tap „Prosledi →" šalje bombu sledećem živom igraču u krugu.',
     'config.hotPotatoModeHint.choose': 'Sam biraš kom živom igraču dodaješ bombu.',
-    'config.emojiHints': 'Postepeni hint (slova)',
-    'config.emojiHintsOn': 'Slova se otkrivaju',
-    'config.emojiHintsOff': 'Bez slova',
-
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Runda {round}/{total}',
     'drawGuess.choosingWord': '{name} bira reč...',
@@ -288,7 +294,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Kviz',
     'game.quiz.description':
-      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom ili snimkom. Najbliži i najbrži nosi poene!',
+      'Pitanja na vreme — obična, sa slikom, mapom, brojevima, pesmom, snimkom ili emoji zagonetkom. Najbliži i najbrži nosi poene!',
     'game.draw-guess.name': 'Crtaj i pogodi',
     'game.draw-guess.description': 'Crtajte redom — ostali pogađaju reč!',
     'game.fake-artist.name': 'Lažni umetnik',
@@ -327,10 +333,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Vruć krompir',
     'game.hot-potato.description':
       'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
-    'game.emoji-zagonetke.name': 'Emoji zagonetke',
-    'game.emoji-zagonetke.description':
-      'Niz emojija krije film, izreku ili pojam — svi kucaju odgovor, brži tačan nosi više poena!',
-
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'Kako se igra →',
     'gameSelect.howToPlayLabel': 'Kako se igra',
@@ -408,12 +410,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.tajni-agenti.rule2':
       'Tim pogađa svoje reči na tabli, ali pazi na ubicu.',
     'game.tajni-agenti.rule3': 'Modovi: Klasik (2 tima), Duet i kooperativni.',
-    'game.emoji-zagonetke.blurb': 'Pogodi pojam iz niza emojija.',
-    'game.emoji-zagonetke.rule1': 'Niz emojija krije film, izreku ili pojam.',
-    'game.emoji-zagonetke.rule2':
-      'Svi kucaju odgovor — brži tačan nosi više poena.',
-    'game.emoji-zagonetke.rule3':
-      'Slova se mogu postepeno otkrivati kao pomoć.',
     'game.spijun.blurb': 'Otkrij uljeza među vama.',
     'game.spijun.rule1': 'Svi znaju tajnu lokaciju — osim špijuna.',
     'game.spijun.rule2':
@@ -558,6 +554,16 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'import.fileReadError': 'Error reading file.',
     'import.invalidJson': 'Invalid JSON.',
     'import.choosePack': 'Choose a pack…',
+    'quizConfig.packs': 'Question packs',
+    'quizConfig.types': 'Question types',
+    'quizConfig.available': '{n} questions selected',
+    'quizConfig.emptySelection': 'Pick at least one pack and one question type.',
+    'quizType.obicno': 'Classic',
+    'quizType.audio': 'Audio',
+    'quizType.video': 'Video',
+    'quizType.geo': 'Geo',
+    'quizType.broj': 'Number',
+    'quizType.emoji': 'Emoji',
     'import.builtinPack': 'Built-in pack',
     'import.builtinWords': 'Built-in words',
     'import.loaded': 'Loaded',
@@ -613,10 +619,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'config.hotPotatoMode.choose': 'Pick who',
     'config.hotPotatoModeHint.sequential': 'Tap "Pass →" to send the bomb to the next living player in the circle.',
     'config.hotPotatoModeHint.choose': 'You choose which living player gets the bomb.',
-    'config.emojiHints': 'Progressive hint (letters)',
-    'config.emojiHintsOn': 'Reveal letters',
-    'config.emojiHintsOff': 'No letters',
-
     // --- draw-guess ------------------------------------------------------
     'drawGuess.round': 'Round {round}/{total}',
     'drawGuess.choosingWord': '{name} is choosing a word...',
@@ -699,7 +701,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     // --- game names / descriptions (all nine) ----------------------------
     'game.quiz.name': 'Quiz',
     'game.quiz.description':
-      'Timed questions — classic, picture, map-pin, number, song or video clip. Closest and fastest scores the most!',
+      'Timed questions — classic, picture, map-pin, number, song, video clip or emoji riddle. Closest and fastest scores the most!',
     'game.fake-artist.name': 'Fake Artist',
     'game.fake-artist.description':
       'Everyone draws the same word one stroke at a time — except the impostor who does not know it. Find the fake!',
@@ -739,10 +741,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Hot Potato',
     'game.hot-potato.description':
       'A bomb with a hidden timer goes around — say a word from the category and pass it on. Whoever holds it when it blows is out!',
-    'game.emoji-zagonetke.name': 'Emoji Riddles',
-    'game.emoji-zagonetke.description':
-      'A string of emojis hides a movie, saying or thing — everyone types the answer, faster correct scores more!',
-
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'How to play →',
     'gameSelect.howToPlayLabel': 'How to play',
@@ -823,13 +821,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.tajni-agenti.rule2':
       'The team guesses its words on the board, but beware the assassin.',
     'game.tajni-agenti.rule3': 'Modes: Classic (2 teams), Duet and co-op.',
-    'game.emoji-zagonetke.blurb': 'Guess the thing from a string of emojis.',
-    'game.emoji-zagonetke.rule1':
-      'A string of emojis hides a movie, saying or thing.',
-    'game.emoji-zagonetke.rule2':
-      'Everyone types the answer — a faster correct one scores more.',
-    'game.emoji-zagonetke.rule3':
-      'Letters can be revealed gradually as a hint.',
     'game.spijun.blurb': 'Unmask the impostor among you.',
     'game.spijun.rule1': 'Everyone knows the secret location — except the spy.',
     'game.spijun.rule2':

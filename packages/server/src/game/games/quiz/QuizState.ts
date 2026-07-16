@@ -11,7 +11,10 @@ export type QuizPhase =
 export type QuizAnswer =
   | { kind: 'choice'; optionIndex: number; timeMs: number; correct: boolean }
   | { kind: 'pin'; pin: GeoPin }
-  | { kind: 'value'; value: number; speedFraction: number };
+  | { kind: 'value'; value: number; speedFraction: number }
+  // Emoji riddle: only a SOLVED answer lands here (wrong guesses may retry
+  // until the clock runs out — see emojiLastGuess/emojiWrong).
+  | { kind: 'text'; timeMs: number; points: number };
 
 export interface QuizInternalState {
   questions: KvizQuestionFull[];
@@ -33,4 +36,12 @@ export interface QuizInternalState {
   lastRoundScores: Map<string, number>;
   /** Per-player distances (km for geo, value delta for broj) at results. */
   lastRoundDistances: Map<string, number>;
+  /** Emoji questions: each player's most recent guess (for results). */
+  emojiLastGuess: Map<string, string>;
+  /** Emoji questions: last WRONG guess (echoed back so the phone can react). */
+  emojiWrong: Map<string, string>;
+  /** Emoji questions: progressive letter hint (public, always enabled). */
+  hint: string;
+  hintRevealOrder: number[];
+  lastHintRevealFraction: number;
 }
