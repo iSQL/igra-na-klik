@@ -253,8 +253,19 @@ The Express server is the single public entry point — the same binary serves t
 
 For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5173` and `CONTROLLER_ORIGIN=http://<LAN-IP>:5174` so CORS accepts LAN origins. Vite dev servers already bind `0.0.0.0`. Open `http://<LAN-IP>:5173/host/` (or `:3001/host/` through the proxy) on the TV; phones hit `:5174/play/` (or `:3001/play/`). Set `SINGLE_ROOM_MODE=true` (root `.env`) plus `VITE_SINGLE_ROOM=true` (`packages/controller/.env`) to let controllers auto-fetch the active room code so players only type a name. See [README.md](README.md) for full instructions.
 
+## Persistent content & backups (deploy vs dev)
+
+All editable content (kviz/ko-sam-ja/tajni-agenti/gluvo-doba/spijun packs + their uploaded images/audio/custom-maps, and the `timing-config.json` overrides) is **file-backed**, and path resolution is centralized in [packages/server/src/data-paths.ts](packages/server/src/data-paths.ts):
+
+- **Dev / legacy** (no `DATA_DIR`): every content dir resolves to the repo-root folder exactly as before — edits write straight into the working copy. Factory reset is *refused* in this mode so it can't wipe the tracked repo.
+- **Deploy** (`DATA_DIR` set — baked to `/data` in the [Dockerfile](Dockerfile), mounted as a persistent volume by [docker-compose.yml](docker-compose.yml) / a Coolify volume): content lives on the volume so it survives image rebuilds. The pristine bundled defaults are baked into `SEED_DIR` (`/app/seed`), and `seedDataDirs()` copies each pack dir into the volume **only if that dir is missing/empty** — a fresh deploy ships the bundled packs, but later admin edits are never clobbered on redeploy. A per-dir env override (`QUESTION_PACKS_DIR` etc.) still wins over `DATA_DIR`.
+
+The admin **"Podaci" view** ([data-admin.ts](packages/server/src/admin/data-admin.ts), `GET /api/admin/backup` + `POST /api/admin/reset-defaults` + `GET /api/admin/data-status`, all under the `ADMIN_TOKEN` gate) adds: **backup** = a `.zip` (via `archiver`) of every content dir + uploaded assets + timing file, fetched with the token header and downloaded client-side; **factory reset** = restore everything from `SEED_DIR` (deploy-mode only, double-confirmed, re-inits the timing cache via `onReset`). Coolify setup: add a persistent volume mounted at `/data` (the image already sets `DATA_DIR=/data`, `SEED_DIR=/app/seed`) + set `ADMIN_TOKEN`.
+
 ## Environment variables
 
+- `DATA_DIR` — persistent volume for editable content in deploy (default unset = dev/repo-root mode; the Docker image sets it to `/data`). When set, all pack dirs + `timing-config.json` live under it, seeded from `SEED_DIR` on first boot.
+- `SEED_DIR` — baked-in default content used to seed a fresh `DATA_DIR` and to power the admin factory reset (Docker image sets it to `/app/seed`).
 - `QUESTION_PACKS_DIR` — directory of kviz pack manifests + per-pack asset folders (default `question-packs/`); each `<id>.json` may have a sibling `<id>/` folder served at `/kviz-files/<id>/<file>`.
 - `KO_SAM_JA_PACKS_DIR` — directory of `.json` Ko sam ja packs (default `ko-sam-ja-packs/`).
 - `ADMIN_TOKEN` — enables the admin editors under `/admin` (kviz, ko-sam-ja, tajni-agenti, gluvo-doba, spijun, timinzi; unset = disabled).

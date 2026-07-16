@@ -280,7 +280,8 @@ var Admin = (function(){
     { id:'tajni-agenti', label:'Tajni agenti', icon:'🕵️', route:'tajni-agenti-packs', listKey:'packs', kind:'tajni',  itemNoun:'reči' },
     { id:'gluvo-doba',   label:'Gluvo doba',   icon:'🌙', route:'gluvo-doba-packs',   listKey:'packs', kind:'gluvo',  itemNoun:'uloga' },
     { id:'spijun',       label:'Špijun',       icon:'🔍', route:'spijun-packs',       listKey:'packs', kind:'spijun', itemNoun:'lokacija' },
-    { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' }
+    { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' },
+    { id:'podaci',       label:'Podaci',       icon:'💾', route:null,                 listKey:null,    kind:'data',    itemNoun:'' }
   ];
   function gameById(id){ for (var i=0;i<GAMES.length;i++) if (GAMES[i].id===id) return GAMES[i]; return GAMES[0]; }
 
@@ -1347,10 +1348,61 @@ var Admin = (function(){
     $('tim-reset').onclick=function(){ if(!window.confirm('Vratiti sva vremena na podrazumevano?'))return; api('PUT','/api/admin/timing-config',{}).then(function(d){ timState.overrides=d.overrides||{}; renderTiminzi(host,ctx); showOk('Vraćeno.'); }).catch(function(e){ showErr(e.message); }); };
   }
 
+  // ---- Podaci (backup + factory reset) ----
+  var dataStatus=null;  // { deployMode }
+  function renderData(host, ctx){
+    if(!dataStatus){
+      host.innerHTML='<div class="empty">Učitavanje…</div>';
+      api('GET','/api/admin/data-status').then(function(d){ dataStatus=d; renderData(host,ctx); }).catch(function(e){ showErr(e.message); });
+      return;
+    }
+    var deploy=!!dataStatus.deployMode;
+    host.innerHTML=
+      '<p class="hint" style="margin-bottom:1rem">Backup i vraćanje svega: svi packovi, pitanja, slike, audio snimci i timinzi.</p>'
+      + '<div class="tim-card" style="margin-bottom:1rem"><div style="font-weight:800;color:var(--navy);margin-bottom:.4rem">💾 Backup</div>'
+      + '<p class="hint" style="margin:.2rem 0 .9rem">Preuzmi .zip sa celokupnim trenutnim sadržajem (svi packovi + slike + audio + timinzi). Čuvaj ga van servera.</p>'
+      + '<button class="btn btn-primary" id="data-backup">Preuzmi backup (.zip)</button></div>'
+      + '<div class="tim-card"><div style="font-weight:800;color:var(--navy);margin-bottom:.4rem">↩ Vrati na fabričko</div>'
+      + '<p class="hint" style="margin:.2rem 0 .9rem">Vraća sav sadržaj na podrazumevano stanje iz aplikacije. <b>Sve izmene, dodati packovi i uploadovane slike/audio se trajno brišu.</b> Preuzmi backup pre ovoga!</p>'
+      + (deploy
+          ? '<button class="btn btn-danger" id="data-reset">Vrati sve na fabričko</button>'
+          : '<button class="btn btn-danger" id="data-reset" disabled>Nedostupno u dev modu</button><p class="hint" style="margin-top:.55rem">Reset radi samo na serveru (DATA_DIR + SEED_DIR postavljeni).</p>')
+      + '</div>';
+
+    $('data-backup').onclick=function(){
+      var btn=$('data-backup'); btn.disabled=true; btn.textContent='Pravim backup…';
+      fetch('/api/admin/backup', { headers: { 'X-Admin-Token': Admin.getToken() } })
+        .then(function(res){ if(!res.ok) throw new Error('Backup nije uspeo ('+res.status+').'); return res.blob().then(function(b){ return { b:b, res:res }; }); })
+        .then(function(o){
+          var name='igra-backup.zip';
+          var cd=o.res.headers.get('Content-Disposition')||'';
+          var m=cd.match(/filename="([^"]+)"/); if(m) name=m[1];
+          var url=URL.createObjectURL(o.b);
+          var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+          showOk('Backup preuzet.');
+        })
+        .catch(function(e){ showErr(e.message); })
+        .then(function(){ var x=$('data-backup'); if(x){ x.disabled=false; x.textContent='Preuzmi backup (.zip)'; } });
+    };
+
+    var rb=$('data-reset');
+    if(rb && !rb.disabled) rb.onclick=function(){
+      if(!window.confirm('Vratiti SVE na fabričko? Svi packovi, izmene, slike i audio se trajno brišu. Ova akcija se ne može poništiti.')) return;
+      if(!window.confirm('Sigurno? Poslednja potvrda.')) return;
+      rb.disabled=true; rb.textContent='Vraćam…';
+      api('POST','/api/admin/reset-defaults',{ confirm:true }).then(function(){
+        showOk('Vraćeno na fabričko. Osvežavam…');
+        setTimeout(function(){ location.reload(); }, 700);
+      }).catch(function(e){ showErr(e.message); rb.disabled=false; rb.textContent='Vrati sve na fabričko'; });
+    };
+  }
+
   window.AdminApp.register('tajni',   { renderMain: renderTajni });
   window.AdminApp.register('gluvo',   { renderMain: renderGluvo });
   window.AdminApp.register('spijun',  { renderMain: renderSpijun });
   window.AdminApp.register('timinzi', { renderMain: renderTiminzi });
+  window.AdminApp.register('data',    { renderMain: renderData });
 })();
 </script>
 </body>

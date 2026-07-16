@@ -39,12 +39,24 @@ COPY --from=builder /app/packages/shared/dist packages/shared/dist
 COPY --from=builder /app/packages/server/dist packages/server/dist
 COPY --from=builder /app/packages/host/dist packages/host/dist
 COPY --from=builder /app/packages/controller/dist packages/controller/dist
-COPY question-packs ./question-packs
-COPY geo-packs ./geo-packs
-COPY ko-sam-ja-packs ./ko-sam-ja-packs
+
+# Baked-in default content ("seed"). The live copy lives on the persistent
+# volume at DATA_DIR (/data) — on first boot the server copies any missing
+# pack dir from here, so edits survive image rebuilds. This dir also powers
+# the admin "factory reset".
+COPY question-packs     ./seed/question-packs
+COPY ko-sam-ja-packs    ./seed/ko-sam-ja-packs
+COPY tajni-agenti-packs ./seed/tajni-agenti-packs
+COPY gluvo-doba-packs   ./seed/gluvo-doba-packs
+COPY spijun-packs       ./seed/spijun-packs
 
 ENV PORT=3001
 ENV SAME_ORIGIN_DEPLOY=true
+# Persist editable content on a volume mounted at /data, seeded from /app/seed.
+# Mount a volume at /data (docker-compose / Coolify) or these live in the
+# ephemeral container layer (still functional, just not persistent).
+ENV DATA_DIR=/data
+ENV SEED_DIR=/app/seed
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

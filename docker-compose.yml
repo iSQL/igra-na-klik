@@ -9,4 +9,14 @@ services:
       # Controllers auto-fill the room code — friends only type their name.
       # Set to "false" if you want the classic 4-letter code entry flow.
       SINGLE_ROOM_MODE: "true"
+      # Set a token to enable the /admin editors (packs, timings, backup/reset).
+      # ADMIN_TOKEN: "change-me"
+    volumes:
+      # Editable content (packs, uploaded images/audio, timings) persists here
+      # so it survives image rebuilds / redeploys. DATA_DIR=/data is baked into
+      # the image; first boot seeds this volume from the bundled defaults.
+      - igra-data:/data
     restart: unless-stopped
+
+volumes:
+  igra-data:

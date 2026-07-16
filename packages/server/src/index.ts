@@ -31,6 +31,12 @@ import { createContentAdminRouter } from './admin/content-admin.js';
 import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
 import { renderAdminApp } from './admin/admin-app.js';
+import { createDataAdminRouter } from './admin/data-admin.js';
+import {
+  resolveContentDir,
+  resolveTimingFile,
+  seedDataDirs,
+} from './data-paths.js';
 import { parseGluvoDobaPack, parseSpijunPack } from '@igra/shared';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
@@ -39,33 +45,39 @@ const CONTROLLER_ORIGIN =
   process.env.CONTROLLER_ORIGIN || 'http://localhost:5174';
 const SINGLE_ROOM_MODE = process.env.SINGLE_ROOM_MODE === 'true';
 
-// Resolve the question-packs directory relative to this source file so it
-// works regardless of where `npm run dev` is invoked from. Both `src/` and
-// `dist/` sit at packages/server/<dir>/index.<ext>, so the repo root is three
-// levels up. Override with QUESTION_PACKS_DIR if you keep packs elsewhere.
-const QUESTION_PACKS_DIR = process.env.QUESTION_PACKS_DIR
-  ? path.resolve(process.env.QUESTION_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'question-packs');
+// Seed a fresh persistent volume from the baked-in defaults before resolving
+// any paths (deploy mode only; a no-op in dev). See data-paths.ts.
+seedDataDirs();
+
+// Content directories. In dev these resolve to the repo-root folders; in
+// deploy mode (DATA_DIR set) they live on the persistent volume. A per-dir env
+// override still wins. See data-paths.ts for the full precedence.
+const QUESTION_PACKS_DIR = resolveContentDir(
+  'question-packs',
+  process.env.QUESTION_PACKS_DIR
+);
 // Quiz question images (uploaded via the admin editor) live in a flat folder
 // inside the packs dir, served at /quiz-images/<file>. Packs reference them by
 // that short path so the socket payload stays tiny.
 const QUIZ_IMAGES_DIR = path.join(QUESTION_PACKS_DIR, '_images');
-const KO_SAM_JA_PACKS_DIR = process.env.KO_SAM_JA_PACKS_DIR
-  ? path.resolve(process.env.KO_SAM_JA_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'ko-sam-ja-packs');
-const TAJNI_AGENTI_PACKS_DIR = process.env.TAJNI_AGENTI_PACKS_DIR
-  ? path.resolve(process.env.TAJNI_AGENTI_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'tajni-agenti-packs');
-const GLUVO_DOBA_PACKS_DIR = process.env.GLUVO_DOBA_PACKS_DIR
-  ? path.resolve(process.env.GLUVO_DOBA_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'gluvo-doba-packs');
-const SPIJUN_PACKS_DIR = process.env.SPIJUN_PACKS_DIR
-  ? path.resolve(process.env.SPIJUN_PACKS_DIR)
-  : path.resolve(__dirname, '../../..', 'spijun-packs');
+const KO_SAM_JA_PACKS_DIR = resolveContentDir(
+  'ko-sam-ja-packs',
+  process.env.KO_SAM_JA_PACKS_DIR
+);
+const TAJNI_AGENTI_PACKS_DIR = resolveContentDir(
+  'tajni-agenti-packs',
+  process.env.TAJNI_AGENTI_PACKS_DIR
+);
+const GLUVO_DOBA_PACKS_DIR = resolveContentDir(
+  'gluvo-doba-packs',
+  process.env.GLUVO_DOBA_PACKS_DIR
+);
+const SPIJUN_PACKS_DIR = resolveContentDir(
+  'spijun-packs',
+  process.env.SPIJUN_PACKS_DIR
+);
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
-const TIMING_CONFIG_FILE = process.env.TIMING_CONFIG_FILE
-  ? path.resolve(process.env.TIMING_CONFIG_FILE)
-  : path.resolve(__dirname, '../../..', 'timing-config.json');
+const TIMING_CONFIG_FILE = resolveTimingFile(process.env.TIMING_CONFIG_FILE);
 initTimingConfig(TIMING_CONFIG_FILE);
 
 // When deployed as a single container, host and controller live on the same
@@ -351,6 +363,22 @@ app.use(
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
+// Backup (.zip) + factory reset for all editable content.
+app.use(
+  '/api/admin',
+  createDataAdminRouter({
+    contentDirs: [
+      { name: 'question-packs', path: QUESTION_PACKS_DIR },
+      { name: 'ko-sam-ja-packs', path: KO_SAM_JA_PACKS_DIR },
+      { name: 'tajni-agenti-packs', path: TAJNI_AGENTI_PACKS_DIR },
+      { name: 'gluvo-doba-packs', path: GLUVO_DOBA_PACKS_DIR },
+      { name: 'spijun-packs', path: SPIJUN_PACKS_DIR },
+    ],
+    timingFile: TIMING_CONFIG_FILE,
+    // Reset wipes the timing file too — refresh the cached overrides.
+    onReset: () => initTimingConfig(TIMING_CONFIG_FILE),
+  })
+);
 
 // Unified admin SPA at /admin — one page covers every content editor, with a
 // client-side game switch (see admin/admin-app.ts). The former per-game pages
