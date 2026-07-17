@@ -16,19 +16,19 @@
     },
     {
       "type": "obicno",
-      "text": "Koji cvet se naziva 'srpski ljiljan' i zaštićen je biljka u Srbiji?",
+      "text": "Koje drvo je otkrio Josif Pančić na Tari 1875. i danas je jedan od simbola srpske prirode?",
       "options": [
-        "Ruža",
-        "Visibaba",
-        "Pančićev ljiljan",
-        "Kaćun"
+        "Divlja jabuka",
+        "Pančićeva omorika",
+        "Crni bor",
+        "Molika"
       ],
-      "correctIndex": 2,
+      "correctIndex": 1,
       "timeLimit": 15
     },
     {
       "type": "obicno",
-      "text": "Koja biljka je sinonim za planinu Kopaonik i nalazi se na njenom grbu?",
+      "text": "Koja biljka je nazvana 'živi fosil' jer je preživela ledeno doba i danas raste u klisurama istočne Srbije?",
       "options": [
         "Planinska ruža",
         "Ramonda srbica",
@@ -40,14 +40,14 @@
     },
     {
       "type": "obicno",
-      "text": "Koji je najstariji živi organizam u Srbiji — tisa star oko 1600 godina?",
+      "text": "Kako se zove hrast u selu Divljana kod Bele Palanke, star preko 1000 godina i smatra se najstarijim drvetom na Balkanu?",
       "options": [
-        "Tisa u Rubićima",
-        "Tisa na Fruškoj gori",
-        "Tisa u Vojlovici",
-        "Tisa kod Vranja"
+        "Zavetni hrast",
+        "Kraljevački hrast",
+        "Mojsijev hrast",
+        "Miloševa lipa"
       ],
-      "correctIndex": 2,
+      "correctIndex": 0,
       "timeLimit": 20
     },
     {
@@ -64,26 +64,26 @@
     },
     {
       "type": "obicno",
-      "text": "Koja vrsta hrasta u Srbiji daje žir bogat taninima, korišćen za štavljenje kože?",
+      "text": "Koja vrsta hrasta u Srbiji daje žir i koru bogatu taninima, tradicionalno korišćenu za štavljenje kože?",
       "options": [
         "Lužnjak",
         "Kitnjak",
         "Sladun",
         "Cer"
       ],
-      "correctIndex": 3,
+      "correctIndex": 0,
       "timeLimit": 20
     },
     {
       "type": "obicno",
-      "text": "U kom delu Srbije raste endemska biljka Ramonda srbica?",
+      "text": "Na kojoj planini je Josif Pančić 1874. godine otkrio endemsku biljku Ramonda srbica?",
       "options": [
         "Fruška Gora",
         "Kopaonik",
         "Prokletije",
         "Rtanj"
       ],
-      "correctIndex": 2,
+      "correctIndex": 3,
       "timeLimit": 20
     },
     {
@@ -208,7 +208,7 @@
     },
     {
       "type": "obicno",
-      "text": "Od kojeg srpskog lekovitog bilja se pravi 'slivovica' — narodni lek za prehladu?",
+      "text": "Od cveta koje biljke se pravi tradicionalni sirup protiv prehlade, poznat po jakom slatkastom mirisu?",
       "options": [
         "Bazga (zova)",
         "Šipak",
@@ -220,14 +220,14 @@
     },
     {
       "type": "obicno",
-      "text": "Koje crnogorično drvo je najraširenije u šumama Kopaonika i Zlatibora?",
+      "text": "Koje crnogorično drvo je najraširenije u visokim šumama Kopaonika?",
       "options": [
         "Jela",
         "Smrča",
         "Bor (Pinus sylvestris)",
         "Tisa"
       ],
-      "correctIndex": 2,
+      "correctIndex": 1,
       "timeLimit": 15
     },
     {
@@ -316,14 +316,14 @@
     },
     {
       "type": "obicno",
-      "text": "Koja planinska biljka Srbije ima najkraće vreme cvetanja — svega nekoliko dana?",
+      "text": "Koja planinska biljka Srbije ima najkraće vreme cvetanja — pojedinačni cvet traje svega par dana?",
       "options": [
         "Visibaba",
         "Šafran (krokus)",
         "Runolist",
         "Planinska ljubičica"
       ],
-      "correctIndex": 2,
+      "correctIndex": 1,
       "timeLimit": 20
     },
     {
@@ -352,14 +352,14 @@
     },
     {
       "type": "obicno",
-      "text": "Koja vrsta vrbe se najčešće viđa uz srpske reke i potoke, poznata po dugim, visećim granama?",
+      "text": "Koja vrsta vrbe je najrasprostranjenija duž srpskih reka i poplavnih ravnica?",
       "options": [
         "Bela vrba",
         "Crna vrba",
         "Žalosna vrba (Salix babylonica)",
         "Rakita"
       ],
-      "correctIndex": 2,
+      "correctIndex": 0,
       "timeLimit": 15
     }
   ]

@@ -64,10 +64,10 @@
     {
       "type": "emoji",
       "emojis": "👽📞🏠",
-      "answer": "I.T.",
+      "answer": "E.T.",
       "accept": [
         "ET",
-        "E.T."
+        "I.T."
       ]
     },
     {
@@ -116,19 +116,20 @@
     {
       "type": "emoji",
       "emojis": "🚗⚡👦",
-      "answer": "Munjavi",
+      "answer": "Munjeviti",
       "accept": [
         "Cars",
-        "Automobili"
+        "Automobili",
+        "Munjeviti Jurić"
       ]
     },
     {
       "type": "emoji",
       "emojis": "🐭🍝👨‍🍳",
-      "answer": "Pacov pod šeširom",
+      "answer": "Ratatuj",
       "accept": [
         "Ratatouille",
-        "Ratatuj"
+        "Pacov pod šeširom"
       ]
     },
     {
@@ -198,7 +199,7 @@
     },
     {
       "type": "emoji",
-      "emojis": "🏀🔨",
+      "emojis": "🏀⛹️",
       "answer": "Košarka"
     },
     {

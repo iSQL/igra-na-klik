@@ -40,7 +40,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji glumac tumači lik Maloga u filmu 'Lepa sela lepo gore'?",
+      "text": "Koji glumac tumači odraslog Milana u filmu 'Lepa sela lepo gore'?",
       "options": [
         "Dragan Bjelogrlić",
         "Nikola Kojo",
@@ -131,7 +131,7 @@
         "Nebojša Glogovac",
         "Uroš Đurić"
       ],
-      "correctIndex": 0,
+      "correctIndex": 3,
       "timeLimit": 20
     },
     {
@@ -172,7 +172,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji glumac igra glavnu ulogu Marka u filmu 'Crni Gruja'?",
+      "text": "Koji glumac igra ulogu Karađorđa u filmu 'Crni Gruja i kamen mudrosti'?",
       "options": [
         "Nikola Kojo",
         "Vojin Ćetković",
@@ -196,7 +196,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji glumac je proslavljen ulogom Žike Pavlovića u seriji filmova 'Tesna koža'?",
+      "text": "Koji glumac je proslavljen ulogom Srećka Šojića u seriji filmova 'Tesna koža'?",
       "options": [
         "Pavle Vuisić",
         "Nikola Simić",
@@ -215,17 +215,17 @@
         "Aleksandar Đorđević",
         "Goran Marković"
       ],
-      "correctIndex": 1,
+      "correctIndex": 0,
       "timeLimit": 20
     },
     {
       "type": "obicno",
-      "text": "Koji film iz 1970. godine prikazuje slikara Milića od Mačve u ulozi crkvenog poglavara?",
+      "text": "Koja glumica tumači lik Milice u filmu 'Zaseda' (1969) Živojina Pavlovića?",
       "options": [
-        "Boj na Kosovu",
-        "Zaseda",
-        "Majstor i Margarita",
-        "Bitka na Neretvi"
+        "Mirjana Karanović",
+        "Milena Dravić",
+        "Ljiljana Blagojević",
+        "Snežana Nikšić"
       ],
       "correctIndex": 1,
       "timeLimit": 25
@@ -256,7 +256,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji srpski film iz 2010. godine govori o životu Mije Aleksića?",
+      "text": "Koji srpski film iz 2010. godine prati put jugoslovenske fudbalske reprezentacije na prvo Svetsko prvenstvo 1930. u Urugvaju?",
       "options": [
         "Žikina dinastija",
         "Montevideo, Bog te video!",
@@ -280,7 +280,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji glumac tumači Tihomira u filmu 'Profesionalac' Dušana Kovačevića?",
+      "text": "Koji glumac tumači Teodora 'Teju' Kraja u filmu 'Profesionalac' Dušana Kovačevića?",
       "options": [
         "Branislav Lečić",
         "Bora Todorović",
@@ -304,7 +304,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji srpski film iz 2006. godine, u režiji Srdana Golubovića, govori o četvorici ljudi povezanih transplantacijom srca?",
+      "text": "Koji srpski film iz 2007. godine, u režiji Srdana Golubovića, prati oca koji pristaje da ubije čoveka kako bi platio operaciju srca svom sinu?",
       "options": [
         "Klopka",
         "Apsolutnih sto",
@@ -352,7 +352,7 @@
     },
     {
       "type": "obicno",
-      "text": "Koji srpski film iz 1974. godine, u režiji Aleksandra Petrovića, je adaptacija romana Mihaila Bulgakova?",
+      "text": "Koji srpski film iz 1972. godine, u režiji Aleksandra Petrovića, je adaptacija romana Mihaila Bulgakova?",
       "options": [
         "Seobe",
         "Majstor i Margarita",

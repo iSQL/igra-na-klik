@@ -30,7 +30,7 @@
     { "type": "obicno", "text": "Koliko igrača ima košarkaška ekipa na terenu?", "options": ["5", "6", "7", "11"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Koje godine su Olimpijske igre održane u Sarajevu (zimske)?", "options": ["1980", "1984", "1988", "1992"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koja disciplina uključuje deset različitih atletskih događaja u dva dana?", "options": ["Sedmoboj", "Desetoboj", "Petoboj", "Triatlon"], "correctIndex": 1, "timeLimit": 15 },
-    { "type": "obicno", "text": "Koji sport se igra reketom preko mreže i olimpijski je od 1988?", "options": ["Tenis", "Badminton", "Stoni tenis", "Skvoš"], "correctIndex": 2, "timeLimit": 15 },
+    { "type": "obicno", "text": "Koji sport sa reketom i mrežicom je prvi put uveden u program Olimpijskih igara 1988. godine?", "options": ["Tenis", "Badminton", "Stoni tenis", "Skvoš"], "correctIndex": 2, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zovu igre za sportiste sa invaliditetom koje slede posle Olimpijskih?", "options": ["Specijalne igre", "Paraolimpijske igre", "Univerzijada", "Mediteranske igre"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "U kom gradu su održane letnje Olimpijske igre 2024. godine?", "options": ["Los Anđeles", "Pariz", "Tokio", "Brizbejn"], "correctIndex": 1, "timeLimit": 15 }
   ]

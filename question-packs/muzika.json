@@ -9,7 +9,7 @@
     { "type": "obicno", "text": "Kako se zove kralj popa?", "options": ["Elvis Prisli", "Majkl Džekson", "Prins", "Džastin Timberlejk"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji instrument ima crne i bele dirke?", "options": ["Violina", "Klavir", "Truba", "Harfa"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove pevačica poznata po pesmama 'Rolling in the Deep' i 'Hello'?", "options": ["Bijonse", "Adele", "Rijana", "Lady Gaga"], "correctIndex": 1, "timeLimit": 15 },
-    { "type": "obicno", "text": "Koji domaći pevač je poznat kao 'Cobe' i pevao je pesmu 'Kad si sam'?", "options": ["Đorđe Balašević", "Zdravko Čolić", "Bora Đorđević", "Momčilo Bajagić Bajaga"], "correctIndex": 3, "timeLimit": 15 },
+    { "type": "obicno", "text": "Koji srpski muzičar je bio gitarista benda 'Riblja čorba' pre nego što je osnovao sopstveni bend 'Instruktori'?", "options": ["Đorđe Balašević", "Zdravko Čolić", "Bora Đorđević", "Momčilo Bajagić Bajaga"], "correctIndex": 3, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove muzički žanr nastao u Jamajci, poznat po Bobu Marliju?", "options": ["Reggae", "Jazz", "Blues", "Soul"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Ko je izvođač pesme 'Shape of You'?", "options": ["Džastin Biber", "Ed Širan", "Bruno Mars", "Šon Mendes"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji instrument svira violinista?", "options": ["Bubnjeve", "Violinu", "Flautu", "Klavir"], "correctIndex": 1, "timeLimit": 15 },

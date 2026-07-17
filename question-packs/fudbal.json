@@ -23,7 +23,7 @@
     { "type": "obicno", "text": "Kako se zove nagrada za najboljeg fudbalera sveta koju dodeljuje France Football?", "options": ["Zlatna kopačka", "Zlatna lopta", "Zlatna rukavica", "The Best"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji engleski klub se zove 'Crveni đavoli'?", "options": ["Liverpul", "Arsenal", "Mančester junajted", "Čelsi"], "correctIndex": 2, "timeLimit": 15 },
     { "type": "obicno", "text": "Koliko traje produžetak u fudbalu (ukupno oba dela)?", "options": ["15 minuta", "20 minuta", "30 minuta", "45 minuta"], "correctIndex": 2, "timeLimit": 15 },
-    { "type": "obicno", "text": "Koji srpski fudbaler je bio kapiten reprezentacije i legenda Fjorentine i Lacija (Siniša)?", "options": ["Dejan Stanković", "Siniša Mihajlović", "Dragan Stojković", "Predrag Mijatović"], "correctIndex": 1, "timeLimit": 15 },
+    { "type": "obicno", "text": "Koji srpski fudbaler je bio kapiten reprezentacije i legenda Sampdorije i Lacija (Siniša)?", "options": ["Dejan Stanković", "Siniša Mihajlović", "Dragan Stojković", "Predrag Mijatović"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove tehnologija koja pomaže sudijama pri spornim situacijama?", "options": ["VAR", "GPS", "VLC", "GLT"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji igrač je poznat kao 'Piksi', legenda srpskog i jugoslovenskog fudbala?", "options": ["Dragan Stojković", "Dejan Savićević", "Predrag Mijatović", "Robert Prosinečki"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove udarac glavom u fudbalu?", "options": ["Volej", "Glavom (header)", "Škarice", "Dribling"], "correctIndex": 1, "timeLimit": 15 },

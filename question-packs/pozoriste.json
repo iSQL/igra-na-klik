@@ -12,7 +12,7 @@
     { "type": "obicno", "text": "Ko vodi i osmišljava pozorišnu predstavu?", "options": ["Producent", "Reditelj", "Scenograf", "Inspicijent"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove komad Branislava Nušića o gospođi koja želi da postane ministarka?", "options": ["Narodni poslanik", "Gospođa ministarka", "Sumnjivo lice", "Ožalošćena porodica"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zovu dve maske koje su simbol pozorišta?", "options": ["Sunce i mesec", "Komedija i tragedija", "Dan i noć", "Ljubav i mržnja"], "correctIndex": 1, "timeLimit": 15 },
-    { "type": "obicno", "text": "Kako se zove pauza tokom predstave?", "options": ["Pauza", "Antrakt (pauza)", "Interludij", "Finale"], "correctIndex": 1, "timeLimit": 15 },
+    { "type": "obicno", "text": "Kako se stručno naziva pauza između činova pozorišne predstave?", "options": ["Odmor", "Antrakt", "Interludij", "Finale"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji ruski pisac je autor drame 'Višnjik' i 'Galeb'?", "options": ["Anton Čehov", "Lav Tolstoj", "Maksim Gorki", "Nikolaj Gogolj"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove govor jednog lika samog na sceni?", "options": ["Dijalog", "Monolog", "Replika", "Refren"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove osoba koja šapatom pomaže glumcima ako zaborave tekst?", "options": ["Inspicijent", "Šaptač (sufler)", "Reditelj", "Dramaturg"], "correctIndex": 1, "timeLimit": 15 },

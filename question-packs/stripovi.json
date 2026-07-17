@@ -28,7 +28,7 @@
     { "type": "obicno", "text": "Kako se zove najbrži čovek na svetu iz DC stripova?", "options": ["Kviksilver", "Flaš", "Zeleni Fenjer", "Akvamen"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Koja Amazonka je superherojka iz DC-a sa lasom istine?", "options": ["Betgerl", "Wonder Woman", "Supergerl", "Crna Kanarinka"], "correctIndex": 1, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove strip junak koji vlada okeanima u DC univerzumu?", "options": ["Akvamen", "Namor", "Posejdon", "Hidromen"], "correctIndex": 0, "timeLimit": 15 },
-    { "type": "obicno", "text": "Kako se zove čuveni srpski strip crtač, autor 'Dikan' i saradnik na 'Politikinom zabavniku'?", "options": ["Đorđe Lobačev", "Nikola Navojev", "Aleksa Gajić", "Zoran Janjetov"], "correctIndex": 0, "timeLimit": 15 },
+    { "type": "obicno", "text": "Kako se zove čuveni srpski strip crtač, autor 'Baš Čelik' i saradnik na 'Politikinom zabavniku'?", "options": ["Đorđe Lobačev", "Nikola Navojev", "Aleksa Gajić", "Zoran Janjetov"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove Betmenov mladi pomoćnik?", "options": ["Robin", "Nightwing", "Alfred", "Batgirl"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Koji strip junak iz Marvela može da se smanji i uveća uz pomoć posebnih čestica?", "options": ["Ant-Man", "Vision", "Doctor Strange", "Black Panther"], "correctIndex": 0, "timeLimit": 15 },
     { "type": "obicno", "text": "Kako se zove ljubičasti negativac koji sakuplja Kamenove beskonačnosti?", "options": ["Loki", "Tanos", "Ultron", "Galaktus"], "correctIndex": 1, "timeLimit": 15 },
