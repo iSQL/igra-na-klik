@@ -10,6 +10,13 @@ const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
 // rejoining is one tap (and name-based slot reclaim just works).
 const LAST_NAME_KEY = 'igra-player-name';
 
+// autoFocus is a convenience for the FIRST open only (fresh app launch,
+// possibly via a ?code= deep link). When the player lands back here later —
+// room closed, kicked, voluntary leave — auto-popping the phone keyboard is
+// jarring, so remounts after the first skip it. Module-level on purpose:
+// survives JoinScreen unmount/remount within the same page load.
+let hadFirstMount = false;
+
 // Server join errors are fixed English strings — map the known ones to
 // localized, friendlier messages (the raw text still shows for unknowns).
 const SERVER_ERROR_KEYS: Record<string, string> = {
@@ -34,6 +41,13 @@ export function JoinScreen() {
   const [fetchingCode, setFetchingCode] = useState(false);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  // Read the latch during render (autoFocus applies at initial render), but
+  // only SET it in an effect — keeps render pure so StrictMode's double
+  // render can't consume the first-mount slot before the real paint.
+  const allowAutoFocus = !hadFirstMount;
+  useEffect(() => {
+    hadFirstMount = true;
+  }, []);
 
   // Public list of active rooms (same feed the landing page uses). Only in
   // multi-room mode; single-room already auto-fills the one room's code.
@@ -221,7 +235,7 @@ export function JoinScreen() {
           <input
             type="text"
             maxLength={ROOM_CODE_LENGTH}
-            autoFocus={!roomCode}
+            autoFocus={allowAutoFocus && !roomCode}
             value={roomCode}
             onChange={(e) => handleCodeChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
@@ -277,7 +291,7 @@ export function JoinScreen() {
           type="text"
           placeholder={t('join.yourName')}
           maxLength={20}
-          autoFocus={SINGLE_ROOM_MODE || !!roomCode}
+          autoFocus={allowAutoFocus && (SINGLE_ROOM_MODE || !!roomCode)}
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
