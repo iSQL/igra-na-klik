@@ -212,8 +212,9 @@ export function GameSelectScreen() {
     questions: KvizImportQuestion[];
     fileName: string;
   } | null>(null);
-  // Checked packs / question types; null = all (default).
-  const [quizPackIds, setQuizPackIds] = useState<string[] | null>(null);
+  // Checked packs / question types; null = all. Packs default to none checked
+  // ([]) so the player consciously picks what to play; types stay null = all.
+  const [quizPackIds, setQuizPackIds] = useState<string[] | null>([]);
   const [quizTypes, setQuizTypes] = useState<KvizQuestionType[] | null>(null);
   const [quizImportError, setQuizImportError] = useState<string | null>(null);
   const [koSamJaPacks, setKoSamJaPacks] = useState<KoSamJaPackSummary[]>([]);
@@ -1487,7 +1488,7 @@ function QuizConfig({
     return getRecentPackIds()
       .map((id) => byId.get(id))
       .filter((p): p is QuestionPackSummary => !!p)
-      .slice(0, 6);
+      .slice(0, 3);
   }, [packs, q]);
 
   const togglePack = (id: string) => {
@@ -1598,16 +1599,16 @@ function QuizConfig({
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 🕘 {t('quizConfig.recent')}
               </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                 {recent.map((p) => (
-                  <Pill
+                  <PackTag
                     key={p.id}
                     active={checkedIds.includes(p.id)}
                     onClick={() => togglePack(p.id)}
                   >
                     {checkedIds.includes(p.id) ? '✓ ' : ''}
                     {p.name}
-                  </Pill>
+                  </PackTag>
                 ))}
               </div>
             </div>
@@ -2061,6 +2062,40 @@ function ModeButton({
         background: active ? 'var(--grad)' : 'var(--bg-primary)',
         color: active ? '#fff' : 'var(--text-secondary)',
         border: active ? '1px solid transparent' : '1px solid var(--line2)',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Compact, auto-width toggle tag that wraps across rows — unlike Pill (which
+ * uses flex:1 to fill a segmented-control row). Used for the "recently used"
+ * pack strip so many packs pack into 2–3 tidy rows.
+ */
+function PackTag({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '0.12rem 0.5rem',
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        lineHeight: 1.25,
+        borderRadius: '999px',
+        background: active ? 'var(--grad)' : 'var(--bg-primary)',
+        color: active ? '#fff' : 'var(--text-secondary)',
+        border: active ? '1px solid transparent' : '1px solid var(--line2)',
+        whiteSpace: 'nowrap',
       }}
     >
       {children}
