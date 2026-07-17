@@ -1,6 +1,7 @@
 {
   "name": "Žabari",
   "description": "Opština Žabari — pogodi gde je slikano",
+  "category": "geo",
   "maps": {
     "main": {
       "imageFile": "map.png",
@@ -15,11 +16,11 @@
   "questions": [
     {
       "type": "geo",
-      "imageFile": "f253a1d3-b41c-4aaf-9eb8-b0d7fed6e2da.jpg",
-      "caption": "Test",
-      "lat": 44.431211,
-      "lng": 21.226975,
-      "mapId": "main"
+      "imageFile": "33b59c88-79d0-43a7-9472-93f4a46c9651.jpg",
+      "lat": 44.357648821077895,
+      "lng": 21.2153795433738,
+      "mapId": "main",
+      "timeLimit": 30
     }
   ]
 }
