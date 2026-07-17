@@ -11,6 +11,7 @@ import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
+import { BackButtonGuard } from './components/BackButtonGuard';
 import { useT } from './i18n/useT';
 
 function ReconnectingOverlay() {
@@ -574,6 +575,7 @@ export function App() {
   return (
     <>
       {showReconnecting && <ReconnectingOverlay />}
+      <BackButtonGuard />
       {body}
       {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
       {kickNotice && (
