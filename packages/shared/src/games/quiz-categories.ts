@@ -3,16 +3,17 @@
  * the admin editor and in the in-game pack picker. A pack carries an optional
  * `category` id in its manifest; anything missing or unknown falls back to
  * 'ostalo' on display (reads stay lax — an unknown value is never an error).
+ *
+ * The five top-level categories double as the game's category → subcategory
+ * hierarchy: each pack is a "subcategory" that shows up grouped under its
+ * category in the picker (e.g. "Fudbal" and "Gejming" both under Sport).
  */
 export type KvizCategoryId =
-  | 'skola'
-  | 'pop'
-  | 'geo'
-  | 'hrana'
-  | 'sport'
-  | 'nauka'
   | 'opste'
-  | 'zabava'
+  | 'nauka'
+  | 'pop'
+  | 'sport'
+  | 'umetnost'
   | 'ostalo';
 
 export interface KvizCategory {
@@ -23,14 +24,11 @@ export interface KvizCategory {
 
 /** Display order = section order in the picker. 'ostalo' is the last fallback. */
 export const KVIZ_CATEGORIES: KvizCategory[] = [
-  { id: 'skola', label: 'Škola', icon: '📚' },
-  { id: 'pop', label: 'Pop kultura', icon: '🎬' },
-  { id: 'geo', label: 'Geografija', icon: '🗺️' },
-  { id: 'hrana', label: 'Hrana & piće', icon: '🍲' },
-  { id: 'sport', label: 'Sport', icon: '⚽' },
-  { id: 'nauka', label: 'Nauka', icon: '🔬' },
   { id: 'opste', label: 'Opšte znanje', icon: '🧠' },
-  { id: 'zabava', label: 'Zabava & igre', icon: '🎮' },
+  { id: 'nauka', label: 'Nauka i priroda', icon: '🔬' },
+  { id: 'pop', label: 'Pop kultura i zabava', icon: '🎬' },
+  { id: 'sport', label: 'Sport i razonoda', icon: '⚽' },
+  { id: 'umetnost', label: 'Umetnost i književnost', icon: '🎨' },
   { id: 'ostalo', label: 'Ostalo', icon: '📦' },
 ];
 

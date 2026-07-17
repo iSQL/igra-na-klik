@@ -2,46 +2,317 @@
   "name": "Emoji zagonetke",
   "description": "Nekadašnja ugrađena banka igre Emoji zagonetke — filmovi, izreke i pojmovi.",
   "questions": [
-    { "type": "emoji", "emojis": "🦁👑", "answer": "Kralj lavova", "accept": ["The Lion King"] },
-    { "type": "emoji", "emojis": "❄️👸⛄", "answer": "Zaleđeno kraljevstvo", "accept": ["Frozen"] },
-    { "type": "emoji", "emojis": "🕷️🧑", "answer": "Spajdermen", "accept": ["Spiderman", "Spider-Man", "Čovek pauk"] },
-    { "type": "emoji", "emojis": "🦇🧑", "answer": "Betmen", "accept": ["Batman"] },
-    { "type": "emoji", "emojis": "🚢🧊💔", "answer": "Titanik", "accept": ["Titanic"] },
-    { "type": "emoji", "emojis": "🦖🏝️", "answer": "Park iz doba jure", "accept": ["Jurassic Park"] },
-    { "type": "emoji", "emojis": "🐠🔍", "answer": "Potraga za Nemom", "accept": ["Finding Nemo", "Nemo"] },
-    { "type": "emoji", "emojis": "👽📞🏠", "answer": "I.T.", "accept": ["ET", "E.T."] },
-    { "type": "emoji", "emojis": "🤖❤️🌱", "answer": "Vol-i", "accept": ["Wall-E", "WALL-E", "Voli"] },
-    { "type": "emoji", "emojis": "🧙‍♂️💍🌋", "answer": "Gospodar prstenova", "accept": ["The Lord of the Rings", "Lord of the Rings"] },
-    { "type": "emoji", "emojis": "🦈🏖️😱", "answer": "Ajkula", "accept": ["Jaws"] },
-    { "type": "emoji", "emojis": "👻🚫", "answer": "Istrebljivači duhova", "accept": ["Ghostbusters"] },
-    { "type": "emoji", "emojis": "🐷🕸️", "answer": "Šarlotina mreža", "accept": ["Charlotte's Web"] },
-    { "type": "emoji", "emojis": "🚗⚡👦", "answer": "Munjavi", "accept": ["Cars", "Automobili"] },
-    { "type": "emoji", "emojis": "🐭🍝👨‍🍳", "answer": "Pacov pod šeširom", "accept": ["Ratatouille", "Ratatuj"] },
-    { "type": "emoji", "emojis": "🌧️🐱🐶", "answer": "Pada kiša", "accept": ["Kiša"] },
-    { "type": "emoji", "emojis": "🐔🥚", "answer": "Kokoška i jaje" },
-    { "type": "emoji", "emojis": "🍎📅", "answer": "Jabuka dnevno", "accept": ["An apple a day"] },
-    { "type": "emoji", "emojis": "🐺🐑", "answer": "Vuk u jagnjećoj koži", "accept": ["Vuk u ovčjoj koži"] },
-    { "type": "emoji", "emojis": "💰🌳", "answer": "Pare ne rastu na drveću" },
-    { "type": "emoji", "emojis": "🔥🚒", "answer": "Vatrogasci", "accept": ["Vatrogasac"] },
-    { "type": "emoji", "emojis": "⏰🌅", "answer": "Ko rano rani, dve sreće grabi" },
-    { "type": "emoji", "emojis": "☕🥐", "answer": "Doručak" },
-    { "type": "emoji", "emojis": "🎂🎉🎈", "answer": "Rođendan" },
-    { "type": "emoji", "emojis": "⚽🥅", "answer": "Fudbal", "accept": ["Gol"] },
-    { "type": "emoji", "emojis": "🏀🔨", "answer": "Košarka" },
-    { "type": "emoji", "emojis": "🎾🟢", "answer": "Tenis" },
-    { "type": "emoji", "emojis": "🍕🇮🇹", "answer": "Pica", "accept": ["Pizza"] },
-    { "type": "emoji", "emojis": "🌍💧🔥🌪️", "answer": "Elementi", "accept": ["Priroda"] },
-    { "type": "emoji", "emojis": "🚑🏥", "answer": "Bolnica", "accept": ["Hitna pomoć"] },
-    { "type": "emoji", "emojis": "✈️🌴🧳", "answer": "Letovanje", "accept": ["Odmor"] },
-    { "type": "emoji", "emojis": "🎄🎁⛄", "answer": "Božić", "accept": ["Nova godina"] },
-    { "type": "emoji", "emojis": "🌙⭐😴", "answer": "Laku noć" },
-    { "type": "emoji", "emojis": "🐝🍯", "answer": "Med", "accept": ["Pčela"] },
-    { "type": "emoji", "emojis": "🦉📚🎓", "answer": "Škola", "accept": ["Fakultet"] },
-    { "type": "emoji", "emojis": "🎣🐟", "answer": "Pecanje", "accept": ["Ribolov"] },
-    { "type": "emoji", "emojis": "🧛🩸🦇", "answer": "Vampir", "accept": ["Drakula", "Dracula"] },
-    { "type": "emoji", "emojis": "🌈🦄", "answer": "Jednorog", "accept": ["Unicorn"] },
-    { "type": "emoji", "emojis": "☔🌈", "answer": "Duga" },
-    { "type": "emoji", "emojis": "🍫🏭🎫", "answer": "Čarli i fabrika čokolade", "accept": ["Charlie and the Chocolate Factory"] },
-    { "type": "emoji", "emojis": "👑💍👰", "answer": "Venčanje", "accept": ["Svadba"] }
-  ]
+    {
+      "type": "emoji",
+      "emojis": "🦁👑",
+      "answer": "Kralj lavova",
+      "accept": [
+        "The Lion King"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "❄️👸⛄",
+      "answer": "Zaleđeno kraljevstvo",
+      "accept": [
+        "Frozen"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🕷️🧑",
+      "answer": "Spajdermen",
+      "accept": [
+        "Spiderman",
+        "Spider-Man",
+        "Čovek pauk"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🦇🧑",
+      "answer": "Betmen",
+      "accept": [
+        "Batman"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🚢🧊💔",
+      "answer": "Titanik",
+      "accept": [
+        "Titanic"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🦖🏝️",
+      "answer": "Park iz doba jure",
+      "accept": [
+        "Jurassic Park"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐠🔍",
+      "answer": "Potraga za Nemom",
+      "accept": [
+        "Finding Nemo",
+        "Nemo"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "👽📞🏠",
+      "answer": "I.T.",
+      "accept": [
+        "ET",
+        "E.T."
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🤖❤️🌱",
+      "answer": "Vol-i",
+      "accept": [
+        "Wall-E",
+        "WALL-E",
+        "Voli"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🧙‍♂️💍🌋",
+      "answer": "Gospodar prstenova",
+      "accept": [
+        "The Lord of the Rings",
+        "Lord of the Rings"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🦈🏖️😱",
+      "answer": "Ajkula",
+      "accept": [
+        "Jaws"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "👻🚫",
+      "answer": "Istrebljivači duhova",
+      "accept": [
+        "Ghostbusters"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐷🕸️",
+      "answer": "Šarlotina mreža",
+      "accept": [
+        "Charlotte's Web"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🚗⚡👦",
+      "answer": "Munjavi",
+      "accept": [
+        "Cars",
+        "Automobili"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐭🍝👨‍🍳",
+      "answer": "Pacov pod šeširom",
+      "accept": [
+        "Ratatouille",
+        "Ratatuj"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🌧️🐱🐶",
+      "answer": "Pada kiša",
+      "accept": [
+        "Kiša"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐔🥚",
+      "answer": "Kokoška i jaje"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🍎📅",
+      "answer": "Jabuka dnevno",
+      "accept": [
+        "An apple a day"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐺🐑",
+      "answer": "Vuk u jagnjećoj koži",
+      "accept": [
+        "Vuk u ovčjoj koži"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "💰🌳",
+      "answer": "Pare ne rastu na drveću"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🔥🚒",
+      "answer": "Vatrogasci",
+      "accept": [
+        "Vatrogasac"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "⏰🌅",
+      "answer": "Ko rano rani, dve sreće grabi"
+    },
+    {
+      "type": "emoji",
+      "emojis": "☕🥐",
+      "answer": "Doručak"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🎂🎉🎈",
+      "answer": "Rođendan"
+    },
+    {
+      "type": "emoji",
+      "emojis": "⚽🥅",
+      "answer": "Fudbal",
+      "accept": [
+        "Gol"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🏀🔨",
+      "answer": "Košarka"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🎾🟢",
+      "answer": "Tenis"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🍕🇮🇹",
+      "answer": "Pica",
+      "accept": [
+        "Pizza"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🌍💧🔥🌪️",
+      "answer": "Elementi",
+      "accept": [
+        "Priroda"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🚑🏥",
+      "answer": "Bolnica",
+      "accept": [
+        "Hitna pomoć"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "✈️🌴🧳",
+      "answer": "Letovanje",
+      "accept": [
+        "Odmor"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🎄🎁⛄",
+      "answer": "Božić",
+      "accept": [
+        "Nova godina"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🌙⭐😴",
+      "answer": "Laku noć"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🐝🍯",
+      "answer": "Med",
+      "accept": [
+        "Pčela"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🦉📚🎓",
+      "answer": "Škola",
+      "accept": [
+        "Fakultet"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🎣🐟",
+      "answer": "Pecanje",
+      "accept": [
+        "Ribolov"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🧛🩸🦇",
+      "answer": "Vampir",
+      "accept": [
+        "Drakula",
+        "Dracula"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "🌈🦄",
+      "answer": "Jednorog",
+      "accept": [
+        "Unicorn"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "☔🌈",
+      "answer": "Duga"
+    },
+    {
+      "type": "emoji",
+      "emojis": "🍫🏭🎫",
+      "answer": "Čarli i fabrika čokolade",
+      "accept": [
+        "Charlie and the Chocolate Factory"
+      ]
+    },
+    {
+      "type": "emoji",
+      "emojis": "👑💍👰",
+      "answer": "Venčanje",
+      "accept": [
+        "Svadba"
+      ]
+    }
+  ],
+  "category": "pop"
 }
