@@ -517,18 +517,18 @@ const LANDING_HTML = `<!DOCTYPE html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;font-family:'Manrope','Segoe UI',system-ui,sans-serif;background:#F5EBE0;background-image:radial-gradient(760px 460px at 50% -8%,rgba(194,155,71,.18),transparent 62%);color:#2B2B2B;-webkit-text-size-adjust:100%}
 body{display:flex;align-items:center;justify-content:center;padding:1.5rem}
 .wrap{text-align:center;max-width:22rem;width:100%;display:flex;flex-direction:column;gap:1.35rem;align-items:center}
 .mark{width:88px;height:88px}
-.eyebrow{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.28em;color:#B89040;text-transform:uppercase}
-h1{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-weight:400;font-size:2.3rem;letter-spacing:0.02em;color:#1D3557;margin-top:-0.9rem}
+.eyebrow{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.28em;color:#B89040;text-transform:uppercase}
+h1{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-weight:400;font-size:2.3rem;letter-spacing:0.02em;color:#1D3557;margin-top:-0.9rem}
 .motto{font-style:italic;font-weight:500;font-size:1.05rem;color:#5A5348;margin-top:-1rem;padding-top:0.7rem;position:relative}
 .motto::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:56px;height:1px;background:#C29B47}
-.cta{display:block;width:100%;padding:1rem 2rem;font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.2rem;letter-spacing:0.03em;background:#1D3557;color:#F5EBE0;border-radius:14px;text-decoration:none;transition:background 0.15s;min-height:48px}
+.cta{display:block;width:100%;padding:1rem 2rem;font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:1.2rem;letter-spacing:0.03em;background:#1D3557;color:#F5EBE0;border-radius:14px;text-decoration:none;transition:background 0.15s;min-height:48px}
 .cta:hover{background:#162E4E}
 .host-link{font-size:0.95rem;font-weight:600;color:#B89040;text-decoration:none;margin-top:0.3rem}
 .host-link:hover{color:#1D3557}
@@ -536,15 +536,15 @@ h1{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-weight:400;font-siz
 .lang-btn{padding:0.3rem 0.65rem;font:inherit;font-size:0.8rem;font-weight:600;border:none;border-radius:0.45rem;cursor:pointer;background:transparent;color:#6E6A5E;min-height:0}
 .rooms{text-align:left;display:none;flex-direction:column;gap:0.5rem;width:100%}
 .rooms.visible{display:flex}
-.rooms-title{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:#B89040}
+.rooms-title{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:#B89040}
 .room-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.7rem 1rem;background:#FAF6F0;border:1px solid rgba(29,53,87,.14);border-radius:0.8rem;text-decoration:none;color:#2B2B2B;transition:border-color 0.15s,background 0.15s}
 a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 .room-row.busy{opacity:0.6}
-.room-code{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:1.15rem;letter-spacing:0.15em;color:#1D3557}
+.room-code{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:1.15rem;letter-spacing:0.15em;color:#1D3557}
 .room-row.busy .room-code{color:#8B8578}
 .room-meta{font-size:0.9rem;font-weight:500;color:#6E6A5E}
 .room-badge{font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:0.4rem;background:#E6DCD2;color:#4A4438;white-space:nowrap}
-.site{font-family:'Fredoka','Manrope',system-ui,sans-serif;font-size:0.9rem;letter-spacing:0.06em;color:#1D3557;margin-top:0.4rem;text-decoration:none;transition:color 0.15s}
+.site{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:0.9rem;letter-spacing:0.06em;color:#1D3557;margin-top:0.4rem;text-decoration:none;transition:color 0.15s}
 .site:hover{color:#C29B47}
 .site span{color:#C29B47}
 .site:hover span{color:#1D3557}

@@ -6,7 +6,6 @@ import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
 import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
-import { LobbyChat } from '../components/LobbyChat';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { AvatarPickerModal } from '../components/AvatarPickerModal';
 import { useT } from '../i18n/useT';
@@ -294,8 +293,6 @@ export function LobbyScreen() {
             </div>
           ))}
       </div>
-
-      <LobbyChat />
 
       <div
         style={{

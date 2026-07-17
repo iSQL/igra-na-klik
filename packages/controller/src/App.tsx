@@ -12,6 +12,7 @@ import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 import { BackButtonGuard } from './components/BackButtonGuard';
+import { ChatHead } from './components/ChatHead';
 import { useT } from './i18n/useT';
 
 function ReconnectingOverlay() {
@@ -577,6 +578,10 @@ export function App() {
       {showReconnecting && <ReconnectingOverlay />}
       <BackButtonGuard />
       {body}
+      {/* Chat only works while the room is in the lobby (server-enforced), so
+          the head floats over the lobby + game-select screens and unmounts
+          during games. */}
+      {player && !gameId && <ChatHead />}
       {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
       {kickNotice && (
         <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />

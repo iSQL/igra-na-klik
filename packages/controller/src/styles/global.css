@@ -28,8 +28,8 @@
   --danger: #e06a5e;
   --blue: #6d9bd1;
   --grad: linear-gradient(125deg, #c0964a, #8f6e2c);
-  --font-display: 'Fredoka', 'Manrope', system-ui, sans-serif;
-  --font-caps: 'Fredoka', 'Manrope', system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Manrope', system-ui, sans-serif;
+  --font-caps: 'Baloo 2', 'Manrope', system-ui, sans-serif;
   --shadow-cta: 0 10px 26px rgba(194, 155, 71, 0.32);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

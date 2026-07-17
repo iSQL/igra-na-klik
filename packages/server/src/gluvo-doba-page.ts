@@ -127,17 +127,16 @@ export const GLUVO_DOBA_PAGE_HTML: string = `<!DOCTYPE html>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-/* Headings use Manrope (not the display Fredoka): Fredoka's Google Fonts
-   build lacks some Serbian Latin glyphs (č/ć…), so those letters fell back
-   to a system font and "jumped". Manrope covers the full set uniformly. */
+/* Headings use the display font Baloo 2 (full Serbian Latin coverage —
+   the previous Fredoka lacked č/ć/đ and those letters "jumped"). */
 body{font-family:'Manrope','Segoe UI',system-ui,sans-serif;background:#F5EBE0;background-image:radial-gradient(760px 460px at 50% -8%,rgba(194,155,71,.18),transparent 62%);color:#2B2B2B;line-height:1.55;padding:2rem 1.25rem 4rem}
 main{max-width:46rem;margin:0 auto;display:flex;flex-direction:column;gap:2rem}
-h1{font-family:'Manrope',system-ui,sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.01em;color:#1D3557}
-h2{font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:1.4rem;color:#1D3557;border-bottom:2px solid #C29B47;padding-bottom:0.3rem;margin-bottom:0.8rem}
-h3{font-family:'Manrope',system-ui,sans-serif;font-weight:700;font-size:1.1rem;color:#8a6a23;margin:1rem 0 0.5rem}
+h1{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-weight:800;font-size:2.2rem;letter-spacing:-0.01em;color:#1D3557}
+h2{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-weight:700;font-size:1.4rem;color:#1D3557;border-bottom:2px solid #C29B47;padding-bottom:0.3rem;margin-bottom:0.8rem}
+h3{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-weight:700;font-size:1.1rem;color:#8a6a23;margin:1rem 0 0.5rem}
 p{margin-bottom:0.5rem}
 .back{font-weight:700;color:#B89040;text-decoration:none}
 .back:hover{color:#1D3557}

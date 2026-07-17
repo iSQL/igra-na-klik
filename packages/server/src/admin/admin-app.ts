@@ -59,7 +59,7 @@ export function renderAdminApp(): string {
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -88,7 +88,7 @@ input,textarea,select{font:inherit}
   color:#F5EBE0;padding:1.2rem 1rem;position:sticky;top:0;height:100vh;overflow-y:auto;box-shadow:2px 0 24px rgba(20,40,63,.28)}
 .app-brandwrap{display:flex;align-items:center;gap:.65rem;padding:.1rem .3rem .9rem}
 .app-brandwrap img{flex:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3))}
-.brand-name{font-family:'Fredoka';font-weight:700;font-size:1.12rem;letter-spacing:.01em}
+.brand-name{font-family:'Baloo 2';font-weight:700;font-size:1.12rem;letter-spacing:.01em}
 .brand-sub{font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-top:2px}
 .side-label{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,235,224,.5);font-weight:700;padding:.3rem .5rem .1rem}
 .app-nav{display:flex;flex-direction:column;gap:.15rem}
@@ -1543,7 +1543,7 @@ const ADMIN_VIEW_CSS = `
 .team-head{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin:1.1rem 0 .5rem}
 .stepper{display:flex;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1rem}
 .stepper button{border:1.5px solid var(--line2);background:var(--surface3);width:38px;height:38px;border-radius:10px;font-size:1.1rem;font-weight:800;color:var(--navy)}
-.stepper .val{font-family:'Fredoka';font-size:1.5rem;font-weight:700;color:var(--navy);min-width:2ch;text-align:center}
+.stepper .val{font-family:'Baloo 2';font-size:1.5rem;font-weight:700;color:var(--navy);min-width:2ch;text-align:center}
 
 /* ---- timinzi ---- */
 .tim-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:.9rem;max-width:680px}
