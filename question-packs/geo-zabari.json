@@ -21,6 +21,20 @@
       "lng": 21.2153795433738,
       "mapId": "main",
       "timeLimit": 30
+    },
+    {
+      "type": "video",
+      "text": "Ko je ovo?",
+      "options": [
+        "1",
+        "2",
+        "3"
+      ],
+      "correctIndex": 0,
+      "videoId": "jMNS-8AyFxY",
+      "startSeconds": 628,
+      "endSeconds": 638,
+      "timeLimit": 25
     }
   ]
 }

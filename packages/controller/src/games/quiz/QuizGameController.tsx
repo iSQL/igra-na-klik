@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -1379,32 +1379,98 @@ function Centered({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Preconnect to YouTube's hosts so the embed's cold-load is a bit faster.
+// Idempotent — added once, reused for every video question.
+function preconnectYouTube() {
+  const hosts = [
+    'https://www.youtube-nocookie.com',
+    'https://www.youtube.com',
+    'https://i.ytimg.com',
+    'https://www.google.com',
+    'https://googlevideo.com',
+  ];
+  for (const href of hosts) {
+    if (document.head.querySelector(`link[data-yt-preconnect="${href}"]`)) continue;
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = href;
+    link.crossOrigin = '';
+    link.setAttribute('data-yt-preconnect', href);
+    document.head.appendChild(link);
+  }
+}
+
+// Phone-side YouTube player. Mobile browsers refuse autoplay WITH sound, so the
+// old embed only ever showed the poster thumbnail ("učita samo sliku"). We
+// autoplay MUTED — that IS allowed, so the clip starts immediately — and offer
+// a one-tap "unmute" (reloading the iframe with sound inside the tap gesture,
+// which browsers do permit).
+function PhoneVideo({ video }: { video: KvizVideoRef }) {
+  const [muted, setMuted] = useState(true);
+  useEffect(preconnectYouTube, []);
+
+  const params = new URLSearchParams({
+    autoplay: '1',
+    rel: '0',
+    playsinline: '1',
+    mute: muted ? '1' : '0',
+  });
+  if (video.startSeconds !== undefined) params.set('start', String(video.startSeconds));
+  if (video.endSeconds !== undefined) params.set('end', String(video.endSeconds));
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        // Cap the height so the answer buttons always fit below. width follows
+        // the 16:9 ratio but never exceeds 100%, and the height stays ≤ 30dvh
+        // (min() picks whichever constraint binds first). Centered horizontally.
+        width: 'min(100%, calc(30dvh * 16 / 9))',
+        maxHeight: '30dvh',
+        aspectRatio: '16 / 9',
+        margin: '0 auto',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        background: '#000',
+        flexShrink: 0,
+      }}
+    >
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${video.videoId}?${params.toString()}`}
+        title="Video pitanje"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+      />
+      {muted && (
+        <button
+          onClick={() => setMuted(false)}
+          style={{
+            position: 'absolute',
+            bottom: '0.6rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '0.45rem 0.9rem',
+            borderRadius: '999px',
+            border: 'none',
+            background: 'rgba(0,0,0,0.75)',
+            color: '#fff',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          🔊 Uključi zvuk
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Phone-side media block for hostless audio/video questions.
 function PhoneMedia({ audioUrl, video }: { audioUrl?: string; video?: KvizVideoRef }) {
   if (video) {
-    const params = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1' });
-    if (video.startSeconds !== undefined) params.set('start', String(video.startSeconds));
-    if (video.endSeconds !== undefined) params.set('end', String(video.endSeconds));
-    return (
-      <div
-        style={{
-          width: '100%',
-          aspectRatio: '16 / 9',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          background: '#000',
-          flexShrink: 0,
-        }}
-      >
-        <iframe
-          src={`https://www.youtube-nocookie.com/embed/${video.videoId}?${params.toString()}`}
-          title="Video pitanje"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
-        />
-      </div>
-    );
+    return <PhoneVideo video={video} />;
   }
   if (audioUrl) {
     return (

@@ -722,6 +722,30 @@ app.get('/gluvo-doba', (_req, res) => {
 const BRAND_ASSETS_DIR = path.resolve(__dirname, '..', 'assets', 'brand');
 app.use(express.static(BRAND_ASSETS_DIR, { maxAge: '7d', etag: true }));
 
+// Pick the most likely physical-LAN IPv4 for the dev banner. Windows dev boxes
+// commonly carry virtual adapters (WSL/Docker/Hyper-V — all on 172.16–31.x)
+// that would win a naive "first non-internal" pick and print e.g. 172.26.x.x
+// instead of the real 192.168.x.x. Rank by address range (192.168 > 10 > 172)
+// and demote known-virtual adapter names.
+function pickLanIp(): string | undefined {
+  const VIRTUAL =
+    /(wsl|docker|hyper-?v|virtualbox|vmware|vethernet|loopback|tailscale|zerotier|hamachi|\btun\b|\btap\b)/i;
+  const candidates: Array<{ address: string; score: number }> = [];
+  for (const [name, infos] of Object.entries(os.networkInterfaces())) {
+    for (const ni of infos ?? []) {
+      if (!ni || ni.family !== 'IPv4' || ni.internal) continue;
+      let score = 40;
+      if (ni.address.startsWith('192.168.')) score = 100;
+      else if (ni.address.startsWith('10.')) score = 80;
+      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(ni.address)) score = 20;
+      if (VIRTUAL.test(name)) score -= 50;
+      candidates.push({ address: ni.address, score });
+    }
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.address;
+}
+
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);
@@ -743,10 +767,7 @@ httpServer.listen(PORT, () => {
   // raw Vite :5173/:5174 addresses (which the Vite dev servers print
   // themselves). Surface the LAN address so phones on the same network can
   // join without guessing the host machine's IP.
-  const lanIp = Object.values(os.networkInterfaces())
-    .flat()
-    .find((ni) => ni && ni.family === 'IPv4' && !ni.internal)?.address;
-  const base = lanIp ? `http://${lanIp}:${PORT}` : `http://localhost:${PORT}`;
+  const base = `http://${pickLanIp() ?? 'localhost'}:${PORT}`;
   console.log('\n  ▶ Otvori igru na:');
   console.log(`      TV / host:   ${base}/host/`);
   console.log(`      Telefoni:    ${base}/play/`);
