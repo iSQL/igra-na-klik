@@ -40,6 +40,12 @@ COPY --from=builder /app/packages/server/dist packages/server/dist
 COPY --from=builder /app/packages/host/dist packages/host/dist
 COPY --from=builder /app/packages/controller/dist packages/controller/dist
 
+# Server's own static assets (the admin geo-map image served at
+# /admin/serbia-map.png and the brand favicons). Resolved at runtime relative
+# to dist/ as ../assets, so this dir MUST ship alongside dist or the admin
+# editor's Serbia map and the landing/admin favicons 404 in production.
+COPY --from=builder /app/packages/server/assets packages/server/assets
+
 # Baked-in default content ("seed"). The live copy lives on the persistent
 # volume at DATA_DIR (/data) — on first boot the server copies any missing
 # pack dir from here, so edits survive image rebuilds. This dir also powers

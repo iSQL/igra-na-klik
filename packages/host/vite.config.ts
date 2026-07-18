@@ -9,6 +9,10 @@ export default defineConfig(() => ({
   // from index.html would resolve to /main.tsx (no prefix) which the
   // dev proxy can't route back to Vite.
   base: '/host/',
+  // Quiet the "Local/Network" URL banner — the host should be opened through
+  // the Express proxy on :3001 (printed by the server), not this raw Vite
+  // :5173 address. Warnings and errors still show.
+  logLevel: 'warn',
   server: {
     host: true,
     port: 5173,

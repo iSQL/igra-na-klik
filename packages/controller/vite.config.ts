@@ -17,6 +17,10 @@ export default defineConfig(() => ({
   // Direct dev: http://localhost:5174/play/. Through Express proxy:
   // http://localhost:3001/play/.
   base: '/play/',
+  // Quiet the "Local/Network" URL banner — players should use the Express
+  // proxy on :3001 (printed by the server), not this raw Vite :5174 address.
+  // Warnings and errors still show.
+  logLevel: 'warn',
   server: {
     host: true,
     port: 5174,

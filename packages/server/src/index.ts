@@ -3,6 +3,7 @@ import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 // Load the repo-root .env explicitly. `npm run dev -w @igra/server` sets
@@ -731,4 +732,18 @@ httpServer.listen(PORT, () => {
       ? 'Admin editors enabled at /admin (kviz, ko-sam-ja, tajni-agenti…)'
       : 'Admin editors disabled (set ADMIN_TOKEN to enable)'
   );
+
+  // The Express server on :3001 is the single entry point — it proxies /host
+  // and /play to the Vite dev servers. Players should open THIS URL, not the
+  // raw Vite :5173/:5174 addresses (which the Vite dev servers print
+  // themselves). Surface the LAN address so phones on the same network can
+  // join without guessing the host machine's IP.
+  const lanIp = Object.values(os.networkInterfaces())
+    .flat()
+    .find((ni) => ni && ni.family === 'IPv4' && !ni.internal)?.address;
+  const base = lanIp ? `http://${lanIp}:${PORT}` : `http://localhost:${PORT}`;
+  console.log('\n  ▶ Otvori igru na:');
+  console.log(`      TV / host:   ${base}/host/`);
+  console.log(`      Telefoni:    ${base}/play/`);
+  console.log(`      Početna:     ${base}/\n`);
 });
