@@ -192,12 +192,11 @@ export function QuizImportButton() {
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
-        marginTop: '0.75rem',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
         gap: '0.45rem',
-        maxWidth: '320px',
+        width: '100%',
       }}
     >
       <input

@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { GAME_DEFINITIONS, GAME_ROUND_CONFIG, DRAW_GUESS_TIME_OPTIONS } from '@igra/shared';
-import type { HostStartGamePayload, GluvoDobaPack, SpijunLocation } from '@igra/shared';
+import type {
+  HostStartGamePayload,
+  GluvoDobaPack,
+  SpijunLocation,
+  GameAccent,
+  GameCategory,
+  GameDefinition,
+} from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
   id: string;
@@ -44,6 +51,83 @@ import { useT } from '../i18n/useT';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
+// Accent hex per token — hex (not CSS var) because the tiles/tags append alpha
+// suffixes (e.g. '2b'/'55'/'22'), which var() can't do. Mirrors global.css and
+// the controller's game-select.
+const ACCENT_HEX: Record<GameAccent, string> = {
+  gold: '#c29b47',
+  pink: '#d97b6c',
+  violet: '#8fa3d9',
+  cyan: '#6fc2bb',
+  lime: '#a9c46c',
+  amber: '#e3b45e',
+  danger: '#e06a5e',
+  blue: '#6d9bd1',
+};
+
+// Per-category tag color — every game with the same tag shows the same color.
+const CATEGORY_COLOR: Record<GameCategory, string> = {
+  quiz: '#8fa3d9',
+  drawing: '#6fc2bb',
+  'drawing-bluff': '#d97b6c',
+  bluff: '#e3b45e',
+  party: '#a9c46c',
+  speed: '#e06a5e',
+  team: '#6d9bd1',
+  cards: '#c29b47',
+};
+
+// Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
+const FILTER_CATEGORIES: GameCategory[] = [
+  'quiz',
+  'drawing',
+  'bluff',
+  'party',
+  'speed',
+  'team',
+  'cards',
+];
+
+function gameInCategory(game: GameDefinition, cat: GameCategory): boolean {
+  if (game.category === cat) return true;
+  if (game.category === 'drawing-bluff')
+    return cat === 'drawing' || cat === 'bluff';
+  return false;
+}
+
+// Colored icon tile — accent hex with alpha wash + border.
+function tileStyle(accent: GameAccent, size: number): CSSProperties {
+  const hex = ACCENT_HEX[accent];
+  return {
+    width: size,
+    height: size,
+    borderRadius: 16,
+    background: hex + '2b',
+    border: '1px solid ' + hex + '55',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: size * 0.5,
+    flexShrink: 0,
+    lineHeight: 1,
+  };
+}
+
+// Category chip — colored by category so the same tag is always one color.
+function tagStyle(category: GameCategory): CSSProperties {
+  const hex = CATEGORY_COLOR[category];
+  return {
+    fontSize: '0.72rem',
+    fontWeight: 800,
+    color: hex,
+    background: hex + '22',
+    padding: '4px 10px',
+    borderRadius: 8,
+    textTransform: 'uppercase',
+    letterSpacing: '.04em',
+  };
+}
+
 export function GameSelectScreen() {
   const setStatus = useRoomStore((s) => s.setStatus);
   const players = useRoomStore((s) => s.players);
@@ -69,6 +153,11 @@ export function GameSelectScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
+  // Which game's config popup is open, and which game's rules modal is open.
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [rulesGameId, setRulesGameId] = useState<string | null>(null);
+  // Single category filter — null means "Sve" (no filtering).
+  const [activeCat, setActiveCat] = useState<GameCategory | null>(null);
   const t = useT();
 
   useEffect(() => {
@@ -248,16 +337,407 @@ export function GameSelectScreen() {
     socket.emit('host:start-game', payload);
   };
 
+  const visibleGames =
+    activeCat === null
+      ? games
+      : games.filter((g) => gameInCategory(g, activeCat));
+  const selectedGame = games.find((g) => g.id === selectedGameId) ?? null;
+  const rulesGame = games.find((g) => g.id === rulesGameId) ?? null;
+
+  // Per-game configuration blocks, rendered inside the config popup.
+  const renderConfig = (game: GameDefinition) => (
+    <>
+      {game.id === 'quiz' && <QuizImportButton />}
+      {game.id === 'ko-sam-ja' && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            {(['family', 'nsfw'] as const).map((cat) => {
+              const active = cat === koSamJaCategory;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setKoSamJaCategory(cat)}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    background: active
+                      ? 'var(--accent)'
+                      : 'var(--bg-secondary)',
+                    color: active ? '#fff' : 'var(--text-primary)',
+                    minWidth: '64px',
+                  }}
+                >
+                  {cat === 'family' ? 'Family' : 'NSFW'}
+                </button>
+              );
+            })}
+          </div>
+          <KoSamJaImportButton />
+        </>
+      )}
+      {game.id === 'tajni-agenti' && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            {(['classic', 'duet', 'coop'] as const).map((m) => {
+              const active = m === effectiveTajniMode;
+              const modeLocked = m === 'classic' && connectedCount < 4;
+              return (
+                <button
+                  key={m}
+                  disabled={modeLocked}
+                  onClick={() => {
+                    if (!modeLocked) setTajniAgentiMode(m);
+                  }}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    background: active
+                      ? 'var(--accent)'
+                      : 'var(--bg-secondary)',
+                    color: active ? '#fff' : 'var(--text-primary)',
+                    opacity: modeLocked ? 0.4 : 1,
+                    cursor: modeLocked ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {t(`config.tajniMode.${m}`)}
+                </button>
+              );
+            })}
+          </div>
+          <p
+            style={{
+              fontSize: '0.78rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            {t(`config.tajniModeHint.${effectiveTajniMode}`)}
+          </p>
+          <TajniAgentiImportButton />
+        </>
+      )}
+      {game.id === 'hot-potato' && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            {(['sequential', 'choose', 'kviz'] as const).map((m) => {
+              const active = m === newGamesConfig.hotPotatoMode;
+              return (
+                <button
+                  key={m}
+                  onClick={() => setHotPotatoMode(m)}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    background: active
+                      ? 'var(--accent)'
+                      : 'var(--bg-secondary)',
+                    color: active ? '#fff' : 'var(--text-primary)',
+                  }}
+                >
+                  {t(`config.hotPotatoMode.${m}`)}
+                </button>
+              );
+            })}
+          </div>
+          <p
+            style={{
+              fontSize: '0.78rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            {t(`config.hotPotatoModeHint.${newGamesConfig.hotPotatoMode}`)}
+          </p>
+          {newGamesConfig.hotPotatoMode === 'kviz' && (
+            <>
+              <PillRow
+                label={t('config.hotPotatoAnswerSeconds')}
+                value={newGamesConfig.hotPotatoKvizAnswerSeconds}
+                options={HOT_POTATO_KVIZ_ANSWER_OPTIONS}
+                onSelect={newGamesConfig.setHotPotatoKvizAnswerSeconds}
+              />
+              <QuizImportButton />
+            </>
+          )}
+        </>
+      )}
+      {game.id === 'slepi-telefoni' && (
+        <>
+          <PillRow
+            label={t('config.rounds')}
+            value={selectedRounds}
+            options={SLEPI_ROUND_OPTIONS}
+            onSelect={setSelectedRounds}
+          />
+          {connectedCount > 0 &&
+            connectedCount <= 4 &&
+            selectedRounds >= 2 && (
+              <p
+                style={{
+                  fontSize: '0.78rem',
+                  lineHeight: 1.35,
+                  color: 'var(--warning, #C29B47)',
+                  textAlign: 'center',
+                  margin: 0,
+                }}
+              >
+                {t('slepi.roundsWarning', { n: connectedCount })}
+              </p>
+            )}
+        </>
+      )}
+      {game.id === 'ko-bi-pre' && (
+        <PillRow
+          label={t('config.rounds')}
+          value={newGamesConfig.koBiPreRounds}
+          options={KO_BI_PRE_ROUND_OPTIONS}
+          onSelect={newGamesConfig.setKoBiPreRounds}
+        />
+      )}
+      {game.id === 'fake-artist' && (
+        <>
+          <PillRow
+            label={t('config.rounds')}
+            value={newGamesConfig.fakeArtistRounds}
+            options={FAKE_ARTIST_ROUND_OPTIONS}
+            onSelect={newGamesConfig.setFakeArtistRounds}
+          />
+          <PillRow
+            label={t('config.strokes')}
+            value={newGamesConfig.fakeArtistStrokes}
+            options={FAKE_ARTIST_STROKE_OPTIONS}
+            onSelect={newGamesConfig.setFakeArtistStrokes}
+          />
+        </>
+      )}
+      {game.id === 'gluvo-doba' && (
+        <>
+          <PillRow
+            label={t('config.discussionSeconds')}
+            value={newGamesConfig.gluvoDobaDiscussionSeconds}
+            options={GLUVO_DOBA_DISCUSSION_OPTIONS}
+            onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
+          />
+          <TextPillRow
+            label={t('config.gluvoMode')}
+            value={newGamesConfig.gluvoDobaPackId}
+            options={[
+              { value: '', label: t('config.gluvoModeClassic') },
+              ...gluvoPacks.map((p) => ({
+                value: p.id,
+                label: p.name || p.id,
+              })),
+            ]}
+            onSelect={newGamesConfig.setGluvoDobaPackId}
+          />
+          <TextPillRow
+            label={t('config.gluvoDeathReveal')}
+            value={newGamesConfig.gluvoDobaDeathReveal}
+            options={GLUVO_DOBA_DEATH_REVEAL_OPTIONS.map((v) => ({
+              value: v,
+              label: t(`config.gluvoDeathReveal.${v}`),
+            }))}
+            onSelect={(v) =>
+              newGamesConfig.setGluvoDobaDeathReveal(
+                v as (typeof GLUVO_DOBA_DEATH_REVEAL_OPTIONS)[number]
+              )
+            }
+          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <TogglePill
+              label={`🕊️ ${t('config.gluvoFirstNight')}`}
+              checked={newGamesConfig.gluvoDobaFirstNightPeace}
+              onToggle={newGamesConfig.setGluvoDobaFirstNightPeace}
+            />
+            {newGamesConfig.gluvoDobaPackId === '' && (
+              <TogglePill
+                label={`🕯️ ${t('config.gluvoBajacica')}`}
+                checked={newGamesConfig.gluvoDobaBajacica}
+                onToggle={newGamesConfig.setGluvoDobaBajacica}
+              />
+            )}
+            <TogglePill
+              label={`🎓 ${t('config.gluvoTutorial')}`}
+              checked={newGamesConfig.gluvoDobaTutorial}
+              onToggle={newGamesConfig.setGluvoDobaTutorial}
+            />
+          </div>
+          {newGamesConfig.gluvoDobaTutorial && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {t('config.gluvoTutorialHint')}
+            </p>
+          )}
+          {newGamesConfig.gluvoDobaPackId !== '' && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {t('config.gluvoModeNote')}
+            </p>
+          )}
+        </>
+      )}
+      {game.id === 'spijun' && (
+        <>
+          <TextPillRow
+            label={t('config.discussionSeconds')}
+            value={String(newGamesConfig.spijunDiscussionSeconds)}
+            options={SPIJUN_DISCUSSION_OPTIONS.map((s) => ({
+              value: String(s),
+              label: t('config.minutes', { n: String(s / 60) }),
+            }))}
+            onSelect={(v) =>
+              newGamesConfig.setSpijunDiscussionSeconds(Number(v))
+            }
+          />
+          {spijunPacks.length > 0 && (
+            <TextPillRow
+              label={t('config.spijunPack')}
+              value={newGamesConfig.spijunPackId}
+              options={[
+                { value: '', label: t('config.builtInBank') },
+                ...spijunPacks.map((p) => ({
+                  value: p.id,
+                  label: `${p.name || p.id} (${p.locations.length})`,
+                })),
+              ]}
+              onSelect={newGamesConfig.setSpijunPackId}
+            />
+          )}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <TogglePill
+              label={`🎓 ${t('config.spijunTutorial')}`}
+              checked={newGamesConfig.spijunTutorial}
+              onToggle={newGamesConfig.setSpijunTutorial}
+            />
+          </div>
+          {newGamesConfig.spijunTutorial && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {t('config.spijunTutorialHint')}
+            </p>
+          )}
+        </>
+      )}
+      {game.id === 'bolji-zivot' && (
+        <>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <TogglePill
+              label={`🎓 ${t('config.bzTutorial')}`}
+              checked={newGamesConfig.boljiZivotTutorial}
+              onToggle={newGamesConfig.setBoljiZivotTutorial}
+            />
+          </div>
+          {newGamesConfig.boljiZivotTutorial && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {t('config.bzTutorialHint')}
+            </p>
+          )}
+        </>
+      )}
+      {GAME_ROUND_CONFIG[game.id] && (
+        <PillRow
+          label={t('config.rounds')}
+          value={
+            newGamesConfig.roundCounts[game.id] ??
+            GAME_ROUND_CONFIG[game.id].default
+          }
+          options={GAME_ROUND_CONFIG[game.id].options}
+          onSelect={(n) => newGamesConfig.setRoundCount(game.id, n)}
+        />
+      )}
+      {game.id === 'draw-guess' && (
+        <TextPillRow
+          label={t('config.drawTime')}
+          value={String(newGamesConfig.drawGuessTimeLimit)}
+          options={DRAW_GUESS_TIME_OPTIONS.map((s) => ({
+            value: String(s),
+            label: t('config.minutes', { n: String(s / 60) }),
+          }))}
+          onSelect={(v) => newGamesConfig.setDrawGuessTimeLimit(Number(v))}
+        />
+      )}
+    </>
+  );
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '2rem',
+        gap: '1.5rem',
         padding: '2rem',
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: '1000px',
         height: '100%',
         overflowY: 'auto',
       }}
@@ -265,7 +745,7 @@ export function GameSelectScreen() {
       <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 10 }}>
         <LanguageSwitch />
       </div>
-      <h1 style={{ fontSize: '2rem' }}>{t('gameSelect.title')}</h1>
+      <h1 style={{ fontSize: '2rem', margin: 0 }}>{t('gameSelect.title')}</h1>
 
       {errorMessage && (
         <div
@@ -285,507 +765,64 @@ export function GameSelectScreen() {
         </div>
       )}
 
+      {/* Category filter chips */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: '1.5rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: '0.5rem',
           width: '100%',
         }}
       >
-        {games.map((game) => {
-          const minPlayers = game.minPlayers;
-          const lacking = connectedCount < minPlayers;
-          return (
-          <div
-            key={game.id}
-            role="button"
-            tabIndex={lacking ? -1 : 0}
-            aria-disabled={lacking}
-            onClick={() => handleSelect(game.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleSelect(game.id);
-              }
-            }}
-            style={{
-              padding: '1.5rem',
-              background: 'var(--bg-card)',
-              borderRadius: '1rem',
-              textAlign: 'center',
-              transition: 'transform 0.15s, background 0.15s',
-              color: 'var(--text-primary)',
-              cursor: lacking ? 'not-allowed' : 'pointer',
-              opacity: lacking ? 0.45 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (lacking) return;
-              e.currentTarget.style.background = 'var(--accent)';
-              e.currentTarget.style.transform = 'scale(1.03)';
-            }}
-            onMouseLeave={(e) => {
-              if (lacking) return;
-              e.currentTarget.style.background = 'var(--bg-card)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <h2 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>
-              {t(`game.${game.id}.name`)}
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {t(`game.${game.id}.description`)}
-            </p>
-            <p
-              style={{
-                fontSize: '0.8rem',
-                marginTop: '0.5rem',
-                color: lacking ? 'var(--danger)' : 'var(--text-secondary)',
-              }}
-            >
-              {lacking
-                ? t('gameSelect.needMore', {
-                    n: minPlayers - connectedCount,
-                    noun: t(
-                      minPlayers - connectedCount === 1
-                        ? 'common.player.one'
-                        : 'common.player.many'
-                    ),
-                  })
-                : t('gameSelect.playerRange', {
-                    min: game.minPlayers,
-                    max: game.maxPlayers,
-                  })}
-            </p>
-            {game.id === 'quiz' && <QuizImportButton />}
-            {game.id === 'ko-sam-ja' && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    marginTop: '0.75rem',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {(['family', 'nsfw'] as const).map((cat) => {
-                    const active = cat === koSamJaCategory;
-                    return (
-                      <button
-                        key={cat}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setKoSamJaCategory(cat);
-                        }}
-                        style={{
-                          padding: '0.3rem 0.75rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: active
-                            ? 'var(--accent)'
-                            : 'var(--bg-secondary)',
-                          color: active ? '#fff' : 'var(--text-primary)',
-                          minWidth: '64px',
-                        }}
-                      >
-                        {cat === 'family' ? 'Family' : 'NSFW'}
-                      </button>
-                    );
-                  })}
-                </div>
-                <KoSamJaImportButton />
-              </>
-            )}
-            {game.id === 'tajni-agenti' && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    marginTop: '0.75rem',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {(['classic', 'duet', 'coop'] as const).map((m) => {
-                    const active = m === effectiveTajniMode;
-                    const modeLocked = m === 'classic' && connectedCount < 4;
-                    return (
-                      <button
-                        key={m}
-                        disabled={modeLocked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!modeLocked) setTajniAgentiMode(m);
-                        }}
-                        style={{
-                          padding: '0.3rem 0.75rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: active
-                            ? 'var(--accent)'
-                            : 'var(--bg-secondary)',
-                          color: active ? '#fff' : 'var(--text-primary)',
-                          opacity: modeLocked ? 0.4 : 1,
-                          cursor: modeLocked ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        {t(`config.tajniMode.${m}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    marginTop: '0.4rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  {t(`config.tajniModeHint.${effectiveTajniMode}`)}
-                </p>
-                <TajniAgentiImportButton />
-              </>
-            )}
-            {game.id === 'hot-potato' && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    marginTop: '0.75rem',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {(['sequential', 'choose', 'kviz'] as const).map((m) => {
-                    const active = m === newGamesConfig.hotPotatoMode;
-                    return (
-                      <button
-                        key={m}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setHotPotatoMode(m);
-                        }}
-                        style={{
-                          padding: '0.3rem 0.75rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: active
-                            ? 'var(--accent)'
-                            : 'var(--bg-secondary)',
-                          color: active ? '#fff' : 'var(--text-primary)',
-                        }}
-                      >
-                        {t(`config.hotPotatoMode.${m}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    marginTop: '0.4rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  {t(`config.hotPotatoModeHint.${newGamesConfig.hotPotatoMode}`)}
-                </p>
-                {newGamesConfig.hotPotatoMode === 'kviz' && (
-                  <>
-                    <PillRow
-                      label={t('config.hotPotatoAnswerSeconds')}
-                      value={newGamesConfig.hotPotatoKvizAnswerSeconds}
-                      options={HOT_POTATO_KVIZ_ANSWER_OPTIONS}
-                      onSelect={newGamesConfig.setHotPotatoKvizAnswerSeconds}
-                    />
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <QuizImportButton />
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-            {game.id === 'slepi-telefoni' && (
-              <>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                    marginTop: '0.75rem',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {SLEPI_ROUND_OPTIONS.map((n) => {
-                    const active = n === selectedRounds;
-                    return (
-                      <button
-                        key={n}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedRounds(n);
-                        }}
-                        style={{
-                          padding: '0.3rem 0.65rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: active
-                            ? 'var(--accent)'
-                            : 'var(--bg-secondary)',
-                          color: active ? '#fff' : 'var(--text-primary)',
-                          minWidth: '36px',
-                        }}
-                      >
-                        {n}
-                      </button>
-                    );
-                  })}
-                </div>
-                {connectedCount > 0 &&
-                  connectedCount <= 4 &&
-                  selectedRounds >= 2 && (
-                    <p
-                      style={{
-                        marginTop: '0.5rem',
-                        fontSize: '0.78rem',
-                        lineHeight: 1.35,
-                        color: 'var(--warning, #C29B47)',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {t('slepi.roundsWarning', { n: connectedCount })}
-                    </p>
-                  )}
-              </>
-            )}
-            {game.id === 'ko-bi-pre' && (
-              <PillRow
-                label={t('config.rounds')}
-                value={newGamesConfig.koBiPreRounds}
-                options={KO_BI_PRE_ROUND_OPTIONS}
-                onSelect={newGamesConfig.setKoBiPreRounds}
-              />
-            )}
-            {game.id === 'fake-artist' && (
-              <>
-                <PillRow
-                  label={t('config.rounds')}
-                  value={newGamesConfig.fakeArtistRounds}
-                  options={FAKE_ARTIST_ROUND_OPTIONS}
-                  onSelect={newGamesConfig.setFakeArtistRounds}
-                />
-                <PillRow
-                  label={t('config.strokes')}
-                  value={newGamesConfig.fakeArtistStrokes}
-                  options={FAKE_ARTIST_STROKE_OPTIONS}
-                  onSelect={newGamesConfig.setFakeArtistStrokes}
-                />
-              </>
-            )}
-            {game.id === 'gluvo-doba' && (
-              <>
-                <PillRow
-                  label={t('config.discussionSeconds')}
-                  value={newGamesConfig.gluvoDobaDiscussionSeconds}
-                  options={GLUVO_DOBA_DISCUSSION_OPTIONS}
-                  onSelect={newGamesConfig.setGluvoDobaDiscussionSeconds}
-                />
-                <TextPillRow
-                  label={t('config.gluvoMode')}
-                  value={newGamesConfig.gluvoDobaPackId}
-                  options={[
-                    { value: '', label: t('config.gluvoModeClassic') },
-                    ...gluvoPacks.map((p) => ({
-                      value: p.id,
-                      label: p.name || p.id,
-                    })),
-                  ]}
-                  onSelect={newGamesConfig.setGluvoDobaPackId}
-                />
-                <TextPillRow
-                  label={t('config.gluvoDeathReveal')}
-                  value={newGamesConfig.gluvoDobaDeathReveal}
-                  options={GLUVO_DOBA_DEATH_REVEAL_OPTIONS.map((v) => ({
-                    value: v,
-                    label: t(`config.gluvoDeathReveal.${v}`),
-                  }))}
-                  onSelect={(v) =>
-                    newGamesConfig.setGluvoDobaDeathReveal(
-                      v as (typeof GLUVO_DOBA_DEATH_REVEAL_OPTIONS)[number]
-                    )
-                  }
-                />
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <TogglePill
-                    label={`🕊️ ${t('config.gluvoFirstNight')}`}
-                    checked={newGamesConfig.gluvoDobaFirstNightPeace}
-                    onToggle={newGamesConfig.setGluvoDobaFirstNightPeace}
-                  />
-                  {newGamesConfig.gluvoDobaPackId === '' && (
-                    <TogglePill
-                      label={`🕯️ ${t('config.gluvoBajacica')}`}
-                      checked={newGamesConfig.gluvoDobaBajacica}
-                      onToggle={newGamesConfig.setGluvoDobaBajacica}
-                    />
-                  )}
-                  <TogglePill
-                    label={`🎓 ${t('config.gluvoTutorial')}`}
-                    checked={newGamesConfig.gluvoDobaTutorial}
-                    onToggle={newGamesConfig.setGluvoDobaTutorial}
-                  />
-                </div>
-                {newGamesConfig.gluvoDobaTutorial && (
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-secondary)',
-                      textAlign: 'center',
-                      marginTop: '0.35rem',
-                    }}
-                  >
-                    {t('config.gluvoTutorialHint')}
-                  </p>
-                )}
-                {newGamesConfig.gluvoDobaPackId !== '' && (
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-secondary)',
-                      textAlign: 'center',
-                      marginTop: '0.35rem',
-                    }}
-                  >
-                    {t('config.gluvoModeNote')}
-                  </p>
-                )}
-              </>
-            )}
-            {game.id === 'spijun' && (
-              <>
-                <TextPillRow
-                  label={t('config.discussionSeconds')}
-                  value={String(newGamesConfig.spijunDiscussionSeconds)}
-                  options={SPIJUN_DISCUSSION_OPTIONS.map((s) => ({
-                    value: String(s),
-                    label: t('config.minutes', { n: String(s / 60) }),
-                  }))}
-                  onSelect={(v) =>
-                    newGamesConfig.setSpijunDiscussionSeconds(Number(v))
-                  }
-                />
-                {spijunPacks.length > 0 && (
-                  <TextPillRow
-                    label={t('config.spijunPack')}
-                    value={newGamesConfig.spijunPackId}
-                    options={[
-                      { value: '', label: t('config.builtInBank') },
-                      ...spijunPacks.map((p) => ({
-                        value: p.id,
-                        label: `${p.name || p.id} (${p.locations.length})`,
-                      })),
-                    ]}
-                    onSelect={newGamesConfig.setSpijunPackId}
-                  />
-                )}
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TogglePill
-                    label={`🎓 ${t('config.spijunTutorial')}`}
-                    checked={newGamesConfig.spijunTutorial}
-                    onToggle={newGamesConfig.setSpijunTutorial}
-                  />
-                </div>
-                {newGamesConfig.spijunTutorial && (
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-secondary)',
-                      textAlign: 'center',
-                      marginTop: '0.35rem',
-                    }}
-                  >
-                    {t('config.spijunTutorialHint')}
-                  </p>
-                )}
-              </>
-            )}
-            {game.id === 'bolji-zivot' && (
-              <>
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TogglePill
-                    label={`🎓 ${t('config.bzTutorial')}`}
-                    checked={newGamesConfig.boljiZivotTutorial}
-                    onToggle={newGamesConfig.setBoljiZivotTutorial}
-                  />
-                </div>
-                {newGamesConfig.boljiZivotTutorial && (
-                  <p
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--text-secondary)',
-                      textAlign: 'center',
-                      marginTop: '0.35rem',
-                    }}
-                  >
-                    {t('config.bzTutorialHint')}
-                  </p>
-                )}
-              </>
-            )}
-            {GAME_ROUND_CONFIG[game.id] && (
-              <PillRow
-                label={t('config.rounds')}
-                value={
-                  newGamesConfig.roundCounts[game.id] ??
-                  GAME_ROUND_CONFIG[game.id].default
-                }
-                options={GAME_ROUND_CONFIG[game.id].options}
-                onSelect={(n) => newGamesConfig.setRoundCount(game.id, n)}
-              />
-            )}
-            {game.id === 'draw-guess' && (
-              <TextPillRow
-                label={t('config.drawTime')}
-                value={String(newGamesConfig.drawGuessTimeLimit)}
-                options={DRAW_GUESS_TIME_OPTIONS.map((s) => ({
-                  value: String(s),
-                  label: t('config.minutes', { n: String(s / 60) }),
-                }))}
-                onSelect={(v) => newGamesConfig.setDrawGuessTimeLimit(Number(v))}
-              />
-            )}
-          </div>
-          );
-        })}
+        <FilterChip
+          label={t('gameSelect.filterAll')}
+          active={activeCat === null}
+          color="#c29b47"
+          onClick={() => setActiveCat(null)}
+        />
+        {FILTER_CATEGORIES.map((cat) => (
+          <FilterChip
+            key={cat}
+            label={t(`gameTag.${cat}`)}
+            active={activeCat === cat}
+            color={CATEGORY_COLOR[cat]}
+            onClick={() => setActiveCat(cat)}
+          />
+        ))}
       </div>
+
+      {visibleGames.length === 0 ? (
+        <p
+          style={{
+            fontSize: '1rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            padding: '2rem 0',
+          }}
+        >
+          {t('gameSelect.noGamesForFilter')}
+        </p>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '1rem',
+            width: '100%',
+          }}
+        >
+          {visibleGames.map((game) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              connectedCount={connectedCount}
+              onOpen={() => setSelectedGameId(game.id)}
+              onRules={() => setRulesGameId(game.id)}
+            />
+          ))}
+        </div>
+      )}
 
       <button
         onClick={() => setStatus('lobby')}
@@ -799,12 +836,516 @@ export function GameSelectScreen() {
       >
         {t('gameSelect.backToLobby')}
       </button>
+
+      {/* Config popup */}
+      {selectedGame && (
+        <div
+          onClick={() => setSelectedGameId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(11,22,40,.62)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            animation: 'igra-fade .18s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              maxHeight: '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              borderRadius: '24px',
+              boxShadow: '0 24px 60px rgba(0,0,0,.5)',
+              animation: 'igra-pop-up .26s cubic-bezier(.22,1,.36,1)',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 22px 16px',
+                borderBottom: '1px solid var(--line)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={tileStyle(selectedGame.accent, 52)}>
+                  {selectedGame.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: '1.4rem',
+                      fontWeight: 800,
+                      lineHeight: 1.05,
+                    }}
+                  >
+                    {t(`game.${selectedGame.id}.name`)}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      marginTop: '5px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span style={tagStyle(selectedGame.category)}>
+                      {t(`gameTag.${selectedGame.category}`)}
+                    </span>
+                    <span>
+                      👥 {selectedGame.minPlayers}–{selectedGame.maxPlayers}
+                    </span>
+                    <span>
+                      ⏱{' '}
+                      {t('config.minutes', {
+                        n: String(selectedGame.estimatedMinutes),
+                      })}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedGameId(null)}
+                  aria-label={t('common.close')}
+                  style={{
+                    flexShrink: 0,
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    border: '1px solid var(--line2)',
+                    background: 'transparent',
+                    color: 'var(--text-secondary)',
+                    fontSize: 18,
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              <p
+                style={{
+                  margin: '12px 0 0',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {t(`game.${selectedGame.id}.description`)}
+              </p>
+              <button
+                onClick={() => setRulesGameId(selectedGame.id)}
+                style={{
+                  marginTop: '10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  background: 'none',
+                  border: 'none',
+                  fontFamily: 'inherit',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  color: 'var(--cyan, #6fc2bb)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '3px',
+                }}
+              >
+                ? {t('gameSelect.howToPlay')}
+              </button>
+            </div>
+
+            {/* Config body */}
+            <div
+              style={{
+                overflowY: 'auto',
+                padding: '18px 22px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+              }}
+            >
+              {renderConfig(selectedGame)}
+            </div>
+
+            {/* Footer: start */}
+            <div
+              style={{
+                padding: '14px 22px 18px',
+                borderTop: '1px solid var(--line)',
+              }}
+            >
+              <button
+                onClick={() => handleSelect(selectedGame.id)}
+                disabled={connectedCount < selectedGame.minPlayers}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.85rem',
+                  fontSize: '1.05rem',
+                  fontWeight: 800,
+                  borderRadius: '14px',
+                  background:
+                    connectedCount < selectedGame.minPlayers
+                      ? 'var(--bg-card)'
+                      : 'var(--accent)',
+                  color:
+                    connectedCount < selectedGame.minPlayers
+                      ? 'var(--text-secondary)'
+                      : '#fff',
+                  cursor:
+                    connectedCount < selectedGame.minPlayers
+                      ? 'not-allowed'
+                      : 'pointer',
+                }}
+              >
+                {connectedCount < selectedGame.minPlayers
+                  ? t('gameSelect.needMore', {
+                      n: selectedGame.minPlayers - connectedCount,
+                      noun: t(
+                        selectedGame.minPlayers - connectedCount === 1
+                          ? 'common.player.one'
+                          : 'common.player.many'
+                      ),
+                    })
+                  : `▶ ${t('gameSelect.start')} ${t(
+                      `game.${selectedGame.id}.name`
+                    )}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rulesGame && (
+        <RulesModal game={rulesGame} onClose={() => setRulesGameId(null)} />
+      )}
     </div>
   );
 }
 
-// Labeled row of number pills for a game card's round / stroke config.
-// stopPropagation keeps taps from bubbling up to the card's start handler.
+// Compact game card — icon tile, name, blurb, category tag, player/time meta,
+// plus a "?" rules button. Clicking the body opens the config popup.
+function GameCard({
+  game,
+  connectedCount,
+  onOpen,
+  onRules,
+}: {
+  game: GameDefinition;
+  connectedCount: number;
+  onOpen: () => void;
+  onRules: () => void;
+}) {
+  const t = useT();
+  const lacking = connectedCount < game.minPlayers;
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--line, rgba(255,255,255,.08))',
+        borderRadius: 18,
+        padding: 16,
+        opacity: lacking ? 0.55 : 1,
+        transition: 'transform 0.15s, box-shadow 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        if (lacking) return;
+        e.currentTarget.style.transform = 'translateY(-3px)';
+        e.currentTarget.style.boxShadow = '0 10px 26px rgba(0,0,0,.28)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRules();
+        }}
+        title={t('gameSelect.howToPlayLabel')}
+        style={{
+          position: 'absolute',
+          top: 11,
+          right: 11,
+          width: 26,
+          height: 26,
+          borderRadius: '50%',
+          border: '1px solid var(--line2)',
+          background: 'rgba(22,46,78,.5)',
+          color: 'var(--text-secondary)',
+          fontSize: 13,
+          fontWeight: 800,
+          fontFamily: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 2,
+        }}
+      >
+        ?
+      </button>
+      <button
+        onClick={() => {
+          if (!lacking) onOpen();
+        }}
+        disabled={lacking}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left',
+          color: 'var(--text-primary)',
+          cursor: lacking ? 'not-allowed' : 'pointer',
+        }}
+      >
+        <div style={tileStyle(game.accent, 48)}>{game.icon}</div>
+        <div
+          style={{
+            fontSize: '1.1rem',
+            fontWeight: 800,
+            lineHeight: 1.1,
+            paddingRight: 24,
+          }}
+        >
+          {t(`game.${game.id}.name`)}
+        </div>
+        <div
+          style={{
+            fontSize: '0.82rem',
+            color: 'var(--text-secondary)',
+            lineHeight: 1.35,
+            minHeight: '2.2em',
+          }}
+        >
+          {t(`game.${game.id}.blurb`)}
+        </div>
+        <div>
+          <span style={tagStyle(game.category)}>
+            {t(`gameTag.${game.category}`)}
+          </span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span>
+            👥 {game.minPlayers}–{game.maxPlayers}
+          </span>
+          <span>·</span>
+          <span>
+            ⏱ {t('config.minutes', { n: String(game.estimatedMinutes) })}
+          </span>
+        </div>
+        {lacking && (
+          <div
+            style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: 'var(--danger)',
+            }}
+          >
+            {t('gameSelect.needMore', {
+              n: game.minPlayers - connectedCount,
+              noun: t(
+                game.minPlayers - connectedCount === 1
+                  ? 'common.player.one'
+                  : 'common.player.many'
+              ),
+            })}
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// Category filter chip.
+function FilterChip({
+  label,
+  active,
+  color,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '7px 14px',
+        fontSize: '0.78rem',
+        fontWeight: 800,
+        fontFamily: 'inherit',
+        borderRadius: 999,
+        cursor: 'pointer',
+        textTransform: 'uppercase',
+        letterSpacing: '.03em',
+        color: active ? color : 'var(--text-secondary)',
+        background: active ? color + '22' : 'transparent',
+        border: '1px solid ' + (active ? color + '77' : 'var(--line2)'),
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// Short 3-step "how to play" rules modal.
+function RulesModal({
+  game,
+  onClose,
+}: {
+  game: GameDefinition;
+  onClose: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(11,22,40,.66)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 22,
+        animation: 'igra-fade .16s ease',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--line2)',
+          borderRadius: 22,
+          padding: 24,
+          boxShadow: '0 24px 60px rgba(0,0,0,.5)',
+          animation: 'igra-pop .24s cubic-bezier(.22,1,.36,1)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={tileStyle(game.accent, 48)}>{game.icon}</div>
+          <div>
+            <div
+              style={{ fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.05 }}
+            >
+              {t(`game.${game.id}.name`)}
+            </div>
+            <div
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '.05em',
+                color: 'var(--accent)',
+                marginTop: 2,
+              }}
+            >
+              {t('gameSelect.howToPlayLabel')}
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            margin: '20px 0 22px',
+          }}
+        >
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}
+            >
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  background: 'rgba(194,155,71,.18)',
+                  color: 'var(--accent)',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 1,
+                }}
+              >
+                {n}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.45,
+                }}
+              >
+                {t(`game.${game.id}.rule${n}`)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%',
+            minHeight: 48,
+            borderRadius: 14,
+            border: '1px solid var(--line2)',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            fontFamily: 'inherit',
+            fontWeight: 800,
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+          }}
+        >
+          {t('common.close')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Labeled row of number pills for a game's round / stroke config.
 function PillRow({
   label,
   value,
@@ -817,10 +1358,7 @@ function PillRow({
   onSelect: (n: number) => void;
 }) {
   return (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      style={{ marginTop: '0.75rem' }}
-    >
+    <div>
       <div
         style={{
           fontSize: '0.75rem',
@@ -843,12 +1381,9 @@ function PillRow({
           return (
             <button
               key={n}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(n);
-              }}
+              onClick={() => onSelect(n)}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.35rem 0.7rem',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 borderRadius: '6px',
@@ -879,7 +1414,7 @@ function TextPillRow({
   onSelect: (v: string) => void;
 }) {
   return (
-    <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '0.75rem' }}>
+    <div>
       <div
         style={{
           fontSize: '0.75rem',
@@ -902,12 +1437,9 @@ function TextPillRow({
           return (
             <button
               key={o.value}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(o.value);
-              }}
+              onClick={() => onSelect(o.value)}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.35rem 0.7rem',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 borderRadius: '6px',
@@ -936,12 +1468,9 @@ function TogglePill({
 }) {
   return (
     <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle(!checked);
-      }}
+      onClick={() => onToggle(!checked)}
       style={{
-        padding: '0.3rem 0.65rem',
+        padding: '0.35rem 0.7rem',
         fontSize: '0.8rem',
         fontWeight: 700,
         borderRadius: '6px',

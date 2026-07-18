@@ -36,15 +36,29 @@ export function LobbyScreen() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '2rem',
-        padding: '2rem',
         width: '100%',
-        maxWidth: '900px',
+        height: '100%',
+        overflowY: 'auto',
       }}
     >
       <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 10 }}>
         <LanguageSwitch />
       </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2rem',
+          padding: '2rem',
+          width: '100%',
+          maxWidth: '900px',
+          // Center vertically when it fits; when the content is taller than the
+          // viewport the auto margins collapse and the outer div scrolls instead
+          // of clipping the title / close button.
+          margin: 'auto',
+        }}
+      >
       <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{t('common.appName')}</h1>
 
       <div
@@ -125,9 +139,10 @@ export function LobbyScreen() {
         </button>
       )}
 
-      <LobbyChatPanel />
+        <LobbyChatPanel />
 
-      <CloseRoomButton />
+        <CloseRoomButton />
+      </div>
     </div>
   );
 }
