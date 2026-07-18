@@ -14,6 +14,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../../..', '.env') });
+// Tee console.* into daily-rolling JSON files (Grafana/Loki), after .env is
+// loaded so LOG_DIR / LOG_RETENTION_DAYS are visible. No-op'able: degrades to
+// stdout-only if the log dir isn't writable. See logger.ts.
+import { initFileLogging } from './logger.js';
+initFileLogging();
 import { existsSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { createProxyMiddleware } from 'http-proxy-middleware';

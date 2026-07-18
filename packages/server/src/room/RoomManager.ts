@@ -15,6 +15,7 @@ import {
   generateRoomCode,
 } from '@igra/shared';
 import { generateId, generateReconnectToken } from '../utils/id.js';
+import { logger } from '../logger.js';
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
@@ -24,7 +25,10 @@ export class RoomManager {
     settings?: Partial<RoomSettings>
   ): Room | null {
     const code = this.generateUniqueCode();
-    if (!code) return null;
+    if (!code) {
+      logger.warn('server_full', { rooms: this.rooms.size, kind: 'host' });
+      return null;
+    }
     const room: Room = {
       code,
       hostSocketId,
@@ -40,6 +44,7 @@ export class RoomManager {
       idleSince: null,
     };
     this.rooms.set(code, room);
+    logger.info('room_created', { room: code, hostless: false, rooms: this.rooms.size });
     return room;
   }
 
@@ -50,7 +55,10 @@ export class RoomManager {
    */
   createHostlessRoom(settings?: Partial<RoomSettings>): Room | null {
     const code = this.generateUniqueCode();
-    if (!code) return null;
+    if (!code) {
+      logger.warn('server_full', { rooms: this.rooms.size, kind: 'hostless' });
+      return null;
+    }
     const room: Room = {
       code,
       hostSocketId: null,
@@ -66,6 +74,7 @@ export class RoomManager {
       idleSince: null,
     };
     this.rooms.set(code, room);
+    logger.info('room_created', { room: code, hostless: true, rooms: this.rooms.size });
     return room;
   }
 
@@ -106,6 +115,12 @@ export class RoomManager {
       if (existing.isConnected) return { error: 'Name already taken' };
       existing.reconnectToken = generateReconnectToken();
       existing.isConnected = true;
+      logger.info('player_joined', {
+        room: room.code,
+        name: existing.name,
+        players: room.players.length,
+        reclaimed: true,
+      });
       return { player: existing, room, reclaimed: true };
     }
 
@@ -123,6 +138,12 @@ export class RoomManager {
     };
 
     room.players.push(player);
+    logger.info('player_joined', {
+      room: room.code,
+      name: player.name,
+      players: room.players.length,
+      reclaimed: false,
+    });
     return { player, room };
   }
 

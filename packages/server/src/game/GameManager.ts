@@ -11,6 +11,7 @@ import { RoomManager } from '../room/RoomManager.js';
 import { GameRegistry } from './GameRegistry.js';
 import type { IGameModule } from './IGameModule.js';
 import { hostRoom, playerRoom } from '../socket/rooms.js';
+import { logger } from '../logger.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -36,6 +37,8 @@ interface ActiveGame {
   gameState: GameState;
   intervalId: ReturnType<typeof setInterval>;
   lastSignature: string;
+  gameId: string;
+  startedAt: number;
 }
 
 export class GameManager {
@@ -62,20 +65,25 @@ export class GameManager {
     const module = this.registry.create(gameId);
     if (!module) return { error: 'Unknown game' };
 
+    const reject = (reason: string): { error: string } => {
+      logger.warn('game_start_rejected', { room: roomCode, game: gameId, reason });
+      return { error: reason };
+    };
+
     const definition = GAME_DEFINITIONS[gameId];
     if (definition) {
       if (room.hostless && !definition.supportsHostless) {
-        return { error: 'Ova igra zahteva TV ekran.' };
+        return reject('Ova igra zahteva TV ekran.');
       }
       const connectedPlayers = room.players.filter((p) => p.isConnected);
       if (connectedPlayers.length < definition.minPlayers) {
-        return { error: `Need at least ${definition.minPlayers} players` };
+        return reject(`Need at least ${definition.minPlayers} players`);
       }
     }
 
     if (module.validateStart) {
       const err = module.validateStart(room, customContent);
-      if (err) return { error: err };
+      if (err) return reject(err);
     }
 
     room.status = 'in-game';
@@ -112,8 +120,17 @@ export class GameManager {
       gameState,
       intervalId,
       lastSignature: '',
+      gameId,
+      startedAt: Date.now(),
     });
     this.emitGameState(roomCode, gameState);
+
+    logger.info('game_started', {
+      room: roomCode,
+      game: gameId,
+      players: room.players.filter((p) => p.isConnected).length,
+      hostless: room.hostless,
+    });
 
     return {};
   }
@@ -287,6 +304,14 @@ export class GameManager {
     }));
 
     this.io.to(roomCode).emit('game:ended', { finalScores });
+
+    logger.info('game_ended', {
+      room: roomCode,
+      game: active.gameId,
+      players: room.players.length,
+      durationSec: Math.round((Date.now() - active.startedAt) / 1000),
+      topScore: finalScores.reduce((max, s) => Math.max(max, s.score), 0),
+    });
 
     room.status = 'lobby';
     room.currentGameId = null;

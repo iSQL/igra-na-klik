@@ -58,6 +58,11 @@ COPY spijun-packs       ./seed/spijun-packs
 
 ENV PORT=3001
 ENV SAME_ORIGIN_DEPLOY=true
+# Daily-rolling JSON logs for Grafana/Loki. Mount the host log dir at
+# /storage/logs (docker-compose volume or a Coolify storage mapping) so the
+# files persist and a Loki collector can tail them. See logger.ts.
+ENV LOG_DIR=/storage/logs
+ENV LOG_RETENTION_DAYS=7
 # Persist editable content on a volume mounted at /data, seeded from /app/seed.
 # Mount a volume at /data (docker-compose / Coolify) or these live in the
 # ephemeral container layer (still functional, just not persistent).

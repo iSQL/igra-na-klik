@@ -4,5 +4,6 @@ dist/
 *.tsbuildinfo
 .vite/
 timing-config.json
+storage/
 .claude/
 Agent tool input*

@@ -1,22 +1,41 @@
 services:
   igra:
     build: .
-    image: igra-na-klik:local
-    container_name: igra-na-klik
-    ports:
-      - "3001:3001"
+    # No container_name / fixed image tag: Coolify manages container naming and
+    # image tags per deploy, and a hardcoded name collides on redeploy.
+    restart: unless-stopped
+    # The server listens on 3001. Coolify's reverse proxy routes the domain you
+    # set in the UI to this exposed port — no host publish needed. (Swap to
+    # `ports: ["3001:3001"]` only if you also want the raw host port open.)
+    expose:
+      - "3001"
     environment:
+      # Coolify generates the public URL for service "igra" on port 3001 and
+      # wires its proxy to it. Set the actual domain in the Coolify UI too.
+      SERVICE_FQDN_IGRA_3001: "/"
       # Controllers auto-fill the room code — friends only type their name.
       # Set to "false" if you want the classic 4-letter code entry flow.
       SINGLE_ROOM_MODE: "true"
       # Set a token to enable the /admin editors (packs, timings, backup/reset).
+      # Prefer setting this in the Coolify env UI rather than committing it.
       # ADMIN_TOKEN: "change-me"
+      # Daily-rolling JSON logs land here (tailed by Loki → Grafana).
+      LOG_DIR: "/storage/logs"
+      LOG_RETENTION_DAYS: "7"
     volumes:
       # Editable content (packs, uploaded images/audio, timings) persists here
       # so it survives image rebuilds / redeploys. DATA_DIR=/data is baked into
       # the image; first boot seeds this volume from the bundled defaults.
       - igra-data:/data
-    restart: unless-stopped
+      # Application logs, tailed by a Loki collector on the host and viewed in
+      # Grafana — same host-dir bind as zabari.net. This directory mount is the
+      # reason to deploy via Docker Compose on Coolify: a plain Dockerfile app
+      # only allows named volumes, not a known host path. Point the same Loki
+      # collector at /var/lib/coolify/storage/logs/* and igra logs show up
+      # alongside zabari's. (Local `docker compose up` isn't used in dev —
+      # `npm run dev` writes to ./storage/logs instead — so this host path is
+      # only materialised on the Coolify server.)
+      - "/var/lib/coolify/storage/logs/igra-na-klik:/storage/logs"
 
 volumes:
   igra-data:
