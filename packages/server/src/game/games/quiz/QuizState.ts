@@ -12,9 +12,13 @@ export type QuizAnswer =
   | { kind: 'choice'; optionIndex: number; timeMs: number; correct: boolean }
   | { kind: 'pin'; pin: GeoPin }
   | { kind: 'value'; value: number; speedFraction: number }
-  // Emoji riddle: only a SOLVED answer lands here (wrong guesses may retry
-  // until the clock runs out — see emojiLastGuess/emojiWrong).
-  | { kind: 'text'; timeMs: number; points: number };
+  // Free-text types (emoji/dopuna/piksel/anagram): only a SOLVED answer lands
+  // here (wrong guesses may retry until the clock runs out — see
+  // emojiLastGuess/emojiWrong).
+  | { kind: 'text'; timeMs: number; points: number }
+  // Redosled: locked arrangement (indices into the presented items), scored
+  // at results time.
+  | { kind: 'order'; order: number[] };
 
 export interface QuizInternalState {
   questions: KvizQuestionFull[];
@@ -44,4 +48,10 @@ export interface QuizInternalState {
   hint: string;
   hintRevealOrder: number[];
   lastHintRevealFraction: number;
+  /** Anagram questions: current public scramble string (uppercase). */
+  scramble: string;
+  /** Anagram: the fixed shuffled letter pool the scramble is built from. */
+  scramblePool: string[];
+  /** Anagram: how many leading letters are already in the correct spot. */
+  scrambleFixed: number;
 }

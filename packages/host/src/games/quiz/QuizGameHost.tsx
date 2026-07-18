@@ -11,12 +11,15 @@ import { Leaderboard } from './components/Leaderboard';
 import { GeoMap } from './components/GeoMap';
 import { BrojTimeline } from './components/BrojTimeline';
 import { MediaPanel } from './components/MediaPanel';
+import { PixelatedImage } from './components/PixelatedImage';
 import { formatBrojValue } from '@igra/shared';
 import type {
   KvizBrojRoundResult,
   KvizEmojiRoundResult,
   KvizGeoRoundResult,
   KvizQuestionType,
+  KvizRedosledRoundResult,
+  KvizTextRoundResult,
   KvizValueType,
   KvizVideoRef,
   QuizLeaderboardEntry,
@@ -188,6 +191,220 @@ export default function QuizGameHost() {
   }
 
   if (
+    questionType === 'dopuna' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions} ·{' '}
+          {questionText ?? 'Završi citat!'}
+        </p>
+        <motion.p
+          key={`${questionIndex}-quote`}
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="display"
+          style={{
+            fontSize: 'clamp(1.8rem, 4vw, 3rem)',
+            fontWeight: 700,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.3,
+            margin: 0,
+          }}
+        >
+          „{data.quote as string}{' '}
+          <span style={{ color: 'var(--accent)', letterSpacing: '0.08em' }}>
+            ______
+          </span>
+          "
+        </motion.p>
+        {phase === 'showing-question' ? (
+          <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+            Spremi se...
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Kucaj reč koja nedostaje na telefonu ·{' '}
+              {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
+    questionType === 'piksel' &&
+    (phase === 'showing-question' || phase === 'answering') &&
+    imageUrl
+  ) {
+    // Sharpens as the clock runs down; preview stays fully pixelated.
+    const pixelation =
+      phase === 'showing-question'
+        ? 1
+        : Math.max(0, Math.min(1, timeRemaining / timeLimit));
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions} ·{' '}
+          {questionText ?? 'Šta je na slici?'}
+        </p>
+        <PixelatedImage src={imageUrl} pixelation={pixelation} />
+        {phase === 'showing-question' ? (
+          <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+            Spremi se...
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Slika se izoštrava — kucaj odgovor na telefonu ·{' '}
+              {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
+    questionType === 'anagram' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions} ·{' '}
+          {questionText ?? 'Reši anagram!'}
+        </p>
+        {phase === 'showing-question' ? (
+          <>
+            <p style={{ fontSize: '5rem', lineHeight: 1, margin: 0 }}>🔀</p>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Spremi se...
+            </p>
+          </>
+        ) : (
+          <>
+            <motion.p
+              key={data.scramble as string}
+              initial={{ opacity: 0.4, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={{
+                fontSize: 'clamp(2.4rem, 7vw, 5rem)',
+                fontWeight: 800,
+                letterSpacing: '0.18em',
+                fontFamily: 'monospace',
+                color: 'var(--accent)',
+                textAlign: 'center',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {(data.scramble as string) ?? ''}
+            </motion.p>
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+              Slova se polako preslažu — što pre pogodiš, više poena!
+            </p>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
+    questionType === 'redosled' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    const items = (data.items as string[]) ?? [];
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions}
+        </p>
+        <p
+          className="display"
+          style={{
+            fontSize: '2.2rem',
+            fontWeight: 800,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.2,
+            margin: 0,
+          }}
+        >
+          {questionText}
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            maxWidth: '900px',
+          }}
+        >
+          {items.map((it, i) => (
+            <motion.span
+              key={`${i}-${it}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              style={{
+                padding: '0.5rem 0.9rem',
+                background: 'var(--bg-card)',
+                borderRadius: '0.7rem',
+                fontSize: '1.15rem',
+                fontWeight: 700,
+                border: '1px solid var(--line2, rgba(255,255,255,.12))',
+              }}
+            >
+              {it}
+            </motion.span>
+          ))}
+        </div>
+        {phase === 'showing-question' ? (
+          <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+            Spremi se...
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Poređaj pojmove na telefonu ·{' '}
+              {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
     questionType === 'geo' &&
     (phase === 'showing-question' || phase === 'answering') &&
     imageUrl
@@ -310,6 +527,14 @@ export default function QuizGameHost() {
 
       {phase === 'showing-results' && data.emojiResult != null && (
         <EmojiResults result={data.emojiResult as KvizEmojiRoundResult} />
+      )}
+
+      {phase === 'showing-results' && data.textResult != null && (
+        <TextResults result={data.textResult as KvizTextRoundResult} />
+      )}
+
+      {phase === 'showing-results' && data.redosledResult != null && (
+        <RedosledResults result={data.redosledResult as KvizRedosledRoundResult} />
       )}
 
       {phase === 'showing-results' && data.results != null && (
@@ -700,6 +925,203 @@ function EmojiResults({ result }: { result: KvizEmojiRoundResult }) {
                   ? `${(r.timeMs / 1000).toFixed(1)}s`
                   : '✓'
                 : '—'}
+            </span>
+            <span
+              style={{
+                fontWeight: 800,
+                minWidth: '3.5rem',
+                textAlign: 'right',
+                color: r.roundScore > 0 ? '#7be37b' : 'var(--text-secondary)',
+              }}
+            >
+              +{r.roundScore}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Results for the free-text types dopuna/piksel/anagram — the reveal visual
+// depends on the kind (finished quote / sharp image / solved word).
+function TextResults({ result }: { result: KvizTextRoundResult }) {
+  const players = useRoomStore((s) => s.players);
+  const emojiFor = (id: string) =>
+    players.find((p) => p.id === id)?.avatarEmoji ?? '👤';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem',
+        width: '100%',
+        overflowY: 'auto',
+      }}
+    >
+      {result.kind === 'dopuna' && result.quote && (
+        <p
+          className="display"
+          style={{
+            fontSize: '1.8rem',
+            fontWeight: 700,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.3,
+            margin: 0,
+          }}
+        >
+          „{result.quote}{' '}
+          <span style={{ color: 'var(--accent)' }}>{result.answer}</span>"
+        </p>
+      )}
+      {result.kind === 'piksel' && result.imageUrl && (
+        <img
+          src={result.imageUrl}
+          alt=""
+          style={{
+            maxWidth: 'min(80%, 640px)',
+            maxHeight: '40vh',
+            objectFit: 'contain',
+            borderRadius: '0.8rem',
+          }}
+        />
+      )}
+      {result.kind !== 'dopuna' && (
+        <motion.p
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          style={{
+            fontSize: '2.6rem',
+            fontWeight: 800,
+            color: 'var(--accent)',
+            margin: 0,
+            textAlign: 'center',
+          }}
+        >
+          {result.answer}
+        </motion.p>
+      )}
+
+      <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => (
+          <div
+            key={r.playerId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.4rem 0.7rem',
+              background: 'var(--bg-secondary)',
+              borderRadius: '0.5rem',
+              borderLeft: `5px solid ${r.avatarColor}`,
+            }}
+          >
+            <span style={{ flex: 1, fontWeight: 600 }}>
+              {emojiFor(r.playerId)} {r.name}
+            </span>
+            <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right', fontSize: '0.9rem' }}>
+              {r.solved
+                ? r.timeMs != null
+                  ? `${(r.timeMs / 1000).toFixed(1)}s`
+                  : '✓'
+                : '—'}
+            </span>
+            <span
+              style={{
+                fontWeight: 800,
+                minWidth: '3.5rem',
+                textAlign: 'right',
+                color: r.roundScore > 0 ? '#7be37b' : 'var(--text-secondary)',
+              }}
+            >
+              +{r.roundScore}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Results for redosled questions: the correct sequence + per-player accuracy.
+function RedosledResults({ result }: { result: KvizRedosledRoundResult }) {
+  const players = useRoomStore((s) => s.players);
+  const emojiFor = (id: string) =>
+    players.find((p) => p.id === id)?.avatarEmoji ?? '👤';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem',
+        width: '100%',
+        overflowY: 'auto',
+      }}
+    >
+      <p
+        className="display"
+        style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, textAlign: 'center' }}
+      >
+        {result.text}
+      </p>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.3rem',
+          maxWidth: '640px',
+          width: '100%',
+        }}
+      >
+        {result.correctItems.map((it, i) => (
+          <motion.div
+            key={`${i}-${it}`}
+            initial={{ opacity: 0, x: -14 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.18 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.4rem 0.7rem',
+              background: 'var(--bg-card)',
+              borderRadius: '0.5rem',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+            }}
+          >
+            <span style={{ color: 'var(--accent)', minWidth: '2ch', fontWeight: 800 }}>
+              {i + 1}.
+            </span>
+            <span>{it}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => (
+          <div
+            key={r.playerId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.4rem 0.7rem',
+              background: 'var(--bg-secondary)',
+              borderRadius: '0.5rem',
+              borderLeft: `5px solid ${r.avatarColor}`,
+            }}
+          >
+            <span style={{ flex: 1, fontWeight: 600 }}>
+              {emojiFor(r.playerId)} {r.name}
+            </span>
+            <span style={{ color: 'var(--text-secondary)', minWidth: '4.5rem', textAlign: 'right', fontSize: '0.9rem' }}>
+              {r.accuracy === null ? '—' : `${r.accuracy}% parova`}
             </span>
             <span
               style={{

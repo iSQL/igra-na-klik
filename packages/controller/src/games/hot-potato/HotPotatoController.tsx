@@ -2,7 +2,12 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
-import type { HotPotatoControllerData, HotPotatoHostData } from '@igra/shared';
+import { AnswerButtons } from '../quiz/components/AnswerButtons';
+import type {
+  HotPotatoControllerData,
+  HotPotatoHostData,
+  QuizOption,
+} from '@igra/shared';
 
 const wrap: React.CSSProperties = {
   display: 'flex',
@@ -49,8 +54,117 @@ export default function HotPotatoController() {
           </p>
         )}
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Kaži reč iz kategorije i brzo prosledi krompir!
+          {host.mode === 'kviz'
+            ? 'Pitanje sleće nasumičnom igraču — 5 sekundi za tačan odgovor ili 💥!'
+            : 'Kaži reč iz kategorije i brzo prosledi krompir!'}
         </p>
+      </div>
+    );
+  }
+
+  if (phase === 'question' && host.question) {
+    const q = host.question;
+    const timeRemaining = gameState.timeRemaining;
+    if (eliminated || !isHolder) {
+      return (
+        <div style={wrap}>
+          <p style={{ fontSize: '2rem' }}>{eliminated ? '💀' : '🥔'}</p>
+          <p style={{ fontSize: '1rem', fontWeight: 700 }}>{q.text}</p>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+            <strong>
+              {holder?.avatarEmoji} {holder?.name ?? '—'}
+            </strong>{' '}
+            odgovara… {timeRemaining}s
+          </p>
+        </div>
+      );
+    }
+    // I hold the bomb — 5 seconds to answer!
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+          padding: '0.75rem',
+          gap: '0.6rem',
+        }}
+      >
+        <div style={{ textAlign: 'center', flexShrink: 0 }}>
+          <p
+            style={{
+              fontSize: '1.3rem',
+              fontWeight: 800,
+              color: timeRemaining <= 2 ? 'var(--danger)' : 'var(--accent)',
+              margin: 0,
+            }}
+          >
+            🥔💣 {timeRemaining}s
+          </p>
+          <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.3rem 0 0' }}>
+            {q.text}
+          </p>
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <AnswerButtons
+            options={q.options as QuizOption[]}
+            hasAnswered={false}
+            selectedIndex={null}
+            action="potato:answer"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'picking' && host.question) {
+    if (!isHolder) {
+      return (
+        <div style={wrap}>
+          <p style={{ fontSize: '2rem' }}>✅</p>
+          <p style={{ fontSize: '1.05rem', fontWeight: 700 }}>
+            {holder?.avatarEmoji} {holder?.name ?? '—'} je pogodio!
+          </p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            Bira kome baca sledeće pitanje…
+          </p>
+        </div>
+      );
+    }
+    const others = host.players.filter((p) => p.alive && p.playerId !== playerId);
+    return (
+      <div style={{ ...wrap, justifyContent: 'flex-start', overflowY: 'auto' }}>
+        <p style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--success)', margin: 0 }}>
+          ✅ Tačno!
+        </p>
+        {my?.nextQuestionText && (
+          <div
+            style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: '12px',
+              padding: '0.7rem 0.9rem',
+              width: '100%',
+            }}
+          >
+            <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+              👀 Sledeće pitanje (samo ti ga vidiš)
+            </p>
+            <p style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0.3rem 0 0' }}>
+              {my.nextQuestionText}
+            </p>
+          </div>
+        )}
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          Kome ga bacaš? · {gameState.timeRemaining}s
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+          {others.map((p) => (
+            <button key={p.playerId} onClick={() => pass(p.playerId)} style={pickBtn}>
+              {p.avatarEmoji} {p.name}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -136,6 +250,14 @@ export default function HotPotatoController() {
         ) : (
           <p style={{ fontSize: '1.3rem', fontWeight: 700 }}>
             {who ? `${who.avatarEmoji} ${who.name}` : 'Neko'} je ispao!
+          </p>
+        )}
+        {host.question && host.correctIndex != null && (
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+            Tačan odgovor:{' '}
+            <strong style={{ color: 'var(--success)' }}>
+              {host.question.options[host.correctIndex]?.text}
+            </strong>
           </p>
         )}
         <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>

@@ -8,11 +8,15 @@ import type {
   KvizQuestionType,
 } from '@igra/shared';
 import {
+  KVIZ_ANAGRAM_DEFAULT_TEXT,
+  KVIZ_DOPUNA_DEFAULT_TEXT,
   KVIZ_EMOJI_DEFAULT_TEXT,
   KVIZ_GEO_DEFAULT_TEXT,
+  KVIZ_PIKSEL_DEFAULT_TEXT,
   kvizOptionsFromStrings,
   kvizTypeCounts,
   parseQuizImport,
+  shuffled,
 } from '@igra/shared';
 
 export interface QuizPackSummary {
@@ -100,7 +104,60 @@ export function importQuestionsToRuntime(
       };
     }
 
-    // Choice types (obicno/audio/video).
+    if (type === 'dopuna') {
+      const d = q as Extract<KvizImportQuestion, { type: 'dopuna' }>;
+      return {
+        type: 'dopuna',
+        id,
+        text: d.text ?? KVIZ_DOPUNA_DEFAULT_TEXT,
+        quote: d.quote,
+        answer: d.answer,
+        accept: d.accept,
+        timeLimit: d.timeLimit!,
+      };
+    }
+
+    if (type === 'piksel') {
+      const p = q as Extract<KvizImportQuestion, { type: 'piksel' }>;
+      return {
+        type: 'piksel',
+        id,
+        text: p.text ?? KVIZ_PIKSEL_DEFAULT_TEXT,
+        imageUrl: p.imageUrl ?? file(p.imageFile) ?? '',
+        answer: p.answer,
+        accept: p.accept,
+        timeLimit: p.timeLimit!,
+      };
+    }
+
+    if (type === 'anagram') {
+      const a = q as Extract<KvizImportQuestion, { type: 'anagram' }>;
+      return {
+        type: 'anagram',
+        id,
+        text: a.text ?? KVIZ_ANAGRAM_DEFAULT_TEXT,
+        answer: a.answer,
+        accept: a.accept,
+        timeLimit: a.timeLimit!,
+      };
+    }
+
+    if (type === 'redosled') {
+      const r = q as Extract<KvizImportQuestion, { type: 'redosled' }>;
+      // One shuffle per resolution (= per game start): every client sees the
+      // same presented order; `order[i]` is the correct rank of items[i].
+      const perm = shuffled(r.items.map((_, idx) => idx));
+      return {
+        type: 'redosled',
+        id,
+        text: r.text,
+        items: perm.map((idx) => r.items[idx]),
+        order: perm,
+        timeLimit: r.timeLimit!,
+      };
+    }
+
+    // Choice types (obicno/audio/video/uljez).
     const choice = q as Extract<
       KvizImportQuestion,
       { options: string[]; correctIndex: number }

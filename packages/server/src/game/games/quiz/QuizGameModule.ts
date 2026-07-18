@@ -1,13 +1,19 @@
 import type {
   Room,
   GameState,
+  KvizAnagramQuestionFull,
   KvizBrojQuestionFull,
   KvizBrojRoundResult,
+  KvizDopunaQuestionFull,
   KvizEmojiQuestionFull,
   KvizEmojiRoundResult,
   KvizGeoQuestionFull,
+  KvizPikselQuestionFull,
   KvizQuestionFull,
   KvizQuestionType,
+  KvizRedosledQuestionFull,
+  KvizRedosledRoundResult,
+  KvizTextRoundResult,
   QuizLeaderboardEntry,
   QuizResultData,
 } from '@igra/shared';
@@ -16,6 +22,7 @@ import {
   QUIZ_QUESTION_BANK,
   bboxDiagonalKm,
   checkEmojiGuess,
+  checkTextGuess,
   clampGameRounds,
   haversineKm,
   packLatLngToPin,
@@ -54,7 +61,30 @@ const ALL_KVIZ_TYPES: KvizQuestionType[] = [
   'geo',
   'broj',
   'emoji',
+  'uljez',
+  'dopuna',
+  'piksel',
+  'anagram',
+  'redosled',
 ];
+
+/** Free-text types sharing the emoji guess/retry machinery. */
+type KvizTextQuestionFull =
+  | KvizEmojiQuestionFull
+  | KvizDopunaQuestionFull
+  | KvizPikselQuestionFull
+  | KvizAnagramQuestionFull;
+
+const TEXT_TYPES: ReadonlySet<KvizQuestionType> = new Set([
+  'emoji',
+  'dopuna',
+  'piksel',
+  'anagram',
+]);
+
+function isTextQuestion(q: KvizQuestionFull): q is KvizTextQuestionFull {
+  return TEXT_TYPES.has(q.type);
+}
 
 export class QuizGameModule extends BaseGameModule {
   readonly gameId = 'quiz';
@@ -88,6 +118,9 @@ export class QuizGameModule extends BaseGameModule {
       hint: '',
       hintRevealOrder: [],
       lastHintRevealFraction: 0,
+      scramble: '',
+      scramblePool: [],
+      scrambleFixed: 0,
     };
 
     const packIds = Array.isArray(cc.quizPackIds)
@@ -200,13 +233,7 @@ export class QuizGameModule extends BaseGameModule {
     let answer: QuizAnswer | null = null;
 
     if (action === 'quiz:answer') {
-      if (
-        question.type === 'geo' ||
-        question.type === 'broj' ||
-        question.type === 'emoji'
-      ) {
-        return null;
-      }
+      if (!('options' in question)) return null;
       const optionIndex = data.optionIndex;
       if (
         typeof optionIndex !== 'number' ||
@@ -256,11 +283,17 @@ export class QuizGameModule extends BaseGameModule {
       );
       answer = { kind: 'value', value: normalizeGuess(raw, question), speedFraction };
     } else if (action === 'quiz:text') {
-      if (question.type !== 'emoji') return null;
+      if (!isTextQuestion(question)) return null;
       const text = typeof data.text === 'string' ? data.text.trim() : '';
       if (!text) return null;
       this.state.emojiLastGuess.set(playerId, text);
-      if (!checkEmojiGuess(text, question)) {
+      // Emoji keeps exact-normalized matching; the new text types tolerate
+      // small typos (fuzzy Levenshtein).
+      const solved =
+        question.type === 'emoji'
+          ? checkEmojiGuess(text, question)
+          : checkTextGuess(text, question);
+      if (!solved) {
         // Wrong guess — the player may retry until the clock runs out.
         this.state.emojiWrong.set(playerId, text);
         return this.buildGameState(room);
@@ -274,6 +307,19 @@ export class QuizGameModule extends BaseGameModule {
       const player = room.players.find((p) => p.id === playerId);
       if (player) player.score += points;
       answer = { kind: 'text', timeMs, points };
+    } else if (action === 'quiz:order') {
+      if (question.type !== 'redosled') return null;
+      const raw = data.order;
+      const n = question.items.length;
+      if (!Array.isArray(raw) || raw.length !== n) return null;
+      const order = raw.map((v) => (typeof v === 'number' ? v : -1));
+      // Must be a permutation of 0..n-1 (indices into the presented items).
+      const seen = new Set<number>();
+      for (const v of order) {
+        if (!Number.isInteger(v) || v < 0 || v >= n || seen.has(v)) return null;
+        seen.add(v);
+      }
+      answer = { kind: 'order', order };
     } else {
       return null;
     }
@@ -318,6 +364,7 @@ export class QuizGameModule extends BaseGameModule {
     if (this.state.phase === 'answering') {
       const question = this.currentQuestion();
       if (question?.type === 'emoji') this.maybeRevealHint(question);
+      if (question?.type === 'anagram') this.maybeAdvanceScramble(question);
     }
 
     this.state.phaseTimeRemaining -= deltaMs / 1000;
@@ -359,6 +406,13 @@ export class QuizGameModule extends BaseGameModule {
             this.state.hint = this.buildHint(q.answer, []);
           } else {
             this.state.hint = '';
+          }
+          if (q.type === 'anagram') {
+            this.initScramble(q);
+          } else {
+            this.state.scramble = '';
+            this.state.scramblePool = [];
+            this.state.scrambleFixed = 0;
           }
         }
         break;
@@ -430,13 +484,36 @@ export class QuizGameModule extends BaseGameModule {
         const player = room.players.find((p) => p.id === playerId);
         if (player) player.score += points;
       }
+    } else if (question?.type === 'redosled') {
+      // Pairwise concordance: exact order = 1000, random ≈ 0.
+      // lastRoundDistances doubles as the accuracy store (0–100 % of pairs).
+      const totalPairs =
+        (question.items.length * (question.items.length - 1)) / 2;
+      for (const [playerId, answer] of this.state.answers) {
+        if (answer.kind !== 'order') continue;
+        let concordant = 0;
+        for (let i = 0; i < answer.order.length; i++) {
+          for (let j = i + 1; j < answer.order.length; j++) {
+            if (question.order[answer.order[i]] < question.order[answer.order[j]]) {
+              concordant++;
+            }
+          }
+        }
+        const frac = totalPairs > 0 ? concordant / totalPairs : 0;
+        const points = Math.round(1000 * Math.max(0, 2 * frac - 1));
+        this.state.lastRoundScores.set(playerId, points);
+        this.state.lastRoundDistances.set(playerId, Math.round(frac * 100));
+        const player = room.players.find((p) => p.id === playerId);
+        if (player) player.score += points;
+      }
     }
 
     this.state.phase = 'showing-results';
     const rich =
       question?.type === 'geo' ||
       question?.type === 'broj' ||
-      question?.type === 'emoji';
+      question?.type === 'redosled' ||
+      (question ? isTextQuestion(question) : false);
     this.state.phaseTimeRemaining = rich
       ? (this.timings.RICH_RESULTS_DURATION ?? RICH_RESULTS_DURATION)
       : (this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION);
@@ -483,6 +560,10 @@ export class QuizGameModule extends BaseGameModule {
           data.video = question.video;
         } else if (question.type === 'emoji') {
           data.emojis = question.emojis;
+        } else if (question.type === 'dopuna') {
+          data.quote = question.quote;
+        } else if (question.type === 'redosled') {
+          data.items = question.items;
         }
         break;
 
@@ -512,6 +593,15 @@ export class QuizGameModule extends BaseGameModule {
           data.emojis = question.emojis;
           data.hint = this.state.hint;
           data.answerLength = this.answerLetterCount(question.answer);
+        } else if (question.type === 'dopuna') {
+          data.quote = question.quote;
+          data.answerLength = this.answerLetterCount(question.answer);
+        } else if (question.type === 'piksel') {
+          data.answerLength = this.answerLetterCount(question.answer);
+        } else if (question.type === 'anagram') {
+          data.scramble = this.state.scramble;
+        } else if (question.type === 'redosled') {
+          data.items = question.items;
         } else {
           data.options = question.options;
           if (question.type === 'audio') data.audioUrl = question.audioUrl;
@@ -525,7 +615,8 @@ export class QuizGameModule extends BaseGameModule {
           else pd.selectedIndex = null;
           if (answer?.kind === 'pin') pd.ownPin = answer.pin;
           if (answer?.kind === 'value') pd.ownGuess = answer.value;
-          if (question.type === 'emoji') {
+          if (answer?.kind === 'order') pd.ownOrder = answer.order;
+          if (isTextQuestion(question)) {
             pd.ownGuess = this.state.emojiLastGuess.get(player.id) ?? null;
             pd.lastWrong = this.state.emojiWrong.get(player.id) ?? null;
             if (answer?.kind === 'text') pd.ownPoints = answer.points;
@@ -557,6 +648,28 @@ export class QuizGameModule extends BaseGameModule {
               playerData[player.id].ownGuess = answer.value;
               playerData[player.id].wasExact = answer.value === question.answer;
             }
+          }
+        } else if (
+          question.type === 'dopuna' ||
+          question.type === 'piksel' ||
+          question.type === 'anagram'
+        ) {
+          data.textResult = this.buildTextResult(room, question);
+          for (const player of room.players) {
+            const answer = this.state.answers.get(player.id);
+            playerData[player.id] = {
+              ownPoints: answer?.kind === 'text' ? answer.points : 0,
+              hasSolved: answer?.kind === 'text',
+              ownGuess: this.state.emojiLastGuess.get(player.id) ?? null,
+            };
+          }
+        } else if (question.type === 'redosled') {
+          data.redosledResult = this.buildRedosledResult(room, question);
+          for (const player of room.players) {
+            playerData[player.id] = {
+              ownPoints: this.state.lastRoundScores.get(player.id) ?? 0,
+              ownAccuracy: this.state.lastRoundDistances.get(player.id) ?? null,
+            };
           }
         } else {
           const results: QuizResultData = {
@@ -718,6 +831,139 @@ export class QuizGameModule extends BaseGameModule {
       answer: question.answer,
       results,
     };
+  }
+
+  /** Results for the free-text types dopuna/piksel/anagram. */
+  private buildTextResult(
+    room: Room,
+    question: KvizDopunaQuestionFull | KvizPikselQuestionFull | KvizAnagramQuestionFull
+  ): KvizTextRoundResult {
+    const results = room.players
+      .filter((p) => p.isConnected || this.state.answers.has(p.id))
+      .map((p) => {
+        const answer = this.state.answers.get(p.id);
+        const solved = answer?.kind === 'text';
+        return {
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          solved,
+          timeMs: solved ? answer.timeMs : null,
+          roundScore: solved ? answer.points : 0,
+          totalScore: p.score,
+        };
+      })
+      .sort((a, b) => b.roundScore - a.roundScore);
+
+    return {
+      kind: question.type,
+      answer: question.answer,
+      quote: question.type === 'dopuna' ? question.quote : undefined,
+      imageUrl: question.type === 'piksel' ? question.imageUrl : undefined,
+      results,
+    };
+  }
+
+  private buildRedosledResult(
+    room: Room,
+    question: KvizRedosledQuestionFull
+  ): KvizRedosledRoundResult {
+    // question.order[i] = correct rank of presented items[i]; invert it to
+    // list the items in the correct order for the reveal.
+    const correctItems = new Array<string>(question.items.length);
+    for (let i = 0; i < question.items.length; i++) {
+      correctItems[question.order[i]] = question.items[i];
+    }
+    const results = room.players
+      .filter((p) => p.isConnected || this.state.answers.has(p.id))
+      .map((p) => {
+        const answer = this.state.answers.get(p.id);
+        const arrangement = answer?.kind === 'order' ? answer.order : null;
+        return {
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          arrangement,
+          accuracy: arrangement
+            ? (this.state.lastRoundDistances.get(p.id) ?? null)
+            : null,
+          roundScore: this.state.lastRoundScores.get(p.id) ?? 0,
+          totalScore: p.score,
+        };
+      })
+      .sort((a, b) => b.roundScore - a.roundScore);
+
+    return {
+      text: question.text,
+      correctItems,
+      presentedItems: question.items,
+      results,
+    };
+  }
+
+  // --- Anagram progressive unscramble -------------------------------------
+
+  /** Uppercase letters of the answer at non-space positions. */
+  private initScramble(question: KvizAnagramQuestionFull): void {
+    const answer = question.answer.toUpperCase();
+    const letters: string[] = [];
+    for (const ch of answer) if (ch !== ' ') letters.push(ch);
+    // Reshuffle a few times if the shuffle lands on the solution itself.
+    let pool = shuffled(letters);
+    for (let tries = 0; tries < 5; tries++) {
+      if (letters.length < 2 || pool.join('') !== letters.join('')) break;
+      pool = shuffled(letters);
+    }
+    this.state.scramblePool = pool;
+    this.state.scrambleFixed = 0;
+    this.state.scramble = this.buildScramble(question);
+  }
+
+  /**
+   * Fix more leading letters into place at 25/45/65/80 % of the window, up
+   * to 70 % of the letters — the rest stays for the players to solve.
+   */
+  private maybeAdvanceScramble(question: KvizAnagramQuestionFull): void {
+    const limit = question.timeLimit;
+    const elapsed = (Date.now() - this.state.questionStartTime) / 1000;
+    const fraction = limit > 0 ? elapsed / limit : 1;
+    const letterCount = this.state.scramblePool.length;
+    const steps = [0.25, 0.45, 0.65, 0.8];
+    let target = 0;
+    for (let i = 0; i < steps.length; i++) {
+      if (fraction >= steps[i]) {
+        target = Math.floor(letterCount * 0.7 * ((i + 1) / steps.length));
+      }
+    }
+    if (target > this.state.scrambleFixed) {
+      this.state.scrambleFixed = target;
+      this.state.scramble = this.buildScramble(question);
+    }
+  }
+
+  /** First `scrambleFixed` letters correct, the remainder from the pool. */
+  private buildScramble(question: KvizAnagramQuestionFull): string {
+    const answer = question.answer.toUpperCase();
+    const letters: string[] = [];
+    for (const ch of answer) if (ch !== ' ') letters.push(ch);
+    const fixed = Math.min(this.state.scrambleFixed, letters.length);
+    const remaining = [...this.state.scramblePool];
+    for (let k = 0; k < fixed; k++) {
+      const at = remaining.indexOf(letters[k]);
+      if (at >= 0) remaining.splice(at, 1);
+    }
+    let li = 0;
+    let ri = 0;
+    let out = '';
+    for (const ch of answer) {
+      if (ch === ' ') {
+        out += ' ';
+        continue;
+      }
+      out += li < fixed ? letters[li] : (remaining[ri++] ?? '?');
+      li++;
+    }
+    return out;
   }
 
   // --- Emoji progressive letter hints (ported from Emoji zagonetke) -------

@@ -113,8 +113,13 @@ export interface ClientToServerEvents {
     // behaves the same as in a normal game).
     boljiZivotTutorial?: boolean;
     // Vruć krompir: how the bomb is passed on ('sequential' = next in order,
-    // 'choose' = holder picks). Defaults to 'sequential' server-side.
+    // 'choose' = holder picks, 'kviz' = quiz-question elimination — the kviz
+    // mode reuses `quizPackIds` above for its question source). Defaults to
+    // 'sequential' server-side.
     hotPotatoMode?: HotPotatoMode;
+    // Vruć krompir kviz mode: seconds a player has to answer each question
+    // (clamped server-side; default 5). Ignored in the other modes.
+    hotPotatoKvizAnswerSeconds?: number;
     // Špijun: discussion length in seconds (clamped server-side), an
     // optional location pack replacing the built-in bank (re-validated
     // server-side), and tutorial mode (phases advance on the moderator's

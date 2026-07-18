@@ -6,6 +6,8 @@ interface AnswerButtonsProps {
   options: QuizOption[];
   hasAnswered: boolean;
   selectedIndex: number | null;
+  /** game:player-action name to emit (Vruć krompir reuses 'potato:answer'). */
+  action?: string;
 }
 
 // Fixed per-slot shape + text color so muscle memory builds across games —
@@ -18,14 +20,19 @@ export const OPTION_TEXT_COLORS: Record<string, string> = {
   '#7C5FA8': '#fff',
 };
 
-export function AnswerButtons({ options, hasAnswered, selectedIndex }: AnswerButtonsProps) {
+export function AnswerButtons({
+  options,
+  hasAnswered,
+  selectedIndex,
+  action = 'quiz:answer',
+}: AnswerButtonsProps) {
   const haptics = useHaptics();
 
   const handleAnswer = (optionIndex: number) => {
     if (hasAnswered) return;
     haptics.tap();
     socket.emit('game:player-action', {
-      action: 'quiz:answer',
+      action,
       data: { optionIndex },
     });
   };

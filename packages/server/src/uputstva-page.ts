@@ -29,6 +29,11 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li><strong>Geo pitanja</strong> 🗺️: TV pokaže fotografiju, a ti na mapi na telefonu postaviš iglu gde misliš da je slikana — bliža igla, više poena.</li>
 <li><strong>Broj pitanja</strong> 🔢: klizačem pogađaš vrednost (cenu, godinu, težinu…) — bliži i brži pogodak nosi više.</li>
 <li><strong>Emoji zagonetke</strong> 😀: niz emojija krije film, izreku ili pojam — kucaš odgovor (može više pokušaja), a slova se postepeno otkrivaju kao hint.</li>
+<li><strong>Pronađi uljeza</strong> 🕵️: 4 pojma — 3 spadaju zajedno, 1 je uljez; tapni uljeza što brže.</li>
+<li><strong>Završi citat</strong> ✍️: poznati citat, stih ili izreka bez poslednje reči — kucaš reč koja nedostaje (sitni tipfeleri se tolerišu).</li>
+<li><strong>Piksel slika</strong> 🧩: slika kreće skroz pikselizovana i polako se izoštrava — ko pre prepozna, više poena.</li>
+<li><strong>Anagram</strong> 🔀: izmešana slova se polako preslažu u tačan redosled — kucaš reč pre nego što se sama otkrije.</li>
+<li><strong>Redosled</strong> ↕️: poređaj 3–10 pojmova (hronološki, po veličini…) — poeni po tačnosti redosleda.</li>
 <li>Svako pitanje vredi najviše 1000 poena; pobednik je igrač sa najviše poena na kraju.</li>
 </ul>
 <p class="tip">Domaćin štiklira jedan ili više packova pitanja (i vrste pitanja) na ekranu za izbor igre, ili uveze svoja pitanja (JSON); packovi se prave u /admin editoru.</p>`,
@@ -176,6 +181,7 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Tajmer je skriven i nasumičan — niko ne zna kada će puknuti.</li>
 <li>Igrač koji drži krompir kad eksplodira — ispada iz igre.</li>
 <li>Prosleđivanje bira domaćin: sledećem po redu ili slobodan izbor kome.</li>
+<li><strong>Kviz mod:</strong> umesto kategorije, pitanje iz kviz packova sleće nasumičnom igraču — 5 sekundi za odgovor. Tačno = vidiš sledeće pitanje i biraš kome ga bacaš; netačno ili isteklo vreme = 💥 ispadaš.</li>
 <li>Poslednji preživeli pobeđuje.</li>
 </ul>`,
   },

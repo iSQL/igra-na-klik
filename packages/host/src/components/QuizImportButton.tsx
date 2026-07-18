@@ -23,6 +23,11 @@ const TYPE_BADGES: Record<KvizQuestionType, string> = {
   audio: '🎵',
   video: '🎬',
   emoji: '😀',
+  uljez: '🕵️',
+  dopuna: '✍️',
+  piksel: '🧩',
+  anagram: '🔀',
+  redosled: '↕️',
 };
 
 const RECENT_SHOWN = 6;
@@ -152,6 +157,24 @@ export function QuizImportButton() {
     minHeight: '22px',
     minWidth: 'auto',
   };
+
+  // Compact type chip — icon + short label, tiny footprint so all 11 types
+  // stay tidy in a wrap grid.
+  const typeChipStyle = (on: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.2rem',
+    padding: '0.15rem 0.4rem',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    borderRadius: '6px',
+    border: `1px solid ${on ? 'var(--accent)' : 'var(--line2)'}`,
+    background: on ? 'rgba(194,155,71,0.18)' : 'transparent',
+    color: on ? 'var(--text-primary)' : 'var(--dim)',
+    minHeight: '26px',
+    minWidth: 'auto',
+    lineHeight: 1.1,
+  });
 
   const chipStyle = (on: boolean): React.CSSProperties => ({
     padding: '0.3rem 0.6rem',
@@ -367,19 +390,24 @@ export function QuizImportButton() {
                   {t('quizConfig.selectNone')}
                 </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                {KVIZ_ALL_TYPES.map((ty) => (
-                  <button
-                    key={ty}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleType(ty);
-                    }}
-                    style={chipStyle(checkedTypes.includes(ty))}
-                  >
-                    {TYPE_BADGES[ty]} {t(`quizType.${ty}`)}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                {KVIZ_ALL_TYPES.map((ty) => {
+                  const on = checkedTypes.includes(ty);
+                  return (
+                    <button
+                      key={ty}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleType(ty);
+                      }}
+                      title={t(`quizType.${ty}`)}
+                      style={typeChipStyle(on)}
+                    >
+                      <span style={{ opacity: on ? 1 : 0.55 }}>{TYPE_BADGES[ty]}</span>
+                      {t(`quizType.${ty}`)}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Footer: selected summary + clear */}

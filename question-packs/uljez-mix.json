@@ -1,0 +1,79 @@
+{
+  "name": "Pronađi uljeza",
+  "description": "Tri pojma spadaju zajedno, jedan je uljez — tapni ga!",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "uljez",
+      "text": "Tri su naučnici — ko je uljez?",
+      "options": ["Nikola Tesla", "Albert Ajnštajn", "Isak Njutn", "Super Mario"],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su planete — ko je uljez?",
+      "options": ["Mars", "Venera", "Meksiko", "Jupiter"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su reke — ko je uljez?",
+      "options": ["Dunav", "Sava", "Kopaonik", "Morava"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su voće — ko je uljez?",
+      "options": ["Jabuka", "Šargarepa", "Kruška", "Banana"],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Troje se bave fudbalom — ko je uljez?",
+      "options": ["Lionel Mesi", "Kristijano Ronaldo", "Novak Đoković", "Nejmar"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su Marvel junaci — ko je uljez?",
+      "options": ["Ajronmen", "Betmen", "Tor", "Spajdermen"],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su muzički instrumenti — ko je uljez?",
+      "options": ["Gitara", "Violina", "Šah", "Klavir"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su gradovi u Srbiji — ko je uljez?",
+      "options": ["Novi Sad", "Zagreb", "Niš", "Kragujevac"],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su sisari — ko je uljez?",
+      "options": ["Delfin", "Slon", "Ajkula", "Lav"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su boje — ko je uljez?",
+      "options": ["Crvena", "Kvadrat", "Zelena", "Plava"],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su društvene mreže — ko je uljez?",
+      "options": ["Instagram", "Fejsbuk", "Fotošop", "Tviter"],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Troje su glumci — ko je uljez?",
+      "options": ["Al Paćino", "Robert de Niro", "Stiven King", "Leonardo Dikaprio"],
+      "correctIndex": 2
+    }
+  ]
+}

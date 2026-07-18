@@ -14,6 +14,11 @@ export const KVIZ_ALL_TYPES: KvizQuestionType[] = [
   'geo',
   'broj',
   'emoji',
+  'uljez',
+  'dopuna',
+  'piksel',
+  'anagram',
+  'redosled',
 ];
 
 /**

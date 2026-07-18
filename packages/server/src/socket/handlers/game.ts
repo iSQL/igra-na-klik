@@ -76,6 +76,7 @@ export function registerGameHandlers(
       roundCount: data.roundCount,
       boljiZivotTutorial: data.boljiZivotTutorial,
       hotPotatoMode: data.hotPotatoMode,
+      hotPotatoKvizAnswerSeconds: data.hotPotatoKvizAnswerSeconds,
       spijunDiscussionSeconds: data.spijunDiscussionSeconds,
       spijunPack: data.spijunPack,
       spijunTutorial: data.spijunTutorial,

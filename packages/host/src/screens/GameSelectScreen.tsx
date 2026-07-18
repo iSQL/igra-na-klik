@@ -27,6 +27,7 @@ import {
   GLUVO_DOBA_DISCUSSION_OPTIONS,
   GLUVO_DOBA_DEATH_REVEAL_OPTIONS,
   SPIJUN_DISCUSSION_OPTIONS,
+  HOT_POTATO_KVIZ_ANSWER_OPTIONS,
 } from '../store/newGamesConfigStore';
 import { QuizImportButton } from '../components/QuizImportButton';
 import {
@@ -125,9 +126,15 @@ export function GameSelectScreen() {
         ? spijunPacks.find((p) => p.id === newGamesConfig.spijunPackId)
         : undefined;
 
-    const quizImport = gameId === 'quiz' ? useQuizImportStore.getState() : null;
-    // Inline file import wins over the pack multi-select.
-    const customQuestions = quizImport?.customQuestions ?? undefined;
+    // Kviz-mode Vruć krompir draws from the same pack selection as Kviz.
+    const hotPotatoKviz =
+      gameId === 'hot-potato' && newGamesConfig.hotPotatoMode === 'kviz';
+    const quizImport =
+      gameId === 'quiz' || hotPotatoKviz ? useQuizImportStore.getState() : null;
+    // Inline file import wins over the pack multi-select (quiz only — the
+    // hot-potato kviz mode supports packs, not inline files).
+    const customQuestions =
+      gameId === 'quiz' ? (quizImport?.customQuestions ?? undefined) : undefined;
     let quizPackIds: string[] | undefined;
     let quizTypes: HostStartGamePayload['quizTypes'];
     if (quizImport) {
@@ -223,6 +230,10 @@ export function GameSelectScreen() {
           : undefined,
       hotPotatoMode:
         gameId === 'hot-potato' ? newGamesConfig.hotPotatoMode : undefined,
+      hotPotatoKvizAnswerSeconds:
+        gameId === 'hot-potato' && newGamesConfig.hotPotatoMode === 'kviz'
+          ? newGamesConfig.hotPotatoKvizAnswerSeconds
+          : undefined,
       spijunDiscussionSeconds:
         gameId === 'spijun' ? newGamesConfig.spijunDiscussionSeconds : undefined,
       spijunPack: spijunPack
@@ -450,7 +461,7 @@ export function GameSelectScreen() {
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {(['sequential', 'choose'] as const).map((m) => {
+                  {(['sequential', 'choose', 'kviz'] as const).map((m) => {
                     const active = m === newGamesConfig.hotPotatoMode;
                     return (
                       <button
@@ -484,6 +495,19 @@ export function GameSelectScreen() {
                 >
                   {t(`config.hotPotatoModeHint.${newGamesConfig.hotPotatoMode}`)}
                 </p>
+                {newGamesConfig.hotPotatoMode === 'kviz' && (
+                  <>
+                    <PillRow
+                      label={t('config.hotPotatoAnswerSeconds')}
+                      value={newGamesConfig.hotPotatoKvizAnswerSeconds}
+                      options={HOT_POTATO_KVIZ_ANSWER_OPTIONS}
+                      onSelect={newGamesConfig.setHotPotatoKvizAnswerSeconds}
+                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <QuizImportButton />
+                    </div>
+                  </>
+                )}
               </>
             )}
             {game.id === 'slepi-telefoni' && (

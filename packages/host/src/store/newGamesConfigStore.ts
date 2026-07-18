@@ -23,8 +23,10 @@ interface NewGamesConfigStore {
   gluvoDobaTutorial: boolean;
   // Tajni agenti mode: classic (2 teams), duet, or coop (see @igra/shared).
   tajniAgentiMode: TajniAgentiMode;
-  // Vruć krompir: how the bomb is passed ('sequential' | 'choose').
+  // Vruć krompir: how the bomb is passed ('sequential' | 'choose' | 'kviz').
   hotPotatoMode: HotPotatoMode;
+  // Vruć krompir kviz mode: seconds to answer each question.
+  hotPotatoKvizAnswerSeconds: number;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
   // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
@@ -48,6 +50,7 @@ interface NewGamesConfigStore {
   setGluvoDobaTutorial: (v: boolean) => void;
   setTajniAgentiMode: (m: TajniAgentiMode) => void;
   setHotPotatoMode: (m: HotPotatoMode) => void;
+  setHotPotatoKvizAnswerSeconds: (n: number) => void;
   setDrawGuessTimeLimit: (n: number) => void;
   setBoljiZivotTutorial: (v: boolean) => void;
   setSpijunDiscussionSeconds: (n: number) => void;
@@ -70,6 +73,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       gluvoDobaTutorial: false,
       tajniAgentiMode: 'classic',
       hotPotatoMode: 'sequential',
+      hotPotatoKvizAnswerSeconds: 5,
       drawGuessTimeLimit: 60,
       boljiZivotTutorial: false,
       spijunDiscussionSeconds: 420,
@@ -88,6 +92,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setGluvoDobaTutorial: (v) => set({ gluvoDobaTutorial: v }),
       setTajniAgentiMode: (m) => set({ tajniAgentiMode: m }),
       setHotPotatoMode: (m) => set({ hotPotatoMode: m }),
+      setHotPotatoKvizAnswerSeconds: (n) =>
+        set({ hotPotatoKvizAnswerSeconds: n }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
       setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
       setSpijunDiscussionSeconds: (n) => set({ spijunDiscussionSeconds: n }),
@@ -104,6 +110,7 @@ export const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 export const FAKE_ARTIST_ROUND_OPTIONS = [1, 2, 3, 4, 5];
 export const FAKE_ARTIST_STROKE_OPTIONS = [1, 2, 3];
 export const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
+export const HOT_POTATO_KVIZ_ANSWER_OPTIONS = [5, 8, 10, 15, 20];
 export const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 export const GLUVO_DOBA_DEATH_REVEAL_OPTIONS: GluvoDobaDeathReveal[] = [
   'role',

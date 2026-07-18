@@ -85,13 +85,66 @@ export interface KvizImportEmoji {
   timeLimit?: number;
 }
 
+export interface KvizImportUljez extends KvizImportChoiceBase {
+  type: 'uljez';
+  /** Exactly 4 pojma; correctIndex marks the uljez. Optional prompt text. */
+  imageUrl?: string;
+  imageFile?: string;
+}
+
+export interface KvizImportDopuna {
+  type: 'dopuna';
+  /** Prompt text; defaults to KVIZ_DOPUNA_DEFAULT_TEXT. */
+  text?: string;
+  /** Visible part of the quote (the hidden word(s) come after it). */
+  quote: string;
+  /** The missing word(s) players must type. */
+  answer: string;
+  /** Accepted alternates (fuzzy-matched like the main answer). */
+  accept?: string[];
+  timeLimit?: number;
+}
+
+export interface KvizImportPiksel {
+  type: 'piksel';
+  /** Prompt text; defaults to KVIZ_PIKSEL_DEFAULT_TEXT. */
+  text?: string;
+  imageFile?: string;
+  imageUrl?: string;
+  answer: string;
+  accept?: string[];
+  timeLimit?: number;
+}
+
+export interface KvizImportAnagram {
+  type: 'anagram';
+  /** Prompt/category text; defaults to KVIZ_ANAGRAM_DEFAULT_TEXT. */
+  text?: string;
+  answer: string;
+  accept?: string[];
+  timeLimit?: number;
+}
+
+export interface KvizImportRedosled {
+  type: 'redosled';
+  text: string;
+  /** 3–10 items in the CORRECT order (shuffled at runtime for play). */
+  items: string[];
+  timeLimit?: number;
+}
+
 export type KvizImportQuestion =
   | KvizImportObicno
   | KvizImportAudio
   | KvizImportVideo
   | KvizImportGeo
   | KvizImportBroj
-  | KvizImportEmoji;
+  | KvizImportEmoji
+  | KvizImportUljez
+  | KvizImportDopuna
+  | KvizImportPiksel
+  | KvizImportAnagram
+  | KvizImportRedosled;
 
 export interface KvizPackManifest {
   name?: string;
@@ -121,6 +174,11 @@ export const KVIZ_DEFAULT_TIME_LIMIT: Record<KvizQuestionType, number> = {
   geo: 30,
   broj: 25,
   emoji: 20,
+  uljez: 15,
+  dopuna: 20,
+  piksel: 25,
+  anagram: 25,
+  redosled: 35,
 };
 
 const MIN_TIME_LIMIT = 5;
@@ -152,6 +210,10 @@ const SERBIA_MAX_LNG = 23.5;
 
 export const KVIZ_GEO_DEFAULT_TEXT = 'Gde je ovo slikano?';
 export const KVIZ_EMOJI_DEFAULT_TEXT = 'Šta se krije iza emojija?';
+export const KVIZ_ULJEZ_DEFAULT_TEXT = 'Pronađi uljeza!';
+export const KVIZ_DOPUNA_DEFAULT_TEXT = 'Završi citat!';
+export const KVIZ_PIKSEL_DEFAULT_TEXT = 'Šta je na slici?';
+export const KVIZ_ANAGRAM_DEFAULT_TEXT = 'Reši anagram!';
 
 /**
  * Pseudo pack id representing the built-in question bank in the pack
@@ -189,6 +251,73 @@ export function checkEmojiGuess(
   if (!g) return false;
   if (g === normalizeEmojiAnswer(riddle.answer)) return true;
   return (riddle.accept ?? []).some((a) => normalizeEmojiAnswer(a) === g);
+}
+
+/**
+ * Damerau-Levenshtein (optimal string alignment) distance with an early-out
+ * cap — adjacent-letter swaps ("beogard") count as ONE edit, the most common
+ * phone typo.
+ */
+function editDistance(a: string, b: string, cap: number): number {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  let prev2: number[] | null = null;
+  let prev = new Array<number>(b.length + 1);
+  let curr = new Array<number>(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= b.length; j++) {
+      let d = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      if (
+        prev2 &&
+        i > 1 &&
+        j > 1 &&
+        a[i - 1] === b[j - 2] &&
+        a[i - 2] === b[j - 1]
+      ) {
+        d = Math.min(d, prev2[j - 2] + 1);
+      }
+      curr[j] = d;
+      if (d < rowMin) rowMin = d;
+    }
+    if (rowMin > cap) return cap + 1;
+    prev2 = prev;
+    prev = curr;
+    curr = new Array<number>(b.length + 1);
+  }
+  return prev[b.length];
+}
+
+/** Typo tolerance by target length: 0 for short words, 1 from 5, 2 from 10. */
+function typoToleranceFor(target: string): number {
+  if (target.length >= 10) return 2;
+  if (target.length >= 5) return 1;
+  return 0;
+}
+
+/**
+ * Free-text answer check for dopuna/piksel/anagram questions: same
+ * normalization as emoji answers, plus small-typo tolerance (Levenshtein)
+ * so "beogard" still counts for "beograd".
+ */
+export function checkTextGuess(
+  guess: string,
+  q: { answer: string; accept?: string[] }
+): boolean {
+  const g = normalizeEmojiAnswer(guess);
+  if (!g) return false;
+  const targets = [q.answer, ...(q.accept ?? [])].map(normalizeEmojiAnswer);
+  return targets.some((t) => {
+    if (!t) return false;
+    if (t === g) return true;
+    const cap = typoToleranceFor(t);
+    return cap > 0 && editDistance(g, t, cap) <= cap;
+  });
 }
 
 function isNonEmptyString(v: unknown): v is string {
@@ -360,6 +489,64 @@ function parseChoiceCore(
   };
 }
 
+/** Optional trimmed text field with the shared length cap. */
+function parseOptionalText(
+  raw: unknown,
+  label: string
+): { ok: true; text?: string } | { ok: false; error: string } {
+  if (raw === undefined) return { ok: true };
+  if (typeof raw !== 'string') {
+    return { ok: false, error: `${label}: "text" mora biti string.` };
+  }
+  const text = raw.trim() || undefined;
+  if (text && text.length > MAX_TEXT_LENGTH) {
+    return { ok: false, error: `${label}: tekst predugačak (max ${MAX_TEXT_LENGTH} znakova).` };
+  }
+  return { ok: true, text };
+}
+
+/** Required free-text answer + optional accept[] list (shared caps). */
+function parseAnswerWithAccept(
+  raw: Record<string, unknown>,
+  label: string
+): { ok: true; answer: string; accept?: string[] } | { ok: false; error: string } {
+  if (!isNonEmptyString(raw.answer)) {
+    return { ok: false, error: `${label}: nedostaje odgovor.` };
+  }
+  const answer = (raw.answer as string).trim();
+  if (answer.length > MAX_EMOJI_ANSWER_LENGTH) {
+    return { ok: false, error: `${label}: odgovor je predugačak.` };
+  }
+  let accept: string[] | undefined;
+  if (raw.accept !== undefined && raw.accept !== null) {
+    if (!Array.isArray(raw.accept)) {
+      return { ok: false, error: `${label}: "accept" mora biti niz.` };
+    }
+    if (raw.accept.length > MAX_EMOJI_ACCEPT) {
+      return { ok: false, error: `${label}: previše alternativnih odgovora.` };
+    }
+    const cleaned: string[] = [];
+    for (const a of raw.accept) {
+      if (!isNonEmptyString(a)) {
+        return { ok: false, error: `${label}: prazan alternativni odgovor.` };
+      }
+      if ((a as string).trim().length > MAX_EMOJI_ANSWER_LENGTH) {
+        return { ok: false, error: `${label}: alternativni odgovor je predugačak.` };
+      }
+      cleaned.push((a as string).trim());
+    }
+    if (cleaned.length > 0) accept = cleaned;
+  }
+  return { ok: true, answer, accept };
+}
+
+// Redosled limits.
+const MIN_REDOSLED_ITEMS = 3;
+const MAX_REDOSLED_ITEMS = 10;
+const MAX_REDOSLED_ITEM_LENGTH = 80;
+// Dopuna quote cap (longer than plain question text — it's a quote/lyric).
+const MAX_QUOTE_LENGTH = 300;
+
 /**
  * Validates and normalizes raw parsed JSON into a KvizPackManifest.
  * Used by the host (pre-flight on file upload, 'inline'), the server pack
@@ -450,11 +637,23 @@ export function parseQuizImport(
     if (raw.type !== undefined) {
       if (
         typeof raw.type !== 'string' ||
-        !['obicno', 'geo', 'broj', 'audio', 'video', 'emoji'].includes(raw.type)
+        ![
+          'obicno',
+          'geo',
+          'broj',
+          'audio',
+          'video',
+          'emoji',
+          'uljez',
+          'dopuna',
+          'piksel',
+          'anagram',
+          'redosled',
+        ].includes(raw.type)
       ) {
         return {
           ok: false,
-          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video/emoji).`,
+          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video/emoji/uljez/dopuna/piksel/anagram/redosled).`,
         };
       }
       type = raw.type as KvizQuestionType;
@@ -594,6 +793,128 @@ export function parseQuizImport(
         emojis,
         answer,
         accept,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'dopuna') {
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      if (!isNonEmptyString(raw.quote)) {
+        return { ok: false, error: `${label}: nedostaje "quote" (vidljivi deo citata).` };
+      }
+      const quote = (raw.quote as string).trim();
+      if (quote.length > MAX_QUOTE_LENGTH) {
+        return { ok: false, error: `${label}: citat predugačak (max ${MAX_QUOTE_LENGTH} znakova).` };
+      }
+      const aa = parseAnswerWithAccept(raw, label);
+      if (!aa.ok) return { ok: false, error: aa.error };
+      questions.push({
+        type: 'dopuna',
+        text: text.text,
+        quote,
+        answer: aa.answer,
+        accept: aa.accept,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'piksel') {
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      if (!imageFile && !imageUrl) {
+        return { ok: false, error: `${label}: piksel pitanje mora imati sliku ("imageFile" ili "imageUrl").` };
+      }
+      const aa = parseAnswerWithAccept(raw, label);
+      if (!aa.ok) return { ok: false, error: aa.error };
+      questions.push({
+        type: 'piksel',
+        text: text.text,
+        imageFile,
+        imageUrl,
+        answer: aa.answer,
+        accept: aa.accept,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'anagram') {
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      const aa = parseAnswerWithAccept(raw, label);
+      if (!aa.ok) return { ok: false, error: aa.error };
+      questions.push({
+        type: 'anagram',
+        text: text.text,
+        answer: aa.answer,
+        accept: aa.accept,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'redosled') {
+      if (!isNonEmptyString(raw.text)) {
+        return { ok: false, error: `${label}: nedostaje tekst pitanja.` };
+      }
+      const text = (raw.text as string).trim();
+      if (text.length > MAX_TEXT_LENGTH) {
+        return { ok: false, error: `${label}: tekst predugačak (max ${MAX_TEXT_LENGTH} znakova).` };
+      }
+      if (!Array.isArray(raw.items)) {
+        return { ok: false, error: `${label}: "items" mora biti niz pojmova.` };
+      }
+      if (
+        raw.items.length < MIN_REDOSLED_ITEMS ||
+        raw.items.length > MAX_REDOSLED_ITEMS
+      ) {
+        return {
+          ok: false,
+          error: `${label}: redosled mora imati između ${MIN_REDOSLED_ITEMS} i ${MAX_REDOSLED_ITEMS} pojmova.`,
+        };
+      }
+      const items: string[] = [];
+      for (let j = 0; j < raw.items.length; j++) {
+        if (!isNonEmptyString(raw.items[j])) {
+          return { ok: false, error: `${label}: pojam ${j + 1} je prazan.` };
+        }
+        const it = (raw.items[j] as string).trim();
+        if (it.length > MAX_REDOSLED_ITEM_LENGTH) {
+          return { ok: false, error: `${label}: pojam ${j + 1} je predugačak.` };
+        }
+        items.push(it);
+      }
+      questions.push({
+        type: 'redosled',
+        text,
+        items,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'uljez') {
+      // Choice mechanics but the prompt is optional and exactly 4 pojma.
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      const core = parseChoiceCore(
+        { ...raw, text: text.text ?? KVIZ_ULJEZ_DEFAULT_TEXT },
+        label
+      );
+      if (!core.ok) return { ok: false, error: core.error };
+      if (core.options.length !== 4) {
+        return { ok: false, error: `${label}: uljez pitanje mora imati tačno 4 pojma.` };
+      }
+      questions.push({
+        type: 'uljez',
+        text: core.text,
+        options: core.options,
+        correctIndex: core.correctIndex,
+        imageFile,
+        imageUrl,
         timeLimit: time.timeLimit,
       });
       continue;

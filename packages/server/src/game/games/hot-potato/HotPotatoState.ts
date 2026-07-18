@@ -1,4 +1,4 @@
-import type { HotPotatoMode, HotPotatoPhase } from '@igra/shared';
+import type { HotPotatoMode, HotPotatoPhase, KvizChoiceQuestionFull } from '@igra/shared';
 
 // Wait-phase durations (seconds) — tunable via /admin/timinzi.
 export const INTRO_DURATION = 3;
@@ -10,6 +10,14 @@ export const FINAL_LEADERBOARD_DURATION = 10;
 // range comfortably above that.
 export const MIN_FUSE_MS = 8_000;
 export const MAX_FUSE_MS = 30_000;
+
+// Kviz mode — active-input timers (visible, unlike the hidden fuse).
+// KVIZ_ANSWER_DURATION is the default; the host can override it per game
+// within [KVIZ_ANSWER_MIN, KVIZ_ANSWER_MAX] seconds.
+export const KVIZ_ANSWER_DURATION = 5;
+export const KVIZ_ANSWER_MIN = 3;
+export const KVIZ_ANSWER_MAX = 30;
+export const KVIZ_PICK_DURATION = 10;
 
 export interface HotPotatoInternalState {
   phase: HotPotatoPhase;
@@ -32,4 +40,17 @@ export interface HotPotatoInternalState {
   winnerId: string | null;
   /** Elimination counter → drives survival-order scoring. */
   eliminatedCount: number;
+
+  // --- kviz mode ---------------------------------------------------------
+  /** Seconds a player has to answer each kviz question (host-configurable). */
+  kvizAnswerDuration: number;
+  /**
+   * Working queue of choice-only questions (obicno/uljez) drawn from the
+   * selected kviz packs; [0] is current, [1] is the holder's preview. The
+   * module refills it from its pool when it runs low.
+   */
+  questions: KvizChoiceQuestionFull[];
+  /** kviz: how the holder answered the current question (exploded reveal). */
+  answeredIndex: number | null;
+  answeredCorrectly: boolean;
 }

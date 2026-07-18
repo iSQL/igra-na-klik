@@ -1,0 +1,19 @@
+{
+  "name": "Anagrami",
+  "description": "Slova su izmešana — presloži ih u tačnu reč pre nego što se sama otkrije!",
+  "category": "pop",
+  "questions": [
+    { "type": "anagram", "text": "Glavni grad Srbije", "answer": "Beograd" },
+    { "type": "anagram", "text": "Žičani muzički instrument", "answer": "Gitara" },
+    { "type": "anagram", "text": "Crveno voće iz bašte", "answer": "Jabuka" },
+    { "type": "anagram", "text": "Pametan morski sisar", "answer": "Delfin" },
+    { "type": "anagram", "text": "Poznati film o brodu", "answer": "Titanik" },
+    { "type": "anagram", "text": "Instrument sa dirkama", "answer": "Klavir" },
+    { "type": "anagram", "text": "Insekt sa šarenim krilima", "answer": "Leptir" },
+    { "type": "anagram", "text": "Najveća planeta Sunčevog sistema", "answer": "Jupiter" },
+    { "type": "anagram", "text": "Žuto tropsko voće", "answer": "Banana" },
+    { "type": "anagram", "text": "Najbrža kopnena životinja", "answer": "Gepard" },
+    { "type": "anagram", "text": "Prugasti afrički konj", "answer": "Zebra" },
+    { "type": "anagram", "text": "Sport sa reketom preko mreže", "answer": "Tenis" }
+  ]
+}

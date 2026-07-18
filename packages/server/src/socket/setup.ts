@@ -82,7 +82,7 @@ export function setupSocket(
   gameRegistry.register(() => new TajniAgentiModule());
   gameRegistry.register(() => new GluvoDobaModule());
   gameRegistry.register(() => new BoljiZivotModule());
-  gameRegistry.register(() => new HotPotatoModule());
+  gameRegistry.register(() => new HotPotatoModule(questionPacksDir));
   gameRegistry.register(() => new SpijunModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);

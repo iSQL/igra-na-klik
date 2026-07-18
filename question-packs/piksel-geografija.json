@@ -1,0 +1,91 @@
+{
+  "name": "Pikselizovana geografija",
+  "description": "Slika kreće potpuno mutna i polako se izoštrava — ko prvi prepozna znamenitost?",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Tour_Eiffel_Wikimedia_Commons.jpg?width=800",
+      "answer": "Ajfelova kula",
+      "accept": ["Ajfel", "Ajfelov toranj", "Eiffel", "Eiffel Tower", "Pariz"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Colosseo_2020.jpg?width=800",
+      "answer": "Koloseum",
+      "accept": ["Kolosej", "Colosseum", "Rim"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Taj_Mahal_(Edited).jpeg?width=800",
+      "answer": "Tadž Mahal",
+      "accept": ["Tadz Mahal", "Taj Mahal", "Indija"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Sydney_Opera_House_Sails.jpg?width=800",
+      "answer": "Sidnejska opera",
+      "accept": ["Opera u Sidneju", "Sydney Opera", "Opera Sidnej", "Sidnej"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/The_Great_Wall_of_China_at_Jinshanling-edit.jpg?width=800",
+      "answer": "Kineski zid",
+      "accept": ["Veliki kineski zid", "Great Wall", "Kina"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Kheops-Pyramid.jpg?width=800",
+      "answer": "Piramide u Gizi",
+      "accept": ["Piramide", "Keopsova piramida", "Egipatske piramide", "Giza", "Egipat"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Statue_of_Liberty_7.jpg?width=800",
+      "answer": "Kip slobode",
+      "accept": ["Statua slobode", "Statue of Liberty", "Njujork"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Elizabeth_Tower,_June_2022.jpg?width=800",
+      "answer": "Big Ben",
+      "accept": ["Big Ben", "Vestminster", "London"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Christ_the_Redeemer_-_Cristo_Redentor.jpg?width=800",
+      "answer": "Hristos Spasitelj",
+      "accept": ["Isus u Riju", "Kristo Redentor", "Cristo Redentor", "Rio de Žaneiro", "Rio"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Cathedral_of_Saint_Sava,_Belgrade.jpg?width=800",
+      "answer": "Hram Svetog Save",
+      "accept": ["Sveti Sava", "Hram svetog Save", "Beograd"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/Neuschwanstein_castle.jpg?width=800",
+      "answer": "Zamak Nojšvanštajn",
+      "accept": ["Nojšvanštajn", "Neuschwanstein", "Nemačka"]
+    },
+    {
+      "type": "piksel",
+      "text": "Koja je ovo znamenitost?",
+      "imageUrl": "https://commons.wikimedia.org/wiki/Special:FilePath/The_Parthenon_in_Athens.jpg?width=800",
+      "answer": "Partenon",
+      "accept": ["Akropolj", "Atina", "Grčka"]
+    }
+  ]
+}

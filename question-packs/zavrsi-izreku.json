@@ -1,0 +1,72 @@
+{
+  "name": "Završi izreku",
+  "description": "Poznata izreka bez poslednje reči — ukucaj šta nedostaje!",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "dopuna",
+      "quote": "Ko rano rani, dve sreće",
+      "answer": "grabi"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Bolje vrabac u ruci nego golub na",
+      "answer": "grani",
+      "accept": ["grancici", "grančici"]
+    },
+    {
+      "type": "dopuna",
+      "quote": "Gvožđe se kuje dok je",
+      "answer": "vruće",
+      "accept": ["vrelo"]
+    },
+    {
+      "type": "dopuna",
+      "quote": "Ko drugome jamu kopa, sam u nju",
+      "answer": "pada",
+      "accept": ["upada"]
+    },
+    {
+      "type": "dopuna",
+      "quote": "Tiha voda breg",
+      "answer": "roni"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Bez muke nema",
+      "answer": "nauke"
+    },
+    {
+      "type": "dopuna",
+      "quote": "U laži su kratke",
+      "answer": "noge"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Sto puta meri, jednom",
+      "answer": "seci"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Ko se dima ne naduši, taj se vatre ne",
+      "answer": "nagreje"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Poklonu se u zube ne",
+      "answer": "gleda"
+    },
+    {
+      "type": "dopuna",
+      "quote": "Vuk dlaku menja ali ćud",
+      "answer": "nikada",
+      "accept": ["nikad", "ne"]
+    },
+    {
+      "type": "dopuna",
+      "quote": "Ni po babu ni po",
+      "answer": "stričevima",
+      "accept": ["stricevima"]
+    }
+  ]
+}

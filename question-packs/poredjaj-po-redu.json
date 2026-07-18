@@ -1,0 +1,67 @@
+{
+  "name": "Poređaj po redu",
+  "description": "Poređaj pojmove tačnim redosledom — po veličini, vremenu ili koracima.",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "redosled",
+      "text": "Poređaj životinje od najmanje ka najvećoj",
+      "items": ["Mrav", "Miš", "Mačka", "Pas", "Konj", "Slon"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj planete od najbliže ka najdaljoj od Sunca",
+      "items": ["Merkur", "Venera", "Zemlja", "Mars", "Jupiter", "Saturn"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj istorijske događaje od najranijeg ka najkasnijem",
+      "items": ["Prvi svetski rat", "Drugi svetski rat", "Sletanje na Mesec", "Pad Berlinskog zida"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pravljenja domaće kafe",
+      "items": ["Zagrej vodu", "Sipaj kafu u šoljicu", "Prelij vrelom vodom", "Promešaj", "Popij"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj brojeve od najmanjeg ka najvećem",
+      "items": ["Dva", "Sedam", "Petnaest", "Trideset", "Sto"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po visini od najniže ka najvišoj",
+      "items": ["Patuljak", "Dete", "Odrastao čovek", "Žirafa"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj dane u nedelji",
+      "items": ["Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj životni ciklus čoveka",
+      "items": ["Beba", "Dete", "Tinejdžer", "Odrastao", "Starac"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po brzini od najsporije ka najbržoj",
+      "items": ["Puž", "Kornjača", "Čovek", "Konj", "Gepard"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mesece u godini",
+      "items": ["Januar", "April", "Jul", "Septembar", "Decembar"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mere za dužinu od najmanje ka najvećoj",
+      "items": ["Milimetar", "Centimetar", "Metar", "Kilometar"]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj obroke tokom dana",
+      "items": ["Doručak", "Užina", "Ručak", "Večera"]
+    }
+  ]
+}

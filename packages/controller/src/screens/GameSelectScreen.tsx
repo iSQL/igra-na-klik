@@ -57,6 +57,11 @@ const KVIZ_ALL_TYPES: KvizQuestionType[] = [
   'geo',
   'broj',
   'emoji',
+  'uljez',
+  'dopuna',
+  'piksel',
+  'anagram',
+  'redosled',
 ];
 const KVIZ_TYPE_BADGES: Record<KvizQuestionType, string> = {
   obicno: '❓',
@@ -65,6 +70,11 @@ const KVIZ_TYPE_BADGES: Record<KvizQuestionType, string> = {
   geo: '🗺️',
   broj: '🔢',
   emoji: '😀',
+  uljez: '🕵️',
+  dopuna: '✍️',
+  piksel: '🧩',
+  anagram: '🔀',
+  redosled: '↕️',
 };
 
 /** Effective checked pack ids (null = all) restricted to loaded packs. */
@@ -242,6 +252,7 @@ export function GameSelectScreen() {
   const [gluvoTutorial, setGluvoTutorial] = useState(false);
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
+  const [hotPotatoAnswerSecs, setHotPotatoAnswerSecs] = useState(5);
   const [bzTutorial, setBzTutorial] = useState(false);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const [spijunPackId, setSpijunPackId] = useState('');
@@ -342,6 +353,12 @@ export function GameSelectScreen() {
     }
     if (game.id === 'hot-potato') {
       payload.hotPotatoMode = hotPotatoMode;
+      // Kviz mode draws from the same pack multi-select as the Kviz game.
+      if (hotPotatoMode === 'kviz') {
+        payload.hotPotatoKvizAnswerSeconds = hotPotatoAnswerSecs;
+        const ids = effectiveQuizPackIds(quizPacks, quizPackIds);
+        if (ids.length > 0) payload.quizPackIds = ids;
+      }
     }
     if (game.id === 'gluvo-doba') {
       payload.gluvoDobaDiscussionSeconds = gluvoDobaDiscussion;
@@ -848,7 +865,7 @@ export function GameSelectScreen() {
                         {t('config.hotPotatoMode')}
                       </span>
                       <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                        {(['sequential', 'choose'] as const).map((m) => (
+                        {(['sequential', 'choose', 'kviz'] as const).map((m) => (
                           <Pill
                             key={m}
                             active={m === hotPotatoMode}
@@ -866,6 +883,44 @@ export function GameSelectScreen() {
                       >
                         {t(`config.hotPotatoModeHint.${hotPotatoMode}`)}
                       </span>
+                      {hotPotatoMode === 'kviz' && (
+                        <>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--text-secondary)',
+                              marginTop: '0.2rem',
+                            }}
+                          >
+                            {t('config.hotPotatoAnswerSeconds')}
+                          </span>
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                            {[5, 8, 10, 15, 20].map((n) => (
+                              <Pill
+                                key={n}
+                                active={n === hotPotatoAnswerSecs}
+                                onClick={() => setHotPotatoAnswerSecs(n)}
+                              >
+                                {n}s
+                              </Pill>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {hotPotatoMode === 'kviz' && (
+                        <QuizConfig
+                          packs={quizPacks}
+                          selectedIds={quizPackIds}
+                          setSelectedIds={setQuizPackIds}
+                          selectedTypes={quizTypes}
+                          setSelectedTypes={setQuizTypes}
+                          imported={null}
+                          setImported={() => {}}
+                          error={null}
+                          setError={() => {}}
+                          hideImport
+                        />
+                      )}
                     </div>
                   )}
                   {game.id === 'gluvo-doba' && (
@@ -1443,6 +1498,7 @@ function QuizConfig({
   setImported,
   error,
   setError,
+  hideImport,
 }: {
   packs: QuestionPackSummary[];
   selectedIds: string[] | null;
@@ -1455,6 +1511,8 @@ function QuizConfig({
   ) => void;
   error: string | null;
   setError: (e: string | null) => void;
+  /** Hot-potato kviz mode: packs only — no inline .json import. */
+  hideImport?: boolean;
 }) {
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1711,16 +1769,34 @@ function QuizConfig({
             () => setSelectedTypes(null),
             () => setSelectedTypes([])
           )}
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-            {KVIZ_ALL_TYPES.map((ty) => (
-              <Pill
-                key={ty}
-                active={checkedTypes.includes(ty)}
-                onClick={() => toggleType(ty)}
-              >
-                {KVIZ_TYPE_BADGES[ty]} {t(`quizType.${ty}`)}
-              </Pill>
-            ))}
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+            {KVIZ_ALL_TYPES.map((ty) => {
+              const on = checkedTypes.includes(ty);
+              return (
+                <button
+                  key={ty}
+                  onClick={() => toggleType(ty)}
+                  title={t(`quizType.${ty}`)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.2rem',
+                    padding: '0.18rem 0.4rem',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: `1.5px solid ${on ? 'var(--accent)' : 'var(--line2)'}`,
+                    background: on ? 'rgba(194,155,71,0.18)' : 'transparent',
+                    color: on ? 'var(--text-primary)' : 'var(--dim)',
+                    minHeight: '30px',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  <span style={{ opacity: on ? 1 : 0.55 }}>{KVIZ_TYPE_BADGES[ty]}</span>
+                  {t(`quizType.${ty}`)}
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1748,7 +1824,7 @@ function QuizConfig({
         onChange={handleFile}
         style={{ display: 'none' }}
       />
-      {isFileImport ? (
+      {hideImport ? null : isFileImport ? (
         <div
           style={{
             display: 'flex',

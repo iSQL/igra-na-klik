@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
-import type { HotPotatoHostData } from '@igra/shared';
+import { OptionGrid } from '../quiz/components/OptionGrid';
+import type { HotPotatoHostData, QuizOption } from '@igra/shared';
 
 export default function HotPotatoHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -22,12 +23,13 @@ export default function HotPotatoHost() {
 
   // Ticking heartbeat while the bomb is live — no numbers, just tension.
   useEffect(() => {
-    if (phase !== 'passing') return;
+    if (phase !== 'passing' && phase !== 'question') return;
     const id = setInterval(() => play('tick'), 1000);
     return () => clearInterval(id);
   }, [phase, play]);
 
   if (!gameState) return null;
+  const timeRemaining = gameState.timeRemaining;
 
   const host = gameState.data.host as HotPotatoHostData;
   const holder = host.players.find((p) => p.playerId === host.holderId);
@@ -45,13 +47,80 @@ export default function HotPotatoHost() {
           🥔 Vruć krompir
         </motion.p>
         <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)', maxWidth: 640, textAlign: 'center' }}>
-          Kaži reč iz kategorije i brzo prosledi krompir — kod koga pukne, ispada!
+          {host.mode === 'kviz'
+            ? 'Pitanje sleće nasumičnom igraču — 5 sekundi za odgovor! Tačno = biraš kome ide sledeće, netačno = 💥 ispadaš!'
+            : 'Kaži reč iz kategorije i brzo prosledi krompir — kod koga pukne, ispada!'}
         </p>
         {host.category && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>
             Kategorija: {host.category}
           </p>
         )}
+      </Center>
+    );
+  }
+
+  if ((phase === 'question' || phase === 'picking') && host.question) {
+    const q = host.question;
+    return (
+      <Center>
+        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {host.round} · {host.aliveCount} u igri
+          {phase === 'question' && (
+            <>
+              {' · '}
+              <strong
+                style={{
+                  color: timeRemaining <= 2 ? 'var(--danger)' : 'var(--accent)',
+                  fontSize: '1.4rem',
+                }}
+              >
+                {timeRemaining}s
+              </strong>
+            </>
+          )}
+        </p>
+        <p style={{ fontSize: '1.6rem', fontWeight: 800 }}>
+          🥔💣 {holder ? `${holder.avatarEmoji} ${holder.name}` : '—'}{' '}
+          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {phase === 'question' ? 'odgovara!' : 'bira kome baca sledeće pitanje…'}
+          </span>
+        </p>
+        <p
+          className="display"
+          style={{
+            fontSize: '2rem',
+            fontWeight: 800,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.2,
+            margin: 0,
+          }}
+        >
+          {q.text}
+        </p>
+        {q.imageUrl && (
+          <img
+            src={q.imageUrl}
+            alt=""
+            style={{ maxWidth: 'min(70%, 520px)', maxHeight: '30vh', objectFit: 'contain', borderRadius: '0.8rem' }}
+          />
+        )}
+        <OptionGrid
+          options={q.options as QuizOption[]}
+          showResults={phase === 'picking'}
+          correctIndex={phase === 'picking' ? host.correctIndex : undefined}
+        />
+        {phase === 'picking' && (
+          <motion.p
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--success)' }}
+          >
+            ✅ Tačno! Novo pitanje čeka…
+          </motion.p>
+        )}
+        <PlayerRing players={alive} highlightId={host.holderId} />
       </Center>
     );
   }
@@ -103,6 +172,18 @@ export default function HotPotatoHost() {
         <p style={{ fontSize: '2.4rem', fontWeight: 800 }}>
           {exploded ? `${exploded.avatarEmoji} ${exploded.name}` : 'Neko'} ispada!
         </p>
+        {host.question && (
+          <>
+            <p style={{ fontSize: '1.15rem', color: 'var(--text-secondary)', maxWidth: 800, textAlign: 'center', margin: 0 }}>
+              {host.question.text}
+            </p>
+            <OptionGrid
+              options={host.question.options as QuizOption[]}
+              showResults
+              correctIndex={host.correctIndex}
+            />
+          </>
+        )}
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
           {host.aliveCount === 1
             ? 'Ostao je poslednji preživeli…'

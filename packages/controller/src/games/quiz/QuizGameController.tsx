@@ -10,6 +10,8 @@ import { RoundResult } from './components/RoundResult';
 import { MapPinPicker } from './components/MapPinPicker';
 import { BrojSlider } from './components/BrojSlider';
 import { GeoMap } from './components/GeoMap';
+import { PixelatedImage } from './components/PixelatedImage';
+import { RedosledPicker } from './components/RedosledPicker';
 import type { MapMarker } from './components/GeoMap';
 import { formatBrojValue } from '@igra/shared';
 import type {
@@ -18,6 +20,8 @@ import type {
   KvizEmojiRoundResult,
   KvizGeoRoundResult,
   KvizQuestionType,
+  KvizRedosledRoundResult,
+  KvizTextRoundResult,
   KvizValueType,
   KvizVideoRef,
   QuizLeaderboardEntry,
@@ -157,12 +161,45 @@ export default function QuizGameController() {
       >
         <QuestionHeader data={data} />
         {questionText && <QuestionCard text={questionText} />}
-        {imageUrl && questionType !== 'geo' && <QuestionImage src={imageUrl} />}
+        {/* piksel renders its own (pixelated) canvas below — never the sharp image. */}
+        {imageUrl && questionType !== 'geo' && questionType !== 'piksel' && (
+          <QuestionImage src={imageUrl} />
+        )}
         {questionType === 'geo' && imageUrl && <QuestionImage src={imageUrl} />}
         {questionType === 'emoji' && data.emojis != null && (
           <p style={{ fontSize: '3.4rem', lineHeight: 1.2, margin: 0 }}>
             {data.emojis as string}
           </p>
+        )}
+        {questionType === 'dopuna' && data.quote != null && (
+          <p
+            className="display"
+            style={{ fontSize: '1.2rem', fontWeight: 700, lineHeight: 1.3, margin: 0 }}
+          >
+            „{data.quote as string}{' '}
+            <span style={{ color: 'var(--accent)' }}>______</span>"
+          </p>
+        )}
+        {questionType === 'piksel' && imageUrl && (
+          <PixelatedImage src={imageUrl} pixelation={1} />
+        )}
+        {questionType === 'redosled' && Array.isArray(data.items) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: 'center' }}>
+            {(data.items as string[]).map((it, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: '0.3rem 0.6rem',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                }}
+              >
+                {it}
+              </span>
+            ))}
+          </div>
         )}
         <CountdownRing timeRemaining={timeRemaining} duration={previewDuration} />
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -170,9 +207,14 @@ export default function QuizGameController() {
             ? 'Mapa se pojavljuje za...'
             : questionType === 'broj'
               ? 'Klizač se pojavljuje za...'
-              : questionType === 'emoji'
+              : questionType === 'emoji' ||
+                  questionType === 'dopuna' ||
+                  questionType === 'piksel' ||
+                  questionType === 'anagram'
                 ? 'Kucanje počinje za...'
-                : 'Odgovori se pojavljuju za...'}
+                : questionType === 'redosled'
+                  ? 'Ređanje počinje za...'
+                  : 'Odgovori se pojavljuju za...'}
         </p>
       </div>
     );
@@ -234,9 +276,13 @@ export default function QuizGameController() {
         | { hasAnswered?: boolean; ownGuess?: string | null; lastWrong?: string | null; ownPoints?: number }
         | undefined;
       return (
-        <EmojiAnswerScreen
+        <TextAnswerScreen
           key={data.questionIndex as number}
-          emojis={(data.emojis as string) ?? ''}
+          visual={
+            <p style={{ fontSize: '2.8rem', lineHeight: 1.2, margin: 0, textAlign: 'center' }}>
+              {(data.emojis as string) ?? ''}
+            </p>
+          }
           hint={hostless ? ((data.hint as string) ?? '') : ''}
           questionText={questionText}
           timeRemaining={timeRemaining}
@@ -245,6 +291,103 @@ export default function QuizGameController() {
           ownPoints={emojiMy?.ownPoints ?? 0}
           headerData={data}
         />
+      );
+    }
+
+    if (
+      questionType === 'dopuna' ||
+      questionType === 'piksel' ||
+      questionType === 'anagram'
+    ) {
+      const textMy = playerData[playerId] as
+        | { hasAnswered?: boolean; ownGuess?: string | null; lastWrong?: string | null; ownPoints?: number }
+        | undefined;
+      const timeLimit = (data.timeLimit as number) || 20;
+      const visual =
+        questionType === 'dopuna' ? (
+          <p
+            className="display"
+            style={{ fontSize: '1.25rem', fontWeight: 700, lineHeight: 1.3, margin: 0, textAlign: 'center' }}
+          >
+            „{data.quote as string}{' '}
+            <span style={{ color: 'var(--accent)', letterSpacing: '0.06em' }}>______</span>"
+          </p>
+        ) : questionType === 'piksel' ? (
+          <PixelatedImage
+            src={imageUrl ?? ''}
+            pixelation={Math.max(0, Math.min(1, timeRemaining / timeLimit))}
+          />
+        ) : (
+          <p
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 800,
+              letterSpacing: '0.14em',
+              fontFamily: 'monospace',
+              color: 'var(--accent)',
+              textAlign: 'center',
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {(data.scramble as string) ?? ''}
+          </p>
+        );
+      return (
+        <TextAnswerScreen
+          key={data.questionIndex as number}
+          visual={visual}
+          hint=""
+          questionText={questionText}
+          timeRemaining={timeRemaining}
+          hasSolved={textMy?.hasAnswered ?? false}
+          lastWrong={textMy?.lastWrong ?? null}
+          ownPoints={textMy?.ownPoints ?? 0}
+          headerData={data}
+          placeholder={questionType === 'dopuna' ? 'Reč koja nedostaje…' : 'Tvoj odgovor…'}
+        />
+      );
+    }
+
+    if (questionType === 'redosled') {
+      const items = (data.items as string[]) ?? [];
+      if (myData?.hasAnswered) {
+        return (
+          <Centered>
+            <p style={{ fontSize: '2.4rem', margin: 0 }}>✅</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
+              Redosled zaključan!
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+              {(data.answeredCount as number) ?? 0}/{(data.totalPlayers as number) ?? 0}{' '}
+              zaključalo
+            </p>
+          </Centered>
+        );
+      }
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.6rem',
+          }}
+        >
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <QuestionHeader data={data} />
+            {questionText && <QuestionCard text={questionText} compact />}
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <RedosledPicker
+              key={data.questionIndex as number}
+              items={items}
+              timeRemaining={timeRemaining}
+            />
+          </div>
+        </div>
       );
     }
 
@@ -319,6 +462,32 @@ export default function QuizGameController() {
       <EmojiResultView
         result={data.emojiResult as KvizEmojiRoundResult}
         my={emojiMy}
+        playerId={playerId}
+      />
+    );
+  }
+
+  if (phase === 'showing-results' && data.textResult) {
+    const textMy = playerData[playerId] as
+      | { ownPoints?: number; hasSolved?: boolean; ownGuess?: string | null }
+      | undefined;
+    return (
+      <TextResultView
+        result={data.textResult as KvizTextRoundResult}
+        my={textMy}
+        playerId={playerId}
+      />
+    );
+  }
+
+  if (phase === 'showing-results' && data.redosledResult) {
+    const redMy = playerData[playerId] as
+      | { ownPoints?: number; ownAccuracy?: number | null }
+      | undefined;
+    return (
+      <RedosledResultView
+        result={data.redosledResult as KvizRedosledRoundResult}
+        my={redMy}
         playerId={playerId}
       />
     );
@@ -673,10 +842,12 @@ function BrojResultView({
 
 // --- emoji answering / result screens ----------------------------------------
 
-// Free-text answer input for emoji questions. Wrong guesses may retry until
-// the clock runs out; a correct one locks the round for this player.
-function EmojiAnswerScreen({
-  emojis,
+// Free-text answer input for emoji/dopuna/piksel/anagram questions. Wrong
+// guesses may retry until the clock runs out; a correct one locks the round
+// for this player. `visual` is the type-specific prompt (emojis, quote,
+// pixelated image, scramble).
+function TextAnswerScreen({
+  visual,
   hint,
   questionText,
   timeRemaining,
@@ -684,8 +855,9 @@ function EmojiAnswerScreen({
   lastWrong,
   ownPoints,
   headerData,
+  placeholder = 'Tvoj odgovor…',
 }: {
-  emojis: string;
+  visual: React.ReactNode;
   hint: string;
   questionText?: string;
   timeRemaining: number;
@@ -693,6 +865,7 @@ function EmojiAnswerScreen({
   lastWrong: string | null;
   ownPoints: number;
   headerData: Record<string, unknown>;
+  placeholder?: string;
 }) {
   const [text, setText] = useState('');
 
@@ -735,9 +908,7 @@ function EmojiAnswerScreen({
         <QuestionHeader data={headerData} />
         {questionText && <QuestionCard text={questionText} compact />}
       </div>
-      <p style={{ fontSize: '2.8rem', lineHeight: 1.2, margin: 0, textAlign: 'center' }}>
-        {emojis}
-      </p>
+      {visual}
       {hint && (
         <p
           style={{
@@ -762,7 +933,7 @@ function EmojiAnswerScreen({
           onKeyDown={(e) => {
             if (e.key === 'Enter') submit();
           }}
-          placeholder="Tvoj odgovor…"
+          placeholder={placeholder}
           autoFocus
           style={{
             flex: 1,
@@ -882,6 +1053,255 @@ function EmojiResultView({
                     ? `${(r.timeMs / 1000).toFixed(1)}s`
                     : '✓'
                   : '—'}
+              </span>
+              <span
+                style={{
+                  fontWeight: 800,
+                  minWidth: '3ch',
+                  textAlign: 'right',
+                  color: r.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                +{r.roundScore}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Results for dopuna/piksel/anagram — same list as emoji results, with the
+// kind-specific reveal on top.
+function TextResultView({
+  result,
+  my,
+  playerId,
+}: {
+  result: KvizTextRoundResult;
+  my?: { ownPoints?: number; hasSolved?: boolean };
+  playerId: string;
+}) {
+  const pts = my?.ownPoints ?? 0;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        padding: '1rem',
+        gap: '0.75rem',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        {result.kind === 'dopuna' && result.quote ? (
+          <p
+            className="display"
+            style={{ fontSize: '1.15rem', fontWeight: 700, lineHeight: 1.3, margin: 0 }}
+          >
+            „{result.quote}{' '}
+            <span style={{ color: 'var(--accent)' }}>{result.answer}</span>"
+          </p>
+        ) : (
+          <>
+            {result.kind === 'piksel' && result.imageUrl && (
+              <img
+                src={result.imageUrl}
+                alt=""
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '26vh',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                }}
+              />
+            )}
+            <p
+              style={{
+                fontSize: '1.7rem',
+                fontWeight: 800,
+                color: 'var(--accent)',
+                margin: '0.2rem 0',
+              }}
+            >
+              {result.answer}
+            </p>
+          </>
+        )}
+        <p style={{ fontSize: '1rem', margin: '0.3rem 0 0' }}>
+          {my?.hasSolved ? 'Pogodio si! 🎯' : 'Nisi pogodio'}
+          {' · '}
+          <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+            +{pts}
+          </strong>
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => {
+          const isMe = r.playerId === playerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.6rem',
+                background: isMe ? 'rgba(194,155,71,.16)' : 'var(--bg-secondary)',
+                border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                borderRadius: '0.5rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: r.avatarColor,
+                  flex: 'none',
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: isMe ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', textAlign: 'right', fontSize: '0.78rem' }}>
+                {r.solved
+                  ? r.timeMs != null
+                    ? `${(r.timeMs / 1000).toFixed(1)}s`
+                    : '✓'
+                  : '—'}
+              </span>
+              <span
+                style={{
+                  fontWeight: 800,
+                  minWidth: '3ch',
+                  textAlign: 'right',
+                  color: r.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                +{r.roundScore}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Results for redosled — correct sequence + per-player accuracy list.
+function RedosledResultView({
+  result,
+  my,
+  playerId,
+}: {
+  result: KvizRedosledRoundResult;
+  my?: { ownPoints?: number; ownAccuracy?: number | null };
+  playerId: string;
+}) {
+  const pts = my?.ownPoints ?? 0;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        padding: '1rem',
+        gap: '0.75rem',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>{result.text}</p>
+        <p style={{ fontSize: '1rem', margin: '0.3rem 0 0' }}>
+          {my?.ownAccuracy == null
+            ? 'Nisi zaključao redosled'
+            : `${my.ownAccuracy}% parova tačno`}
+          {' · '}
+          <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+            +{pts}
+          </strong>
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        {result.correctItems.map((it, i) => (
+          <div
+            key={`${i}-${it}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.4rem 0.6rem',
+              background: 'var(--bg-secondary)',
+              borderRadius: '0.5rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+            }}
+          >
+            <span style={{ color: 'var(--accent)', minWidth: '2ch', fontWeight: 800 }}>
+              {i + 1}.
+            </span>
+            <span>{it}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => {
+          const isMe = r.playerId === playerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.6rem',
+                background: isMe ? 'rgba(194,155,71,.16)' : 'var(--bg-secondary)',
+                border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                borderRadius: '0.5rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: r.avatarColor,
+                  flex: 'none',
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: isMe ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', textAlign: 'right', fontSize: '0.78rem' }}>
+                {r.accuracy === null ? '—' : `${r.accuracy}%`}
               </span>
               <span
                 style={{
