@@ -13,6 +13,12 @@ interface MapPinPickerProps {
    * expands full-screen on tap (there is no TV keeping it visible).
    */
   photoUrl?: string;
+  /**
+   * The question prompt. For text-only geo questions (no photo) this IS the
+   * question the player answers, so it headlines the picker; with a photo we
+   * keep the short "tap where it was taken" instruction instead.
+   */
+  prompt?: string;
   /** Custom question map image — undefined = bundled Serbia map. */
   mapImageUrl?: string;
 }
@@ -41,10 +47,16 @@ export function MapPinPicker({
   ownPin,
   ownColor,
   photoUrl,
+  prompt,
   mapImageUrl,
 }: MapPinPickerProps) {
   const [draftPin, setDraftPin] = useState<GeoPin | null>(ownPin ?? null);
   const [photoOpen, setPhotoOpen] = useState(false);
+  // With a photo the map is a "where was this taken?" task; without one the
+  // prompt itself is the question and headlines the picker.
+  const headerPrompt = photoUrl
+    ? 'Tapni gde je slikana'
+    : prompt?.trim() || 'Tapni lokaciju na mapi';
 
   // Sync the draft pin with the server's authoritative ownPin (e.g. on
   // reconnect during answering).
@@ -176,10 +188,10 @@ export function MapPinPicker({
           alignItems: 'center',
         }}
       >
-        <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>
-          Tapni gde je slikana
+        <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, flex: 1, minWidth: 0 }}>
+          {headerPrompt}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
           {photoThumb}
           <span
             className="display"

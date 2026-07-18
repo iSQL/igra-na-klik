@@ -678,9 +678,6 @@ export function parseQuizImport(
     const imageUrl = imageUrlParsed.imageUrl;
 
     if (type === 'geo') {
-      if (!imageFile && !imageUrl) {
-        return { ok: false, error: `${label}: geo pitanje mora imati sliku ("imageFile" ili "imageUrl").` };
-      }
       let text: string | undefined;
       if (raw.text !== undefined) {
         if (typeof raw.text !== 'string') {
@@ -690,6 +687,12 @@ export function parseQuizImport(
         if (text && text.length > MAX_TEXT_LENGTH) {
           return { ok: false, error: `${label}: tekst predugačak (max ${MAX_TEXT_LENGTH} znakova).` };
         }
+      }
+      // The photo is now optional: a geo question can be text-only (e.g. "Gde
+      // je glavni grad Srbije?"), where the map is the whole prompt. But it
+      // must carry SOMETHING to ask — either an image or prompt text.
+      if (!imageFile && !imageUrl && !text) {
+        return { ok: false, error: `${label}: geo pitanje mora imati sliku ("imageFile"/"imageUrl") ili tekst pitanja ("text").` };
       }
       let caption: string | undefined;
       if (raw.caption !== undefined) {

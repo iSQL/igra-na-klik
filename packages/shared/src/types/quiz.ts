@@ -74,7 +74,12 @@ export interface KvizGeoQuestion {
   id: string;
   /** Prompt text (default "Gde je ovo slikano?"). */
   text: string;
-  imageUrl: string;
+  /**
+   * Optional round photo. When absent the question is text-only (e.g. "Gde je
+   * na mapi glavni grad Srbije?") — the map alone carries the round; the
+   * prompt `text` is what the player answers.
+   */
+  imageUrl?: string;
   caption?: string;
   /**
    * Custom map image for this question, if any. Undefined = bundled Serbia
@@ -252,7 +257,8 @@ export interface KvizGeoRoundResultEntry {
 }
 
 export interface KvizGeoRoundResult {
-  imageUrl: string;
+  /** The round photo, if the question had one (text-only geo omits it). */
+  imageUrl?: string;
   caption?: string;
   lat: number;
   lng: number;

@@ -406,8 +406,7 @@ export default function QuizGameHost() {
 
   if (
     questionType === 'geo' &&
-    (phase === 'showing-question' || phase === 'answering') &&
-    imageUrl
+    (phase === 'showing-question' || phase === 'answering')
   ) {
     return (
       <GeoPromptScreen
@@ -612,7 +611,7 @@ function GeoPromptScreen({
   totalPlayers,
 }: {
   phase: string;
-  imageUrl: string;
+  imageUrl?: string;
   questionText: string;
   questionIndex: number;
   totalQuestions: number;
@@ -646,7 +645,8 @@ function GeoPromptScreen({
         }}
       >
         <span>
-          Pitanje <strong>{questionIndex + 1}</strong> / {totalQuestions} · {questionText}
+          Pitanje <strong>{questionIndex + 1}</strong> / {totalQuestions}
+          {imageUrl ? ` · ${questionText}` : ''}
         </span>
         <span
           style={{
@@ -674,16 +674,35 @@ function GeoPromptScreen({
           padding: '1rem 0',
         }}
       >
-        <img
-          src={imageUrl}
-          alt=""
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            borderRadius: '0.5rem',
-          }}
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              borderRadius: '0.5rem',
+            }}
+          />
+        ) : (
+          // Text-only geo question: the prompt itself is the focus (no photo).
+          <motion.p
+            key={questionText}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              fontSize: '3.4rem',
+              fontWeight: 800,
+              textAlign: 'center',
+              maxWidth: '1000px',
+              lineHeight: 1.2,
+              margin: 0,
+            }}
+          >
+            {questionText}
+          </motion.p>
+        )}
       </div>
       <p
         style={{

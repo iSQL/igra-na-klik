@@ -63,7 +63,8 @@ export function importQuestionsToRuntime(
         type: 'geo',
         id,
         text: geo.text ?? KVIZ_GEO_DEFAULT_TEXT,
-        imageUrl: geo.imageUrl ?? file(geo.imageFile) ?? '',
+        // Optional: text-only geo questions have no photo.
+        imageUrl: geo.imageUrl ?? file(geo.imageFile),
         caption: geo.caption,
         mapImageUrl: map ? file(map.imageFile) : undefined,
         map,

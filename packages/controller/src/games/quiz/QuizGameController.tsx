@@ -229,6 +229,7 @@ export default function QuizGameController() {
           ownPin={myData?.ownPin}
           ownColor={myColor}
           photoUrl={imageUrl}
+          prompt={questionText}
           mapImageUrl={data.mapImageUrl as string | undefined}
         />
       );
