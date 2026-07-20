@@ -19,6 +19,17 @@ interface SpijunPackSummary {
   name?: string;
   locations: SpijunLocation[];
 }
+
+// Packs usable for the chosen Asocijacije mode: klasik needs any puzzle,
+// kviz needs puzzles whose fields all carry questions.
+function validAsocijacijePacks(
+  packs: AsocijacijePackSummary[],
+  mode: 'klasik' | 'kviz'
+): AsocijacijePackSummary[] {
+  return packs.filter((p) =>
+    mode === 'kviz' ? p.kvizPuzzleCount > 0 : p.puzzleCount > 0
+  );
+}
 import { socket } from '../socket';
 import { useRoomStore } from '../store/roomStore';
 import { useGameStore } from '../store/gameStore';
@@ -213,6 +224,26 @@ export function GameSelectScreen() {
     };
   }, []);
 
+  // Keep the selected Asocijacije pack valid for the current mode: if the
+  // chosen pack isn't usable (or none is chosen), fall back to the first one.
+  useEffect(() => {
+    const valid = validAsocijacijePacks(
+      asocijacijePacks,
+      newGamesConfig.asocijacijeMode
+    );
+    const stillValid = valid.some(
+      (p) => p.id === newGamesConfig.asocijacijePackId
+    );
+    if (!stillValid) {
+      newGamesConfig.setAsocijacijePackId(valid[0]?.id ?? '');
+    }
+  }, [
+    asocijacijePacks,
+    newGamesConfig.asocijacijeMode,
+    newGamesConfig.asocijacijePackId,
+    newGamesConfig,
+  ]);
+
   useEffect(() => {
     if (!errorMessage) return;
     const handle = setTimeout(() => setErrorMessage(null), 6000);
@@ -352,8 +383,12 @@ export function GameSelectScreen() {
         gameId === 'spijun' && newGamesConfig.spijunTutorial ? true : undefined,
       asocijacijeMode:
         gameId === 'asocijacije' ? newGamesConfig.asocijacijeMode : undefined,
+      // Send the chosen pack id; empty selection → undefined (server falls
+      // back to the built-in bank so the game never starts empty).
       asocijacijePackIds:
-        gameId === 'asocijacije' ? [newGamesConfig.asocijacijePackId] : undefined,
+        gameId === 'asocijacije' && newGamesConfig.asocijacijePackId
+          ? [newGamesConfig.asocijacijePackId]
+          : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -385,42 +420,43 @@ export function GameSelectScreen() {
               newGamesConfig.setAsocijacijeMode(v as 'klasik' | 'kviz')
             }
           />
-          {asocijacijePacks.length > 0 && (
-            <TextPillRow
-              label="Slagalice"
-              value={newGamesConfig.asocijacijePackId}
-              options={asocijacijePacks.map((p) => ({
-                value: p.id,
-                label: `${p.name || p.id} (${
-                  newGamesConfig.asocijacijeMode === 'kviz'
-                    ? p.kvizPuzzleCount
-                    : p.puzzleCount
-                })`,
-              }))}
-              onSelect={newGamesConfig.setAsocijacijePackId}
-            />
-          )}
-          {newGamesConfig.asocijacijeMode === 'kviz' &&
-            (() => {
-              const pack = asocijacijePacks.find(
-                (p) => p.id === newGamesConfig.asocijacijePackId
+          {(() => {
+            const valid = validAsocijacijePacks(
+              asocijacijePacks,
+              newGamesConfig.asocijacijeMode
+            );
+            if (valid.length === 0) {
+              return (
+                <p
+                  style={{
+                    fontSize: '0.72rem',
+                    color: 'var(--danger, #E5533C)',
+                    textAlign: 'center',
+                    margin: 0,
+                  }}
+                >
+                  {newGamesConfig.asocijacijeMode === 'kviz'
+                    ? 'Nema paketa sa kviz slagalicama — napravi ih u /admin.'
+                    : 'Nema paketa slagalica — napravi ih u /admin.'}
+                </p>
               );
-              if (pack && pack.kvizPuzzleCount === 0) {
-                return (
-                  <p
-                    style={{
-                      fontSize: '0.72rem',
-                      color: 'var(--danger, #E5533C)',
-                      textAlign: 'center',
-                      margin: 0,
-                    }}
-                  >
-                    Ovaj paket nema slagalice sa pitanjima — koristiće se ugrađene.
-                  </p>
-                );
-              }
-              return null;
-            })()}
+            }
+            return (
+              <TextPillRow
+                label="Slagalice"
+                value={newGamesConfig.asocijacijePackId}
+                options={valid.map((p) => ({
+                  value: p.id,
+                  label: `${p.name || p.id} (${
+                    newGamesConfig.asocijacijeMode === 'kviz'
+                      ? p.kvizPuzzleCount
+                      : p.puzzleCount
+                  })`,
+                }))}
+                onSelect={newGamesConfig.setAsocijacijePackId}
+              />
+            );
+          })()}
         </>
       )}
       {game.id === 'ko-sam-ja' && (

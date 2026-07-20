@@ -16,7 +16,6 @@ import {
   ASOCIJACIJE_COLUMN_COLORS,
   ASOCIJACIJE_COLUMN_LETTERS,
   checkEmojiGuess,
-  clampGameRounds,
   isKvizCapablePuzzle,
   parseAsocijacijePack,
   shuffled,
@@ -39,7 +38,6 @@ interface StartContent {
   asocijacijeMode?: AsocijacijeMode;
   asocijacijePackIds?: string[];
   customAsocijacijePuzzles?: AsocijacijePuzzle[];
-  roundCount?: number;
 }
 
 export class AsocijacijeModule extends BaseGameModule {
@@ -85,8 +83,8 @@ export class AsocijacijeModule extends BaseGameModule {
       if (kviz.length > 0) pool = kviz;
     }
 
-    const rounds = clampGameRounds(this.gameId, c.roundCount);
-    const puzzles = shuffled(pool).slice(0, Math.max(1, rounds));
+    // A game is always a single board (one full Slagalica).
+    const puzzles = shuffled(pool).slice(0, 1);
 
     const turnOrder = shuffled(
       room.players.filter((p) => p.isConnected).map((p) => p.id)

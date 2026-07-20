@@ -27,11 +27,7 @@ import {
   parseTajniAgentiImport,
   KVIZ_BANK_PACK_ID,
   QUIZ_QUESTION_BANK,
-  ASOCIJACIJE_BANK,
-  ASOCIJACIJE_BANK_PACK_ID,
-  countKvizPuzzles,
 } from '@igra/shared';
-import type { AsocijacijePackSummary } from '@igra/shared';
 import { listAsocijacijePackSummaries } from './game/games/asocijacije/asocijacije-pack-resolver.js';
 import type { KoSamJaImportQuestion, KvizQuestionType } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
@@ -247,23 +243,13 @@ app.get('/api/spijun-packs', async (_req, res) => {
   }
 });
 
-// Asocijacije puzzle packs — summaries only (manifests carry answers). The
-// built-in bank is prepended as the pseudo-pack so clients list it normally.
+// Asocijacije puzzle packs — summaries only (manifests carry answers). Only
+// file-backed packs are listed; the in-code bank is kept solely as a silent
+// server-side fallback (never a selectable "category").
 app.get('/api/asocijacije-packs', async (_req, res) => {
   try {
     const packs = await listAsocijacijePackSummaries(ASOCIJACIJE_PACKS_DIR);
-    const bank: AsocijacijePackSummary = {
-      id: ASOCIJACIJE_BANK_PACK_ID,
-      name: 'Ugrađene slagalice',
-      puzzleCount: ASOCIJACIJE_BANK.length,
-      kvizPuzzleCount: countKvizPuzzles({
-        id: ASOCIJACIJE_BANK_PACK_ID,
-        name: '',
-        puzzles: ASOCIJACIJE_BANK,
-      }),
-      visibleInGame: true,
-    };
-    res.json({ packs: [bank, ...packs] });
+    res.json({ packs });
   } catch (err) {
     console.error('Failed to read asocijacije packs directory:', err);
     res.status(500).json({ error: 'Failed to read asocijacije packs' });

@@ -273,7 +273,8 @@ export function GameSelectScreen() {
   const [asocijacijePacks, setAsocijacijePacks] = useState<
     AsocijacijePackSummary[]
   >([]);
-  const [asocijacijePackId, setAsocijacijePackId] = useState('__bank__');
+  // '' = auto-pick the first pack valid for the current mode.
+  const [asocijacijePackId, setAsocijacijePackId] = useState('');
   const [asocijacijeMode, setAsocijacijeMode] = useState<'klasik' | 'kviz'>(
     'klasik'
   );
@@ -328,6 +329,16 @@ export function GameSelectScreen() {
       cancelled = true;
     };
   }, []);
+
+  // Keep the selected Asocijacije pack valid for the current mode.
+  useEffect(() => {
+    const valid = asocijacijePacks.filter((p) =>
+      asocijacijeMode === 'kviz' ? p.kvizPuzzleCount > 0 : p.puzzleCount > 0
+    );
+    if (!valid.some((p) => p.id === asocijacijePackId)) {
+      setAsocijacijePackId(valid[0]?.id ?? '');
+    }
+  }, [asocijacijePacks, asocijacijeMode, asocijacijePackId]);
 
   useEffect(() => {
     const onError = ({ message }: { message: string }) => {
@@ -417,7 +428,8 @@ export function GameSelectScreen() {
     }
     if (game.id === 'asocijacije') {
       payload.asocijacijeMode = asocijacijeMode;
-      payload.asocijacijePackIds = [asocijacijePackId];
+      // Empty selection → omit (server falls back to the built-in bank).
+      if (asocijacijePackId) payload.asocijacijePackIds = [asocijacijePackId];
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -1137,13 +1149,27 @@ export function GameSelectScreen() {
                           Kviz
                         </Pill>
                       </div>
-                      {asocijacijePacks.length > 0 && (
-                        <>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            Slagalice
-                          </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Slagalice
+                      </span>
+                      {(() => {
+                        const valid = asocijacijePacks.filter((p) =>
+                          asocijacijeMode === 'kviz'
+                            ? p.kvizPuzzleCount > 0
+                            : p.puzzleCount > 0
+                        );
+                        if (valid.length === 0) {
+                          return (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--danger, #E5533C)' }}>
+                              {asocijacijeMode === 'kviz'
+                                ? 'Nema paketa sa kviz slagalicama (napravi u /admin).'
+                                : 'Nema paketa slagalica (napravi u /admin).'}
+                            </span>
+                          );
+                        }
+                        return (
                           <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                            {asocijacijePacks.map((p) => (
+                            {valid.map((p) => (
                               <Pill
                                 key={p.id}
                                 active={asocijacijePackId === p.id}
@@ -1157,8 +1183,8 @@ export function GameSelectScreen() {
                               </Pill>
                             ))}
                           </div>
-                        </>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
                   {game.id === 'bolji-zivot' && (

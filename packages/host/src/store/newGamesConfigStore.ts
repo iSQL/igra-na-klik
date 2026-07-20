@@ -87,7 +87,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       spijunPackId: '',
       spijunTutorial: false,
       asocijacijeMode: 'klasik',
-      asocijacijePackId: '__bank__',
+      // '' = auto-pick the first pack valid for the current mode.
+      asocijacijePackId: '',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),

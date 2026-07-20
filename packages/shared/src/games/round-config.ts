@@ -23,8 +23,7 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   // Špijun: a "round" is one full location+spy deal (discussions are long,
   // so the default is a single round).
   spijun: { options: [1, 2, 3], default: 1, min: 1, max: 5 },
-  // Asocijacije: a "round" is one full board (4×4 + final solution).
-  asocijacije: { options: [1, 2, 3], default: 1, min: 1, max: 5 },
+  // Asocijacije is intentionally NOT here — a game is always a single board.
 };
 
 // Crtaj i pogodi: selectable per-turn drawing time (seconds). The host picks

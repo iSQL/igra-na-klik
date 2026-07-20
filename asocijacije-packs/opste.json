@@ -1,0 +1,516 @@
+{
+  "name": "Opšte",
+  "description": "Opšte asocijacije — proleće, more, zima. Igra se i u klasik i u kviz modu.",
+  "puzzles": [
+    {
+      "finalSolution": "PROLEĆE",
+      "acceptFinal": [
+        "prolece"
+      ],
+      "columns": [
+        {
+          "solution": "SUNCE",
+          "fields": [
+            {
+              "word": "ZRAK",
+              "question": "Sunčev svetlosni snop?",
+              "wrongOptions": [
+                "SENKA",
+                "MRAK",
+                "OBLAK"
+              ]
+            },
+            {
+              "word": "TOPLOTA",
+              "question": "Šta Sunce daje osim svetlosti?",
+              "wrongOptions": [
+                "HLADNOĆA",
+                "KIŠA",
+                "VETAR"
+              ]
+            },
+            {
+              "word": "PLAŽA",
+              "question": "Gde se sunčamo pored mora?",
+              "wrongOptions": [
+                "ŠUMA",
+                "PLANINA",
+                "PEĆINA"
+              ]
+            },
+            {
+              "word": "PEGE",
+              "question": "Šta izbije na koži od sunca?",
+              "wrongOptions": [
+                "BORE",
+                "OŽILJCI",
+                "PLIKOVI"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "KIŠA",
+          "fields": [
+            {
+              "word": "OBLAK",
+              "question": "Iz čega pada kiša?",
+              "wrongOptions": [
+                "NEBO",
+                "SUNCE",
+                "ZVEZDA"
+              ]
+            },
+            {
+              "word": "KIŠOBRAN",
+              "question": "Šta nosimo da nas ne pokvasi?",
+              "wrongOptions": [
+                "KAPUT",
+                "ŠEŠIR",
+                "TORBA"
+              ]
+            },
+            {
+              "word": "PLJUSAK",
+              "question": "Kratka i jaka kiša?",
+              "wrongOptions": [
+                "ROSA",
+                "MAGLA",
+                "SUSNEŽICA"
+              ]
+            },
+            {
+              "word": "DUGA",
+              "question": "Šareni luk na nebu posle kiše?",
+              "wrongOptions": [
+                "MUNJA",
+                "GROM",
+                "ZORA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "CVEĆE",
+          "fields": [
+            {
+              "word": "RUŽA",
+              "question": "Cvet sa trnjem, simbol ljubavi?",
+              "wrongOptions": [
+                "LALA",
+                "BOŽUR",
+                "KRIN"
+              ]
+            },
+            {
+              "word": "BUKET",
+              "question": "Kako se zove svežanj cveća?",
+              "wrongOptions": [
+                "VENAC",
+                "SAKSIJA",
+                "KORPA"
+              ]
+            },
+            {
+              "word": "LEJA",
+              "question": "Deo bašte gde se sadi cveće?",
+              "wrongOptions": [
+                "STAZA",
+                "OGRADA",
+                "TRAVNJAK"
+              ]
+            },
+            {
+              "word": "MIRIS",
+              "question": "Šta cveće širi oko sebe?",
+              "wrongOptions": [
+                "ZVUK",
+                "SVETLOST",
+                "TOPLOTA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "PTICE",
+          "fields": [
+            {
+              "word": "LASTA",
+              "question": "Koja ptica najavljuje proleće?",
+              "wrongOptions": [
+                "SOVA",
+                "VRANA",
+                "GALEB"
+              ]
+            },
+            {
+              "word": "GNEZDO",
+              "question": "Gde ptice legu jaja?",
+              "wrongOptions": [
+                "KAVEZ",
+                "KROŠNJA",
+                "DUPLJA"
+              ]
+            },
+            {
+              "word": "SEOBA",
+              "question": "Kako se zove selidba ptica na jug?",
+              "wrongOptions": [
+                "LET",
+                "JATO",
+                "POVRATAK"
+              ]
+            },
+            {
+              "word": "CVRKUT",
+              "question": "Zvuk koji ptice proizvode?",
+              "wrongOptions": [
+                "LAVEŽ",
+                "MJAUK",
+                "ROMOR"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "MORE",
+      "columns": [
+        {
+          "solution": "PESAK",
+          "fields": [
+            {
+              "word": "PLAŽA",
+              "question": "Peskovita obala mora?",
+              "wrongOptions": [
+                "LUKA",
+                "GREBEN",
+                "HRID"
+              ]
+            },
+            {
+              "word": "DINA",
+              "question": "Peščani breg u pustinji?",
+              "wrongOptions": [
+                "OAZA",
+                "KANJON",
+                "LITICA"
+              ]
+            },
+            {
+              "word": "SAT",
+              "question": "Peščani ___ meri vreme?",
+              "wrongOptions": [
+                "MINUT",
+                "ČAS",
+                "KALENDAR"
+              ]
+            },
+            {
+              "word": "ZAMAK",
+              "question": "Šta deca prave na plaži od peska?",
+              "wrongOptions": [
+                "KULA",
+                "MOST",
+                "TUNEL"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "SO",
+          "fields": [
+            {
+              "word": "KUHINJA",
+              "question": "Gde u kući stoji so?",
+              "wrongOptions": [
+                "SPAVAĆA",
+                "KUPATILO",
+                "PODRUM"
+              ]
+            },
+            {
+              "word": "MORE",
+              "question": "Odakle se dobija morska so?",
+              "wrongOptions": [
+                "REKA",
+                "JEZERO",
+                "IZVOR"
+              ]
+            },
+            {
+              "word": "ZAČIN",
+              "question": "So je najpoznatiji ___ za jelo?",
+              "wrongOptions": [
+                "SASTOJAK",
+                "DODATAK",
+                "PRELIV"
+              ]
+            },
+            {
+              "word": "RUDNIK",
+              "question": "Gde se kopa kamena so?",
+              "wrongOptions": [
+                "PEĆINA",
+                "BUNAR",
+                "KAMENOLOM"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "TALAS",
+          "fields": [
+            {
+              "word": "SURF",
+              "question": "Sport jahanja na talasima?",
+              "wrongOptions": [
+                "JEDRENJE",
+                "RONJENJE",
+                "VESLANJE"
+              ]
+            },
+            {
+              "word": "CUNAMI",
+              "question": "Ogroman razorni talas?",
+              "wrongOptions": [
+                "PLIMA",
+                "VRTLOG",
+                "BURA"
+              ]
+            },
+            {
+              "word": "RADIO",
+              "question": "___ talasi prenose signal?",
+              "wrongOptions": [
+                "SVETLOSNI",
+                "ZVUČNI",
+                "TOPLOTNI"
+              ]
+            },
+            {
+              "word": "PLIMA",
+              "question": "Podizanje nivoa mora?",
+              "wrongOptions": [
+                "OSEKA",
+                "STRUJA",
+                "VIR"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "BROD",
+          "fields": [
+            {
+              "word": "KAPETAN",
+              "question": "Ko upravlja brodom?",
+              "wrongOptions": [
+                "MORNAR",
+                "PILOT",
+                "VOZAČ"
+              ]
+            },
+            {
+              "word": "SIDRO",
+              "question": "Čime brod stane na mestu?",
+              "wrongOptions": [
+                "JEDRO",
+                "VESLO",
+                "UŽE"
+              ]
+            },
+            {
+              "word": "LUKA",
+              "question": "Gde brodovi pristaju?",
+              "wrongOptions": [
+                "STANICA",
+                "MOST",
+                "OBALA"
+              ]
+            },
+            {
+              "word": "JEDRO",
+              "question": "Platno koje hvata vetar na brodu?",
+              "wrongOptions": [
+                "ZASTAVA",
+                "MREŽA",
+                "CERADA"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "ZIMA",
+      "columns": [
+        {
+          "solution": "SNEG",
+          "fields": [
+            {
+              "word": "PAHULJA",
+              "question": "Kako se zove jedan komadić snega?",
+              "wrongOptions": [
+                "KAP",
+                "ZRNO",
+                "LJUSPA"
+              ]
+            },
+            {
+              "word": "GRUDVA",
+              "question": "Šta pravimo i bacamo od snega?",
+              "wrongOptions": [
+                "LOPTA",
+                "KOCKA",
+                "KUGLA"
+              ]
+            },
+            {
+              "word": "SANKE",
+              "question": "Na čemu se spuštamo niz sneg?",
+              "wrongOptions": [
+                "SKIJE",
+                "KLIZALJKE",
+                "DASKA"
+              ]
+            },
+            {
+              "word": "SNEŠKO",
+              "question": "Belić od snega sa šargarepom umesto nosa?",
+              "wrongOptions": [
+                "PATULJAK",
+                "DIV",
+                "VILENJAK"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "LED",
+          "fields": [
+            {
+              "word": "KLIZALJKE",
+              "question": "Šta nosimo za klizanje na ledu?",
+              "wrongOptions": [
+                "PATIKE",
+                "SKIJE",
+                "ČIZME"
+              ]
+            },
+            {
+              "word": "SANTA",
+              "question": "Ogroman plutajući komad leda?",
+              "wrongOptions": [
+                "STENA",
+                "GREBEN",
+                "HRID"
+              ]
+            },
+            {
+              "word": "HOKEJ",
+              "question": "Sport sa palicom i pakom na ledu?",
+              "wrongOptions": [
+                "KOŠARKA",
+                "RUKOMET",
+                "TENIS"
+              ]
+            },
+            {
+              "word": "MRAZ",
+              "question": "Šta zaledi lokve preko noći?",
+              "wrongOptions": [
+                "ROSA",
+                "MAGLA",
+                "VETAR"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "KAPUT",
+          "fields": [
+            {
+              "word": "DUGME",
+              "question": "Čime se kaput zakopčava?",
+              "wrongOptions": [
+                "RAJSFERŠLUS",
+                "KOPČA",
+                "PERTLA"
+              ]
+            },
+            {
+              "word": "KRAGNA",
+              "question": "Deo kaputa oko vrata?",
+              "wrongOptions": [
+                "RUKAV",
+                "DŽEP",
+                "POSTAVA"
+              ]
+            },
+            {
+              "word": "VUNA",
+              "question": "Topli materijal za zimsku odeću?",
+              "wrongOptions": [
+                "SVILA",
+                "PAMUK",
+                "LAN"
+              ]
+            },
+            {
+              "word": "ČIVILUK",
+              "question": "Gde okačimo kaput?",
+              "wrongOptions": [
+                "POLICA",
+                "FIOKA",
+                "STO"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "PRAZNIK",
+          "fields": [
+            {
+              "word": "JELKA",
+              "question": "Okićeno drvce za praznike?",
+              "wrongOptions": [
+                "BOR",
+                "SMREKA",
+                "ČEMPRES"
+              ]
+            },
+            {
+              "word": "POKLON",
+              "question": "Šta Deda Mraz donosi?",
+              "wrongOptions": [
+                "PISMO",
+                "ČESTITKA",
+                "PESMA"
+              ]
+            },
+            {
+              "word": "VATROMET",
+              "question": "Šta bljesne na nebu u ponoć Nove godine?",
+              "wrongOptions": [
+                "ZVEZDA",
+                "MUNJA",
+                "KOMETA"
+              ]
+            },
+            {
+              "word": "ZDRAVICA",
+              "question": "Šta se izgovara uz podignutu čašu?",
+              "wrongOptions": [
+                "GOVOR",
+                "MOLITVA",
+                "ZAKLETVA"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

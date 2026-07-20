@@ -1791,131 +1791,166 @@ function kvizCatById(id){
   }
 
   // ---------- asocijacije (4×4 puzzles + final solution) ----------
-  // Local working copy edited in place; the whole manifest is PUT on "Sačuvaj".
-  var asWork=null;  // { packId, name, description, puzzles:[...], dirty }
+  // Compact table of puzzles (one row each) + a slide-in sheet with the full
+  // 4×4 editor, mirroring the kviz table/sheet. Each save/delete PUTs the
+  // whole manifest via ctx.putPack (no separate dirty state).
   var AS_LETTERS='ABCD';
   function asBlankField(){ return { word:'', question:'', wrongOptions:[] }; }
   function asBlankCol(){ return { solution:'', fields:[asBlankField(),asBlankField(),asBlankField(),asBlankField()] }; }
   function asBlankPuzzle(){ return { columns:[asBlankCol(),asBlankCol(),asBlankCol(),asBlankCol()], finalSolution:'' }; }
-  function asNorm(puzzles){
-    var out=(puzzles||[]).map(function(p){
-      return {
-        finalSolution: p.finalSolution||'',
-        columns: (p.columns||[]).map(function(c){
-          return {
-            solution: c.solution||'',
-            fields: (c.fields||[]).map(function(f){
-              return { word:f.word||'', question:f.question||'', wrongOptions:(f.wrongOptions||[]).slice() };
-            })
-          };
-        })
-      };
+  function asColArray(p){
+    var cols=(p&&p.columns)?p.columns.slice(0,4):[];
+    while(cols.length<4) cols.push(asBlankCol());
+    return cols.map(function(c){
+      var fields=(c&&c.fields)?c.fields.slice(0,4):[];
+      while(fields.length<4) fields.push(asBlankField());
+      return { solution:(c&&c.solution)||'', fields:fields.map(function(f){
+        return { word:(f&&f.word)||'', question:(f&&f.question)||'', wrongOptions:(f&&f.wrongOptions||[]).slice() };
+      }) };
     });
-    out.forEach(function(p){
-      while(p.columns.length<4) p.columns.push(asBlankCol());
-      p.columns.length=4;
-      p.columns.forEach(function(c){
-        while(c.fields.length<4) c.fields.push(asBlankField());
-        c.fields.length=4;
-      });
-    });
-    return out;
   }
-  function asBuild(pz){
-    var out=[];
-    pz.forEach(function(p){
-      var any=(p.finalSolution||'').trim() || p.columns.some(function(c){
-        return (c.solution||'').trim() || c.fields.some(function(f){ return (f.word||'').trim(); });
-      });
-      if(!any) return;  // skip a totally blank puzzle template
-      out.push({
-        finalSolution:(p.finalSolution||'').trim(),
-        columns: p.columns.map(function(c){
-          return { solution:(c.solution||'').trim(), fields: c.fields.map(function(f){
-            var fo={ word:(f.word||'').trim() };
-            var q=(f.question||'').trim(); if(q) fo.question=q;
-            var wo=(f.wrongOptions||[]).filter(Boolean); if(wo.length) fo.wrongOptions=wo;
-            return fo;
-          }) };
-        })
-      });
-    });
-    return out;
+  function asKvizReady(p){
+    return asColArray(p).every(function(c){ return c.fields.every(function(f){
+      return f.word && f.question && (f.wrongOptions||[]).filter(Boolean).length>0;
+    }); });
   }
+
   function renderAsoc(host, ctx){
     var p=ctx.pack;
-    if(!p){ asWork=null; host.innerHTML='<div class="empty">Napravi pack da dodaš slagalice.</div>'; return; }
-    if(!asWork || asWork.packId!==p.id){ asWork={ packId:p.id, name:p.name||'', description:p.description||'', puzzles:asNorm(p.puzzles), dirty:false }; }
-    var pz=asWork.puzzles;
-    var subStyle='style="font-size:.72rem;padding:.28rem .5rem;min-height:0;margin-top:.2rem"';
+    if(!p){ host.innerHTML='<div class="empty">Napravi pack da dodaš slagalice.</div>'; return; }
+    var puzzles=(p.puzzles||[]);
 
-    var blocks='';
-    pz.forEach(function(puz, pi){
-      var cols='';
-      puz.columns.forEach(function(col, ci){
-        var fields='';
-        col.fields.forEach(function(f, fi){
-          var k=pi+'-'+ci+'-'+fi;
-          fields+='<div style="margin-bottom:.5rem">'
-            +'<input class="field" data-w="'+k+'" placeholder="Pojam" value="'+esc(f.word||'')+'" style="font-weight:700;min-height:0;padding:.3rem .55rem">'
-            +'<input class="field" data-q="'+k+'" placeholder="Kviz pitanje (opc.)" value="'+esc(f.question||'')+'" '+subStyle+'>'
-            +'<input class="field" data-wo="'+k+'" placeholder="Pogrešni, zarezom" value="'+esc((f.wrongOptions||[]).join(', '))+'" '+subStyle+'>'
-            +'</div>';
-        });
-        cols+='<div style="min-width:0"><div style="font-weight:800;color:var(--navy);text-align:center">'+AS_LETTERS.charAt(ci)+'</div>'
-          +'<input class="field" data-sol="'+pi+'-'+ci+'" placeholder="Rešenje kolone" value="'+esc(col.solution||'')+'" style="font-weight:800;min-height:0;padding:.3rem .55rem;margin-bottom:.5rem">'
-          +fields+'</div>';
-      });
-      blocks+='<div class="panel" style="margin-bottom:.8rem"><div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem">'
-        +'<span style="flex:1;font-weight:800;color:var(--navy)">Slagalica '+(pi+1)+'</span>'
-        +'<button class="iconbtn del" data-delpuz="'+pi+'">🗑</button></div>'
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem">'+cols+'</div>'
-        +'<div style="display:flex;align-items:center;gap:.5rem;margin-top:.7rem"><span style="font-weight:800;white-space:nowrap">⭐ Konačno</span>'
-        +'<input class="field" data-final="'+pi+'" placeholder="Konačno rešenje" value="'+esc(puz.finalSolution||'')+'" style="font-weight:800;min-height:0;padding:.35rem .6rem"></div></div>';
+    // Pack name/description (persisted on change).
+    function saveMeta(){
+      var body={ name:($('as-name').value||'').trim()||p.id, puzzles:(p.puzzles||[]) };
+      var d=($('as-desc').value||'').trim(); if(d) body.description=d;
+      ctx.putPack(body,'Sačuvano.').catch(function(e){ showErr(e.message); });
+    }
+
+    var rows='';
+    puzzles.forEach(function(pz, idx){
+      var cols=asColArray(pz);
+      var chips='';
+      cols.forEach(function(c, ci){ chips+='<span class="chip">'+AS_LETTERS.charAt(ci)+': '+esc(c.solution||'?')+'</span>'; });
+      var ready=asKvizReady(pz)
+        ? '<span class="badge badge-ok">kviz</span>'
+        : '<span class="badge badge-draft">klasik</span>';
+      rows+='<div class="tbl-row" data-idx="'+idx+'" style="grid-template-columns:1fr auto">'
+        +'<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
+        +'<span class="t-text" style="font-weight:800">'+esc(pz.finalSolution||'(bez rešenja)')+'</span> '+ready+'</div>'
+        +'<div class="t-ans" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">'+chips+'</div></div>'
+        +'<div class="t-acts">'
+        +'<button class="iconbtn edit" title="Izmeni" data-idx="'+idx+'">✎</button>'
+        +'<button class="iconbtn del" title="Obriši" data-idx="'+idx+'">🗑</button></div></div>';
     });
-
-    var statusHtml;
-    if(asWork.dirty) statusHtml='<span style="color:var(--amber)">● Nesačuvane izmene — klikni „Sačuvaj".</span>';
-    else if(p.visibleInGame) statusHtml='<span style="color:var(--green)">✓ Sačuvano i vidljivo u igri.</span>';
-    else statusHtml='<span style="color:var(--amber)">Sačuvano, ali se ne vidi u igri: '+esc(p.error||'potrebna bar 1 slagalica')+'</span>';
+    if(puzzles.length===0) rows='<div class="empty">Prazan pack — dodaj prvu slagalicu.</div>';
 
     host.innerHTML=
-      '<label class="lbl">Naziv packa</label><input class="field" id="as-name" maxlength="80" value="'+esc(asWork.name)+'" style="max-width:340px">'
-      +'<label class="lbl" style="margin-top:.6rem">Opis (opciono)</label><input class="field" id="as-desc" maxlength="200" value="'+esc(asWork.description)+'" style="max-width:520px;margin-bottom:.8rem">'
-      +'<p class="hint" style="margin:.2rem 0 1rem">Svaka slagalica: 4 kolone (A–D) × 4 pojma + konačno rešenje. Za <b>kviz mod</b> popuni pitanje i pogrešne odgovore za SVAKO polje (tačan odgovor je sam pojam).</p>'
-      +(blocks||'<div class="empty">Još nema slagalica.</div>')
-      +'<div style="display:flex;gap:.7rem;align-items:center;margin-top:1rem;flex-wrap:wrap">'
-      +'<button class="btn btn-ghost" id="as-add">＋ Dodaj slagalicu</button>'
-      +'<button class="btn btn-primary" id="as-save"'+(asWork.dirty?'':' disabled')+'>Sačuvaj</button>'
-      +'<span class="hint" style="margin:0;font-weight:800">'+statusHtml+'</span></div>';
+      '<label class="lbl">Naziv packa</label><input class="field" id="as-name" maxlength="80" value="'+esc(p.name||'')+'" style="max-width:340px">'
+      +'<label class="lbl">Opis (opciono)</label><input class="field" id="as-desc" maxlength="200" value="'+esc(p.description||'')+'" style="max-width:520px">'
+      +'<div class="tbl-tools" style="margin-top:1.2rem"><span class="hint" style="margin:0">'+puzzles.length+' slagalica</span>'
+      +'<button class="btn btn-primary" id="as-new" style="margin-left:auto">＋ Nova slagalica</button></div>'
+      +'<div class="tbl"><div class="tbl-head" style="grid-template-columns:1fr auto"><span>Konačno rešenje</span><span style="text-align:right">Radnje</span></div>'
+      +rows+'</div>'
+      +'<button class="add-row" id="as-add">＋ Dodaj slagalicu</button>';
 
-    function markDirty(){ asWork.dirty=true; var b=$('as-save'); if(b)b.disabled=false; }
-    function rerender(){ renderAsoc(host, ctx); }
-    function idx3(s){ var a=s.split('-'); return [parseInt(a[0],10),parseInt(a[1],10),parseInt(a[2],10)]; }
+    $('as-name').onchange=saveMeta;
+    $('as-desc').onchange=saveMeta;
+    $('as-new').onclick=function(){ openAsocSheet(ctx, null); };
+    $('as-add').onclick=function(){ openAsocSheet(ctx, null); };
+    var edits=host.querySelectorAll('.iconbtn.edit');
+    for(var e=0;e<edits.length;e++) edits[e].onclick=function(){ openAsocSheet(ctx, parseInt(this.getAttribute('data-idx'),10)); };
+    var dels=host.querySelectorAll('.iconbtn.del');
+    for(var d=0;d<dels.length;d++) dels[d].onclick=function(){
+      var i=parseInt(this.getAttribute('data-idx'),10);
+      if(!window.confirm('Obrisati slagalicu '+(i+1)+'?'))return;
+      var next=(p.puzzles||[]).slice(); next.splice(i,1);
+      var body={ name:p.name||p.id, puzzles:next }; if(p.description)body.description=p.description;
+      ctx.putPack(body,'Slagalica obrisana.').catch(function(err){ showErr(err.message); });
+    };
+  }
 
-    $('as-name').oninput=function(){ asWork.name=this.value; markDirty(); };
-    $('as-desc').oninput=function(){ asWork.description=this.value; markDirty(); };
-    $('as-add').onclick=function(){ pz.push(asBlankPuzzle()); markDirty(); rerender(); };
+  // Local slide-in sheet (the kviz table's makeSheet lives in another IIFE).
+  function asMakeSheet(){
+    var host=$('sheet-host'); host.innerHTML='';
+    var scrim=document.createElement('div'); scrim.className='sheet-scrim';
+    var sheet=document.createElement('div'); sheet.className='sheet';
+    host.appendChild(scrim); host.appendChild(sheet);
+    function close(){ host.innerHTML=''; document.removeEventListener('keydown',onKey); }
+    function onKey(ev){ if(ev.key==='Escape') close(); }
+    document.addEventListener('keydown',onKey);
+    scrim.onclick=close;
+    return { sheet:sheet, close:close };
+  }
 
-    var delBtns=host.querySelectorAll('[data-delpuz]');
-    for(var d=0;d<delBtns.length;d++) delBtns[d].onclick=function(){ var i=parseInt(this.getAttribute('data-delpuz'),10); if(!window.confirm('Obrisati slagalicu '+(i+1)+'?'))return; pz.splice(i,1); markDirty(); rerender(); };
-    var ws=host.querySelectorAll('[data-w]');
-    for(var w=0;w<ws.length;w++) ws[w].oninput=function(){ var t=idx3(this.getAttribute('data-w')); pz[t[0]].columns[t[1]].fields[t[2]].word=this.value; markDirty(); };
-    var qs=host.querySelectorAll('[data-q]');
-    for(var q=0;q<qs.length;q++) qs[q].oninput=function(){ var t=idx3(this.getAttribute('data-q')); pz[t[0]].columns[t[1]].fields[t[2]].question=this.value; markDirty(); };
-    var wos=host.querySelectorAll('[data-wo]');
-    for(var o=0;o<wos.length;o++) wos[o].oninput=function(){ var t=idx3(this.getAttribute('data-wo')); pz[t[0]].columns[t[1]].fields[t[2]].wrongOptions=this.value.split(',').map(function(x){return x.trim();}).filter(Boolean); markDirty(); };
-    var sols=host.querySelectorAll('[data-sol]');
-    for(var s=0;s<sols.length;s++) sols[s].oninput=function(){ var a=this.getAttribute('data-sol').split('-'); pz[parseInt(a[0],10)].columns[parseInt(a[1],10)].solution=this.value; markDirty(); };
-    var fins=host.querySelectorAll('[data-final]');
-    for(var fni=0;fni<fins.length;fni++) fins[fni].oninput=function(){ pz[parseInt(this.getAttribute('data-final'),10)].finalSolution=this.value; markDirty(); };
+  function openAsocSheet(ctx, editIndex){
+    var p=ctx.pack;
+    var existing=(editIndex!=null)?(p.puzzles||[])[editIndex]:null;
+    var cols=asColArray(existing||asBlankPuzzle());
+    var finalSol=existing?(existing.finalSolution||''):'';
+    var s=asMakeSheet(); var sheet=s.sheet, close=s.close;
+    var subStyle='style="font-size:.78rem;padding:.35rem .55rem;min-height:0;margin-top:.25rem"';
 
-    $('as-save').onclick=function(){
-      var body={ name:(asWork.name||'').trim()||p.id, puzzles: asBuild(pz) };
-      var desc=(asWork.description||'').trim(); if(desc) body.description=desc;
-      $('as-save').disabled=true;
-      api('PUT','/api/admin/asocijacije-packs/'+p.id, body).then(function(dd){ asWork=null; ctx.updatePack(dd.item); showOk('Sačuvano.'); renderAsoc(host, ctx); })
-        .catch(function(e){ showErr(e.message); var b=$('as-save'); if(b)b.disabled=false; });
+    var colHtml='';
+    cols.forEach(function(c, ci){
+      var fields='';
+      c.fields.forEach(function(f, fi){
+        var k=ci+'-'+fi;
+        fields+='<div style="margin-bottom:.6rem;padding:.5rem;border:1px solid var(--line2);border-radius:10px">'
+          +'<input class="field" data-w="'+k+'" placeholder="Pojam" value="'+esc(f.word||'')+'" style="font-weight:700;min-height:0;padding:.4rem .6rem">'
+          +'<input class="field" data-q="'+k+'" placeholder="Kviz pitanje (opc.)" value="'+esc(f.question||'')+'" '+subStyle+'>'
+          +'<input class="field" data-wo="'+k+'" placeholder="Pogrešni odgovori, zarezom" value="'+esc((f.wrongOptions||[]).join(', '))+'" '+subStyle+'>'
+          +'</div>';
+      });
+      colHtml+='<div style="min-width:0"><div style="font-weight:800;color:var(--navy);margin-bottom:.35rem">Kolona '+AS_LETTERS.charAt(ci)+'</div>'
+        +'<input class="field" data-sol="'+ci+'" placeholder="Rešenje kolone" value="'+esc(c.solution||'')+'" style="font-weight:800;min-height:0;padding:.4rem .6rem;margin-bottom:.6rem">'
+        +fields+'</div>';
+    });
+
+    sheet.innerHTML=
+      '<div class="sheet-head"><div style="display:flex;align-items:center;gap:.6rem"><div style="flex:1">'
+      +'<div class="sheet-eyebrow">Asocijacije</div><div class="sheet-title">'+(editIndex!=null?'Slagalica '+(editIndex+1):'Nova slagalica')+'</div></div>'
+      +'<button class="sheet-x" id="sh-x">✕</button></div></div>'
+      +'<div class="sheet-body">'
+      +'<p class="hint" style="margin:0 0 1rem">4 kolone (A–D) × 4 pojma + konačno rešenje. Za <b>kviz mod</b> popuni pitanje i pogrešne odgovore za SVAKO polje (tačan odgovor je sam pojam).</p>'
+      +'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem">'+colHtml+'</div>'
+      +'<label class="lbl">⭐ Konačno rešenje</label><input class="field" id="sh-final" placeholder="Konačno rešenje" value="'+esc(finalSol)+'" style="font-weight:800;max-width:420px">'
+      +'</div>'
+      +'<div class="sheet-foot"><button class="btn btn-ghost" id="sh-cancel">Otkaži</button><span style="flex:1"></span>'
+      +'<button class="btn btn-primary" id="sh-save">Sačuvaj slagalicu</button></div>';
+
+    $('sh-x').onclick=close;
+    $('sh-cancel').onclick=close;
+    $('sh-save').onclick=function(){
+      // Read the form into a puzzle object.
+      function val(sel){ var el=sheet.querySelector(sel); return el?el.value.trim():''; }
+      var puzzle={ finalSolution: val('#sh-final'), columns: [] };
+      for(var ci=0;ci<4;ci++){
+        var col={ solution: val('[data-sol="'+ci+'"]'), fields: [] };
+        for(var fi=0;fi<4;fi++){
+          var k=ci+'-'+fi;
+          var fo={ word: val('[data-w="'+k+'"]') };
+          var q=val('[data-q="'+k+'"]'); if(q)fo.question=q;
+          var woEl=sheet.querySelector('[data-wo="'+k+'"]');
+          var wo=(woEl?woEl.value:'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+          if(wo.length)fo.wrongOptions=wo;
+          col.fields.push(fo);
+        }
+        puzzle.columns.push(col);
+      }
+      // Light client validation (server would 400 otherwise).
+      if(!puzzle.finalSolution) return showErr('Unesi konačno rešenje.');
+      for(var c=0;c<4;c++){
+        if(!puzzle.columns[c].solution) return showErr('Unesi rešenje za kolonu '+AS_LETTERS.charAt(c)+'.');
+        for(var f=0;f<4;f++) if(!puzzle.columns[c].fields[f].word) return showErr('Popuni sve pojmove u koloni '+AS_LETTERS.charAt(c)+'.');
+      }
+      var next=(p.puzzles||[]).slice();
+      if(editIndex!=null) next[editIndex]=puzzle; else next.push(puzzle);
+      var body={ name:p.name||p.id, puzzles:next }; if(p.description)body.description=p.description;
+      $('sh-save').disabled=true;
+      ctx.putPack(body, editIndex!=null?'Slagalica izmenjena.':'Slagalica dodata.')
+        .then(close)
+        .catch(function(err){ showErr(err.message); var b=$('sh-save'); if(b)b.disabled=false; });
     };
   }
 
