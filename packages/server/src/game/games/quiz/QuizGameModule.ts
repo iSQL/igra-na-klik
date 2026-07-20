@@ -4,10 +4,14 @@ import type {
   KvizAnagramQuestionFull,
   KvizBrojQuestionFull,
   KvizBrojRoundResult,
+  KvizDominoQuestionFull,
+  KvizDominoRoundResult,
   KvizDopunaQuestionFull,
   KvizEmojiQuestionFull,
   KvizEmojiRoundResult,
   KvizGeoQuestionFull,
+  KvizMatricaQuestionFull,
+  KvizMatricaRoundResult,
   KvizPikselQuestionFull,
   KvizQuestionFull,
   KvizQuestionType,
@@ -67,6 +71,8 @@ const ALL_KVIZ_TYPES: KvizQuestionType[] = [
   'piksel',
   'anagram',
   'redosled',
+  'domino',
+  'matrica',
 ];
 
 /** Free-text types sharing the emoji guess/retry machinery. */
@@ -128,6 +134,7 @@ export class QuizGameModule extends BaseGameModule {
       scramble: '',
       scramblePool: [],
       scrambleFixed: 0,
+      dominoProgress: new Map(),
     };
 
     // Reset feedback bookkeeping for this match. Bank keys are always known
@@ -399,6 +406,55 @@ export class QuizGameModule extends BaseGameModule {
         seen.add(v);
       }
       answer = { kind: 'order', order };
+    } else if (action === 'quiz:matrix') {
+      if (question.type !== 'matrica') return null;
+      const raw = data.cells;
+      if (!Array.isArray(raw) || raw.length !== question.correct.length) return null;
+      const n = question.cells.length;
+      const seen = new Set<number>();
+      const cells: number[] = [];
+      for (const v of raw) {
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v >= n || seen.has(v)) {
+          return null;
+        }
+        seen.add(v);
+        cells.push(v);
+      }
+      const correctSet = new Set(question.correct);
+      let hit = 0;
+      for (const v of cells) if (correctSet.has(v)) hit++;
+      const timeMs = Date.now() - this.state.questionStartTime;
+      const timeRemaining = Math.max(0, question.timeLimit * 1000 - timeMs);
+      const points = Math.round(
+        1000 * (timeRemaining / (question.timeLimit * 1000)) * (hit / question.correct.length)
+      );
+      const player = room.players.find((p) => p.id === playerId);
+      if (player) player.score += points;
+      answer = { kind: 'matrix', cells, hit, points };
+    } else if (action === 'quiz:domino') {
+      if (question.type !== 'domino') return null;
+      const dir = data.answer;
+      if (dir !== 'before' && dir !== 'after') return null;
+      const items = question.items;
+      const prog =
+        this.state.dominoProgress.get(playerId) ?? { pos: 1, streak: 0, done: false };
+      if (prog.done || prog.pos >= items.length) return this.buildGameState(room);
+      const correctDir =
+        items[prog.pos].value >= items[prog.pos - 1].value ? 'after' : 'before';
+      if (dir === correctDir) {
+        prog.streak++;
+        prog.pos++;
+        if (prog.pos >= items.length) prog.done = true;
+      } else {
+        prog.done = true;
+        prog.wrongAt = prog.pos;
+      }
+      this.state.dominoProgress.set(playerId, prog);
+      if (prog.done) {
+        this.state.answers.set(playerId, { kind: 'domino', streak: prog.streak });
+        if (this.allExpectedAnswered(room)) this.transitionToResults(room);
+      }
+      return this.buildGameState(room);
     } else {
       return null;
     }
@@ -493,6 +549,12 @@ export class QuizGameModule extends BaseGameModule {
             this.state.scramblePool = [];
             this.state.scrambleFixed = 0;
           }
+          this.state.dominoProgress = new Map();
+          if (q.type === 'domino') {
+            for (const id of this.state.expectedAnswererIds) {
+              this.state.dominoProgress.set(id, { pos: 1, streak: 0, done: false });
+            }
+          }
         }
         break;
       }
@@ -585,13 +647,29 @@ export class QuizGameModule extends BaseGameModule {
         const player = room.players.find((p) => p.id === playerId);
         if (player) player.score += points;
       }
+    } else if (question?.type === 'domino') {
+      // Streak scoring: proportional to the consecutive-correct run, capped at
+      // 1000 for a full clear. lastRoundDistances doubles as the streak store.
+      const maxStreak = Math.max(1, question.items.length - 1);
+      for (const id of this.state.expectedAnswererIds) {
+        const prog = this.state.dominoProgress.get(id);
+        const streak = prog ? prog.streak : 0;
+        const points = Math.round(1000 * Math.min(1, streak / maxStreak));
+        this.state.lastRoundScores.set(id, points);
+        this.state.lastRoundDistances.set(id, streak);
+        const player = room.players.find((p) => p.id === id);
+        if (player) player.score += points;
+      }
     }
+    // matrica is scored on submit (in onPlayerAction); nothing to do here.
 
     this.state.phase = 'showing-results';
     const rich =
       question?.type === 'geo' ||
       question?.type === 'broj' ||
       question?.type === 'redosled' ||
+      question?.type === 'domino' ||
+      question?.type === 'matrica' ||
       (question ? isTextQuestion(question) : false);
     this.state.phaseTimeRemaining = rich
       ? (this.timings.RICH_RESULTS_DURATION ?? RICH_RESULTS_DURATION)
@@ -649,6 +727,12 @@ export class QuizGameModule extends BaseGameModule {
           data.quote = question.quote;
         } else if (question.type === 'redosled') {
           data.items = question.items;
+        } else if (question.type === 'matrica') {
+          data.cells = question.cells;
+        } else if (question.type === 'domino') {
+          data.lowerLabel = question.lowerLabel;
+          data.higherLabel = question.higherLabel;
+          data.dominoTotal = question.items.length;
         }
         break;
 
@@ -688,6 +772,20 @@ export class QuizGameModule extends BaseGameModule {
           data.scramble = this.state.scramble;
         } else if (question.type === 'redosled') {
           data.items = question.items;
+        } else if (question.type === 'matrica') {
+          data.cells = question.cells;
+        } else if (question.type === 'domino') {
+          data.lowerLabel = question.lowerLabel;
+          data.higherLabel = question.higherLabel;
+          data.dominoTotal = question.items.length;
+          if (question.unit) data.unit = question.unit;
+          if (question.valueType) data.valueType = question.valueType;
+          // Public streak board for the TV (counts only — not secret).
+          data.dominoBoard = connectedPlayers.map((p) => {
+            const prog =
+              this.state.dominoProgress.get(p.id) ?? { pos: 1, streak: 0, done: false };
+            return { playerId: p.id, streak: prog.streak, done: prog.done };
+          });
         } else {
           data.options = question.options;
           if (question.type === 'audio') data.audioUrl = question.audioUrl;
@@ -702,10 +800,28 @@ export class QuizGameModule extends BaseGameModule {
           if (answer?.kind === 'pin') pd.ownPin = answer.pin;
           if (answer?.kind === 'value') pd.ownGuess = answer.value;
           if (answer?.kind === 'order') pd.ownOrder = answer.order;
+          if (answer?.kind === 'matrix') pd.ownCells = answer.cells;
           if (isTextQuestion(question)) {
             pd.ownGuess = this.state.emojiLastGuess.get(player.id) ?? null;
             pd.lastWrong = this.state.emojiWrong.get(player.id) ?? null;
             if (answer?.kind === 'text') pd.ownPoints = answer.points;
+          }
+          if (question.type === 'domino') {
+            const prog =
+              this.state.dominoProgress.get(player.id) ?? { pos: 1, streak: 0, done: false };
+            const items = question.items;
+            pd.streak = prog.streak;
+            pd.done = prog.done;
+            // Reference = the previously-shown item (label + value revealed);
+            // current = the item to place (label only — value stays hidden).
+            const refIdx = Math.min(prog.pos - 1, items.length - 1);
+            const ref = items[refIdx];
+            pd.reference = { label: ref.label, value: ref.value };
+            if (!prog.done && prog.pos < items.length) {
+              pd.current = { label: items[prog.pos].label };
+            } else {
+              pd.current = null;
+            }
           }
           playerData[player.id] = pd;
         }
@@ -755,6 +871,24 @@ export class QuizGameModule extends BaseGameModule {
             playerData[player.id] = {
               ownPoints: this.state.lastRoundScores.get(player.id) ?? 0,
               ownAccuracy: this.state.lastRoundDistances.get(player.id) ?? null,
+            };
+          }
+        } else if (question.type === 'domino') {
+          data.dominoResult = this.buildDominoResult(room, question);
+          for (const player of room.players) {
+            playerData[player.id] = {
+              ownPoints: this.state.lastRoundScores.get(player.id) ?? 0,
+              ownStreak: this.state.lastRoundDistances.get(player.id) ?? 0,
+            };
+          }
+        } else if (question.type === 'matrica') {
+          data.matricaResult = this.buildMatricaResult(room, question);
+          for (const player of room.players) {
+            const answer = this.state.answers.get(player.id);
+            playerData[player.id] = {
+              ownPoints: answer?.kind === 'matrix' ? answer.points : 0,
+              ownHit: answer?.kind === 'matrix' ? answer.hit : null,
+              ownCells: answer?.kind === 'matrix' ? answer.cells : null,
             };
           }
         } else {
@@ -984,6 +1118,64 @@ export class QuizGameModule extends BaseGameModule {
       text: question.text,
       correctItems,
       presentedItems: question.items,
+      results,
+    };
+  }
+
+  private buildDominoResult(
+    room: Room,
+    question: KvizDominoQuestionFull
+  ): KvizDominoRoundResult {
+    const results = room.players
+      .filter((p) => p.isConnected || this.state.answers.has(p.id))
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        avatarColor: p.avatarColor,
+        streak: this.state.lastRoundDistances.get(p.id) ?? 0,
+        roundScore: this.state.lastRoundScores.get(p.id) ?? 0,
+        totalScore: p.score,
+      }))
+      .sort((a, b) => b.roundScore - a.roundScore);
+
+    return {
+      text: question.text,
+      lowerLabel: question.lowerLabel,
+      higherLabel: question.higherLabel,
+      unit: question.unit,
+      valueType: question.valueType,
+      items: question.items,
+      maxStreak: Math.max(1, question.items.length - 1),
+      results,
+    };
+  }
+
+  private buildMatricaResult(
+    room: Room,
+    question: KvizMatricaQuestionFull
+  ): KvizMatricaRoundResult {
+    const results = room.players
+      .filter((p) => p.isConnected || this.state.answers.has(p.id))
+      .map((p) => {
+        const answer = this.state.answers.get(p.id);
+        const selected = answer?.kind === 'matrix' ? answer.cells : null;
+        return {
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          selected,
+          hit: answer?.kind === 'matrix' ? answer.hit : null,
+          roundScore: answer?.kind === 'matrix' ? answer.points : 0,
+          totalScore: p.score,
+        };
+      })
+      .sort((a, b) => b.roundScore - a.roundScore);
+
+    return {
+      text: question.text,
+      cells: question.cells,
+      correct: question.correct,
+      explanation: question.explanation,
       results,
     };
   }

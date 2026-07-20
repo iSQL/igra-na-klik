@@ -63,6 +63,8 @@ const KVIZ_ALL_TYPES: KvizQuestionType[] = [
   'piksel',
   'anagram',
   'redosled',
+  'domino',
+  'matrica',
 ];
 const KVIZ_TYPE_BADGES: Record<KvizQuestionType, string> = {
   obicno: '❓',
@@ -76,6 +78,8 @@ const KVIZ_TYPE_BADGES: Record<KvizQuestionType, string> = {
   piksel: '🧩',
   anagram: '🔀',
   redosled: '↕️',
+  domino: '🁢',
+  matrica: '🔲',
 };
 
 /** Effective checked pack ids (null = all) restricted to loaded packs. */

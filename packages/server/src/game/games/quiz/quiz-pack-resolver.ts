@@ -9,9 +9,13 @@ import type {
 } from '@igra/shared';
 import {
   KVIZ_ANAGRAM_DEFAULT_TEXT,
+  KVIZ_DOMINO_DEFAULT_HIGHER,
+  KVIZ_DOMINO_DEFAULT_LOWER,
+  KVIZ_DOMINO_DEFAULT_TEXT,
   KVIZ_DOPUNA_DEFAULT_TEXT,
   KVIZ_EMOJI_DEFAULT_TEXT,
   KVIZ_GEO_DEFAULT_TEXT,
+  KVIZ_MATRICA_DEFAULT_TEXT,
   KVIZ_PIKSEL_DEFAULT_TEXT,
   kvizOptionsFromStrings,
   kvizTypeCounts,
@@ -156,6 +160,34 @@ export function importQuestionsToRuntime(
         items: perm.map((idx) => r.items[idx]),
         order: perm,
         timeLimit: r.timeLimit!,
+      };
+    }
+
+    if (type === 'domino') {
+      const d = q as Extract<KvizImportQuestion, { type: 'domino' }>;
+      return {
+        type: 'domino',
+        id,
+        text: d.text ?? KVIZ_DOMINO_DEFAULT_TEXT,
+        items: d.items,
+        lowerLabel: d.lowerLabel ?? KVIZ_DOMINO_DEFAULT_LOWER,
+        higherLabel: d.higherLabel ?? KVIZ_DOMINO_DEFAULT_HIGHER,
+        unit: d.unit,
+        valueType: d.valueType,
+        timeLimit: d.timeLimit!,
+      };
+    }
+
+    if (type === 'matrica') {
+      const m = q as Extract<KvizImportQuestion, { type: 'matrica' }>;
+      return {
+        type: 'matrica',
+        id,
+        text: m.text ?? KVIZ_MATRICA_DEFAULT_TEXT,
+        cells: m.cells,
+        correct: m.correct,
+        explanation: m.explanation,
+        timeLimit: m.timeLimit!,
       };
     }
 

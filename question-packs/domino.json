@@ -1,0 +1,864 @@
+{
+  "name": "Domino",
+  "description": "Stavke izlaze jedna po jedna — pogodi da li je svaka nova pre/posle (ili manje/više) od prethodne. Gradi niz dok ne pogrešiš!",
+  "category": "ostalo",
+  "questions": [
+    {
+      "type": "domino",
+      "text": "Godine izlaska filmova",
+      "items": [
+        {
+          "label": "Zvezdani ratovi",
+          "value": 1977
+        },
+        {
+          "label": "Titanik",
+          "value": 1997
+        },
+        {
+          "label": "Matrix",
+          "value": 1999
+        },
+        {
+          "label": "Avatar",
+          "value": 2009
+        },
+        {
+          "label": "Osvetnici: Kraj igre",
+          "value": 2019
+        }
+      ],
+      "lowerLabel": "Pre",
+      "higherLabel": "Posle",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Godine velikih otkrića i izuma",
+      "items": [
+        {
+          "label": "Telefon",
+          "value": 1876
+        },
+        {
+          "label": "Radio",
+          "value": 1895
+        },
+        {
+          "label": "Televizija",
+          "value": 1927
+        },
+        {
+          "label": "Internet (ARPANET)",
+          "value": 1969
+        },
+        {
+          "label": "Prvi iPhone",
+          "value": 2007
+        }
+      ],
+      "lowerLabel": "Pre",
+      "higherLabel": "Posle",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Godine velikih istorijskih događaja",
+      "items": [
+        {
+          "label": "Prvi svetski rat",
+          "value": 1914
+        },
+        {
+          "label": "Drugi svetski rat",
+          "value": 1939
+        },
+        {
+          "label": "Sletanje na Mesec",
+          "value": 1969
+        },
+        {
+          "label": "Pad Berlinskog zida",
+          "value": 1989
+        },
+        {
+          "label": "Raspad SFRJ",
+          "value": 1991
+        }
+      ],
+      "lowerLabel": "Pre",
+      "higherLabel": "Posle",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Godine premijera popularnih serija",
+      "items": [
+        {
+          "label": "Simpsonovi",
+          "value": 1989
+        },
+        {
+          "label": "Prijatelji",
+          "value": 1994
+        },
+        {
+          "label": "Kancelarija (SAD)",
+          "value": 2005
+        },
+        {
+          "label": "Breaking Bad",
+          "value": 2008
+        },
+        {
+          "label": "Igra prestola",
+          "value": 2011
+        }
+      ],
+      "lowerLabel": "Pre",
+      "higherLabel": "Posle",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Godine osnivanja poznatih kompanija",
+      "items": [
+        {
+          "label": "Coca-Cola",
+          "value": 1886
+        },
+        {
+          "label": "Apple",
+          "value": 1976
+        },
+        {
+          "label": "Amazon",
+          "value": 1994
+        },
+        {
+          "label": "Google",
+          "value": 1998
+        },
+        {
+          "label": "Facebook",
+          "value": 2004
+        }
+      ],
+      "lowerLabel": "Pre",
+      "higherLabel": "Posle",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Visine planina",
+      "items": [
+        {
+          "label": "Triglav",
+          "value": 2864
+        },
+        {
+          "label": "Mont Blanc",
+          "value": 4809
+        },
+        {
+          "label": "Kilimandžaro",
+          "value": 5895
+        },
+        {
+          "label": "Mont Everest",
+          "value": 8849
+        }
+      ],
+      "lowerLabel": "Niža",
+      "higherLabel": "Viša",
+      "unit": "m",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Dužine reka",
+      "items": [
+        {
+          "label": "Drina",
+          "value": 346
+        },
+        {
+          "label": "Sava",
+          "value": 945
+        },
+        {
+          "label": "Dunav",
+          "value": 2850
+        },
+        {
+          "label": "Nil",
+          "value": 6650
+        }
+      ],
+      "lowerLabel": "Kraća",
+      "higherLabel": "Duža",
+      "unit": "km",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Prosečna udaljenost planeta od Sunca",
+      "items": [
+        {
+          "label": "Merkur",
+          "value": 58
+        },
+        {
+          "label": "Venera",
+          "value": 108
+        },
+        {
+          "label": "Zemlja",
+          "value": 150
+        },
+        {
+          "label": "Mars",
+          "value": 228
+        },
+        {
+          "label": "Jupiter",
+          "value": 778
+        }
+      ],
+      "lowerLabel": "Bliža",
+      "higherLabel": "Dalja",
+      "unit": "mil. km",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj igrača na terenu (po timu)",
+      "items": [
+        {
+          "label": "Košarka",
+          "value": 5
+        },
+        {
+          "label": "Odbojka",
+          "value": 6
+        },
+        {
+          "label": "Vaterpolo",
+          "value": 7
+        },
+        {
+          "label": "Fudbal",
+          "value": 11
+        },
+        {
+          "label": "Ragbi",
+          "value": 15
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Tačke topljenja metala",
+      "items": [
+        {
+          "label": "Kalaj",
+          "value": 232
+        },
+        {
+          "label": "Olovo",
+          "value": 327
+        },
+        {
+          "label": "Cink",
+          "value": 420
+        },
+        {
+          "label": "Aluminijum",
+          "value": 660
+        },
+        {
+          "label": "Gvožđe",
+          "value": 1538
+        }
+      ],
+      "lowerLabel": "Niža",
+      "higherLabel": "Viša",
+      "unit": "°C",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Brzina životinja i ljudi",
+      "items": [
+        {
+          "label": "Čovek (sprint)",
+          "value": 37
+        },
+        {
+          "label": "Zec",
+          "value": 56
+        },
+        {
+          "label": "Konj",
+          "value": 70
+        },
+        {
+          "label": "Lav",
+          "value": 80
+        },
+        {
+          "label": "Gepard",
+          "value": 120
+        }
+      ],
+      "lowerLabel": "Sporije",
+      "higherLabel": "Brže",
+      "unit": "km/h",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Trajanje filmova",
+      "items": [
+        {
+          "label": "Matrix",
+          "value": 136
+        },
+        {
+          "label": "Interstellar",
+          "value": 169
+        },
+        {
+          "label": "Osvetnici: Kraj igre",
+          "value": 181
+        },
+        {
+          "label": "Titanik",
+          "value": 195
+        },
+        {
+          "label": "Gospodar prstenova: Povratak kralja",
+          "value": 201
+        }
+      ],
+      "lowerLabel": "Kraći",
+      "higherLabel": "Duži",
+      "unit": "min",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Visine građevina",
+      "items": [
+        {
+          "label": "Ajfelova kula",
+          "value": 330
+        },
+        {
+          "label": "Empire State Building",
+          "value": 443
+        },
+        {
+          "label": "Šangajska kula",
+          "value": 632
+        },
+        {
+          "label": "Burj Khalifa",
+          "value": 828
+        }
+      ],
+      "lowerLabel": "Niža",
+      "higherLabel": "Viša",
+      "unit": "m",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Površine država",
+      "items": [
+        {
+          "label": "Srbija",
+          "value": 88499
+        },
+        {
+          "label": "Grčka",
+          "value": 131957
+        },
+        {
+          "label": "Rumunija",
+          "value": 238397
+        },
+        {
+          "label": "Poljska",
+          "value": 312696
+        },
+        {
+          "label": "Francuska",
+          "value": 543940
+        }
+      ],
+      "lowerLabel": "Manja",
+      "higherLabel": "Veća",
+      "unit": "km²",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj stanovnika gradova u Srbiji (popis 2022)",
+      "items": [
+        {
+          "label": "Subotica",
+          "value": 97910
+        },
+        {
+          "label": "Kragujevac",
+          "value": 150835
+        },
+        {
+          "label": "Niš",
+          "value": 183164
+        },
+        {
+          "label": "Novi Sad",
+          "value": 356117
+        },
+        {
+          "label": "Beograd",
+          "value": 1166763
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Prosečan životni vek životinja",
+      "items": [
+        {
+          "label": "Miš",
+          "value": 2
+        },
+        {
+          "label": "Pas",
+          "value": 12
+        },
+        {
+          "label": "Papagaj ara",
+          "value": 50
+        },
+        {
+          "label": "Slon",
+          "value": 60
+        },
+        {
+          "label": "Kornjača",
+          "value": 100
+        }
+      ],
+      "lowerLabel": "Kraći",
+      "higherLabel": "Duži",
+      "unit": "god.",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj zuba kod odraslih jedinki",
+      "items": [
+        {
+          "label": "Miš",
+          "value": 16
+        },
+        {
+          "label": "Mačka",
+          "value": 30
+        },
+        {
+          "label": "Čovek",
+          "value": 32
+        },
+        {
+          "label": "Pas",
+          "value": 42
+        },
+        {
+          "label": "Svinja",
+          "value": 44
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Dubina mora i okeana",
+      "items": [
+        {
+          "label": "Jadransko more",
+          "value": 1233
+        },
+        {
+          "label": "Crno more",
+          "value": 2212
+        },
+        {
+          "label": "Sredozemno more",
+          "value": 5267
+        },
+        {
+          "label": "Atlantski okean",
+          "value": 8376
+        },
+        {
+          "label": "Tihi okean",
+          "value": 10935
+        }
+      ],
+      "lowerLabel": "Plići",
+      "higherLabel": "Dublji",
+      "unit": "m",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Kapacitet fudbalskih stadiona",
+      "items": [
+        {
+          "label": "Stadion Rajko Mitić",
+          "value": 53000
+        },
+        {
+          "label": "Santiago Bernabeu",
+          "value": 81000
+        },
+        {
+          "label": "Marakana",
+          "value": 78000
+        },
+        {
+          "label": "Wembley",
+          "value": 90000
+        },
+        {
+          "label": "Camp Nou",
+          "value": 99000
+        }
+      ],
+      "lowerLabel": "Manji",
+      "higherLabel": "Veći",
+      "unit": "gled.",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj slova u nazivima glavnih gradova",
+      "items": [
+        {
+          "label": "Rim",
+          "value": 3
+        },
+        {
+          "label": "Pariz",
+          "value": 5
+        },
+        {
+          "label": "Beograd",
+          "value": 7
+        },
+        {
+          "label": "Vašington",
+          "value": 9
+        },
+        {
+          "label": "Budimpešta",
+          "value": 10
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj slova u nazivima životinja",
+      "items": [
+        {
+          "label": "Pas",
+          "value": 3
+        },
+        {
+          "label": "Slon",
+          "value": 4
+        },
+        {
+          "label": "Mačka",
+          "value": 5
+        },
+        {
+          "label": "Žirafa",
+          "value": 6
+        },
+        {
+          "label": "Nosorog",
+          "value": 7
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj nogu kod životinja",
+      "items": [
+        {
+          "label": "Čovek",
+          "value": 2
+        },
+        {
+          "label": "Pas",
+          "value": 4
+        },
+        {
+          "label": "Mrav",
+          "value": 6
+        },
+        {
+          "label": "Pauk",
+          "value": 8
+        },
+        {
+          "label": "Rak",
+          "value": 10
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj članova muzičkog sastava",
+      "items": [
+        {
+          "label": "Kvartet",
+          "value": 4
+        },
+        {
+          "label": "Kvintet",
+          "value": 5
+        },
+        {
+          "label": "Sekstet",
+          "value": 6
+        },
+        {
+          "label": "Septet",
+          "value": 7
+        },
+        {
+          "label": "Oktet",
+          "value": 8
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj stranica geometrijskih oblika",
+      "items": [
+        {
+          "label": "Trougao",
+          "value": 3
+        },
+        {
+          "label": "Kvadrat",
+          "value": 4
+        },
+        {
+          "label": "Petougao",
+          "value": 5
+        },
+        {
+          "label": "Šestougao",
+          "value": 6
+        },
+        {
+          "label": "Osmougao",
+          "value": 8
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Vremenske jedinice — broj godina",
+      "items": [
+        {
+          "label": "Godina",
+          "value": 1
+        },
+        {
+          "label": "Decenija",
+          "value": 10
+        },
+        {
+          "label": "Vek",
+          "value": 100
+        },
+        {
+          "label": "Milenijum",
+          "value": 1000
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Broj komora srca kod životinja",
+      "items": [
+        {
+          "label": "Riba",
+          "value": 2
+        },
+        {
+          "label": "Žaba",
+          "value": 3
+        },
+        {
+          "label": "Čovek",
+          "value": 4
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Prečnik planeta",
+      "items": [
+        {
+          "label": "Merkur",
+          "value": 4879
+        },
+        {
+          "label": "Mars",
+          "value": 6779
+        },
+        {
+          "label": "Venera",
+          "value": 12104
+        },
+        {
+          "label": "Zemlja",
+          "value": 12742
+        },
+        {
+          "label": "Jupiter",
+          "value": 139820
+        }
+      ],
+      "lowerLabel": "Manji",
+      "higherLabel": "Veći",
+      "unit": "km",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Vremenske jedinice — broj minuta",
+      "items": [
+        {
+          "label": "Sat",
+          "value": 60
+        },
+        {
+          "label": "Dan",
+          "value": 1440
+        },
+        {
+          "label": "Nedelja",
+          "value": 10080
+        },
+        {
+          "label": "Mesec (30 dana)",
+          "value": 43200
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "unit": "min",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Kalorije u namirnicama (na 100g)",
+      "items": [
+        {
+          "label": "Krastavac",
+          "value": 15
+        },
+        {
+          "label": "Jabuka",
+          "value": 52
+        },
+        {
+          "label": "Banana",
+          "value": 89
+        },
+        {
+          "label": "Kuvan pirinač",
+          "value": 130
+        },
+        {
+          "label": "Čokolada",
+          "value": 546
+        }
+      ],
+      "lowerLabel": "Manje",
+      "higherLabel": "Više",
+      "unit": "kcal",
+      "timeLimit": 35
+    },
+    {
+      "type": "domino",
+      "text": "Vreme potrebno planeti da obiđe Sunce",
+      "items": [
+        {
+          "label": "Merkur",
+          "value": 88
+        },
+        {
+          "label": "Venera",
+          "value": 225
+        },
+        {
+          "label": "Zemlja",
+          "value": 365
+        },
+        {
+          "label": "Mars",
+          "value": 687
+        },
+        {
+          "label": "Jupiter",
+          "value": 4333
+        }
+      ],
+      "lowerLabel": "Kraće",
+      "higherLabel": "Duže",
+      "unit": "dana",
+      "timeLimit": 35
+    }
+  ]
+}

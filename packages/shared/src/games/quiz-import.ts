@@ -139,6 +139,38 @@ export interface KvizImportRedosled {
   timeLimit?: number;
 }
 
+export interface KvizImportDominoItem {
+  label: string;
+  value: number;
+}
+
+export interface KvizImportDomino {
+  type: 'domino';
+  /** Prompt text; defaults to KVIZ_DOMINO_DEFAULT_TEXT. */
+  text?: string;
+  /** 3–12 items in presented order; each has a comparable numeric `value`. */
+  items: KvizImportDominoItem[];
+  /** Button labels; default "Pre"/"Posle" (lower/higher value). */
+  lowerLabel?: string;
+  higherLabel?: string;
+  unit?: string;
+  valueType?: KvizValueType;
+  timeLimit?: number;
+}
+
+export interface KvizImportMatrica {
+  type: 'matrica';
+  /** Prompt text; defaults to KVIZ_MATRICA_DEFAULT_TEXT. */
+  text?: string;
+  /** Exactly 9 grid terms (3×3), row-major. */
+  cells: string[];
+  /** The 3 indices (0–8) of the connected triple. */
+  correct: number[];
+  /** Optional reveal note explaining the link. */
+  explanation?: string;
+  timeLimit?: number;
+}
+
 /**
  * Metadata common to every question shape. `tags` are author-only (difficulty
  * / NSFW) and never reach players — see {@link KvizQuestionTag}.
@@ -159,6 +191,8 @@ export type KvizImportQuestion = (
   | KvizImportPiksel
   | KvizImportAnagram
   | KvizImportRedosled
+  | KvizImportDomino
+  | KvizImportMatrica
 ) &
   KvizImportQuestionMeta;
 
@@ -195,6 +229,8 @@ export const KVIZ_DEFAULT_TIME_LIMIT: Record<KvizQuestionType, number> = {
   piksel: 25,
   anagram: 25,
   redosled: 35,
+  domino: 35,
+  matrica: 30,
 };
 
 const MIN_TIME_LIMIT = 5;
@@ -230,6 +266,10 @@ export const KVIZ_ULJEZ_DEFAULT_TEXT = 'Pronađi uljeza!';
 export const KVIZ_DOPUNA_DEFAULT_TEXT = 'Završi citat!';
 export const KVIZ_PIKSEL_DEFAULT_TEXT = 'Šta je na slici?';
 export const KVIZ_ANAGRAM_DEFAULT_TEXT = 'Reši anagram!';
+export const KVIZ_DOMINO_DEFAULT_TEXT = 'Pre ili posle?';
+export const KVIZ_MATRICA_DEFAULT_TEXT = 'Poveži 3 pojma koja idu zajedno!';
+export const KVIZ_DOMINO_DEFAULT_LOWER = 'Pre';
+export const KVIZ_DOMINO_DEFAULT_HIGHER = 'Posle';
 
 /**
  * Pseudo pack id representing the built-in question bank in the pack
@@ -580,6 +620,16 @@ const MAX_REDOSLED_ITEMS = 10;
 const MAX_REDOSLED_ITEM_LENGTH = 80;
 // Dopuna quote cap (longer than plain question text — it's a quote/lyric).
 const MAX_QUOTE_LENGTH = 300;
+// Domino limits.
+const MIN_DOMINO_ITEMS = 3;
+const MAX_DOMINO_ITEMS = 12;
+const MAX_DOMINO_LABEL_LENGTH = 80;
+const MAX_DOMINO_BTN_LENGTH = 24;
+// Matrica limits (fixed 3×3 grid, pick 3).
+const MATRICA_CELLS = 9;
+const MATRICA_PICK = 3;
+const MAX_MATRICA_CELL_LENGTH = 60;
+const MAX_MATRICA_EXPLANATION_LENGTH = 200;
 
 /**
  * Validates and normalizes raw parsed JSON into a KvizPackManifest.
@@ -688,11 +738,13 @@ export function parseQuizImport(
           'piksel',
           'anagram',
           'redosled',
+          'domino',
+          'matrica',
         ].includes(raw.type)
       ) {
         return {
           ok: false,
-          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video/emoji/uljez/dopuna/piksel/anagram/redosled).`,
+          error: `${label}: nepoznat tip "${String(raw.type)}" (obicno/geo/broj/audio/video/emoji/uljez/dopuna/piksel/anagram/redosled/domino/matrica).`,
         };
       }
       type = raw.type as KvizQuestionType;
@@ -944,6 +996,151 @@ export function parseQuizImport(
         type: 'redosled',
         text,
         items,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'domino') {
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      if (!Array.isArray(raw.items)) {
+        return { ok: false, error: `${label}: "items" mora biti niz stavki.` };
+      }
+      if (
+        raw.items.length < MIN_DOMINO_ITEMS ||
+        raw.items.length > MAX_DOMINO_ITEMS
+      ) {
+        return {
+          ok: false,
+          error: `${label}: domino mora imati između ${MIN_DOMINO_ITEMS} i ${MAX_DOMINO_ITEMS} stavki.`,
+        };
+      }
+      const items: { label: string; value: number }[] = [];
+      for (let j = 0; j < raw.items.length; j++) {
+        const it = raw.items[j] as Record<string, unknown> | undefined;
+        if (!it || typeof it !== 'object') {
+          return { ok: false, error: `${label}: stavka ${j + 1} nije objekat.` };
+        }
+        if (!isNonEmptyString(it.label)) {
+          return { ok: false, error: `${label}: stavka ${j + 1} nema naziv ("label").` };
+        }
+        const itLabel = (it.label as string).trim();
+        if (itLabel.length > MAX_DOMINO_LABEL_LENGTH) {
+          return { ok: false, error: `${label}: stavka ${j + 1} je predugačka.` };
+        }
+        if (!isFiniteNumber(it.value)) {
+          return { ok: false, error: `${label}: stavka ${j + 1} nema broj ("value").` };
+        }
+        items.push({ label: itLabel, value: it.value });
+      }
+      // Consecutive equal values make a step unanswerable — reject ties in the
+      // presented order.
+      for (let j = 1; j < items.length; j++) {
+        if (items[j].value === items[j - 1].value) {
+          return {
+            ok: false,
+            error: `${label}: stavke ${j} i ${j + 1} imaju istu vrednost — nema "pre/posle".`,
+          };
+        }
+      }
+      let lowerLabel: string | undefined;
+      let higherLabel: string | undefined;
+      for (const [key, target] of [
+        ['lowerLabel', 'lower'],
+        ['higherLabel', 'higher'],
+      ] as const) {
+        const v = raw[key];
+        if (v === undefined || v === null || v === '') continue;
+        if (typeof v !== 'string') {
+          return { ok: false, error: `${label}: "${key}" mora biti string.` };
+        }
+        const t = v.trim();
+        if (t.length > MAX_DOMINO_BTN_LENGTH) {
+          return { ok: false, error: `${label}: "${key}" je predugačak.` };
+        }
+        if (target === 'lower') lowerLabel = t || undefined;
+        else higherLabel = t || undefined;
+      }
+      let unit: string | undefined;
+      if (raw.unit !== undefined) {
+        if (typeof raw.unit !== 'string') {
+          return { ok: false, error: `${label}: "unit" mora biti string.` };
+        }
+        const trimmed = raw.unit.trim();
+        if (trimmed.length > MAX_UNIT_LENGTH) {
+          return { ok: false, error: `${label}: "unit" predugačak (max ${MAX_UNIT_LENGTH} znakova).` };
+        }
+        unit = trimmed || undefined;
+      }
+      let valueType: KvizValueType | undefined;
+      if (raw.valueType !== undefined) {
+        if (
+          typeof raw.valueType !== 'string' ||
+          !VALUE_TYPES.has(raw.valueType as KvizValueType)
+        ) {
+          return { ok: false, error: `${label}: "valueType" mora biti "number" ili "duration".` };
+        }
+        valueType = raw.valueType as KvizValueType;
+      }
+      questions.push({
+        type: 'domino',
+        text: text.text,
+        items,
+        lowerLabel,
+        higherLabel,
+        unit,
+        valueType,
+        timeLimit: time.timeLimit,
+      });
+      continue;
+    }
+
+    if (type === 'matrica') {
+      const text = parseOptionalText(raw.text, label);
+      if (!text.ok) return { ok: false, error: text.error };
+      if (!Array.isArray(raw.cells) || raw.cells.length !== MATRICA_CELLS) {
+        return { ok: false, error: `${label}: matrica mora imati tačno ${MATRICA_CELLS} polja (3×3).` };
+      }
+      const cells: string[] = [];
+      for (let j = 0; j < raw.cells.length; j++) {
+        if (!isNonEmptyString(raw.cells[j])) {
+          return { ok: false, error: `${label}: polje ${j + 1} je prazno.` };
+        }
+        const cell = (raw.cells[j] as string).trim();
+        if (cell.length > MAX_MATRICA_CELL_LENGTH) {
+          return { ok: false, error: `${label}: polje ${j + 1} je predugačko.` };
+        }
+        cells.push(cell);
+      }
+      if (!Array.isArray(raw.correct) || raw.correct.length !== MATRICA_PICK) {
+        return { ok: false, error: `${label}: "correct" mora imati tačno ${MATRICA_PICK} polja.` };
+      }
+      const seen = new Set<number>();
+      const correct: number[] = [];
+      for (const v of raw.correct) {
+        if (!Number.isInteger(v) || v < 0 || v >= MATRICA_CELLS || seen.has(v as number)) {
+          return { ok: false, error: `${label}: "correct" mora biti 3 različita broja između 1 i ${MATRICA_CELLS}.` };
+        }
+        seen.add(v as number);
+        correct.push(v as number);
+      }
+      let explanation: string | undefined;
+      if (raw.explanation !== undefined && raw.explanation !== null) {
+        if (typeof raw.explanation !== 'string') {
+          return { ok: false, error: `${label}: "explanation" mora biti string.` };
+        }
+        explanation = raw.explanation.trim() || undefined;
+        if (explanation && explanation.length > MAX_MATRICA_EXPLANATION_LENGTH) {
+          return { ok: false, error: `${label}: "explanation" predugačak (max ${MAX_MATRICA_EXPLANATION_LENGTH}).` };
+        }
+      }
+      questions.push({
+        type: 'matrica',
+        text: text.text,
+        cells,
+        correct,
+        explanation,
         timeLimit: time.timeLimit,
       });
       continue;

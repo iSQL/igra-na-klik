@@ -77,6 +77,64 @@
       "text": "Sport sa reketom preko mreže",
       "answer": "Tenis",
       "timeLimit": 25
+    },
+    {
+      "type": "domino",
+      "text": "Brojevi po veličini",
+      "items": [
+        {
+          "label": "jedan",
+          "value": 1
+        },
+        {
+          "label": "2",
+          "value": 2
+        },
+        {
+          "label": "4",
+          "value": 4
+        },
+        {
+          "label": "3",
+          "value": 3
+        },
+        {
+          "label": "5",
+          "value": 5
+        }
+      ],
+      "lowerLabel": "Manji",
+      "higherLabel": "Veci",
+      "unit": "broj",
+      "timeLimit": 35,
+      "tags": [
+        "easy"
+      ]
+    },
+    {
+      "type": "matrica",
+      "text": "Sta je povezano?",
+      "cells": [
+        "Jedan",
+        "kec",
+        "1",
+        "Macka",
+        "Dva",
+        "tri",
+        "kuce",
+        "mace",
+        "petao"
+      ],
+      "correct": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Isti broj",
+      "timeLimit": 30,
+      "tags": [
+        "easy"
+      ]
     }
   ]
 }

@@ -18,7 +18,14 @@ export type QuizAnswer =
   | { kind: 'text'; timeMs: number; points: number }
   // Redosled: locked arrangement (indices into the presented items), scored
   // at results time.
-  | { kind: 'order'; order: number[] };
+  | { kind: 'order'; order: number[] }
+  // Matrica: the 3 tapped cell indices + how many hit the correct triple;
+  // scored on submit.
+  | { kind: 'matrix'; cells: number[]; hit: number; points: number }
+  // Domino: only lands here once the player is DONE (first mistake or the
+  // chain is finished). `streak` = consecutive-correct count; scored at
+  // results time. In-flight progress lives in dominoProgress.
+  | { kind: 'domino'; streak: number };
 
 export interface QuizInternalState {
   questions: KvizQuestionFull[];
@@ -54,4 +61,10 @@ export interface QuizInternalState {
   scramblePool: string[];
   /** Anagram: how many leading letters are already in the correct spot. */
   scrambleFixed: number;
+  /**
+   * Domino: per-player streak progress. `pos` = the item index currently being
+   * compared (to items[pos-1]); `streak` = correct-so-far; `done` once the
+   * player errs or finishes; `wrongAt` = the pos where they missed (if any).
+   */
+  dominoProgress: Map<string, { pos: number; streak: number; done: boolean; wrongAt?: number }>;
 }

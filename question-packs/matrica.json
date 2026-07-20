@@ -1,0 +1,667 @@
+{
+  "name": "Matrica",
+  "description": "Mreža 3×3 pojmova — pronađi tri koja imaju zajedničku vezu i tapni ih.",
+  "category": "ostalo",
+  "questions": [
+    {
+      "type": "matrica",
+      "text": "Poveži 3 glumca koja su igrala Betmena",
+      "cells": [
+        "Christian Bale",
+        "Tom Kruz",
+        "Brad Pit",
+        "Leonardo DiCaprio",
+        "Robert Pattinson",
+        "Will Smith",
+        "Johnny Depp",
+        "Matt Damon",
+        "Ben Affleck"
+      ],
+      "correct": [
+        0,
+        4,
+        8
+      ],
+      "explanation": "Sva trojica su igrala Betmena na filmu",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 grada kroz koja protiče Dunav",
+      "cells": [
+        "Pariz",
+        "Madrid",
+        "Beograd",
+        "Rim",
+        "Budimpešta",
+        "London",
+        "Beč",
+        "Berlin",
+        "Atina"
+      ],
+      "correct": [
+        2,
+        4,
+        6
+      ],
+      "explanation": "Dunav protiče kroz sva tri grada",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 filma Kristofera Nolana",
+      "cells": [
+        "Titanik",
+        "Insepšon",
+        "Avatar",
+        "Matriks",
+        "Interstelar",
+        "Gladijator",
+        "Kum",
+        "Tenet",
+        "Podzemlje"
+      ],
+      "correct": [
+        1,
+        4,
+        7
+      ],
+      "explanation": "Sva tri filma je režirao Kristofer Nolan",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 NBA MVP košarkaša",
+      "cells": [
+        "Ronaldo",
+        "Mesi",
+        "Novak Đoković",
+        "LeBron Džejms",
+        "Majkl Džordan",
+        "Kobi Brajant",
+        "Rafael Nadal",
+        "Nejmar",
+        "Rodžer Federer"
+      ],
+      "correct": [
+        3,
+        4,
+        5
+      ],
+      "explanation": "Sva trojica su bili NBA MVP",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 glavna grada koja se nalaze na ostrvu",
+      "cells": [
+        "Manila",
+        "Pariz",
+        "Berlin",
+        "Velington",
+        "Beograd",
+        "Rim",
+        "Rejkjavik",
+        "Kairo",
+        "Madrid"
+      ],
+      "correct": [
+        0,
+        3,
+        6
+      ],
+      "explanation": "Sva tri grada se nalaze na ostrvima",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sastojka klasične pice Margerita",
+      "cells": [
+        "Feferoni",
+        "Pečurke",
+        "Paradajz sos",
+        "Ananas",
+        "Slanina",
+        "Mocarela",
+        "Luk",
+        "Maslinke",
+        "Bosiljak"
+      ],
+      "correct": [
+        2,
+        5,
+        8
+      ],
+      "explanation": "To su tri osnovna sastojka pice Margerita",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 grčka boga",
+      "cells": [
+        "Zevs",
+        "Atina",
+        "Apolon",
+        "Jupiter",
+        "Minerva",
+        "Merkur",
+        "Odin",
+        "Tor",
+        "Loki"
+      ],
+      "correct": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Sva trojica su bogovi iz grčke mitologije",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sazvežđa zodijaka",
+      "cells": [
+        "Veliki medved",
+        "Kasiopeja",
+        "Orion",
+        "Zmaj",
+        "Herkules",
+        "Labud",
+        "Ovan",
+        "Bik",
+        "Blizanci"
+      ],
+      "correct": [
+        6,
+        7,
+        8
+      ],
+      "explanation": "Sva tri sazvežđa spadaju u zodijak",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 gasa na sobnoj temperaturi",
+      "cells": [
+        "Gvožđe",
+        "Kiseonik",
+        "Zlato",
+        "Azot",
+        "Bakar",
+        "Vodonik",
+        "Srebro",
+        "Aluminijum",
+        "Cink"
+      ],
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "explanation": "Sva tri elementa su gasovita na sobnoj temperaturi",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 glavna grada koja počinju na slovo B",
+      "cells": [
+        "Beograd",
+        "Pariz",
+        "Madrid",
+        "Rim",
+        "Berlin",
+        "London",
+        "Atina",
+        "Brisel",
+        "Lisabon"
+      ],
+      "correct": [
+        0,
+        4,
+        7
+      ],
+      "explanation": "Nazivi sva tri grada počinju slovom B",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 reke koje se ulivaju u Crno more",
+      "cells": [
+        "Dunav",
+        "Rajna",
+        "Sena",
+        "Temza",
+        "Dnjepar",
+        "Nil",
+        "Amazon",
+        "Volga",
+        "Dnjestar"
+      ],
+      "correct": [
+        0,
+        4,
+        8
+      ],
+      "explanation": "Sve tri reke se ulivaju u Crno more",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 filma sa Leonardom DiCapriom",
+      "cells": [
+        "Gladijator",
+        "Matriks",
+        "Titanik",
+        "Avatar",
+        "Insepšon",
+        "Kum",
+        "Vuk sa Vol Strita",
+        "Podzemlje",
+        "Boemska rapsodija"
+      ],
+      "correct": [
+        2,
+        4,
+        6
+      ],
+      "explanation": "Leonardo DiCaprio glumi u sva tri filma",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 instrumenta sa žicama",
+      "cells": [
+        "Truba",
+        "Gitara",
+        "Bubanj",
+        "Flauta",
+        "Violina",
+        "Saksofon",
+        "Usna harmonika",
+        "Harfa",
+        "Klarinet"
+      ],
+      "correct": [
+        1,
+        4,
+        7
+      ],
+      "explanation": "Sva tri instrumenta imaju žice",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sporta sa letnjih Olimpijskih igara",
+      "cells": [
+        "Skijanje",
+        "Klizanje",
+        "Hokej na ledu",
+        "Atletika",
+        "Plivanje",
+        "Košarka",
+        "Bob",
+        "Skeleton",
+        "Snoubording"
+      ],
+      "correct": [
+        3,
+        4,
+        5
+      ],
+      "explanation": "Sva tri sporta su deo letnjih Olimpijskih igara",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 bivše jugoslovenske republike",
+      "cells": [
+        "Slovenija",
+        "Mađarska",
+        "Austrija",
+        "Hrvatska",
+        "Italija",
+        "Grčka",
+        "Srbija",
+        "Bugarska",
+        "Rumunija"
+      ],
+      "correct": [
+        0,
+        3,
+        6
+      ],
+      "explanation": "Sve tri su bile republike bivše Jugoslavije",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 ptice koje ne lete",
+      "cells": [
+        "Orao",
+        "Golub",
+        "Pingvin",
+        "Papagaj",
+        "Lasta",
+        "Noj",
+        "Sova",
+        "Vrabac",
+        "Kivi"
+      ],
+      "correct": [
+        2,
+        5,
+        8
+      ],
+      "explanation": "Sve tri ptice ne umeju da lete",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sastojka klasične Cezar salate",
+      "cells": [
+        "Zelena salata",
+        "Parmezan",
+        "Krutoni",
+        "Mocarela",
+        "Bosiljak",
+        "Slanina",
+        "Feferoni",
+        "Kupus",
+        "Krastavac"
+      ],
+      "correct": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "To su tri osnovna sastojka Cezar salate",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 boje francuske zastave",
+      "cells": [
+        "Zelena",
+        "Žuta",
+        "Crna",
+        "Narandžasta",
+        "Ljubičasta",
+        "Roze",
+        "Plava",
+        "Bela",
+        "Crvena"
+      ],
+      "correct": [
+        6,
+        7,
+        8
+      ],
+      "explanation": "Francuska zastava ima ove tri boje",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 glavna junaka Harija Potera",
+      "cells": [
+        "Frodo Beskin",
+        "Hari Poter",
+        "Persi Džekson",
+        "Hermiona Grejndžer",
+        "Luk Skajvoker",
+        "Ron Vizli",
+        "Šerlok Holms",
+        "Bilbo Beskin",
+        "Aragorn"
+      ],
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "explanation": "Sva trojica su glavni junaci Harija Potera",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 Marvel superheroja",
+      "cells": [
+        "Ajronmen",
+        "Betmen",
+        "Supermen",
+        "Vonder Vumen",
+        "Kapetan Amerika",
+        "Šrek",
+        "Miki Maus",
+        "Tor",
+        "Pepa Prase"
+      ],
+      "correct": [
+        0,
+        4,
+        7
+      ],
+      "explanation": "Sva trojica su Marvel superheroji",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 hemijska elementa sa simbolom od jednog slova",
+      "cells": [
+        "Vodonik (H)",
+        "Gvožđe (Fe)",
+        "Natrijum (Na)",
+        "Bakar (Cu)",
+        "Kiseonik (O)",
+        "Zlato (Au)",
+        "Srebro (Ag)",
+        "Hlor (Cl)",
+        "Ugljenik (C)"
+      ],
+      "correct": [
+        0,
+        4,
+        8
+      ],
+      "explanation": "Sva tri elementa imaju simbol od samo jednog slova",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sastojka sušija",
+      "cells": [
+        "Testenina",
+        "Paradajz",
+        "Pirinač",
+        "Krompir",
+        "Nori alga",
+        "Hleb",
+        "Riba",
+        "Sir",
+        "Kupus"
+      ],
+      "correct": [
+        2,
+        4,
+        6
+      ],
+      "explanation": "Sva tri sastojka su osnova klasičnog sušija",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 planinska venca u Srbiji",
+      "cells": [
+        "Alpi",
+        "Kopaonik",
+        "Karpati",
+        "Ande",
+        "Zlatibor",
+        "Himalaji",
+        "Pirineji",
+        "Stara planina",
+        "Atlas"
+      ],
+      "correct": [
+        1,
+        4,
+        7
+      ],
+      "explanation": "Sve tri planine se nalaze u Srbiji",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 reči koje počinju i završavaju istim slovom",
+      "cells": [
+        "Sto",
+        "Prozor",
+        "Kompjuter",
+        "Oko",
+        "Aroma",
+        "Adresa",
+        "Slika",
+        "Voda",
+        "Nebo"
+      ],
+      "correct": [
+        3,
+        4,
+        5
+      ],
+      "explanation": "Sve tri reči počinju i završavaju istim slovom",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 sporta koja se igraju sa reketom",
+      "cells": [
+        "Tenis",
+        "Fudbal",
+        "Košarka",
+        "Badminton",
+        "Odbojka",
+        "Rukomet",
+        "Skvoš",
+        "Vaterpolo",
+        "Boks"
+      ],
+      "correct": [
+        0,
+        3,
+        6
+      ],
+      "explanation": "Sva tri sporta se igraju reketom",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 voćke koje rastu na drveću",
+      "cells": [
+        "Jagoda",
+        "Malina",
+        "Jabuka",
+        "Lubenica",
+        "Dinja",
+        "Kruška",
+        "Grožđe",
+        "Ananas",
+        "Trešnja"
+      ],
+      "correct": [
+        2,
+        5,
+        8
+      ],
+      "explanation": "Sve tri voćke rastu na drvetu",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 društvene igre koje se igraju kockicama",
+      "cells": [
+        "Čovječe ne ljuti se",
+        "Monopoli",
+        "Riziko",
+        "Šah",
+        "Domine",
+        "Pasijans",
+        "Scrabble",
+        "Karte",
+        "Tablić"
+      ],
+      "correct": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Sve tri igre se igraju bacanjem kockica",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 boje semafora",
+      "cells": [
+        "Plava",
+        "Ljubičasta",
+        "Narandžasta",
+        "Roze",
+        "Braon",
+        "Siva",
+        "Crvena",
+        "Žuta",
+        "Zelena"
+      ],
+      "correct": [
+        6,
+        7,
+        8
+      ],
+      "explanation": "Semafor ima ove tri boje",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 poznata para iz crtanih filmova",
+      "cells": [
+        "Vinja Pu",
+        "Miki i Mini",
+        "Elza",
+        "Šrek i Fiona",
+        "Betmen",
+        "Simba i Nala",
+        "Spajdermen",
+        "Hari Poter",
+        "Frodo"
+      ],
+      "correct": [
+        1,
+        3,
+        5
+      ],
+      "explanation": "Sva tri para su poznati parovi iz crtanih filmova",
+      "timeLimit": 30
+    },
+    {
+      "type": "matrica",
+      "text": "Poveži 3 vozila koja se kreću po šinama",
+      "cells": [
+        "Voz",
+        "Autobus",
+        "Taksi",
+        "Bicikl",
+        "Tramvaj",
+        "Skuter",
+        "Avion",
+        "Metro",
+        "Brod"
+      ],
+      "correct": [
+        0,
+        4,
+        7
+      ],
+      "explanation": "Sva tri vozila se kreću po šinama",
+      "timeLimit": 30
+    }
+  ]
+}

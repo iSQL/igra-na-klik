@@ -8,6 +8,7 @@ import type {
 const STORAGE_KEY = 'igra-quiz-custom';
 
 export const KVIZ_ALL_TYPES: KvizQuestionType[] = [
+  // (domino/matrica appended below in the same order the filter chips render)
   'obicno',
   'audio',
   'video',
@@ -19,6 +20,8 @@ export const KVIZ_ALL_TYPES: KvizQuestionType[] = [
   'piksel',
   'anagram',
   'redosled',
+  'domino',
+  'matrica',
 ];
 
 /**

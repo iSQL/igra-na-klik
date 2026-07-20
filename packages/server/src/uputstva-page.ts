@@ -34,6 +34,8 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li><strong>Piksel slika</strong> 🧩: slika kreće skroz pikselizovana i polako se izoštrava — ko pre prepozna, više poena.</li>
 <li><strong>Anagram</strong> 🔀: izmešana slova se polako preslažu u tačan redosled — kucaš reč pre nego što se sama otkrije.</li>
 <li><strong>Redosled</strong> ↕️: poređaj 3–10 pojmova (hronološki, po veličini…) — poeni po tačnosti redosleda.</li>
+<li><strong>Domino</strong> ⏳: stavke izlaze jedna po jedna — za svaku kažeš da li je „pre/posle" (ili manje/više) od prethodne. Ideš dok ne pogrešiš; više tačnih redom nosi više poena.</li>
+<li><strong>Matrica</strong> 🔗: mreža 3×3 pojmova — tapni 3 polja koja imaju zajedničku vezu (isti film, isti tim…). Poeni po broju pogođenih i brzini.</li>
 <li>Svako pitanje vredi najviše 1000 poena; pobednik je igrač sa najviše poena na kraju.</li>
 </ul>
 <p class="tip">Domaćin štiklira jedan ili više packova pitanja (i vrste pitanja) na ekranu za izbor igre, ili uveze svoja pitanja (JSON); packovi se prave u /admin editoru.</p>`,

@@ -25,6 +25,12 @@ export interface QuizOption {
  *               players type the word (speed scoring = points decay).
  *  - 'redosled' — order 3–10 items (chronology, size, steps…); scored by
  *               pairwise correctness of the submitted arrangement.
+ *  - 'domino'  — chronological/comparison streak: items come out one by one,
+ *               each player taps whether the new item is lower/higher (Pre/Posle,
+ *               Manje/Više…) than the previous one, building a run until the
+ *               first mistake or the list runs out. Self-paced per player.
+ *  - 'matrica' — 3×3 grid of terms; players tap the 3 cells that share a hidden
+ *               common link (same movie, same team…). Speed × correctness.
  */
 export type KvizQuestionType =
   | 'obicno'
@@ -37,7 +43,9 @@ export type KvizQuestionType =
   | 'dopuna'
   | 'piksel'
   | 'anagram'
-  | 'redosled';
+  | 'redosled'
+  | 'domino'
+  | 'matrica';
 
 /** How a numeric value is rendered on screen. `duration` shows mm:ss. */
 export type KvizValueType = 'number' | 'duration';
@@ -198,6 +206,52 @@ export interface KvizRedosledQuestion {
   timeLimit: number;
 }
 
+/**
+ * One item in a domino streak — a label plus the hidden numeric `value` the
+ * before/after comparison is scored against (year, size, duration…). Values
+ * live only in the Full/server shape; the client walks them one step at a time
+ * through `playerData`, never the whole list at once.
+ */
+export interface KvizDominoItem {
+  label: string;
+  value: number;
+}
+
+/**
+ * Chronological/comparison streak question — client-safe shape. The items and
+ * their values stay server-side; the client receives only the labels/values of
+ * the step it currently faces (via playerData) plus the two button labels.
+ */
+export interface KvizDominoQuestion {
+  type: 'domino';
+  id: string;
+  /** Prompt text (default "Pre ili posle?"). */
+  text: string;
+  /** Button for "lower value than the reference" (default "Pre"). */
+  lowerLabel: string;
+  /** Button for "higher value than the reference" (default "Posle"). */
+  higherLabel: string;
+  /** Unit suffix for the shown values ("god.", "km"…). */
+  unit?: string;
+  /** `duration` formats values as mm:ss. */
+  valueType?: KvizValueType;
+  timeLimit: number;
+}
+
+/**
+ * Matrix-association question — client-safe shape. `cells` (the 3×3 grid of
+ * terms) is public; the correct triple + explanation stay server-side.
+ */
+export interface KvizMatricaQuestion {
+  type: 'matrica';
+  id: string;
+  /** Prompt text (default "Poveži 3 pojma koja idu zajedno!"). */
+  text: string;
+  /** The 9 grid terms (3×3), row-major. */
+  cells: string[];
+  timeLimit: number;
+}
+
 export type KvizQuestion =
   | KvizChoiceQuestion
   | KvizGeoQuestion
@@ -206,7 +260,9 @@ export type KvizQuestion =
   | KvizDopunaQuestion
   | KvizPikselQuestion
   | KvizAnagramQuestion
-  | KvizRedosledQuestion;
+  | KvizRedosledQuestion
+  | KvizDominoQuestion
+  | KvizMatricaQuestion;
 
 /** Full questions with answers — only used server-side and in results. */
 export type KvizChoiceQuestionFull = KvizChoiceQuestion & { correctIndex: number };
@@ -237,6 +293,16 @@ export type KvizRedosledQuestionFull = KvizRedosledQuestion & {
   /** For presented items[i], its rank (0-based) in the correct sequence. */
   order: number[];
 };
+export type KvizDominoQuestionFull = KvizDominoQuestion & {
+  /** Items in the PRESENTED order; each consecutive pair drives one step. */
+  items: KvizDominoItem[];
+};
+export type KvizMatricaQuestionFull = KvizMatricaQuestion & {
+  /** The 3 indices into `cells` that form the correct triple. */
+  correct: number[];
+  /** Optional reveal note explaining the link. */
+  explanation?: string;
+};
 export type KvizQuestionFull =
   | KvizChoiceQuestionFull
   | KvizGeoQuestionFull
@@ -245,7 +311,9 @@ export type KvizQuestionFull =
   | KvizDopunaQuestionFull
   | KvizPikselQuestionFull
   | KvizAnagramQuestionFull
-  | KvizRedosledQuestionFull;
+  | KvizRedosledQuestionFull
+  | KvizDominoQuestionFull
+  | KvizMatricaQuestionFull;
 
 /** Legacy aliases — the choice shape is what the original quiz always was. */
 export type QuizQuestion = KvizChoiceQuestion;
@@ -367,6 +435,54 @@ export interface KvizRedosledRoundResult {
   presentedItems: string[];
   /** Sorted by roundScore desc. */
   results: KvizRedosledRoundResultEntry[];
+}
+
+/** showing-results payload for domino (streak) questions. */
+export interface KvizDominoRoundResultEntry {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  /** Consecutive-correct run reached before the first mistake. */
+  streak: number;
+  roundScore: number;
+  totalScore: number;
+}
+
+export interface KvizDominoRoundResult {
+  text: string;
+  lowerLabel: string;
+  higherLabel: string;
+  unit?: string;
+  valueType?: KvizValueType;
+  /** Items in the presented order, now WITH values — the reveal of the chain. */
+  items: KvizDominoItem[];
+  /** Longest possible run (items.length - 1). */
+  maxStreak: number;
+  /** Sorted by roundScore desc. */
+  results: KvizDominoRoundResultEntry[];
+}
+
+/** showing-results payload for matrica (3×3 association) questions. */
+export interface KvizMatricaRoundResultEntry {
+  playerId: string;
+  name: string;
+  avatarColor: string;
+  /** Cells this player tapped (indices), or null if they didn't submit. */
+  selected: number[] | null;
+  /** How many of the tapped cells were part of the correct triple. */
+  hit: number | null;
+  roundScore: number;
+  totalScore: number;
+}
+
+export interface KvizMatricaRoundResult {
+  text: string;
+  cells: string[];
+  /** The correct triple (indices into cells). */
+  correct: number[];
+  explanation?: string;
+  /** Sorted by roundScore desc. */
+  results: KvizMatricaRoundResultEntry[];
 }
 
 export interface QuizLeaderboardEntry {

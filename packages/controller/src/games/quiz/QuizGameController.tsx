@@ -13,13 +13,16 @@ import { GeoMap } from './components/GeoMap';
 import { PixelatedImage } from './components/PixelatedImage';
 import { RedosledPicker } from './components/RedosledPicker';
 import { ReportRateButton } from './components/ReportRateButton';
+import { DominoPlayer, MatricaGrid, MatricaPicker } from './components/QuizNewTypes';
 import type { MapMarker } from './components/GeoMap';
 import { formatBrojValue } from '@igra/shared';
 import type {
   GeoPin,
   KvizBrojRoundResult,
+  KvizDominoRoundResult,
   KvizEmojiRoundResult,
   KvizGeoRoundResult,
+  KvizMatricaRoundResult,
   KvizQuestionType,
   KvizRedosledRoundResult,
   KvizTextRoundResult,
@@ -229,6 +232,17 @@ function QuizGameControllerInner() {
             ))}
           </div>
         )}
+        {questionType === 'matrica' && Array.isArray(data.cells) && (
+          <div style={{ width: '100%', maxWidth: '340px' }}>
+            <MatricaGrid cells={data.cells as string[]} />
+          </div>
+        )}
+        {questionType === 'domino' && (
+          <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
+            <strong>{(data.lowerLabel as string) ?? 'Pre'}</strong> ili{' '}
+            <strong>{(data.higherLabel as string) ?? 'Posle'}</strong>? Poredi svaku stavku sa prethodnom.
+          </p>
+        )}
         <CountdownRing timeRemaining={timeRemaining} duration={previewDuration} />
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
           {questionType === 'geo'
@@ -432,6 +446,86 @@ function QuizGameControllerInner() {
       );
     }
 
+    if (questionType === 'matrica') {
+      const cells = (data.cells as string[]) ?? [];
+      const matMy = playerData[playerId] as
+        | { hasAnswered?: boolean; ownCells?: number[] }
+        | undefined;
+      if (matMy?.hasAnswered) {
+        return (
+          <Centered>
+            <p style={{ fontSize: '2.4rem', margin: 0 }}>✅</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Poslato!</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+              {(data.answeredCount as number) ?? 0}/{(data.totalPlayers as number) ?? 0} poslalo
+            </p>
+          </Centered>
+        );
+      }
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.6rem',
+          }}
+        >
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <QuestionHeader data={data} />
+            {questionText && <QuestionCard text={questionText} compact />}
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <MatricaPicker key={data.questionIndex as number} cells={cells} pick={3} timeRemaining={timeRemaining} />
+          </div>
+        </div>
+      );
+    }
+
+    if (questionType === 'domino') {
+      const dMy = playerData[playerId] as
+        | {
+            reference?: { label: string; value: number } | null;
+            current?: { label: string } | null;
+            streak?: number;
+            done?: boolean;
+          }
+        | undefined;
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            height: '100%',
+            padding: '0.75rem',
+            gap: '0.5rem',
+          }}
+        >
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <QuestionHeader data={data} />
+            {questionText && <QuestionCard text={questionText} compact />}
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <DominoPlayer
+              reference={dMy?.reference ?? null}
+              current={dMy?.current ?? null}
+              streak={dMy?.streak ?? 0}
+              done={dMy?.done ?? false}
+              total={(data.dominoTotal as number) ?? 0}
+              lowerLabel={(data.lowerLabel as string) ?? 'Pre'}
+              higherLabel={(data.higherLabel as string) ?? 'Posle'}
+              unit={data.unit as string | undefined}
+              valueType={data.valueType as KvizValueType | undefined}
+              timeRemaining={timeRemaining}
+            />
+          </div>
+        </div>
+      );
+    }
+
     const options = data.options as QuizOption[];
     const hasAnswered = myData?.hasAnswered ?? false;
     const selectedIndex = myData?.selectedIndex ?? null;
@@ -533,6 +627,32 @@ function QuizGameControllerInner() {
       <RedosledResultView
         result={data.redosledResult as KvizRedosledRoundResult}
         my={redMy}
+        playerId={playerId}
+      />
+    );
+  }
+
+  if (phase === 'showing-results' && data.dominoResult) {
+    const domMy = playerData[playerId] as
+      | { ownPoints?: number; ownStreak?: number }
+      | undefined;
+    return (
+      <DominoResultView
+        result={data.dominoResult as KvizDominoRoundResult}
+        my={domMy}
+        playerId={playerId}
+      />
+    );
+  }
+
+  if (phase === 'showing-results' && data.matricaResult) {
+    const matMy = playerData[playerId] as
+      | { ownPoints?: number; ownHit?: number | null; ownCells?: number[] | null }
+      | undefined;
+    return (
+      <MatricaResultView
+        result={data.matricaResult as KvizMatricaRoundResult}
+        my={matMy}
         playerId={playerId}
       />
     );
@@ -1352,6 +1472,212 @@ function RedosledResultView({
               </span>
               <span style={{ color: 'var(--text-secondary)', textAlign: 'right', fontSize: '0.78rem' }}>
                 {r.accuracy === null ? '—' : `${r.accuracy}%`}
+              </span>
+              <span
+                style={{
+                  fontWeight: 800,
+                  minWidth: '3ch',
+                  textAlign: 'right',
+                  color: r.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                +{r.roundScore}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- domino / matrica result screens -----------------------------------------
+
+function DominoResultView({
+  result,
+  my,
+  playerId,
+}: {
+  result: KvizDominoRoundResult;
+  my?: { ownPoints?: number; ownStreak?: number };
+  playerId: string;
+}) {
+  const pts = my?.ownPoints ?? 0;
+  const fmt = (v: number) => formatBrojValue(v, result.unit, result.valueType);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        padding: '1rem',
+        gap: '0.75rem',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
+          {my?.ownStreak ?? 0}/{result.maxStreak} tačno
+        </p>
+        <p style={{ fontSize: '1rem', margin: '0.2rem 0 0' }}>
+          <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+            +{pts}
+          </strong>
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: 'center' }}>
+        {result.items.map((it, i) => (
+          <span
+            key={`${i}-${it.label}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '0.3rem 0.5rem',
+              background: 'var(--bg-secondary)',
+              borderRadius: '10px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              minWidth: '72px',
+            }}
+          >
+            <span style={{ textAlign: 'center' }}>{it.label}</span>
+            <span style={{ color: 'var(--accent)', fontWeight: 800 }}>{fmt(it.value)}</span>
+          </span>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => {
+          const isMe = r.playerId === playerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.6rem',
+                background: isMe ? 'rgba(194,155,71,.16)' : 'var(--bg-secondary)',
+                border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                borderRadius: '0.5rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{ width: 10, height: 10, borderRadius: '50%', background: r.avatarColor, flex: 'none' }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: isMe ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                {r.streak}/{result.maxStreak}
+              </span>
+              <span
+                style={{
+                  fontWeight: 800,
+                  minWidth: '3ch',
+                  textAlign: 'right',
+                  color: r.roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
+                }}
+              >
+                +{r.roundScore}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MatricaResultView({
+  result,
+  my,
+  playerId,
+}: {
+  result: KvizMatricaRoundResult;
+  my?: { ownPoints?: number; ownHit?: number | null; ownCells?: number[] | null };
+  playerId: string;
+}) {
+  const pts = my?.ownPoints ?? 0;
+  const correctSet = new Set(result.correct);
+  // Highlight the player's wrong picks in red (their picks that weren't correct).
+  const wrongSet = new Set(
+    (my?.ownCells ?? []).filter((i) => !correctSet.has(i))
+  );
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        padding: '1rem',
+        gap: '0.75rem',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '1rem', margin: 0 }}>
+          {my?.ownHit == null ? 'Nisi poslao' : `${my.ownHit}/3 tačno`}
+          {' · '}
+          <strong style={{ color: pts > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>
+            +{pts}
+          </strong>
+        </p>
+      </div>
+      <MatricaGrid cells={result.cells} correct={correctSet} wrong={wrongSet} />
+      {result.explanation && (
+        <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--accent)', textAlign: 'center', margin: 0 }}>
+          {result.explanation}
+        </p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {result.results.map((r) => {
+          const isMe = r.playerId === playerId;
+          return (
+            <div
+              key={r.playerId}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.45rem 0.6rem',
+                background: isMe ? 'rgba(194,155,71,.16)' : 'var(--bg-secondary)',
+                border: `1px solid ${isMe ? 'var(--accent)' : 'transparent'}`,
+                borderRadius: '0.5rem',
+                fontSize: '0.85rem',
+              }}
+            >
+              <span
+                style={{ width: 10, height: 10, borderRadius: '50%', background: r.avatarColor, flex: 'none' }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontWeight: isMe ? 800 : 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                {r.hit === null ? '—' : `${r.hit}/3`}
               </span>
               <span
                 style={{

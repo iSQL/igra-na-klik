@@ -150,6 +150,22 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     <div class="grp" id="grp-redosled"><label class="lbl">Pojmovi u TAČNOM redosledu (jedan po redu, 3–10)</label>
       <textarea class="field" id="q-items" rows="5" placeholder="Prvi svetski rat&#10;Drugi svetski rat&#10;Pad Berlinskog zida"></textarea></div>
 
+    <div class="grp" id="grp-domino"><label class="lbl">Stavke (redosled kako izlaze) — „Naziv | vrednost" (3–12)</label>
+      <textarea class="field" id="q-domino-items" rows="5" placeholder="Titanik potonuo | 1912&#10;Prvi svetski rat | 1914&#10;Sletanje na Mesec | 1969"></textarea>
+      <div class="row3"><div><label class="lbl">Dugme „niže"</label><input class="field" id="q-domino-lower" maxlength="24" placeholder="Pre"></div>
+      <div><label class="lbl">Dugme „više"</label><input class="field" id="q-domino-higher" maxlength="24" placeholder="Posle"></div>
+      <div><label class="lbl">Jedinica (opciono)</label><input class="field" id="q-domino-unit" maxlength="20" placeholder="god."></div></div>
+      <label class="lbl">Tip prikaza</label>
+      <select class="field" id="q-domino-vt"><option value="">Broj</option><option value="duration">Trajanje (mm:ss)</option></select>
+      <p class="hint">Igrač poredi svaku novu stavku sa prethodnom; traje dok ne pogreši. Susedne stavke ne smeju imati istu vrednost.</p></div>
+
+    <div class="grp" id="grp-matrica"><label class="lbl">9 polja mreže 3×3 (jedno po redu)</label>
+      <textarea class="field" id="q-matrica-cells" rows="9" placeholder="Al Pacino&#10;Robert De Niro&#10;...ukupno 9 pojmova"></textarea>
+      <label class="lbl">Tačna 3 polja (brojevi 1–9, npr. 1,4,7)</label>
+      <input class="field" id="q-matrica-correct" placeholder="1,4,7">
+      <label class="lbl">Objašnjenje veze (opciono)</label>
+      <input class="field" id="q-matrica-expl" maxlength="200" placeholder="npr. Svi glumili u Kumovima"></div>
+
     <div class="grp" id="grp-video"><label class="lbl">YouTube link ili ID</label>
       <input class="field" id="q-v-id" placeholder="https://youtu.be/… ili 11 znakova">
       <div class="row2"><div><label class="lbl">Start (s, opciono)</label><input class="field" type="number" id="q-v-start" min="0"></div>
@@ -201,6 +217,8 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     {id:'dopuna',label:'Završi citat'},
     {id:'anagram',label:'Anagram'},
     {id:'redosled',label:'Redosled'},
+    {id:'domino',label:'Domino (pre/posle)'},
+    {id:'matrica',label:'Matrica (3×3)'},
     {id:'audio',label:'Audio + opcije'},
     {id:'video',label:'YouTube + opcije'},
     {id:'piksel',label:'Piksel (slika + odgovor)'}
@@ -231,12 +249,14 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     show('grp-dopuna', t==='dopuna');
     show('grp-textans', t==='dopuna'||t==='anagram'||t==='piksel');
     show('grp-redosled', t==='redosled');
+    show('grp-domino', t==='domino');
+    show('grp-matrica', t==='matrica');
     show('grp-video', t==='video');
     show('grp-audio', t==='audio');
     show('grp-image', t==='obicno'||t==='broj'||t==='piksel'||t==='audio');
     $('lbl-choice').textContent=(t==='uljez')?'4 pojma · označi ULJEZA':'Odgovori · označi tačan';
     $('lbl-image').textContent=(t==='piksel')?'Slika (obavezno — to je pitanje)':'Slika (opciono)';
-    var optional=(t==='emoji'||t==='dopuna'||t==='anagram'||t==='piksel'||t==='uljez');
+    var optional=(t==='emoji'||t==='dopuna'||t==='anagram'||t==='piksel'||t==='uljez'||t==='domino'||t==='matrica');
     $('lbl-text').textContent=optional?'Tekst pitanja (opciono)':'Tekst pitanja';
   }
   function show(id,on){ $(id).className='grp'+(on?' on':''); }
@@ -317,6 +337,8 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     else if(t==='anagram'){ var at=$('q-text').value.trim(); if(at)q.text=at; var aa=$('q-ta-ans').value.trim(); if(!aa){ toast('Unesi rešenje.',true); return null; } q.answer=aa; var aac=collectAccept('q-ta-accept'); if(aac)q.accept=aac; }
     else if(t==='piksel'){ var pt=$('q-text').value.trim(); if(pt)q.text=pt; if(!pend.imgName){ toast('Piksel pitanje mora imati sliku.',true); return null; } q.imageFile=pend.imgName; var pa=$('q-ta-ans').value.trim(); if(!pa){ toast('Unesi rešenje.',true); return null; } q.answer=pa; var pac=collectAccept('q-ta-accept'); if(pac)q.accept=pac; }
     else if(t==='redosled'){ var rt=$('q-text').value.trim(); if(!rt){ toast('Unesi tekst pitanja.',true); return null; } q.text=rt; var lines=$('q-items').value.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(function(l){return l.length>0;}); if(lines.length<3||lines.length>10){ toast('Redosled mora imati 3–10 pojmova.',true); return null; } q.items=lines; }
+    else if(t==='domino'){ var dmt=$('q-text').value.trim(); if(dmt)q.text=dmt; var dlines=$('q-domino-items').value.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(function(l){return l.length>0;}); if(dlines.length<3||dlines.length>12){ toast('Domino mora imati 3–12 stavki.',true); return null; } var ditems=[]; for(var di=0;di<dlines.length;di++){ var pipe=dlines[di].lastIndexOf('|'); if(pipe<0){ toast('Stavka '+(di+1)+': format „Naziv | vrednost".',true); return null; } var dlab=dlines[di].slice(0,pipe).trim(); var dval=parseFloat(dlines[di].slice(pipe+1).trim()); if(!dlab){ toast('Stavka '+(di+1)+' nema naziv.',true); return null; } if(isNaN(dval)){ toast('Stavka '+(di+1)+' nema broj.',true); return null; } ditems.push({label:dlab,value:dval}); } for(var dj=1;dj<ditems.length;dj++){ if(ditems[dj].value===ditems[dj-1].value){ toast('Stavke '+dj+' i '+(dj+1)+' imaju istu vrednost.',true); return null; } } q.items=ditems; var dlo=$('q-domino-lower').value.trim(); if(dlo)q.lowerLabel=dlo; var dhi=$('q-domino-higher').value.trim(); if(dhi)q.higherLabel=dhi; var dun=$('q-domino-unit').value.trim(); if(dun)q.unit=dun; if($('q-domino-vt').value)q.valueType=$('q-domino-vt').value; }
+    else if(t==='matrica'){ var mmt=$('q-text').value.trim(); if(mmt)q.text=mmt; var mlines=$('q-matrica-cells').value.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(function(l){return l.length>0;}); if(mlines.length!==9){ toast('Matrica mora imati tačno 9 polja.',true); return null; } q.cells=mlines; var mraw=$('q-matrica-correct').value.split(',').map(function(x){return x.trim();}).filter(function(x){return x.length>0;}); if(mraw.length!==3){ toast('Unesi tačno 3 tačna polja (npr. 1,4,7).',true); return null; } var mcor=[],mseen={}; for(var mi=0;mi<mraw.length;mi++){ var mn=parseInt(mraw[mi],10); if(isNaN(mn)||mn<1||mn>9){ toast('Tačna polja: brojevi 1–9.',true); return null; } if(mseen[mn]){ toast('Tačna polja moraju biti različita.',true); return null; } mseen[mn]=1; mcor.push(mn-1); } q.correct=mcor; var mexpl=$('q-matrica-expl').value.trim(); if(mexpl)q.explanation=mexpl; }
     if(qTags.length)q.tags=qTags.slice();
     return q;
   }
@@ -329,6 +351,8 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     $('q-b-ans').value='';$('q-b-min').value='';$('q-b-max').value='';$('q-b-unit').value='';$('q-b-vt').value='';
     $('q-e-emojis').value='';$('q-e-ans').value='';$('q-e-accept').value='';$('q-e-cat').value='';
     $('q-d-quote').value='';$('q-ta-ans').value='';$('q-ta-accept').value='';$('q-items').value='';
+    $('q-domino-items').value='';$('q-domino-lower').value='';$('q-domino-higher').value='';$('q-domino-unit').value='';$('q-domino-vt').value='';
+    $('q-matrica-cells').value='';$('q-matrica-correct').value='';$('q-matrica-expl').value='';
     $('q-v-id').value='';$('q-v-start').value='';$('q-v-end').value='';
     $('q-img-file').value='';$('q-audio-file').value='';$('q-img-name').textContent='';$('q-audio-name').textContent='';
     var pv=$('q-img-prev'); pv.style.display='none'; pv.removeAttribute('src');
@@ -346,6 +370,8 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     if(t==='dopuna'){ $('q-d-quote').value=q.quote||'';$('q-ta-ans').value=q.answer||'';$('q-ta-accept').value=(q.accept||[]).join(', '); }
     if(t==='anagram'||t==='piksel'){ $('q-ta-ans').value=q.answer||'';$('q-ta-accept').value=(q.accept||[]).join(', '); }
     if(t==='redosled'){ $('q-items').value=(q.items||[]).join(String.fromCharCode(10)); }
+    if(t==='domino'){ $('q-domino-items').value=(q.items||[]).map(function(x){return ((x&&x.label)||'')+' | '+(x&&x.value!=null?x.value:'');}).join(String.fromCharCode(10)); $('q-domino-lower').value=q.lowerLabel||'';$('q-domino-higher').value=q.higherLabel||'';$('q-domino-unit').value=q.unit||'';$('q-domino-vt').value=q.valueType||''; }
+    if(t==='matrica'){ $('q-matrica-cells').value=(q.cells||[]).join(String.fromCharCode(10)); $('q-matrica-correct').value=(q.correct||[]).map(function(i){return i+1;}).join(','); $('q-matrica-expl').value=q.explanation||''; }
     if(t==='video'){ $('q-v-id').value=q.videoId||'';$('q-v-start').value=q.startSeconds!=null?q.startSeconds:'';$('q-v-end').value=q.endSeconds!=null?q.endSeconds:''; }
     if(q.imageFile){ pend.imgName=q.imageFile; var b=assets[q.imageFile]; if(b){ var pv=$('q-img-prev'); pv.src=URL.createObjectURL(new Blob([b])); pv.style.display='block'; } $('q-img-name').textContent=q.imageFile; }
     if(q.audioFile){ pend.audioName=q.audioFile; $('q-audio-name').textContent=q.audioFile+' ✓'; }
@@ -361,11 +387,13 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     if(t==='dopuna') return '„'+esc(q.quote)+' …" → ✔ '+esc(q.answer);
     if(t==='anagram'||t==='piksel') return '✔ '+esc(q.answer);
     if(t==='redosled') return (q.items||[]).map(esc).join(' · ');
+    if(t==='domino') return (q.items||[]).map(function(x){return esc((x&&x.label)||'')+'('+esc(String(x&&x.value))+')';}).join(' · ');
+    if(t==='matrica'){ var mc=q.cells||[]; var cor=q.correct||[]; return mc.map(function(x,i){return (cor.indexOf(i)>=0?'🔗 ':'')+esc(x);}).join(' · '); }
     if(t==='video') return (q.options||[]).map(function(o,i){return (i===q.correctIndex?'✔ ':'')+esc(o);}).join(' · ')+' · ▶ '+esc(q.videoId);
     if(t==='audio') return (q.options||[]).map(function(o,i){return (i===q.correctIndex?'✔ ':'')+esc(o);}).join(' · ')+' · 🎵';
     return (q.options||[]).map(function(o,i){return (i===q.correctIndex?((t==='uljez'?'🕵️ ':'✔ ')):'')+esc(o);}).join(' · ');
   }
-  var DEF={emoji:'Šta se krije iza emojija?',dopuna:'Završi citat!',anagram:'Reši anagram!',piksel:'Šta je na slici?',uljez:'Pronađi uljeza!'};
+  var DEF={emoji:'Šta se krije iza emojija?',dopuna:'Završi citat!',anagram:'Reši anagram!',piksel:'Šta je na slici?',uljez:'Pronađi uljeza!',domino:'Pre ili posle?',matrica:'Poveži 3 pojma koja idu zajedno!'};
   function render(){
     var host=$('qlist');
     if(!questions.length){ host.innerHTML='<div class="empty">Još nema pitanja — dodaj prvo gore.</div>'; }

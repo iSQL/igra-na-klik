@@ -29,6 +29,8 @@ const TYPE_BADGES: Record<KvizQuestionType, string> = {
   piksel: '🧩',
   anagram: '🔀',
   redosled: '↕️',
+  domino: '🁢',
+  matrica: '🔲',
 };
 
 const RECENT_SHOWN = 6;

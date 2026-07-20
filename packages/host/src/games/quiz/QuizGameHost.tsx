@@ -12,11 +12,19 @@ import { GeoMap } from './components/GeoMap';
 import { BrojTimeline } from './components/BrojTimeline';
 import { MediaPanel } from './components/MediaPanel';
 import { PixelatedImage } from './components/PixelatedImage';
+import {
+  DominoBoard,
+  DominoResults,
+  MatricaGrid,
+  MatricaResults,
+} from './components/QuizNewTypes';
 import { formatBrojValue } from '@igra/shared';
 import type {
   KvizBrojRoundResult,
+  KvizDominoRoundResult,
   KvizEmojiRoundResult,
   KvizGeoRoundResult,
+  KvizMatricaRoundResult,
   KvizQuestionType,
   KvizRedosledRoundResult,
   KvizTextRoundResult,
@@ -422,6 +430,93 @@ export default function QuizGameHost() {
   }
 
   if (
+    questionType === 'matrica' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    const cells = (data.cells as string[]) ?? [];
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions}
+        </p>
+        <p
+          className="display"
+          style={{
+            fontSize: '2rem',
+            fontWeight: 800,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.2,
+            margin: 0,
+          }}
+        >
+          {questionText ?? 'Poveži 3 pojma koja idu zajedno!'}
+        </p>
+        <MatricaGrid cells={cells} />
+        {phase === 'showing-question' ? (
+          <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>Spremi se...</p>
+        ) : (
+          <>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
+              Tapni 3 polja na telefonu · {(data.answeredCount as number) ?? 0}/
+              {(data.totalPlayers as number) ?? 0} · {timeRemaining}s
+            </p>
+            <WaitingChips
+              expectedIds={(data.expectedIds as string[]) ?? []}
+              answeredIds={(data.answeredIds as string[]) ?? []}
+            />
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
+    questionType === 'domino' &&
+    (phase === 'showing-question' || phase === 'answering')
+  ) {
+    const lowerLabel = (data.lowerLabel as string) ?? 'Pre';
+    const higherLabel = (data.higherLabel as string) ?? 'Posle';
+    const total = (data.dominoTotal as number) ?? 0;
+    return (
+      <Center>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+          Pitanje {questionIndex + 1}/{totalQuestions}
+        </p>
+        <p
+          className="display"
+          style={{
+            fontSize: '2.2rem',
+            fontWeight: 800,
+            textAlign: 'center',
+            maxWidth: '1000px',
+            lineHeight: 1.2,
+            margin: 0,
+          }}
+        >
+          {questionText ?? 'Pre ili posle?'}
+        </p>
+        {phase === 'showing-question' ? (
+          <>
+            <p style={{ fontSize: '4rem', lineHeight: 1, margin: 0 }}>⏳</p>
+            <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>Spremi se...</p>
+          </>
+        ) : (
+          <>
+            <DominoBoard
+              board={(data.dominoBoard as { playerId: string; streak: number; done: boolean }[]) ?? []}
+              total={total}
+              lowerLabel={lowerLabel}
+              higherLabel={higherLabel}
+            />
+            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>{timeRemaining}s</p>
+          </>
+        )}
+      </Center>
+    );
+  }
+
+  if (
     questionType === 'geo' &&
     (phase === 'showing-question' || phase === 'answering')
   ) {
@@ -551,6 +646,14 @@ export default function QuizGameHost() {
 
       {phase === 'showing-results' && data.redosledResult != null && (
         <RedosledResults result={data.redosledResult as KvizRedosledRoundResult} />
+      )}
+
+      {phase === 'showing-results' && data.dominoResult != null && (
+        <DominoResults result={data.dominoResult as KvizDominoRoundResult} />
+      )}
+
+      {phase === 'showing-results' && data.matricaResult != null && (
+        <MatricaResults result={data.matricaResult as KvizMatricaRoundResult} />
       )}
 
       {phase === 'showing-results' && data.results != null && (
