@@ -137,6 +137,11 @@ export interface KvizEmojiQuestion {
   text: string;
   /** The emoji string that IS the riddle. */
   emojis: string;
+  /**
+   * Short answer-category hint (e.g. "Film", "Crtani lik", "Lokacija"). Shown
+   * to players alongside the emojis; safe to broadcast (not the answer).
+   */
+  category?: string;
   timeLimit: number;
 }
 
@@ -320,6 +325,8 @@ export interface KvizEmojiRoundResultEntry {
 export interface KvizEmojiRoundResult {
   emojis: string;
   answer: string;
+  /** Answer-category hint, if the question had one. */
+  category?: string;
   /** Sorted by roundScore desc. */
   results: KvizEmojiRoundResultEntry[];
 }

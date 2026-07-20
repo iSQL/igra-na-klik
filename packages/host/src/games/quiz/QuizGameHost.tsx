@@ -154,6 +154,23 @@ export default function QuizGameHost() {
         >
           {data.emojis as string}
         </motion.p>
+        {data.emojiCategory != null && (
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '0.35rem 1rem',
+              borderRadius: 999,
+              background: 'rgba(194,155,71,0.18)',
+              color: 'var(--accent)',
+              fontWeight: 800,
+              fontSize: '1.1rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {data.emojiCategory as string}
+          </span>
+        )}
         {phase === 'showing-question' ? (
           <p style={{ fontSize: '1.3rem', color: 'var(--text-secondary)' }}>
             Spremi se...
@@ -906,6 +923,23 @@ function EmojiResults({ result }: { result: KvizEmojiRoundResult }) {
         overflowY: 'auto',
       }}
     >
+      {result.category && (
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '0.3rem 0.9rem',
+            borderRadius: 999,
+            background: 'rgba(194,155,71,0.18)',
+            color: 'var(--accent)',
+            fontWeight: 800,
+            fontSize: '1rem',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {result.category}
+        </span>
+      )}
       <p style={{ fontSize: '3rem', margin: 0 }}>{result.emojis}</p>
       <motion.p
         initial={{ scale: 0.6, opacity: 0 }}

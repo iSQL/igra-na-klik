@@ -105,6 +105,12 @@ function QuizGameControllerInner() {
           audioUrl={data.audioUrl as string | undefined}
           video={data.video as KvizVideoRef | undefined}
         />
+        {phase === 'answering' && (
+          <AnswerCountdown
+            timeRemaining={timeRemaining}
+            timeLimit={data.timeLimit as number | undefined}
+          />
+        )}
         <div style={{ flex: 1, minHeight: 0 }}>
           {phase === 'showing-question' ? (
             <Centered>
@@ -184,9 +190,14 @@ function QuizGameControllerInner() {
         )}
         {questionType === 'geo' && imageUrl && <QuestionImage src={imageUrl} />}
         {questionType === 'emoji' && data.emojis != null && (
-          <p style={{ fontSize: '3.4rem', lineHeight: 1.2, margin: 0 }}>
-            {data.emojis as string}
-          </p>
+          <>
+            <p style={{ fontSize: '3.4rem', lineHeight: 1.2, margin: 0 }}>
+              {data.emojis as string}
+            </p>
+            {data.emojiCategory != null && (
+              <CategoryChip label={data.emojiCategory as string} />
+            )}
+          </>
         )}
         {questionType === 'dopuna' && data.quote != null && (
           <p
@@ -297,9 +308,21 @@ function QuizGameControllerInner() {
         <TextAnswerScreen
           key={data.questionIndex as number}
           visual={
-            <p style={{ fontSize: '2.8rem', lineHeight: 1.2, margin: 0, textAlign: 'center' }}>
-              {(data.emojis as string) ?? ''}
-            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <p style={{ fontSize: '2.8rem', lineHeight: 1.2, margin: 0, textAlign: 'center' }}>
+                {(data.emojis as string) ?? ''}
+              </p>
+              {data.emojiCategory != null && (
+                <CategoryChip label={data.emojiCategory as string} />
+              )}
+            </div>
           }
           hint={hostless ? ((data.hint as string) ?? '') : ''}
           questionText={questionText}
@@ -446,6 +469,10 @@ function QuizGameControllerInner() {
           {questionText && <QuestionCard text={questionText} compact />}
           {imageUrl && <QuestionImage src={imageUrl} compact />}
         </div>
+        <AnswerCountdown
+          timeRemaining={timeRemaining}
+          timeLimit={data.timeLimit as number | undefined}
+        />
         <div style={{ flex: 1, minHeight: 0 }}>{body}</div>
       </div>
     );
@@ -1007,6 +1034,11 @@ function EmojiResultView({
       }}
     >
       <div style={{ textAlign: 'center' }}>
+        {result.category && (
+          <div style={{ marginBottom: '0.4rem' }}>
+            <CategoryChip label={result.category} />
+          </div>
+        )}
         <p style={{ fontSize: '2.2rem', margin: 0 }}>{result.emojis}</p>
         <p
           style={{
@@ -1529,6 +1561,76 @@ function QuestionImage({ src, compact }: { src: string; compact?: boolean }) {
         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
       }}
     />
+  );
+}
+
+// Slim depleting progress bar + seconds, shown during the answering phase so
+// the player always sees how long is left to answer.
+function AnswerCountdown({
+  timeRemaining,
+  timeLimit,
+}: {
+  timeRemaining: number;
+  timeLimit?: number;
+}) {
+  const total = timeLimit && timeLimit > 0 ? timeLimit : 15;
+  const frac = Math.max(0, Math.min(1, timeRemaining / total));
+  const urgent = timeRemaining <= 5;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          height: 8,
+          borderRadius: 999,
+          background: 'var(--bg-card)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: `${frac * 100}%`,
+            height: '100%',
+            borderRadius: 999,
+            background: urgent ? 'var(--danger)' : 'var(--accent)',
+            transition: 'width 0.3s linear, background 0.3s',
+          }}
+        />
+      </div>
+      <span
+        style={{
+          fontVariantNumeric: 'tabular-nums',
+          fontWeight: 800,
+          fontSize: '0.95rem',
+          minWidth: '2.6ch',
+          textAlign: 'right',
+          color: urgent ? 'var(--danger)' : 'var(--text-primary)',
+        }}
+      >
+        {Math.ceil(timeRemaining)}s
+      </span>
+    </div>
+  );
+}
+
+// Small pill showing the emoji riddle's answer-category hint (Film, Lokacija…).
+function CategoryChip({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        padding: '0.2rem 0.75rem',
+        borderRadius: 999,
+        background: 'rgba(194,155,71,0.16)',
+        color: 'var(--accent)',
+        fontWeight: 800,
+        fontSize: '0.8rem',
+        letterSpacing: '0.03em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </span>
   );
 }
 

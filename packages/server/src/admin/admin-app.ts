@@ -659,7 +659,8 @@ function kvizCatById(id){
       }
       if (t==='emoji'){
         var acc=(Array.isArray(q.accept)&&q.accept.length)?' · prihvata: '+q.accept.map(esc).join(', '):'';
-        return esc(q.emojis||'')+' → <span class="ok">✔ '+esc(q.answer||'')+'</span>'+acc;
+        var ecat=q.category?' · 🏷 '+esc(q.category):'';
+        return esc(q.emojis||'')+' → <span class="ok">✔ '+esc(q.answer||'')+'</span>'+ecat+acc;
       }
       if (t==='dopuna'){
         var dacc=(Array.isArray(q.accept)&&q.accept.length)?' · prihvata: '+q.accept.map(esc).join(', '):'';
@@ -912,6 +913,9 @@ function kvizCatById(id){
       + '<input class="field" id="q-emoji-answer" maxlength="60" placeholder="npr. Kralj lavova">'
       + '<label class="lbl">Prihvaćeni odgovori (opciono, zarezom, do 8)</label>'
       + '<input class="field" id="q-emoji-accept" placeholder="npr. The Lion King, Lion King">'
+      + '<label class="lbl">Kategorija (opciono — prikazuje se igračima uz zagonetku)</label>'
+      + '<input class="field" id="q-emoji-category" list="q-emoji-cat-list" maxlength="40" placeholder="npr. Film, Crtani lik, Lokacija, Situacija">'
+      + '<datalist id="q-emoji-cat-list"><option value="Film"><option value="Serija"><option value="Crtani lik"><option value="Lik"><option value="Pesma"><option value="Lokacija"><option value="Grad"><option value="Država"><option value="Situacija"><option value="Poslovica"><option value="Brend"><option value="Knjiga"><option value="Igra"><option value="Hrana"></datalist>'
       + '<p class="hint">Poređenje ignoriše velika/mala slova, kvačice i interpunkciju. Slova rešenja se u igri postepeno otkrivaju kao hint.</p></div>'
       + '<div id="grp-geo"><label class="lbl">Caption / naziv lokacije</label>'
       + '<input class="field" id="q-caption" maxlength="200" placeholder="npr. Đavolja varoš">'
@@ -1051,7 +1055,7 @@ function kvizCatById(id){
       else if(qType==='video'){ if(!buildChoiceCore(q))return null; var vid=ytId($('q-video-id').value); if(!vid){ showErr('Unesi ispravan YouTube link ili ID (11 znakova).'); return null; } q.videoId=vid; var vs=$('q-video-start').value.trim(),ve=$('q-video-end').value.trim(); if(vs)q.startSeconds=parseInt(vs,10); if(ve)q.endSeconds=parseInt(ve,10); if(q.startSeconds!=null&&q.endSeconds!=null&&q.endSeconds<=q.startSeconds){ showErr('Kraj mora biti posle starta.'); return null; } }
       else if(qType==='broj'){ var text=$('q-text').value.trim(); if(!text){ showErr('Unesi tekst pitanja.'); return null; } q.text=text; var answer=parseFloat($('q-broj-answer').value),mn=parseFloat($('q-broj-min').value),mx=parseFloat($('q-broj-max').value); if(isNaN(answer)||isNaN(mn)||isNaN(mx)){ showErr('Popuni odgovor, min i max.'); return null; } if(mn>=mx){ showErr('Min mora biti manji od max.'); return null; } if(answer<mn||answer>mx){ showErr('Odgovor mora biti između min i max.'); return null; } q.answer=answer;q.min=mn;q.max=mx; var st=$('q-broj-step').value.trim(); if(st){ var stn=parseFloat(st); if(isNaN(stn)||stn<=0){ showErr('Korak mora biti pozitivan broj.'); return null; } q.step=stn; } var unit=$('q-broj-unit').value.trim(); if(unit)q.unit=unit; if($('q-broj-valuetype').value)q.valueType=$('q-broj-valuetype').value; var em=$('q-broj-emoji').value.trim(); if(em)q.emoji=em; attachImage(q); }
       else if(qType==='geo'){ var gt=$('q-text').value.trim(); if(gt)q.text=gt; if(!pend.imageFile&&!pend.imageUrl&&!gt){ showErr('Geo pitanje mora imati sliku ili tekst pitanja.'); return null; } attachImage(q); var cap=$('q-caption').value.trim(); if(cap)q.caption=cap; if(geo.lat==null||geo.lng==null){ showErr('Postavi pin na mapu.'); return null; } q.lat=geo.lat;q.lng=geo.lng; if(geo.mapId)q.mapId=geo.mapId; }
-      else if(qType==='emoji'){ var et=$('q-text').value.trim(); if(et)q.text=et; var ems=$('q-emoji-emojis').value.trim(); if(!ems){ showErr('Unesi emoji zagonetku.'); return null; } q.emojis=ems; var ans=$('q-emoji-answer').value.trim(); if(!ans){ showErr('Unesi rešenje.'); return null; } q.answer=ans; var accRaw=$('q-emoji-accept').value.trim(); if(accRaw){ var acc=accRaw.split(',').map(function(a){return a.trim();}).filter(function(a){return a.length>0;}); if(acc.length>8){ showErr('Najviše 8 prihvaćenih odgovora.'); return null; } if(acc.length)q.accept=acc; } }
+      else if(qType==='emoji'){ var et=$('q-text').value.trim(); if(et)q.text=et; var ems=$('q-emoji-emojis').value.trim(); if(!ems){ showErr('Unesi emoji zagonetku.'); return null; } q.emojis=ems; var ans=$('q-emoji-answer').value.trim(); if(!ans){ showErr('Unesi rešenje.'); return null; } q.answer=ans; var accRaw=$('q-emoji-accept').value.trim(); if(accRaw){ var acc=accRaw.split(',').map(function(a){return a.trim();}).filter(function(a){return a.length>0;}); if(acc.length>8){ showErr('Najviše 8 prihvaćenih odgovora.'); return null; } if(acc.length)q.accept=acc; } var ecat=$('q-emoji-category').value.trim(); if(ecat)q.category=ecat; }
       else if(qType==='uljez'){
         var utext=$('q-text').value.trim(); if(utext)q.text=utext;
         var usel=sheet.querySelector('input[name=correct]:checked'); var uslot=usel?parseInt(usel.value,10):0;
@@ -1090,7 +1094,7 @@ function kvizCatById(id){
       $('q-time').value=''; $('q-video-id').value=''; $('q-video-start').value=''; $('q-video-end').value=''; updateVideoThumb();
       $('q-broj-answer').value='';$('q-broj-min').value='';$('q-broj-max').value='';$('q-broj-step').value='';$('q-broj-unit').value='';$('q-broj-valuetype').value='';$('q-broj-emoji').value='';
       $('q-caption').value=''; geo.pin=null;geo.lat=null;geo.lng=null;geo.mapId=''; $('geo-map-select').value=''; updatePinUi(); syncMapImage();
-      $('q-emoji-emojis').value='';$('q-emoji-answer').value='';$('q-emoji-accept').value='';
+      $('q-emoji-emojis').value='';$('q-emoji-answer').value='';$('q-emoji-accept').value='';$('q-emoji-category').value='';
       $('q-quote').value='';$('q-ta-answer').value='';$('q-ta-accept').value='';$('q-items').value='';
       setImage(null,null); setAudio(null,null);
       $('sh-eyebrow').textContent='Novo pitanje';
@@ -1134,7 +1138,7 @@ function kvizCatById(id){
       if(qType==='video'){ $('q-video-id').value=existing.videoId||''; $('q-video-start').value=existing.startSeconds!=null?String(existing.startSeconds):''; $('q-video-end').value=existing.endSeconds!=null?String(existing.endSeconds):''; updateVideoThumb(); }
       if(qType==='broj'){ $('q-broj-answer').value=String(existing.answer);$('q-broj-min').value=String(existing.min);$('q-broj-max').value=String(existing.max);$('q-broj-step').value=existing.step!=null?String(existing.step):'';$('q-broj-unit').value=existing.unit||'';$('q-broj-valuetype').value=existing.valueType||'';$('q-broj-emoji').value=existing.emoji||''; }
       if(qType==='geo'){ $('q-caption').value=existing.caption||''; geo.mapId=existing.mapId||''; $('geo-map-select').value=geo.mapId; syncMapImage(); if(typeof existing.lat==='number'&&typeof existing.lng==='number')pinFromLatLng(existing.lat,existing.lng); }
-      if(qType==='emoji'){ $('q-emoji-emojis').value=existing.emojis||''; $('q-emoji-answer').value=existing.answer||''; $('q-emoji-accept').value=Array.isArray(existing.accept)?existing.accept.join(', '):''; }
+      if(qType==='emoji'){ $('q-emoji-emojis').value=existing.emojis||''; $('q-emoji-answer').value=existing.answer||''; $('q-emoji-accept').value=Array.isArray(existing.accept)?existing.accept.join(', '):''; $('q-emoji-category').value=existing.category||''; }
       if(qType==='dopuna'||qType==='piksel'||qType==='anagram'){ $('q-ta-answer').value=existing.answer||''; $('q-ta-accept').value=Array.isArray(existing.accept)?existing.accept.join(', '):''; }
       if(qType==='dopuna'){ $('q-quote').value=existing.quote||''; }
       if(qType==='redosled'){ $('q-items').value=Array.isArray(existing.items)?existing.items.join(String.fromCharCode(10)):''; }

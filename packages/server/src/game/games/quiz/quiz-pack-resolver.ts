@@ -101,6 +101,7 @@ export function importQuestionsToRuntime(
         emojis: emoji.emojis,
         answer: emoji.answer,
         accept: emoji.accept,
+        category: emoji.category,
         timeLimit: emoji.timeLimit!,
       };
     }

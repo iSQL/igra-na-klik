@@ -83,6 +83,11 @@ export interface KvizImportEmoji {
   answer: string;
   /** Accepted alternate answers (fuzzy-matched like the main answer). */
   accept?: string[];
+  /**
+   * Short answer-category hint shown to players (e.g. "Film", "Crtani lik",
+   * "Lokacija", "Situacija"). Purely a display aid — never affects matching.
+   */
+  category?: string;
   timeLimit?: number;
 }
 
@@ -237,6 +242,7 @@ export const KVIZ_BANK_PACK_ID = '__bank__';
 const MAX_EMOJIS_LENGTH = 40;
 const MAX_EMOJI_ANSWER_LENGTH = 60;
 const MAX_EMOJI_ACCEPT = 8;
+const MAX_EMOJI_CATEGORY_LENGTH = 40;
 
 /**
  * Normalize a free-text answer for comparison: lowercase, fold Serbian
@@ -823,12 +829,23 @@ export function parseQuizImport(
         }
         if (cleaned.length > 0) accept = cleaned;
       }
+      let category: string | undefined;
+      if (raw.category !== undefined && raw.category !== null) {
+        if (typeof raw.category !== 'string') {
+          return { ok: false, error: `${label}: "category" mora biti string.` };
+        }
+        category = raw.category.trim() || undefined;
+        if (category && category.length > MAX_EMOJI_CATEGORY_LENGTH) {
+          return { ok: false, error: `${label}: kategorija je predugačka (max ${MAX_EMOJI_CATEGORY_LENGTH}).` };
+        }
+      }
       questions.push({
         type: 'emoji',
         text,
         emojis,
         answer,
         accept,
+        category,
         timeLimit: time.timeLimit,
       });
       continue;

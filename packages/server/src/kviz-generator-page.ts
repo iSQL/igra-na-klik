@@ -135,7 +135,10 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     <div class="grp" id="grp-emoji"><label class="lbl">Emoji zagonetka</label>
       <input class="field" id="q-e-emojis" maxlength="40" placeholder="🦁👑" style="font-size:1.2rem">
       <label class="lbl">Rešenje</label><input class="field" id="q-e-ans" maxlength="60" placeholder="Kralj lavova">
-      <label class="lbl">Prihvaćeni odgovori (zarezom, opciono)</label><input class="field" id="q-e-accept" placeholder="The Lion King"></div>
+      <label class="lbl">Prihvaćeni odgovori (zarezom, opciono)</label><input class="field" id="q-e-accept" placeholder="The Lion King">
+      <label class="lbl">Kategorija (opciono — prikazuje se igračima)</label>
+      <input class="field" id="q-e-cat" list="q-e-cat-list" maxlength="40" placeholder="npr. Film, Crtani lik, Lokacija">
+      <datalist id="q-e-cat-list"><option value="Film"><option value="Serija"><option value="Crtani lik"><option value="Lik"><option value="Pesma"><option value="Lokacija"><option value="Grad"><option value="Država"><option value="Situacija"><option value="Poslovica"><option value="Brend"><option value="Knjiga"><option value="Igra"><option value="Hrana"></datalist></div>
 
     <div class="grp" id="grp-dopuna"><label class="lbl">Vidljivi deo citata (bez skrivene reči)</label>
       <textarea class="field" id="q-d-quote" rows="2" placeholder="Bolje vrabac u ruci nego golub na"></textarea></div>
@@ -309,7 +312,7 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
       if(mn>=mx){ toast('Min mora biti manji od max.',true); return null; }
       if(a<mn||a>mx){ toast('Odgovor mora biti između min i max.',true); return null; }
       q.answer=a;q.min=mn;q.max=mx; var u=$('q-b-unit').value.trim(); if(u)q.unit=u; if($('q-b-vt').value)q.valueType=$('q-b-vt').value; if(pend.imgName)q.imageFile=pend.imgName; }
-    else if(t==='emoji'){ var et=$('q-text').value.trim(); if(et)q.text=et; var em=$('q-e-emojis').value.trim(); if(!em){ toast('Unesi emoji zagonetku.',true); return null; } q.emojis=em; var ea=$('q-e-ans').value.trim(); if(!ea){ toast('Unesi rešenje.',true); return null; } q.answer=ea; var acc=collectAccept('q-e-accept'); if(acc)q.accept=acc; }
+    else if(t==='emoji'){ var et=$('q-text').value.trim(); if(et)q.text=et; var em=$('q-e-emojis').value.trim(); if(!em){ toast('Unesi emoji zagonetku.',true); return null; } q.emojis=em; var ea=$('q-e-ans').value.trim(); if(!ea){ toast('Unesi rešenje.',true); return null; } q.answer=ea; var acc=collectAccept('q-e-accept'); if(acc)q.accept=acc; var ecat=$('q-e-cat').value.trim(); if(ecat)q.category=ecat; }
     else if(t==='dopuna'){ var dt=$('q-text').value.trim(); if(dt)q.text=dt; var quote=$('q-d-quote').value.trim(); if(!quote){ toast('Unesi vidljivi deo citata.',true); return null; } q.quote=quote; var da=$('q-ta-ans').value.trim(); if(!da){ toast('Unesi rešenje.',true); return null; } q.answer=da; var dac=collectAccept('q-ta-accept'); if(dac)q.accept=dac; }
     else if(t==='anagram'){ var at=$('q-text').value.trim(); if(at)q.text=at; var aa=$('q-ta-ans').value.trim(); if(!aa){ toast('Unesi rešenje.',true); return null; } q.answer=aa; var aac=collectAccept('q-ta-accept'); if(aac)q.accept=aac; }
     else if(t==='piksel'){ var pt=$('q-text').value.trim(); if(pt)q.text=pt; if(!pend.imgName){ toast('Piksel pitanje mora imati sliku.',true); return null; } q.imageFile=pend.imgName; var pa=$('q-ta-ans').value.trim(); if(!pa){ toast('Unesi rešenje.',true); return null; } q.answer=pa; var pac=collectAccept('q-ta-accept'); if(pac)q.accept=pac; }
@@ -324,7 +327,7 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     $('q-text').value=''; for(var i=0;i<4;i++)$('q-opt'+i).value='';
     document.querySelector('input[name=correct][value="0"]').checked=true;
     $('q-b-ans').value='';$('q-b-min').value='';$('q-b-max').value='';$('q-b-unit').value='';$('q-b-vt').value='';
-    $('q-e-emojis').value='';$('q-e-ans').value='';$('q-e-accept').value='';
+    $('q-e-emojis').value='';$('q-e-ans').value='';$('q-e-accept').value='';$('q-e-cat').value='';
     $('q-d-quote').value='';$('q-ta-ans').value='';$('q-ta-accept').value='';$('q-items').value='';
     $('q-v-id').value='';$('q-v-start').value='';$('q-v-end').value='';
     $('q-img-file').value='';$('q-audio-file').value='';$('q-img-name').textContent='';$('q-audio-name').textContent='';
@@ -339,7 +342,7 @@ a.back{color:var(--navy);font-weight:700;text-decoration:none;font-size:.9rem}
     if(q.text)$('q-text').value=q.text;
     if(Array.isArray(q.options)){ for(var i=0;i<4;i++)$('q-opt'+i).value=q.options[i]||''; var rd=document.querySelector('input[name=correct][value="'+(q.correctIndex||0)+'"]'); if(rd)rd.checked=true; }
     if(t==='broj'){ $('q-b-ans').value=q.answer;$('q-b-min').value=q.min;$('q-b-max').value=q.max;$('q-b-unit').value=q.unit||'';$('q-b-vt').value=q.valueType||''; }
-    if(t==='emoji'){ $('q-e-emojis').value=q.emojis||'';$('q-e-ans').value=q.answer||'';$('q-e-accept').value=(q.accept||[]).join(', '); }
+    if(t==='emoji'){ $('q-e-emojis').value=q.emojis||'';$('q-e-ans').value=q.answer||'';$('q-e-accept').value=(q.accept||[]).join(', ');$('q-e-cat').value=q.category||''; }
     if(t==='dopuna'){ $('q-d-quote').value=q.quote||'';$('q-ta-ans').value=q.answer||'';$('q-ta-accept').value=(q.accept||[]).join(', '); }
     if(t==='anagram'||t==='piksel'){ $('q-ta-ans').value=q.answer||'';$('q-ta-accept').value=(q.accept||[]).join(', '); }
     if(t==='redosled'){ $('q-items').value=(q.items||[]).join(String.fromCharCode(10)); }

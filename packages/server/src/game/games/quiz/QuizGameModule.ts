@@ -644,6 +644,7 @@ export class QuizGameModule extends BaseGameModule {
           data.video = question.video;
         } else if (question.type === 'emoji') {
           data.emojis = question.emojis;
+          if (question.category) data.emojiCategory = question.category;
         } else if (question.type === 'dopuna') {
           data.quote = question.quote;
         } else if (question.type === 'redosled') {
@@ -675,6 +676,7 @@ export class QuizGameModule extends BaseGameModule {
           if (question.emoji) data.emoji = question.emoji;
         } else if (question.type === 'emoji') {
           data.emojis = question.emojis;
+          if (question.category) data.emojiCategory = question.category;
           data.hint = this.state.hint;
           data.answerLength = this.answerLetterCount(question.answer);
         } else if (question.type === 'dopuna') {
@@ -913,6 +915,7 @@ export class QuizGameModule extends BaseGameModule {
     return {
       emojis: question.emojis,
       answer: question.answer,
+      category: question.category,
       results,
     };
   }
