@@ -20,6 +20,7 @@ import {
 import type { GeoMapBBox, GeoPackMapDef } from '@igra/shared';
 import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './admin-common.js';
 import { getQuizFeedback, clearQuizFeedback } from '../game/quiz-feedback.js';
+import { readZipEntries } from './zip-read.js';
 
 /**
  * Admin CRUD API for JSON-only content packs: quiz question packs,
@@ -406,6 +407,137 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     const cleared = clearQuizFeedback(key);
     res.json({ ok: true, cleared });
   });
+
+  // ---------- import a generated quiz pack (.zip or bare .json) --------------------
+  // Body is the raw file (Content-Type app/octet-stream). A .zip carries
+  // `pack.json` + an `assets/` folder (from the public /kviz-generator); a bare
+  // .json is a manifest with no assets. Creates a NEW pack (uniquified id from
+  // the name) so an import never clobbers an existing pack.
+  const IMG_EXT_RE = /\.(jpg|jpeg|png|webp)$/i;
+  const AUD_EXT_RE = /\.(mp3|ogg|m4a)$/i;
+  const MAX_ASSET_BYTES = 12_000_000;
+
+  router.post(
+    '/import-quiz-zip',
+    express.raw({ type: () => true, limit: '64mb' }),
+    async (req, res) => {
+      const buf = req.body as Buffer;
+      if (!Buffer.isBuffer(buf) || buf.length === 0) {
+        res.status(400).json({ error: 'Prazan ili nevažeći fajl.' });
+        return;
+      }
+
+      let manifestRaw: unknown;
+      let assets: { name: string; data: Buffer }[] = [];
+      const isZip =
+        buf.length > 4 &&
+        buf[0] === 0x50 &&
+        buf[1] === 0x4b &&
+        buf[2] === 0x03 &&
+        buf[3] === 0x04;
+
+      if (isZip) {
+        let entries;
+        try {
+          entries = readZipEntries(buf);
+        } catch (err) {
+          res.status(400).json({ error: (err as Error).message });
+          return;
+        }
+        const packEntry = entries.find(
+          (e) => e.name === 'pack.json' || path.basename(e.name) === 'pack.json'
+        );
+        if (!packEntry) {
+          res.status(400).json({ error: 'U .zip-u nema pack.json.' });
+          return;
+        }
+        try {
+          manifestRaw = JSON.parse(packEntry.data.toString('utf-8'));
+        } catch {
+          res.status(400).json({ error: 'pack.json nije validan JSON.' });
+          return;
+        }
+        assets = entries
+          .filter((e) => e.name.startsWith('assets/'))
+          .map((e) => ({ name: path.basename(e.name), data: e.data }));
+      } else {
+        try {
+          manifestRaw = JSON.parse(buf.toString('utf-8'));
+        } catch {
+          res.status(400).json({ error: 'Fajl nije .zip ni validan .json.' });
+          return;
+        }
+      }
+
+      const parsed = parseQuizImport(manifestRaw, { context: 'pack' });
+      if (!parsed.ok) {
+        res.status(400).json({ error: 'Nevažeći pack: ' + parsed.error });
+        return;
+      }
+      const m = parsed.manifest;
+
+      // Unique id from the pack name so we never overwrite an existing pack.
+      const base = slugify(m.name ?? 'pack') || 'pack';
+      let id = base;
+      let n = 2;
+      while (await fileExists(path.join(dirs.questionPacksDir, `${id}.json`))) {
+        id = `${base}-${n++}`;
+        if (n > 999) break;
+      }
+
+      // Which assets the questions (and custom maps) actually reference.
+      const referenced = new Set<string>();
+      for (const q of m.questions as unknown as Record<string, unknown>[]) {
+        if (typeof q.imageFile === 'string') referenced.add(q.imageFile);
+        if (typeof q.audioFile === 'string') referenced.add(q.audioFile);
+      }
+      if (m.maps) {
+        for (const k of Object.keys(m.maps)) {
+          const mf = m.maps[k]?.imageFile;
+          if (mf) referenced.add(mf);
+        }
+      }
+
+      const assetByName = new Map(assets.map((a) => [a.name, a.data]));
+      const packDir = path.join(dirs.questionPacksDir, id);
+      let written = 0;
+      const missing: string[] = [];
+      if (referenced.size > 0) {
+        await mkdir(packDir, { recursive: true });
+        for (const name of referenced) {
+          if (name.includes('..') || name.includes('/') || name.includes('\\')) continue;
+          if (!IMG_EXT_RE.test(name) && !AUD_EXT_RE.test(name)) continue;
+          const data = assetByName.get(name);
+          if (!data) {
+            missing.push(name);
+            continue;
+          }
+          if (data.length > MAX_ASSET_BYTES) {
+            missing.push(name);
+            continue;
+          }
+          await writeFile(path.join(packDir, name), data);
+          written++;
+        }
+      }
+
+      const data = {
+        name: m.name ?? id,
+        ...(m.description ? { description: m.description } : {}),
+        ...(m.category ? { category: m.category } : {}),
+        ...(m.maps && Object.keys(m.maps).length > 0 ? { maps: m.maps } : {}),
+        questions: m.questions,
+      };
+      await writeJsonAtomic(path.join(dirs.questionPacksDir, `${id}.json`), data);
+
+      res.status(201).json({
+        item: describeQuizPack(id, data),
+        id,
+        assetsWritten: written,
+        missingAssets: missing,
+      });
+    }
+  );
 
   // ---------- pin ↔ lat/lng conversion --------------------------------------------
   // Stateless helper for the kviz editor's geo question picker — the page does

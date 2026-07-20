@@ -51,6 +51,14 @@ import { useT } from '../i18n/useT';
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
 
+// Effective minimum players for start-gating. In dev, Kviz may run solo so a
+// single browser tab exercises the whole flow (the server relaxes the same
+// rule for gameId 'quiz' when NODE_ENV !== 'production'). Display ranges keep
+// the real minimum.
+function effMinPlayers(game: GameDefinition): number {
+  return import.meta.env.DEV && game.id === 'quiz' ? 1 : game.minPlayers;
+}
+
 // Accent hex per token — hex (not CSS var) because the tiles/tags append alpha
 // suffixes (e.g. '2b'/'55'/'22'), which var() can't do. Mirrors global.css and
 // the controller's game-select.
@@ -201,7 +209,7 @@ export function GameSelectScreen() {
 
   const handleSelect = (gameId: string) => {
     const def = GAME_DEFINITIONS[gameId];
-    if (def && connectedCount < def.minPlayers) return;
+    if (def && connectedCount < effMinPlayers(def)) return;
 
     // The chosen Gluvo doba pack (if any) — a missing/deleted id falls back
     // to the built-in bands.
@@ -990,7 +998,7 @@ export function GameSelectScreen() {
             >
               <button
                 onClick={() => handleSelect(selectedGame.id)}
-                disabled={connectedCount < selectedGame.minPlayers}
+                disabled={connectedCount < effMinPlayers(selectedGame)}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -999,24 +1007,24 @@ export function GameSelectScreen() {
                   fontWeight: 800,
                   borderRadius: '14px',
                   background:
-                    connectedCount < selectedGame.minPlayers
+                    connectedCount < effMinPlayers(selectedGame)
                       ? 'var(--bg-card)'
                       : 'var(--accent)',
                   color:
-                    connectedCount < selectedGame.minPlayers
+                    connectedCount < effMinPlayers(selectedGame)
                       ? 'var(--text-secondary)'
                       : '#fff',
                   cursor:
-                    connectedCount < selectedGame.minPlayers
+                    connectedCount < effMinPlayers(selectedGame)
                       ? 'not-allowed'
                       : 'pointer',
                 }}
               >
-                {connectedCount < selectedGame.minPlayers
+                {connectedCount < effMinPlayers(selectedGame)
                   ? t('gameSelect.needMore', {
-                      n: selectedGame.minPlayers - connectedCount,
+                      n: effMinPlayers(selectedGame) - connectedCount,
                       noun: t(
-                        selectedGame.minPlayers - connectedCount === 1
+                        effMinPlayers(selectedGame) - connectedCount === 1
                           ? 'common.player.one'
                           : 'common.player.many'
                       ),
@@ -1051,7 +1059,7 @@ function GameCard({
   onRules: () => void;
 }) {
   const t = useT();
-  const lacking = connectedCount < game.minPlayers;
+  const lacking = connectedCount < effMinPlayers(game);
   return (
     <div
       style={{
@@ -1172,9 +1180,9 @@ function GameCard({
             }}
           >
             {t('gameSelect.needMore', {
-              n: game.minPlayers - connectedCount,
+              n: effMinPlayers(game) - connectedCount,
               noun: t(
-                game.minPlayers - connectedCount === 1
+                effMinPlayers(game) - connectedCount === 1
                   ? 'common.player.one'
                   : 'common.player.many'
               ),

@@ -38,6 +38,7 @@ import { CloseRoomButton } from '../components/CloseRoomButton';
 import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
+import { unpackQuizZip } from '../utils/quizZipImport';
 
 interface QuestionPackSummary {
   id: string;
@@ -118,6 +119,12 @@ interface SpijunPackSummary {
   id: string;
   name?: string;
   locations: SpijunLocation[];
+}
+
+// Effective minimum players for start-gating. In dev, Kviz may run solo (the
+// server relaxes the same rule for 'quiz' when NODE_ENV !== 'production').
+function effMinPlayers(game: GameDefinition): number {
+  return import.meta.env.DEV && game.id === 'quiz' ? 1 : game.minPlayers;
 }
 
 const SLEPI_ROUND_OPTIONS = [1, 2, 3, 4];
@@ -334,7 +341,7 @@ export function GameSelectScreen() {
     tajniMode === 'classic' && connectedCount < 4 ? 'duet' : tajniMode;
 
   const handleStart = (game: GameDefinition) => {
-    if (connectedCount < game.minPlayers) return;
+    if (connectedCount < effMinPlayers(game)) return;
     const payload: Parameters<typeof socket.emit<'host:start-game'>>[1] = {
       gameId: game.id,
     };
@@ -1229,7 +1236,7 @@ function GameCard({
 }) {
   const t = useT();
   const needsTv = hostless && !game.supportsHostless;
-  const lacking = connectedCount < game.minPlayers;
+  const lacking = connectedCount < effMinPlayers(game);
   const disabled = lacking || needsTv;
   return (
     <div
@@ -1350,9 +1357,9 @@ function GameCard({
             }}
           >
             {t('gameSelect.needMore', {
-              n: game.minPlayers - connectedCount,
+              n: effMinPlayers(game) - connectedCount,
               noun: t(
-                game.minPlayers - connectedCount === 1
+                effMinPlayers(game) - connectedCount === 1
                   ? 'common.player.one'
                   : 'common.player.many'
               ),
@@ -1579,25 +1586,47 @@ function QuizConfig({
     setSelectedTypes(next.length === KVIZ_ALL_TYPES.length ? null : next);
   };
 
+  const acceptImported = (manifest: unknown, name: string) => {
+    const result = parseQuizImport(manifest, { context: 'inline' });
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setImported({ questions: result.manifest.questions, fileName: name });
+    setError(null);
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+
+    const isZip =
+      /\.zip$/i.test(file.name) ||
+      file.type === 'application/zip' ||
+      file.type === 'application/x-zip-compressed';
+
+    if (isZip) {
+      file
+        .arrayBuffer()
+        .then((ab) => unpackQuizZip(new Uint8Array(ab)))
+        .then((res) => {
+          if (!res.ok) {
+            setError(res.error);
+            return;
+          }
+          acceptImported(res.manifest, file.name);
+        })
+        .catch(() => setError(t('import.fileReadError')));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
-        const result = parseQuizImport(json, { context: 'inline' });
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-        setImported({
-          questions: result.manifest.questions,
-          fileName: file.name,
-        });
-        setError(null);
+        acceptImported(json, file.name);
       } catch {
         setError(t('import.invalidJson'));
       }
@@ -1820,7 +1849,7 @@ function QuizConfig({
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,.zip,application/zip"
         onChange={handleFile}
         style={{ display: 'none' }}
       />

@@ -530,6 +530,11 @@ function kvizCatById(id){
       if (g.route && !state.packsByGame[gameId]){
         loadPacks(gameId).then(finish).catch(finish);
       } else { finish(); }
+    },
+    // Force-refresh a game's pack list from the server (used after importing a
+    // new pack in the Podaci tab so it appears without a full reload).
+    reloadPacks: function(gameId){
+      return loadPacks(gameId).then(function(){ if(state.game===gameId) renderAll(); }).catch(function(){});
     }
   };
 
@@ -1559,6 +1564,11 @@ function kvizCatById(id){
     var deploy=!!dataStatus.deployMode;
     host.innerHTML=
       '<p class="hint" style="margin-bottom:1rem">Backup i vraćanje svega: svi packovi, pitanja, slike, audio snimci i timinzi.</p>'
+      + '<div class="tim-card" style="margin-bottom:1rem"><div style="font-weight:800;color:var(--navy);margin-bottom:.4rem">📥 Uvezi .zip kviz pack</div>'
+      + '<p class="hint" style="margin:.2rem 0 .9rem">Ubaci pack napravljen u <a href="/kviz-generator" target="_blank" style="color:var(--gold);font-weight:700">generatoru kvizova</a> (.zip sa pitanjima i slikama/audiom). Pravi se NOVI pack — postojeći se ne menja. Podržan je i običan .json manifest.</p>'
+      + '<input type="file" id="data-import-file" accept=".zip,.json,application/zip,application/json" style="display:none">'
+      + '<button class="btn btn-primary" id="data-import">Izaberi .zip / .json</button>'
+      + '<span class="hint" id="data-import-name" style="margin-left:.6rem"></span></div>'
       + '<div class="tim-card" style="margin-bottom:1rem"><div style="font-weight:800;color:var(--navy);margin-bottom:.4rem">💾 Backup</div>'
       + '<p class="hint" style="margin:.2rem 0 .9rem">Preuzmi .zip sa celokupnim trenutnim sadržajem (svi packovi + slike + audio + timinzi). Čuvaj ga van servera.</p>'
       + '<button class="btn btn-primary" id="data-backup">Preuzmi backup (.zip)</button></div>'
@@ -1568,6 +1578,25 @@ function kvizCatById(id){
           ? '<button class="btn btn-danger" id="data-reset">Vrati sve na fabričko</button>'
           : '<button class="btn btn-danger" id="data-reset" disabled>Nedostupno u dev modu</button><p class="hint" style="margin-top:.55rem">Reset radi samo na serveru (DATA_DIR + SEED_DIR postavljeni).</p>')
       + '</div>';
+
+    $('data-import').onclick=function(){ $('data-import-file').click(); };
+    $('data-import-file').onchange=function(e){
+      var f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f)return;
+      $('data-import-name').textContent=f.name+' …';
+      var btn=$('data-import'); btn.disabled=true;
+      fetch('/api/admin/import-quiz-zip', { method:'POST', headers:{ 'X-Admin-Token':Admin.getToken(), 'Content-Type':'application/octet-stream' }, body:f })
+        .then(function(res){ return res.json().then(function(d){ if(!res.ok) throw new Error(d.error||('Greška '+res.status)); return d; }); })
+        .then(function(d){
+          var extra=''; if(d.assetsWritten) extra=' · '+d.assetsWritten+' fajlova';
+          if(d.missingAssets&&d.missingAssets.length) extra+=' · ⚠ nedostaje '+d.missingAssets.length+' fajl(ova)';
+          $('data-import-name').textContent='✓ „'+((d.item&&d.item.name)||d.id)+'"'+extra;
+          showOk('Pack uvezen kao „'+d.id+'". Vidljiv je u Kviz tabu.');
+          // Refresh the cached kviz pack list so it shows up immediately.
+          if(window.AdminApp.reloadPacks) window.AdminApp.reloadPacks('kviz');
+        })
+        .catch(function(err){ $('data-import-name').textContent=''; showErr(err.message); })
+        .then(function(){ var b=$('data-import'); if(b)b.disabled=false; });
+    };
 
     $('data-backup').onclick=function(){
       var btn=$('data-backup'); btn.disabled=true; btn.textContent='Pravim backup…';

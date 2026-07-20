@@ -10,10 +10,11 @@ import { CloseRoomButton } from '../components/CloseRoomButton';
 import { useT } from '../i18n/useT';
 
 // Lowest minPlayers across all registered games — gate the lobby on this so
-// games with a low floor aren't blocked by a hard 2.
-const MIN_PLAYERS_OVERALL = Math.min(
-  ...Object.values(GAME_DEFINITIONS).map((g) => g.minPlayers)
-);
+// games with a low floor aren't blocked by a hard 2. In dev the floor drops to
+// 1 so a single tab can reach game-select and start Kviz solo.
+const MIN_PLAYERS_OVERALL = import.meta.env.DEV
+  ? 1
+  : Math.min(...Object.values(GAME_DEFINITIONS).map((g) => g.minPlayers));
 
 export function LobbyScreen() {
   const { room, players, setStatus, remoteHostPlayerId } = useRoomStore();

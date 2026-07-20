@@ -76,8 +76,13 @@ export class GameManager {
         return reject('Ova igra zahteva TV ekran.');
       }
       const connectedPlayers = room.players.filter((p) => p.isConnected);
-      if (connectedPlayers.length < definition.minPlayers) {
-        return reject(`Need at least ${definition.minPlayers} players`);
+      // Dev convenience: let Kviz run solo so a single browser tab can exercise
+      // the whole flow. Production keeps the real minimum.
+      const devSolo =
+        process.env.NODE_ENV !== 'production' && gameId === 'quiz';
+      const minPlayers = devSolo ? 1 : definition.minPlayers;
+      if (connectedPlayers.length < minPlayers) {
+        return reject(`Need at least ${minPlayers} players`);
       }
     }
 

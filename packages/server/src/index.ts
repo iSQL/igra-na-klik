@@ -38,6 +38,7 @@ import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
 import { initQuizFeedback } from './game/quiz-feedback.js';
 import { renderAdminApp } from './admin/admin-app.js';
+import { renderKvizGeneratorPage } from './kviz-generator-page.js';
 import { createDataAdminRouter } from './admin/data-admin.js';
 import {
   resolveContentDir,
@@ -401,6 +402,12 @@ app.use(
 const ADMIN_APP_HTML = renderAdminApp();
 app.get('/admin', (_req, res) => res.type('html').send(ADMIN_APP_HTML));
 app.get('/admin/', (_req, res) => res.type('html').send(ADMIN_APP_HTML));
+
+// Public, no-auth Kviz pack generator. Builds a pack zip fully client-side;
+// the owner imports it via the admin "Podaci" tab.
+const KVIZ_GENERATOR_HTML = renderKvizGeneratorPage();
+app.get('/kviz-generator', (_req, res) => res.type('html').send(KVIZ_GENERATOR_HTML));
+app.get('/kviz-generator/', (_req, res) => res.type('html').send(KVIZ_GENERATOR_HTML));
 const LEGACY_ADMIN_ROUTES = [
   '/admin/kviz',
   '/admin/ko-sam-ja',

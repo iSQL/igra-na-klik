@@ -14,6 +14,7 @@ import {
 } from '../store/quizImportStore';
 import type { QuizPackSummary } from '../store/quizImportStore';
 import { getRecentPackIds } from '../store/quizRecentStore';
+import { unpackQuizZip } from '../utils/quizZipImport';
 import { useT } from '../i18n/useT';
 
 const TYPE_BADGES: Record<KvizQuestionType, string> = {
@@ -74,25 +75,50 @@ export function QuizImportButton() {
     };
   }, [setPacks]);
 
+  const acceptImported = (manifest: unknown, name: string) => {
+    const result = parseQuizImport(manifest, { context: 'inline' });
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    // Store the validated wire shape (re-validated on server).
+    setCustom(result.manifest.questions, name);
+    setError(null);
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     // Allow re-selecting the same file later.
     e.target.value = '';
     if (!file) return;
 
+    const isZip =
+      /\.zip$/i.test(file.name) ||
+      file.type === 'application/zip' ||
+      file.type === 'application/x-zip-compressed';
+
+    if (isZip) {
+      // Unpack client-side (images folded in as data: URLs), then validate.
+      file
+        .arrayBuffer()
+        .then((ab) => unpackQuizZip(new Uint8Array(ab)))
+        .then((res) => {
+          if (!res.ok) {
+            setError(res.error);
+            return;
+          }
+          acceptImported(res.manifest, file.name);
+        })
+        .catch(() => setError(t('import.fileReadError')));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onerror = () => setError(t('import.fileReadError'));
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string);
-        const result = parseQuizImport(json, { context: 'inline' });
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-        // Store the validated wire shape (re-validated on server).
-        setCustom(result.manifest.questions, file.name);
-        setError(null);
+        acceptImported(json, file.name);
       } catch {
         setError(t('import.invalidJson'));
       }
@@ -202,7 +228,7 @@ export function QuizImportButton() {
       <input
         ref={inputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,.zip,application/zip"
         onChange={handleFile}
         style={{ display: 'none' }}
       />
