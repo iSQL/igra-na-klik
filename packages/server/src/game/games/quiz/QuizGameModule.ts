@@ -32,6 +32,7 @@ import {
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
+import { recordQuizFeedback } from '../../quiz-feedback.js';
 import type { QuizAnswer, QuizInternalState } from './QuizState.js';
 import { inlineQuestionsToRuntime, resolveQuizPack } from './quiz-pack-resolver.js';
 import {
@@ -92,6 +93,12 @@ export class QuizGameModule extends BaseGameModule {
   private state!: QuizInternalState;
   private timings: Record<string, number> = {};
   private desiredRounds = 0;
+  // Runtime question id → stable feedback key (`pack:<packId>:<index>` or
+  // `bank:<index>`). Built as questions load; inline custom questions have no
+  // persistable source and are simply absent (their feedback is dropped).
+  private feedbackKeys = new Map<string, string>();
+  // Dedupe: `<playerId>|<questionId>|<report|rating>` already submitted.
+  private feedbackSeen = new Set<string>();
 
   constructor(private readonly packsDir: string = '') {
     super();
@@ -122,6 +129,13 @@ export class QuizGameModule extends BaseGameModule {
       scramblePool: [],
       scrambleFixed: 0,
     };
+
+    // Reset feedback bookkeeping for this match. Bank keys are always known
+    // (the bank is a fallback for every source path); pack keys are added as
+    // packs resolve in loadPacks.
+    this.feedbackKeys.clear();
+    this.feedbackSeen.clear();
+    this.registerBankFeedbackKeys();
 
     const packIds = Array.isArray(cc.quizPackIds)
       ? (cc.quizPackIds.filter((v) => typeof v === 'string') as string[])
@@ -176,6 +190,63 @@ export class QuizGameModule extends BaseGameModule {
     return filtered.length > 0 ? filtered : pool;
   }
 
+  /** Map the built-in bank's runtime ids to `bank:<index>` feedback keys. */
+  private registerBankFeedbackKeys(): void {
+    QUIZ_QUESTION_BANK.forEach((q, i) => {
+      this.feedbackKeys.set(q.id, `bank:${i}`);
+    });
+  }
+
+  /**
+   * Map one pack's runtime question ids to `pack:<packId>:<index>` keys. The
+   * resolver assigns ids as `pack-<packId>-<i+1>`, so array position === the
+   * question's index in the manifest — what the admin editor joins against.
+   */
+  private registerPackFeedbackKeys(
+    packId: string,
+    questions: KvizQuestionFull[]
+  ): void {
+    questions.forEach((q, i) => {
+      this.feedbackKeys.set(q.id, `pack:${packId}:${i}`);
+    });
+  }
+
+  /**
+   * Handle a `quiz:feedback` player action: a report-as-wrong flag and/or a
+   * 1–5 rating for a question the player identifies by its runtime id. Ignored
+   * for unknown/unmapped ids (e.g. inline custom questions) and deduped so one
+   * player can report / rate each question at most once per match.
+   */
+  private handleFeedback(playerId: string, data: Record<string, unknown>): void {
+    const questionId = typeof data.questionId === 'string' ? data.questionId : '';
+    if (!questionId) return;
+    const key = this.feedbackKeys.get(questionId);
+    if (!key) return; // inline custom or stale id — nothing to persist against.
+
+    const report = data.report === true;
+    const ratingRaw = data.rating;
+    const rating =
+      typeof ratingRaw === 'number' &&
+      Number.isInteger(ratingRaw) &&
+      ratingRaw >= 1 &&
+      ratingRaw <= 5
+        ? ratingRaw
+        : undefined;
+
+    const payload: { report?: boolean; rating?: number } = {};
+    if (report && !this.feedbackSeen.has(`${playerId}|${questionId}|report`)) {
+      this.feedbackSeen.add(`${playerId}|${questionId}|report`);
+      payload.report = true;
+    }
+    if (rating !== undefined && !this.feedbackSeen.has(`${playerId}|${questionId}|rating`)) {
+      this.feedbackSeen.add(`${playerId}|${questionId}|rating`);
+      payload.rating = rating;
+    }
+    if (payload.report || payload.rating !== undefined) {
+      recordQuizFeedback(key, payload);
+    }
+  }
+
   private setQuestions(bank: KvizQuestionFull[]): void {
     this.state.questions = shuffled(bank).slice(
       0,
@@ -204,6 +275,7 @@ export class QuizGameModule extends BaseGameModule {
       if (packIds[i] === KVIZ_BANK_PACK_ID) {
         pool.push(...QUIZ_QUESTION_BANK);
       } else if (resolved[i]) {
+        this.registerPackFeedbackKeys(resolved[i]!.id, resolved[i]!.questions);
         pool.push(...resolved[i]!.questions);
       }
     }
@@ -222,6 +294,13 @@ export class QuizGameModule extends BaseGameModule {
     action: string,
     data: Record<string, unknown>
   ): GameState | null {
+    // Feedback (report-as-wrong / 1–5 rating) is accepted in any phase and
+    // doesn't change game state — handle it before the answering gate.
+    if (action === 'quiz:feedback') {
+      this.handleFeedback(playerId, data);
+      return null;
+    }
+
     if (this.state.phase !== 'answering') return null;
     if (this.state.answers.has(playerId)) return null;
     const question = this.currentQuestion();
@@ -532,7 +611,12 @@ export class QuizGameModule extends BaseGameModule {
       questionIndex: this.state.currentQuestionIndex,
       totalQuestions: this.state.questions.length,
     };
-    if (question) data.questionType = question.type;
+    if (question) {
+      data.questionType = question.type;
+      // Runtime id so the controller can attach report/rating feedback to the
+      // right question (see handleFeedback). Not sensitive — carries no answer.
+      data.questionId = question.id;
+    }
 
     const playerData: Record<string, Record<string, unknown>> = {};
 

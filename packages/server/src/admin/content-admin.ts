@@ -19,6 +19,7 @@ import {
 } from '@igra/shared';
 import type { GeoMapBBox, GeoPackMapDef } from '@igra/shared';
 import { PACK_ID_RE, requireAdmin, slugify, writeJsonAtomic, badId } from './admin-common.js';
+import { getQuizFeedback, clearQuizFeedback } from '../game/quiz-feedback.js';
 
 /**
  * Admin CRUD API for JSON-only content packs: quiz question packs,
@@ -384,6 +385,26 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
       return;
     }
     res.status(201).json({ file: fileName, url: `/kviz-files/${id}/${fileName}` });
+  });
+
+  // ---------- player quiz feedback (reports + ratings) ----------------------------
+  // Collected live during games and keyed `pack:<packId>:<index>` /
+  // `bank:<index>` so the editor joins it to a pack's questions by position.
+  router.get('/quiz-feedback', (_req, res) => {
+    res.json({ feedback: getQuizFeedback() });
+  });
+
+  // Clear a question's feedback (admin "mark resolved"). Key is passed in the
+  // body because it contains ':' — awkward as a path param.
+  router.post('/quiz-feedback/clear', (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const key = typeof body.key === 'string' ? body.key : '';
+    if (!key) {
+      res.status(400).json({ error: 'Nedostaje ključ.' });
+      return;
+    }
+    const cleared = clearQuizFeedback(key);
+    res.json({ ok: true, cleared });
   });
 
   // ---------- pin ↔ lat/lng conversion --------------------------------------------

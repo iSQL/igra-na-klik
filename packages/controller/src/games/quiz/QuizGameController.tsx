@@ -12,6 +12,7 @@ import { BrojSlider } from './components/BrojSlider';
 import { GeoMap } from './components/GeoMap';
 import { PixelatedImage } from './components/PixelatedImage';
 import { RedosledPicker } from './components/RedosledPicker';
+import { ReportRateButton } from './components/ReportRateButton';
 import type { MapMarker } from './components/GeoMap';
 import { formatBrojValue } from '@igra/shared';
 import type {
@@ -43,7 +44,23 @@ interface MyResultData {
   wasExact?: boolean;
 }
 
+// Outer wrapper: renders the phase UI plus the always-available report/rate
+// corner control while a specific question is on screen (answering / results).
 export default function QuizGameController() {
+  const gameState = useGameStore((s) => s.gameState);
+  const phase = gameState?.phase;
+  const questionId = gameState?.data?.questionId as string | undefined;
+  const showReport =
+    !!questionId && (phase === 'answering' || phase === 'showing-results');
+  return (
+    <>
+      <QuizGameControllerInner />
+      {showReport && <ReportRateButton questionId={questionId!} />}
+    </>
+  );
+}
+
+function QuizGameControllerInner() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const myColor = usePlayerStore((s) => s.player?.avatarColor);

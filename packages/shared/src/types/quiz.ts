@@ -42,6 +42,21 @@ export type KvizQuestionType =
 /** How a numeric value is rendered on screen. `duration` shows mm:ss. */
 export type KvizValueType = 'number' | 'duration';
 
+/**
+ * Author-facing difficulty / content tags. Editor-only metadata — never
+ * broadcast to players (kept out of the client-safe `KvizQuestion` shapes);
+ * stored in the pack manifest for future filtering (difficulty curves, an
+ * NSFW gate, etc.).
+ */
+export type KvizQuestionTag = 'easy' | 'medium' | 'hard' | 'nsfw';
+
+export const KVIZ_QUESTION_TAGS: readonly KvizQuestionTag[] = [
+  'easy',
+  'medium',
+  'hard',
+  'nsfw',
+] as const;
+
 export interface KvizVideoRef {
   /** YouTube video id (11 chars). */
   videoId: string;

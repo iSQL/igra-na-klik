@@ -44,6 +44,7 @@ export const CONTENT_DIR_NAMES = [
 ] as const;
 
 export const TIMING_FILE_NAME = 'timing-config.json';
+export const QUIZ_FEEDBACK_FILE_NAME = 'quiz-feedback.json';
 
 /**
  * Resolve a content directory. An explicit per-dir env override always wins;
@@ -60,6 +61,16 @@ export function resolveTimingFile(envOverride?: string): string {
   if (envOverride) return path.resolve(envOverride);
   if (DATA_DIR) return path.join(DATA_DIR, TIMING_FILE_NAME);
   return path.resolve(REPO_ROOT, TIMING_FILE_NAME);
+}
+
+/**
+ * Resolve the player quiz-feedback JSON file (reports + ratings collected
+ * in-game). Same precedence as the timing file; gitignored in dev.
+ */
+export function resolveQuizFeedbackFile(envOverride?: string): string {
+  if (envOverride) return path.resolve(envOverride);
+  if (DATA_DIR) return path.join(DATA_DIR, QUIZ_FEEDBACK_FILE_NAME);
+  return path.resolve(REPO_ROOT, QUIZ_FEEDBACK_FILE_NAME);
 }
 
 function isEmptyOrMissing(dir: string): boolean {

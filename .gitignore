@@ -4,6 +4,7 @@ dist/
 *.tsbuildinfo
 .vite/
 timing-config.json
+quiz-feedback.json
 storage/
 .claude/
 Agent tool input*

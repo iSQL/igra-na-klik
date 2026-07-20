@@ -292,6 +292,7 @@ function kvizCatById(id){
     { id:'tajni-agenti', label:'Tajni agenti', icon:'🕵️', route:'tajni-agenti-packs', listKey:'packs', kind:'tajni',  itemNoun:'reči' },
     { id:'gluvo-doba',   label:'Gluvo doba',   icon:'🌙', route:'gluvo-doba-packs',   listKey:'packs', kind:'gluvo',  itemNoun:'uloga' },
     { id:'spijun',       label:'Špijun',       icon:'🔍', route:'spijun-packs',       listKey:'packs', kind:'spijun', itemNoun:'lokacija' },
+    { id:'prigovori',    label:'Prigovori',    icon:'🚩', route:null,                 listKey:null,    kind:'feedback', itemNoun:'' },
     { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' },
     { id:'podaci',       label:'Podaci',       icon:'💾', route:null,                 listKey:null,    kind:'data',    itemNoun:'' }
   ];
@@ -518,7 +519,18 @@ function kvizCatById(id){
   // Public registration surface for view modules.
   window.AdminApp = {
     register: function(kind, mod){ MODULES[kind] = mod; },
-    ctx: ctx, renderAll: renderAll
+    ctx: ctx, renderAll: renderAll,
+    // Switch to a game tab and (optionally) select a pack — used by the
+    // Prigovori view to jump to a reported question's pack.
+    goToPack: function(gameId, packId){
+      state.game = gameId;
+      state.pickerOpen = false;
+      var g = gameById(gameId);
+      function finish(){ if (packId) state.packIdByGame[gameId] = packId; renderAll(); }
+      if (g.route && !state.packsByGame[gameId]){
+        loadPacks(gameId).then(finish).catch(finish);
+      } else { finish(); }
+    }
   };
 
   // ---- boot / token gate ----
@@ -586,8 +598,35 @@ function kvizCatById(id){
 
   var PH_SUBJECT='{'+'subject}', PH_PEER='{'+'peer}', PH_PEER1='{'+'peer1}', PH_PEER2='{'+'peer2}';
 
+  // Author tags (kviz only) — internal difficulty/NSFW metadata, never shown
+  // to players. Order matches KVIZ_QUESTION_TAGS in shared.
+  var KVIZ_TAG_DEFS=[
+    {id:'easy',label:'Lako',color:'#3E7D57'},
+    {id:'medium',label:'Srednje',color:'#A07D2E'},
+    {id:'hard',label:'Teško',color:'#B85C4F'},
+    {id:'nsfw',label:'NSFW',color:'#8A5CA6'}
+  ];
+  function tagLabel(id){ for(var i=0;i<KVIZ_TAG_DEFS.length;i++) if(KVIZ_TAG_DEFS[i].id===id) return KVIZ_TAG_DEFS[i]; return null; }
+
+  // Player feedback (reports + ratings), fetched once, keyed pack:<id>:<index>.
+  var feedbackCache=null, feedbackLoading=false;
+  function fbKey(ctx,idx){ return 'pack:'+ctx.pack.id+':'+idx; }
+  function fbFor(ctx,idx){ return (feedbackCache && ctx.pack && feedbackCache[fbKey(ctx,idx)]) || null; }
+  function fbAvg(fb){ return (fb && fb.ratingCount>0) ? (fb.ratingSum/fb.ratingCount) : null; }
+  function ensureFeedback(host,ctx){
+    if (feedbackCache!==null || feedbackLoading) return;
+    feedbackLoading=true;
+    api('GET','/api/admin/quiz-feedback').then(function(d){ feedbackCache=d.feedback||{}; feedbackLoading=false; renderMain(host,ctx); })
+      .catch(function(){ feedbackCache={}; feedbackLoading=false; });
+  }
+  function clearFeedback(ctx,idx){
+    var k=fbKey(ctx,idx);
+    api('POST','/api/admin/quiz-feedback/clear',{key:k}).then(function(){ if(feedbackCache)delete feedbackCache[k]; window.AdminApp.renderAll(); showOk('Feedback obrisan.'); })
+      .catch(function(e){ showErr(e.message); });
+  }
+
   // table state persists across re-renders; reset when switching game.
-  var tv = { game:null, search:'', filter:'all' };
+  var tv = { game:null, search:'', filter:'all', sort:'none' };
 
   function packMaps(ctx){ var p=ctx.pack; return (p && p.maps && typeof p.maps==='object')?p.maps:{}; }
   function fileUrl(ctx,name){ return '/kviz-files/'+ctx.pack.id+'/'+name; }
@@ -651,22 +690,40 @@ function kvizCatById(id){
   // ---------- table view ----------
   function renderMain(host, ctx){
     var g=ctx.game, p=ctx.pack;
-    if (tv.game!==g.id){ tv.game=g.id; tv.search=''; tv.filter='all'; }
+    if (tv.game!==g.id){ tv.game=g.id; tv.search=''; tv.filter='all'; tv.sort='none'; }
     if (!p){ host.innerHTML='<div class="empty">Nema izabranog packa — napravi novi pack (dugme gore).</div>'; return; }
+    var isKviz=(g.id==='kviz');
+    if (isKviz) ensureFeedback(host,ctx);
     var TM=typesFor(g);
     var list=p.questions||[];
     var counts={all:list.length};
     for (var k in TM) counts[k]=0;
-    list.forEach(function(q){ var t=typeOf(g,q); if(counts[t]!=null)counts[t]++; });
+    var reportedCount=0;
+    list.forEach(function(q,idx){ var t=typeOf(g,q); if(counts[t]!=null)counts[t]++; if(isKviz){ var fb=fbFor(ctx,idx); if(fb&&fb.reports>0)reportedCount++; } });
 
     var filtersHtml='<button class="chip-f'+(tv.filter==='all'?' on':'')+'" data-f="all">Sve <span class="c-n">'+counts.all+'</span></button>';
     for (var kk in TM){ filtersHtml+='<button class="chip-f'+(tv.filter===kk?' on':'')+'" data-f="'+kk+'">'+TM[kk].icon+' '+esc(TM[kk].label)+' <span class="c-n">'+(counts[kk]||0)+'</span></button>'; }
+    if (isKviz){ filtersHtml+='<button class="chip-f'+(tv.filter==='reported'?' on':'')+'" data-f="reported" style="'+(reportedCount?'':'opacity:.55;')+'">🚩 Prijavljena <span class="c-n">'+reportedCount+'</span></button>'; }
+
+    // Build display order (original indices), then sort by feedback if asked.
+    var order=[]; for(var oi=0;oi<list.length;oi++) order.push(oi);
+    if (isKviz && tv.sort!=='none'){
+      order.sort(function(a,b){
+        var fa=fbFor(ctx,a), fbb=fbFor(ctx,b);
+        if (tv.sort==='reports') return (fbb?fbb.reports:0)-(fa?fa.reports:0);
+        var av=fbAvg(fa), bv=fbAvg(fbb);
+        if (tv.sort==='rating-asc'){ return (av==null?99:av)-(bv==null?99:bv); }
+        return (bv==null?-1:bv)-(av==null?-1:av); // rating-desc
+      });
+    }
 
     var s=tv.search.trim().toLowerCase();
     var rowsHtml=''; var shown=0;
-    list.forEach(function(q,idx){
+    order.forEach(function(idx){
+      var q=list[idx];
       var t=typeOf(g,q);
-      if (tv.filter!=='all' && t!==tv.filter) return;
+      if (tv.filter==='reported'){ var fbr=fbFor(ctx,idx); if(!fbr||!fbr.reports) return; }
+      else if (tv.filter!=='all' && t!==tv.filter) return;
       if (s && (q.text||'').toLowerCase().indexOf(s)<0 && (q.caption||'').toLowerCase().indexOf(s)<0
         && String(q.answer||'').toLowerCase().indexOf(s)<0 && (q.emojis||'').toLowerCase().indexOf(s)<0
         && (q.quote||'').toLowerCase().indexOf(s)<0
@@ -676,26 +733,53 @@ function kvizCatById(id){
       var mt=mediaTagFor(g,q,ctx);
       var mtHtml = mt ? '<span class="t-mtag" style="color:'+m.color+';background:'+m.bg+'">'+mt+'</span>' : '';
       var catHtml = (g.id!=='kviz' && q.category) ? '<span class="t-mtag'+(q.category==='nsfw'?' tag-nsfw':'')+'" style="background:var(--surface2);color:var(--muted)">'+esc(q.category)+'</span>' : '';
+      // Author tags (kviz) — internal, shown to admin only.
+      var tagsHtml='';
+      if (isKviz && Array.isArray(q.tags)){
+        q.tags.forEach(function(tg){ var td=tagLabel(tg); if(td) tagsHtml+='<span class="t-mtag" style="color:'+td.color+';background:'+td.color+'22">'+esc(td.label)+'</span>'; });
+      }
+      // Feedback badges (kviz).
+      var fbHtml='';
+      if (isKviz){
+        var fb=fbFor(ctx,idx);
+        if (fb){
+          if (fb.reports>0) fbHtml+='<span class="t-mtag" style="color:#B85C4F;background:rgba(184,92,79,.14)" title="Prijava kao netačno">🚩 '+fb.reports+'</span>';
+          var avg=fbAvg(fb);
+          if (avg!=null) fbHtml+='<span class="t-mtag" style="color:#8a6f2c;background:rgba(194,155,71,.16)" title="'+fb.ratingCount+' ocena">★ '+avg.toFixed(1)+' <span style="opacity:.7">('+fb.ratingCount+')</span></span>';
+        }
+      }
       var DEF_TEXTS = { geo:'Gde je ovo slikano?', emoji:'Šta se krije iza emojija?', uljez:'Pronađi uljeza!', dopuna:'Završi citat!', piksel:'Šta je na slici?', anagram:'Reši anagram!' };
       var text = q.text || DEF_TEXTS[t] || '(bez teksta)';
+      var clearBtn = (isKviz && fbHtml) ? '<button class="iconbtn fbclear" title="Obriši feedback" data-idx="'+idx+'">✖🚩</button>' : '';
       rowsHtml += '<div class="tbl-row" data-idx="'+idx+'">'
         + '<div class="t-type"><span class="ti">'+m.icon+'</span><span class="tl" style="color:'+m.color+'">'+esc(m.label)+'</span></div>'
         + '<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
-        + '<span class="t-text">'+esc(text)+'</span>'+mtHtml+catHtml+'</div>'
+        + '<span class="t-text">'+esc(text)+'</span>'+mtHtml+catHtml+tagsHtml+fbHtml+'</div>'
         + '<div class="t-ans">'+answerLine(g,q)+'</div></div>'
         + '<div class="t-acts">'
         + (q.timeLimit && g.id!=='kviz' ? '<span class="t-time">⏱ '+esc(q.timeLimit)+'s</span>' : '')
+        + clearBtn
         + '<button class="iconbtn dup" title="Dupliraj" data-idx="'+idx+'">⧉</button>'
         + '<button class="iconbtn edit" title="Izmeni" data-idx="'+idx+'">✎</button>'
         + '<button class="iconbtn del" title="Obriši" data-idx="'+idx+'">🗑</button></div></div>';
     });
     if (shown===0) rowsHtml='<div class="empty">'+(list.length?'Nema pitanja za ovaj filter.':'Prazan pack — dodaj prvo pitanje.')+'</div>';
 
+    // Sort control lives on its own row so it never squeezes the type filters.
+    var sortHtml='';
+    if (isKviz){
+      var so=[['none','— Redosled u packu —'],['reports','Najviše prijava'],['rating-asc','Najlošije ocenjena'],['rating-desc','Najbolje ocenjena']];
+      sortHtml='<div class="tbl-sortbar"><span class="tbl-sortlbl">Sortiraj:</span><select class="tbl-sort" id="tbl-sort">';
+      for(var si=0;si<so.length;si++) sortHtml+='<option value="'+so[si][0]+'"'+(tv.sort===so[si][0]?' selected':'')+'>'+so[si][1]+'</option>';
+      sortHtml+='</select></div>';
+    }
+
     host.innerHTML =
       '<div class="tbl-tools">'
       + '<div class="tbl-search"><span>🔎</span><input class="field" id="tbl-q" placeholder="Pretraži pitanja…" value="'+esc(tv.search)+'"></div>'
-      + '<div class="tbl-filters">'+filtersHtml+'</div>'
-      + '<button class="btn btn-primary" id="tbl-new">＋ Novo pitanje</button></div>'
+      + '<button class="btn btn-primary" id="tbl-new" style="margin-left:auto">＋ Novo pitanje</button></div>'
+      + '<div class="tbl-filterbar"><div class="tbl-filters">'+filtersHtml+'</div></div>'
+      + sortHtml
       + '<div class="tbl'+(g.id==='kviz'?' tbl-icont':'')+'"><div class="tbl-head"><span>Tip</span><span>Pitanje</span><span style="text-align:right">Radnje</span></div>'
       + rowsHtml + '</div>'
       + '<button class="add-row" id="tbl-add">＋ Dodaj pitanje</button>';
@@ -703,6 +787,7 @@ function kvizCatById(id){
     // wiring
     var q=$('tbl-q');
     q.oninput=function(){ tv.search=this.value; var pos=this.selectionStart; renderMain(host,ctx); var nq=$('tbl-q'); if(nq){nq.focus(); try{nq.setSelectionRange(pos,pos);}catch(e){}} };
+    var sortSel=$('tbl-sort'); if(sortSel) sortSel.onchange=function(){ tv.sort=this.value; renderMain(host,ctx); };
     var fbtns=host.querySelectorAll('.chip-f');
     for (var i=0;i<fbtns.length;i++) fbtns[i].onclick=function(){ tv.filter=this.getAttribute('data-f'); renderMain(host,ctx); };
     $('tbl-new').onclick=function(){ openSheet(ctx,null); };
@@ -713,6 +798,8 @@ function kvizCatById(id){
     for (var d=0;d<dups.length;d++) dups[d].onclick=function(){ dupQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
     var dels=host.querySelectorAll('.iconbtn.del');
     for (var x=0;x<dels.length;x++) dels[x].onclick=function(){ delQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
+    var fcs=host.querySelectorAll('.iconbtn.fbclear');
+    for (var fci=0;fci<fcs.length;fci++) fcs[fci].onclick=function(){ if(window.confirm('Obrisati prijave i ocene za ovo pitanje?')) clearFeedback(ctx, parseInt(this.getAttribute('data-idx'),10)); };
   }
 
   function saveQuestions(ctx, questions, okMsg){
@@ -763,6 +850,7 @@ function kvizCatById(id){
     var qType = existing ? typeOf(ctx.game, existing) : 'obicno';
     var pend = { imageFile:null, imageUrl:null, audioFile:null, audioUrl:null };
     var geo = { pin:null, lat:null, lng:null, mapId:'', zoom:1, panX:0, panY:0 };
+    var qTags = (existing && Array.isArray(existing.tags)) ? existing.tags.slice() : [];
 
     var tabs='';
     for (var k in TM) tabs+='<button class="sheet-tab" data-type="'+k+'">'+TM[k].icon+' '+esc(TM[k].label)+'</button>';
@@ -833,7 +921,9 @@ function kvizCatById(id){
       + '<div style="margin-top:.5rem"><button type="button" class="btn btn-ghost btn-sm" id="q-img-pick">Dodaj sliku</button>'
       + '<button type="button" class="btn btn-danger btn-sm" id="q-img-remove" style="display:none">Ukloni</button></div></div></div>'
       + '<label class="lbl">Vreme u sekundama (opciono, 5–60)</label>'
-      + '<input class="field" type="number" id="q-time" min="5" max="60" step="1" placeholder="15" style="width:72px;text-align:center"></div>'
+      + '<input class="field" type="number" id="q-time" min="5" max="60" step="1" placeholder="15" style="width:72px;text-align:center">'
+      + '<label class="lbl" style="margin-top:.8rem">Oznake <span style="font-weight:600;color:var(--muted)">(interno — igrači ih ne vide)</span></label>'
+      + '<div id="q-tags" style="display:flex;flex-wrap:wrap;gap:.4rem"></div></div>'
       + sheetFoot(editIndex==null);
 
     // --- setType ---
@@ -975,10 +1065,23 @@ function kvizCatById(id){
         if(lines.length<3||lines.length>10){ showErr('Redosled mora imati između 3 i 10 pojmova.'); return null; }
         q.items=lines;
       }
-      if(!attachTime(q))return null; return q;
+      if(!attachTime(q))return null; if(qTags.length)q.tags=qTags.slice(); return q;
+    }
+    function renderTags(){
+      var thost=$('q-tags'); if(!thost)return; thost.innerHTML='';
+      KVIZ_TAG_DEFS.forEach(function(td){
+        var on=qTags.indexOf(td.id)>=0;
+        var b=document.createElement('button'); b.type='button'; b.textContent=td.label;
+        b.style.cssText='padding:.35rem .8rem;border-radius:999px;font-size:.8rem;font-weight:700;cursor:pointer;'
+          +'border:1.5px solid '+(on?td.color:'rgba(29,53,87,.16)')+';'
+          +'background:'+(on?td.color+'22':'var(--surface3)')+';color:'+(on?td.color:'var(--muted)')+';';
+        b.onclick=function(){ var i=qTags.indexOf(td.id); if(i>=0)qTags.splice(i,1); else qTags.push(td.id); renderTags(); };
+        thost.appendChild(b);
+      });
     }
     function resetForNew(){
       $('q-text').value=''; for(var i=0;i<4;i++)$('q-opt'+i).value=''; sheet.querySelector('input[name=correct][value="0"]').checked=true;
+      qTags=[]; renderTags();
       $('q-time').value=''; $('q-video-id').value=''; $('q-video-start').value=''; $('q-video-end').value=''; updateVideoThumb();
       $('q-broj-answer').value='';$('q-broj-min').value='';$('q-broj-max').value='';$('q-broj-step').value='';$('q-broj-unit').value='';$('q-broj-valuetype').value='';$('q-broj-emoji').value='';
       $('q-caption').value=''; geo.pin=null;geo.lat=null;geo.lng=null;geo.mapId=''; $('geo-map-select').value=''; updatePinUi(); syncMapImage();
@@ -1012,6 +1115,7 @@ function kvizCatById(id){
     var sa=$('sh-save-again'); if(sa)sa.onclick=function(){ doSave(true); };
     $('sh-cancel').onclick=close;
     initMap();
+    renderTags();
 
     // init / prefill
     if(existing){
@@ -1494,11 +1598,105 @@ function kvizCatById(id){
     };
   }
 
-  window.AdminApp.register('tajni',   { renderMain: renderTajni });
-  window.AdminApp.register('gluvo',   { renderMain: renderGluvo });
-  window.AdminApp.register('spijun',  { renderMain: renderSpijun });
-  window.AdminApp.register('timinzi', { renderMain: renderTiminzi });
-  window.AdminApp.register('data',    { renderMain: renderData });
+  // ---------- prigovori (player feedback: reports + ratings) ----------
+  var FB_TYPE={obicno:'❓',audio:'🎵',video:'🎬',geo:'🗺️',broj:'🔢',emoji:'😀',uljez:'🕵️',dopuna:'✍️',piksel:'🧩',anagram:'🔀',redosled:'↕️'};
+  var FB_DEFTEXT={geo:'Gde je ovo slikano?',emoji:'Šta se krije iza emojija?',uljez:'Pronađi uljeza!',dopuna:'Završi citat!',piksel:'Šta je na slici?',anagram:'Reši anagram!'};
+  var fbData=null; // { feedback, packs } cached across re-renders
+  function fbAnswerBrief(q){
+    if(!q) return '';
+    var t=q.type||'obicno';
+    if(t==='geo') return '📍 '+esc(q.caption||'(bez captiona)')+(q.lat!=null?(' · '+Number(q.lat).toFixed(2)+', '+Number(q.lng).toFixed(2)):'');
+    if(t==='broj') return '✔ '+esc(String(q.answer))+(q.unit?' '+esc(q.unit):'');
+    if(t==='emoji') return esc(q.emojis||'')+' → ✔ '+esc(q.answer||'');
+    if(t==='dopuna') return '„'+esc(q.quote||'')+' …" → ✔ '+esc(q.answer||'');
+    if(t==='piksel'||t==='anagram') return '✔ '+esc(q.answer||'');
+    if(t==='redosled') return (Array.isArray(q.items)?q.items.map(esc).join(' · '):'');
+    var o=Array.isArray(q.options)?q.options:[]; return o.map(function(x,i){return (i===q.correctIndex?'✔ ':'')+esc(x);}).join(' · ');
+  }
+  function fbResolve(key, packsById){
+    var parts=String(key).split(':');
+    if(parts[0]==='pack' && parts.length===3){
+      var packId=parts[1], idx=parseInt(parts[2],10);
+      var pack=packsById[packId];
+      var q=(pack && Array.isArray(pack.questions))?pack.questions[idx]:null;
+      return { source:'pack', packId:packId, packName:(pack?(pack.name||pack.id):packId), idx:idx, q:q, missing:!pack||!q };
+    }
+    if(parts[0]==='bank'){
+      return { source:'bank', packId:null, packName:'Ugrađeni bank', idx:parseInt(parts[1],10), q:null, missing:false };
+    }
+    return { source:'?', packId:null, packName:'?', idx:-1, q:null, missing:true };
+  }
+  function renderFeedback(host, ctx){
+    if(fbData){ paintFeedback(host,ctx); return; }
+    host.innerHTML='<div class="empty">Učitavanje prigovora…</div>';
+    Promise.all([ api('GET','/api/admin/quiz-feedback'), api('GET','/api/admin/quiz-packs') ])
+      .then(function(r){ fbData={ feedback:r[0].feedback||{}, packs:(r[1].packs)||[] }; paintFeedback(host,ctx); })
+      .catch(function(e){ host.innerHTML='<div class="empty">Greška pri učitavanju: '+esc(e.message)+'</div>'; });
+  }
+  function paintFeedback(host, ctx){
+    var packsById={}; (fbData.packs||[]).forEach(function(p){ packsById[p.id]=p; });
+    var fb=fbData.feedback||{};
+    var entries=[];
+    for(var key in fb){
+      if(!Object.prototype.hasOwnProperty.call(fb,key)) continue;
+      var v=fb[key]||{};
+      if(!(v.reports>0)) continue; // Prigovori = prijavljena pitanja.
+      var info=fbResolve(key, packsById);
+      entries.push({ key:key, reports:v.reports||0, ratingCount:v.ratingCount||0,
+        avg:(v.ratingCount>0?v.ratingSum/v.ratingCount:null), lastReportAt:v.lastReportAt||0, info:info });
+    }
+    entries.sort(function(a,b){ if(b.reports!==a.reports) return b.reports-a.reports; return (b.lastReportAt||0)-(a.lastReportAt||0); });
+
+    var head='<div class="fb-head"><div><div class="fb-title">🚩 Prijavljena pitanja</div>'
+      +'<div class="hint" style="margin:.2rem 0 0">Pitanja koja su igrači prijavili kao netačna tokom igre. Prijava se beleži čim igrač klikne „Prijavi", i pre isteka vremena.</div></div>'
+      +'<button class="btn btn-ghost btn-sm" id="fb-refresh">↻ Osveži</button></div>';
+
+    var body;
+    if(entries.length===0){
+      body='<div class="empty">Nema prijavljenih pitanja. 🎉</div>';
+    } else {
+      body='';
+      entries.forEach(function(e){
+        var info=e.info; var q=info.q; var t=q?(q.type||'obicno'):'';
+        var icon=FB_TYPE[t]||'•';
+        var text;
+        if(info.source==='bank') text='Pitanje #'+(isNaN(info.idx)?'?':(info.idx+1))+' iz ugrađenog banka';
+        else if(info.missing) text='Nepoznato pitanje (možda obrisano)';
+        else text=q.text || FB_DEFTEXT[t] || '(bez teksta)';
+        var ratingHtml=(e.avg!=null)?'<span class="fb-badge fb-rate" title="'+e.ratingCount+' ocena">★ '+e.avg.toFixed(1)+' ('+e.ratingCount+')</span>':'';
+        var openBtn=(info.source==='pack' && !info.missing)
+          ? '<button class="btn btn-ghost btn-sm fb-open" data-pk="'+esc(info.packId)+'">Otvori pack →</button>' : '';
+        body+='<div class="fb-row">'
+          +'<div class="fb-flag">🚩<b>'+e.reports+'</b></div>'
+          +'<div class="fb-main"><div class="fb-text">'+(q?('<span class="fb-ico">'+icon+'</span>'):'')+esc(text)+'</div>'
+          +'<div class="fb-meta">'+esc(info.packName)+(q?(' · '+icon+' '+esc(t)):'')+' '+ratingHtml+'</div>'
+          +(q?'<div class="fb-ans">'+fbAnswerBrief(q)+'</div>':'')
+          +'</div>'
+          +'<div class="fb-acts">'+openBtn
+          +'<button class="btn btn-danger btn-sm fb-clear" data-key="'+esc(e.key)+'">✓ Reši</button></div>'
+          +'</div>';
+      });
+    }
+    host.innerHTML=head+'<div class="fb-list">'+body+'</div>';
+
+    $('fb-refresh').onclick=function(){ fbData=null; renderFeedback(host,ctx); };
+    var opens=host.querySelectorAll('.fb-open');
+    for(var i=0;i<opens.length;i++) opens[i].onclick=function(){ window.AdminApp.goToPack('kviz', this.getAttribute('data-pk')); };
+    var clears=host.querySelectorAll('.fb-clear');
+    for(var c=0;c<clears.length;c++) clears[c].onclick=function(){
+      var key=this.getAttribute('data-key');
+      if(!window.confirm('Označiti kao rešeno i ukloniti prijave/ocene za ovo pitanje?')) return;
+      api('POST','/api/admin/quiz-feedback/clear',{key:key}).then(function(){ if(fbData&&fbData.feedback)delete fbData.feedback[key]; paintFeedback(host,ctx); showOk('Rešeno.'); })
+        .catch(function(e){ showErr(e.message); });
+    };
+  }
+
+  window.AdminApp.register('tajni',    { renderMain: renderTajni });
+  window.AdminApp.register('gluvo',    { renderMain: renderGluvo });
+  window.AdminApp.register('spijun',   { renderMain: renderSpijun });
+  window.AdminApp.register('feedback', { renderMain: renderFeedback });
+  window.AdminApp.register('timinzi',  { renderMain: renderTiminzi });
+  window.AdminApp.register('data',     { renderMain: renderData });
 })();
 </script>
 </body>
@@ -1511,11 +1709,29 @@ function kvizCatById(id){
  */
 const ADMIN_VIEW_CSS = `
 /* ---- table editor (kviz + ko-sam-ja) ---- */
-.tbl-tools{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:1rem}
-.tbl-search{position:relative;flex:1;min-width:180px;max-width:300px}
+.tbl-tools{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.75rem}
+.tbl-search{position:relative;flex:1;min-width:180px;max-width:360px}
 .tbl-search span{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--dim)}
 .tbl-search input{padding-left:2rem}
-.tbl-filters{display:flex;gap:.3rem;flex-wrap:wrap;flex:1}
+.tbl-filterbar{margin-bottom:.9rem}
+.tbl-filters{display:flex;gap:.3rem;flex-wrap:wrap}
+.tbl-sortbar{display:flex;align-items:center;gap:.5rem;margin:-.4rem 0 .9rem}
+.tbl-sortlbl{font-size:.8rem;font-weight:700;color:var(--dim)}
+.tbl-sort{background:var(--surface3);color:var(--ink);border:1.5px solid var(--line2);border-radius:9px;padding:.35rem .6rem;font-size:.82rem;font-weight:600;cursor:pointer;max-width:230px}
+.fb-head{display:flex;align-items:flex-start;gap:1rem;justify-content:space-between;margin-bottom:1.1rem;flex-wrap:wrap}
+.fb-title{font-size:1.15rem;font-weight:800;color:var(--navy)}
+.fb-list{display:flex;flex-direction:column;gap:.5rem}
+.fb-row{display:flex;align-items:center;gap:.9rem;background:var(--surface);border:1.5px solid var(--line2);border-radius:12px;padding:.7rem .9rem}
+.fb-flag{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:2.3rem;color:#B85C4F;font-size:.85rem;line-height:1.1}
+.fb-flag b{font-size:1.15rem}
+.fb-main{flex:1;min-width:0}
+.fb-text{font-weight:700;color:var(--navy);display:flex;align-items:center;gap:.4rem}
+.fb-ico{opacity:.85}
+.fb-meta{font-size:.8rem;color:var(--dim);margin-top:.15rem}
+.fb-ans{font-size:.82rem;color:var(--muted);margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-badge{display:inline-flex;align-items:center;gap:.2rem;font-size:.72rem;font-weight:800;padding:2px 8px;border-radius:12px}
+.fb-rate{color:#8a6f2c;background:rgba(194,155,71,.16)}
+.fb-acts{display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
 .chip-f{display:inline-flex;align-items:center;gap:.3rem;border:1.5px solid var(--line2);background:var(--surface);color:var(--navy);
   font-weight:700;font-size:.82rem;padding:.38rem .7rem;border-radius:20px;white-space:nowrap;cursor:pointer}
 .chip-f.on{background:var(--navy);color:#F5EBE0;border-color:var(--navy)}

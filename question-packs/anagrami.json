@@ -3,17 +3,80 @@
   "description": "Slova su izmešana — presloži ih u tačnu reč pre nego što se sama otkrije!",
   "category": "pop",
   "questions": [
-    { "type": "anagram", "text": "Glavni grad Srbije", "answer": "Beograd" },
-    { "type": "anagram", "text": "Žičani muzički instrument", "answer": "Gitara" },
-    { "type": "anagram", "text": "Crveno voće iz bašte", "answer": "Jabuka" },
-    { "type": "anagram", "text": "Pametan morski sisar", "answer": "Delfin" },
-    { "type": "anagram", "text": "Poznati film o brodu", "answer": "Titanik" },
-    { "type": "anagram", "text": "Instrument sa dirkama", "answer": "Klavir" },
-    { "type": "anagram", "text": "Insekt sa šarenim krilima", "answer": "Leptir" },
-    { "type": "anagram", "text": "Najveća planeta Sunčevog sistema", "answer": "Jupiter" },
-    { "type": "anagram", "text": "Žuto tropsko voće", "answer": "Banana" },
-    { "type": "anagram", "text": "Najbrža kopnena životinja", "answer": "Gepard" },
-    { "type": "anagram", "text": "Prugasti afrički konj", "answer": "Zebra" },
-    { "type": "anagram", "text": "Sport sa reketom preko mreže", "answer": "Tenis" }
+    {
+      "type": "anagram",
+      "text": "Glavni grad Srbije",
+      "answer": "Beograd",
+      "timeLimit": 25,
+      "tags": [
+        "easy"
+      ]
+    },
+    {
+      "type": "anagram",
+      "text": "Žičani muzički instrument",
+      "answer": "Gitara",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Crveno voće iz bašte",
+      "answer": "Jabuka",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Pametan morski sisar",
+      "answer": "Delfin",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Poznati film o brodu",
+      "answer": "Titanik",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Instrument sa dirkama",
+      "answer": "Klavir",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Insekt sa šarenim krilima",
+      "answer": "Leptir",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najveća planeta Sunčevog sistema",
+      "answer": "Jupiter",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Žuto tropsko voće",
+      "answer": "Banana",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najbrža kopnena životinja",
+      "answer": "Gepard",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Prugasti afrički konj",
+      "answer": "Zebra",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport sa reketom preko mreže",
+      "answer": "Tenis",
+      "timeLimit": 25
+    }
   ]
 }

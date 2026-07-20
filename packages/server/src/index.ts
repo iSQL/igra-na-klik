@@ -36,11 +36,13 @@ import { listQuizPackSummaries } from './game/games/quiz/quiz-pack-resolver.js';
 import { createContentAdminRouter } from './admin/content-admin.js';
 import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
+import { initQuizFeedback } from './game/quiz-feedback.js';
 import { renderAdminApp } from './admin/admin-app.js';
 import { createDataAdminRouter } from './admin/data-admin.js';
 import {
   resolveContentDir,
   resolveTimingFile,
+  resolveQuizFeedbackFile,
   seedDataDirs,
 } from './data-paths.js';
 import { parseGluvoDobaPack, parseSpijunPack } from '@igra/shared';
@@ -85,6 +87,10 @@ const SPIJUN_PACKS_DIR = resolveContentDir(
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = resolveTimingFile(process.env.TIMING_CONFIG_FILE);
 initTimingConfig(TIMING_CONFIG_FILE);
+// Player quiz feedback (reports + ratings) is file-backed alongside the timing
+// overrides; the quiz module writes to it live, the admin editor reads it.
+const QUIZ_FEEDBACK_FILE = resolveQuizFeedbackFile(process.env.QUIZ_FEEDBACK_FILE);
+initQuizFeedback(QUIZ_FEEDBACK_FILE);
 
 // When deployed as a single container, host and controller live on the same
 // origin — no CORS list needed. Fall back to the configured origins otherwise.
@@ -382,6 +388,7 @@ app.use(
       { name: 'spijun-packs', path: SPIJUN_PACKS_DIR },
     ],
     timingFile: TIMING_CONFIG_FILE,
+    extraFiles: [QUIZ_FEEDBACK_FILE],
     // Reset wipes the timing file too — refresh the cached overrides.
     onReset: () => initTimingConfig(TIMING_CONFIG_FILE),
   })
@@ -591,12 +598,12 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 <div class="eyebrow" id="eyebrow">Opština Žabari</div>
 <h1>Igra Na Klik</h1>
 <div class="motto" id="motto">Mreža naše varoši</div>
-<a class="cta" id="cta" href="/play/">Pridruži se igri</a>
+<a class="cta" id="cta" href="/play/">📱 Igraj sa telefona</a>
 <div class="rooms" id="rooms">
 <div class="rooms-title" id="rooms-title">Aktivne sobe</div>
 <div id="rooms-list"></div>
 </div>
-<a class="host-link" id="host-link" href="/host/">Kreiraj novu sobu →</a>
+<a class="host-link" id="host-link" href="/host/">🖥️ Napravi sobu na TV-u / velikom ekranu →</a>
 <a class="host-link" href="/uputstva">📖 Uputstva za igre</a>
 <a class="site" href="https://zabari.net" target="_blank" rel="noopener">zabari<span>.net</span></a>
 </div>
@@ -604,8 +611,8 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 (function(){
   var KEY='igra-language';
   var T={
-    sr:{cta:'Pridruži se igri',host:'Kreiraj novu sobu →',roomsTitle:'Aktivne sobe',roomsEmpty:'Nema aktivnih soba',inGame:'Igra u toku',players:'igrača'},
-    en:{cta:'Join a game',host:'Create a new room →',roomsTitle:'Active rooms',roomsEmpty:'No active rooms',inGame:'Game in progress',players:'players'}
+    sr:{cta:'📱 Igraj sa telefona',host:'🖥️ Napravi sobu na TV-u / velikom ekranu →',roomsTitle:'Aktivne sobe',roomsEmpty:'Nema aktivnih soba',inGame:'Igra u toku',players:'igrača'},
+    en:{cta:'📱 Play on your phone',host:'🖥️ Create a room on a TV / big screen →',roomsTitle:'Active rooms',roomsEmpty:'No active rooms',inGame:'Game in progress',players:'players'}
   };
   var currentLang='sr';
   var lastRooms=null;

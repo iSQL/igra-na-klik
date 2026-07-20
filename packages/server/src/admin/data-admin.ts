@@ -19,6 +19,8 @@ interface DataAdminOpts {
   /** Resolved content dirs to include in the backup, each as `<name>/…`. */
   contentDirs: { name: string; path: string }[];
   timingFile: string;
+  /** Extra loose files to include in the backup zip (e.g. quiz feedback). */
+  extraFiles?: string[];
   /** Refresh in-memory caches after a reset (e.g. re-init timing config). */
   onReset: () => void;
 }
@@ -59,6 +61,9 @@ export function createDataAdminRouter(opts: DataAdminOpts): Router {
     }
     if (existsSync(opts.timingFile)) {
       archive.file(opts.timingFile, { name: path.basename(opts.timingFile) });
+    }
+    for (const f of opts.extraFiles ?? []) {
+      if (existsSync(f)) archive.file(f, { name: path.basename(f) });
     }
     archive.finalize();
   });

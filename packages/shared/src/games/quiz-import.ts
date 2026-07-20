@@ -1,6 +1,7 @@
-import { QUIZ_OPTION_COLORS } from '../types/quiz.js';
+import { QUIZ_OPTION_COLORS, KVIZ_QUESTION_TAGS } from '../types/quiz.js';
 import type {
   KvizQuestionType,
+  KvizQuestionTag,
   KvizValueType,
   QuizOption,
 } from '../types/quiz.js';
@@ -133,7 +134,15 @@ export interface KvizImportRedosled {
   timeLimit?: number;
 }
 
-export type KvizImportQuestion =
+/**
+ * Metadata common to every question shape. `tags` are author-only (difficulty
+ * / NSFW) and never reach players — see {@link KvizQuestionTag}.
+ */
+export interface KvizImportQuestionMeta {
+  tags?: KvizQuestionTag[];
+}
+
+export type KvizImportQuestion = (
   | KvizImportObicno
   | KvizImportAudio
   | KvizImportVideo
@@ -144,7 +153,9 @@ export type KvizImportQuestion =
   | KvizImportDopuna
   | KvizImportPiksel
   | KvizImportAnagram
-  | KvizImportRedosled;
+  | KvizImportRedosled
+) &
+  KvizImportQuestionMeta;
 
 export interface KvizPackManifest {
   name?: string;
@@ -322,6 +333,23 @@ export function checkTextGuess(
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
+}
+
+const KVIZ_TAG_SET = new Set<string>(KVIZ_QUESTION_TAGS);
+
+/**
+ * Lax parse of a question's author tags: keep known tag ids, drop anything
+ * else (never a validation error). Returns undefined when there are none.
+ */
+function parseQuestionTags(raw: unknown): KvizQuestionTag[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: KvizQuestionTag[] = [];
+  for (const t of raw) {
+    if (typeof t === 'string' && KVIZ_TAG_SET.has(t) && !out.includes(t as KvizQuestionTag)) {
+      out.push(t as KvizQuestionTag);
+    }
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function isFiniteNumber(v: unknown): v is number {
@@ -624,6 +652,9 @@ export function parseQuizImport(
   }
 
   const questions: KvizImportQuestion[] = [];
+  // Author tags per question, index-aligned with `questions` (exactly one
+  // question is pushed per successful loop iteration). Applied after the loop.
+  const perQuestionTags: (KvizQuestionTag[] | undefined)[] = [];
 
   for (let i = 0; i < rawQuestions.length; i++) {
     const raw = rawQuestions[i] as Record<string, unknown> | undefined;
@@ -632,6 +663,8 @@ export function parseQuizImport(
     if (!raw || typeof raw !== 'object') {
       return { ok: false, error: `${label}: nije objekat.` };
     }
+
+    perQuestionTags.push(parseQuestionTags(raw.tags));
 
     let type: KvizQuestionType = 'obicno';
     if (raw.type !== undefined) {
@@ -1097,6 +1130,12 @@ export function parseQuizImport(
       timeLimit: time.timeLimit,
     });
   }
+
+  // Re-attach author tags now that every question object exists.
+  questions.forEach((q, i) => {
+    const tags = perQuestionTags[i];
+    if (tags && tags.length > 0) q.tags = tags;
+  });
 
   return {
     ok: true,
