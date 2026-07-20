@@ -183,6 +183,19 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // javna lista lokacija + optužbe + glasanje stižu i do kontrolera.
     supportsHostless: true,
   },
+  asocijacije: {
+    id: 'asocijacije',
+    name: 'Asocijacije',
+    minPlayers: 2,
+    maxPlayers: 8,
+    description:
+      'TV Slagalica: 4 kolone × 4 polja i konačno rešenje. Otvaraj polja, pogađaj kolone i vikni konačno rešenje! Klasik ili kviz mod.',
+    icon: '🧩',
+    accent: 'gold',
+    category: 'quiz',
+    estimatedMinutes: 12,
+    supportsHostless: true,
+  },
   'hot-potato': {
     id: 'hot-potato',
     name: 'Vruć krompir',

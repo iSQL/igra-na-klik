@@ -7,6 +7,7 @@ import type {
   GameAccent,
   GameCategory,
   GameDefinition,
+  AsocijacijePackSummary,
 } from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
@@ -161,6 +162,9 @@ export function GameSelectScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
+  const [asocijacijePacks, setAsocijacijePacks] = useState<
+    AsocijacijePackSummary[]
+  >([]);
   // Which game's config popup is open, and which game's rules modal is open.
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [rulesGameId, setRulesGameId] = useState<string | null>(null);
@@ -185,6 +189,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setSpijunPacks([]);
+      });
+    fetch('/api/asocijacije-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: AsocijacijePackSummary[] }) => {
+        if (!cancelled) setAsocijacijePacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAsocijacijePacks([]);
       });
     return () => {
       cancelled = true;
@@ -338,6 +350,10 @@ export function GameSelectScreen() {
         : undefined,
       spijunTutorial:
         gameId === 'spijun' && newGamesConfig.spijunTutorial ? true : undefined,
+      asocijacijeMode:
+        gameId === 'asocijacije' ? newGamesConfig.asocijacijeMode : undefined,
+      asocijacijePackIds:
+        gameId === 'asocijacije' ? [newGamesConfig.asocijacijePackId] : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -356,6 +372,57 @@ export function GameSelectScreen() {
   const renderConfig = (game: GameDefinition) => (
     <>
       {game.id === 'quiz' && <QuizImportButton />}
+      {game.id === 'asocijacije' && (
+        <>
+          <TextPillRow
+            label="Mod"
+            value={newGamesConfig.asocijacijeMode}
+            options={[
+              { value: 'klasik', label: 'Klasik' },
+              { value: 'kviz', label: 'Kviz' },
+            ]}
+            onSelect={(v) =>
+              newGamesConfig.setAsocijacijeMode(v as 'klasik' | 'kviz')
+            }
+          />
+          {asocijacijePacks.length > 0 && (
+            <TextPillRow
+              label="Slagalice"
+              value={newGamesConfig.asocijacijePackId}
+              options={asocijacijePacks.map((p) => ({
+                value: p.id,
+                label: `${p.name || p.id} (${
+                  newGamesConfig.asocijacijeMode === 'kviz'
+                    ? p.kvizPuzzleCount
+                    : p.puzzleCount
+                })`,
+              }))}
+              onSelect={newGamesConfig.setAsocijacijePackId}
+            />
+          )}
+          {newGamesConfig.asocijacijeMode === 'kviz' &&
+            (() => {
+              const pack = asocijacijePacks.find(
+                (p) => p.id === newGamesConfig.asocijacijePackId
+              );
+              if (pack && pack.kvizPuzzleCount === 0) {
+                return (
+                  <p
+                    style={{
+                      fontSize: '0.72rem',
+                      color: 'var(--danger, #E5533C)',
+                      textAlign: 'center',
+                      margin: 0,
+                    }}
+                  >
+                    Ovaj paket nema slagalice sa pitanjima — koristiće se ugrađene.
+                  </p>
+                );
+              }
+              return null;
+            })()}
+        </>
+      )}
       {game.id === 'ko-sam-ja' && (
         <>
           <div

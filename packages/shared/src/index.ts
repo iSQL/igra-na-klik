@@ -42,3 +42,6 @@ export * from './types/spijun.js';
 export * from './games/spijun-locations.js';
 export * from './games/spijun-import.js';
 export * from './games/spijun-tutorial.js';
+export * from './types/asocijacije.js';
+export * from './games/asocijacije-bank.js';
+export * from './games/asocijacije-import.js';

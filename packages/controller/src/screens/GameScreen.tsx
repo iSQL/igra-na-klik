@@ -16,8 +16,8 @@ export function GameScreen() {
       <div
         style={{
           position: 'fixed',
-          top: 'calc(0.6rem + var(--safe-top, 0px))',
-          left: 'calc(0.6rem + var(--safe-left, 0px))',
+          bottom: 'calc(0.6rem + var(--safe-bottom, 0px))',
+          right: 'calc(0.6rem + var(--safe-right, 0px))',
           zIndex: 50,
         }}
       >

@@ -1,0 +1,88 @@
+{
+  "name": "Primer paketa",
+  "description": "Dve slagalice sa kviz pitanjima — primer kako izgleda paket.",
+  "puzzles": [
+    {
+      "finalSolution": "FUDBAL",
+      "columns": [
+        {
+          "solution": "LOPTA",
+          "fields": [
+            { "word": "OKRUGLA", "question": "Kog je oblika lopta?", "wrongOptions": ["KOCKASTA", "TROUGLASTA", "RAVNA"] },
+            { "word": "KOŽA", "question": "Od čega je klasična fudbalska lopta?", "wrongOptions": ["STAKLO", "GUMA", "DRVO"] },
+            { "word": "ŠUT", "question": "Kako se zove snažan udarac po lopti?", "wrongOptions": ["DODIR", "HVAT", "SKOK"] },
+            { "word": "GO", "question": "Šta postižeš kad lopta uđe u mrežu?", "wrongOptions": ["FAUL", "KORNER", "AUT"] }
+          ]
+        },
+        {
+          "solution": "TEREN",
+          "fields": [
+            { "word": "TRAVA", "question": "Čime je prekriven fudbalski teren?", "wrongOptions": ["PESAK", "BETON", "LED"] },
+            { "word": "GOL", "question": "Šta stoji na kraju terena sa mrežom?", "wrongOptions": ["KLUPA", "SEMAFOR", "TRIBINA"] },
+            { "word": "LINIJA", "question": "Čime je iscrtana granica terena?", "wrongOptions": ["OGRADA", "ZID", "ROV"] },
+            { "word": "CENTAR", "question": "Odakle počinje utakmica?", "wrongOptions": ["UGAO", "GOL", "AUT"] }
+          ]
+        },
+        {
+          "solution": "SUDIJA",
+          "fields": [
+            { "word": "PIŠTALJKA", "question": "Čime sudija zaustavlja igru?", "wrongOptions": ["ZVONO", "TRUBA", "DOBOŠ"] },
+            { "word": "KARTON", "question": "Šta sudija pokaže za prekršaj?", "wrongOptions": ["ZASTAVA", "TABLA", "PAPIR"] },
+            { "word": "FAUL", "question": "Kako se zove nedozvoljen start?", "wrongOptions": ["GOL", "PAS", "CENTAR"] },
+            { "word": "PENAL", "question": "Kako se kažnjava prekršaj u kaznenom prostoru?", "wrongOptions": ["KORNER", "AUT", "SLOBODAN"] }
+          ]
+        },
+        {
+          "solution": "NAVIJAČI",
+          "fields": [
+            { "word": "TRIBINA", "question": "Gde sede navijači?", "wrongOptions": ["KLUPA", "TEREN", "SVLAČIONICA"] },
+            { "word": "ZASTAVA", "question": "Čime navijači mašu na utakmici?", "wrongOptions": ["LOPTA", "KARTON", "DRES"] },
+            { "word": "PESMA", "question": "Šta navijači glasno pevaju?", "wrongOptions": ["TIŠINA", "GOVOR", "MOLITVA"] },
+            { "word": "DRES", "question": "Šta navijači nose u bojama kluba?", "wrongOptions": ["ODELO", "KAPUT", "PIDŽAMA"] }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "KAFA",
+      "columns": [
+        {
+          "solution": "ZRNO",
+          "fields": [
+            { "word": "PRŽENJE", "question": "Kako se zrno kafe priprema pre mlevenja?", "wrongOptions": ["KUVANJE", "SUŠENJE", "SMRZAVANJE"] },
+            { "word": "MLIN", "question": "U čemu se melju zrna kafe?", "wrongOptions": ["FRIŽIDER", "REND", "TIGANJ"] },
+            { "word": "AROMA", "question": "Šta zrno kafe širi mirisom?", "wrongOptions": ["ZVUK", "BOJA", "SVETLOST"] },
+            { "word": "SMEĐA", "question": "Koje je boje zrno pržene kafe?", "wrongOptions": ["ZELENA", "PLAVA", "BELA"] }
+          ]
+        },
+        {
+          "solution": "ŠOLJA",
+          "fields": [
+            { "word": "DRŠKA", "question": "Za šta se drži šolja?", "wrongOptions": ["DNO", "IVICA", "POKLOPAC"] },
+            { "word": "TANJIRIĆ", "question": "Na čemu stoji šoljica?", "wrongOptions": ["STOLNJAK", "POSLUŽAVNIK", "SALVETA"] },
+            { "word": "KAŠIČICA", "question": "Čime mešamo šećer u kafi?", "wrongOptions": ["VILJUŠKA", "NOŽ", "SLAMKA"] },
+            { "word": "PORCELAN", "question": "Od čega su fine šolje?", "wrongOptions": ["PLASTIKA", "METAL", "DRVO"] }
+          ]
+        },
+        {
+          "solution": "JUTRO",
+          "fields": [
+            { "word": "BUĐENJE", "question": "Šta radimo kad ustanemo?", "wrongOptions": ["SPAVANJE", "SANJANJE", "ZEVANJE"] },
+            { "word": "DORUČAK", "question": "Koji je prvi obrok u danu?", "wrongOptions": ["RUČAK", "VEČERA", "UŽINA"] },
+            { "word": "SUNCE", "question": "Šta izlazi ujutru?", "wrongOptions": ["MESEC", "ZVEZDE", "KOMETA"] },
+            { "word": "BUDILNIK", "question": "Šta nas budi zvonjavom?", "wrongOptions": ["TELEFON", "ZVONO", "SIRENA"] }
+          ]
+        },
+        {
+          "solution": "KOFEIN",
+          "fields": [
+            { "word": "ENERGIJA", "question": "Šta nam kofein daje?", "wrongOptions": ["POSPANOST", "GLAD", "ŽEĐ"] },
+            { "word": "BUDNOST", "question": "Kako se osećamo posle kafe?", "wrongOptions": ["POSPANO", "GLADNO", "UMORNO"] },
+            { "word": "SRCE", "question": "Koji organ kofein ubrzava?", "wrongOptions": ["JETRA", "PLUĆA", "BUBREG"] },
+            { "word": "NAVIKA", "question": "Šta jutarnja kafa lako postane?", "wrongOptions": ["KAZNA", "IZNENAĐENJE", "SLUČAJNOST"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

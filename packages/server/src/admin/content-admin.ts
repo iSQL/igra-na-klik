@@ -13,6 +13,8 @@ import {
   parseTajniAgentiImport,
   parseGluvoDobaPack,
   parseSpijunPack,
+  parseAsocijacijePack,
+  countKvizPuzzles,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
   TAJNI_AGENTI_MAX_WORD_LENGTH,
@@ -47,6 +49,7 @@ interface ContentDirs {
   tajniAgentiPacksDir: string;
   gluvoDobaPacksDir: string;
   spijunPacksDir: string;
+  asocijacijePacksDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
@@ -781,6 +784,60 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
     replace: (body) => {
       const parsed = parseSpijunPack(body, { allowEmpty: true });
       if (!parsed.ok) return { ok: false, error: parsed.error };
+      return { ok: true, data: parsed.pack };
+    },
+  });
+
+  // ---------- asocijacije puzzle packs --------------------------------------
+  // File on disk: { name?, description?, puzzles: [{ columns:[4×{solution,
+  // fields:[4×{word, question?, wrongOptions?}]}], finalSolution }] }.
+  // Writes accept drafts (0 puzzles, allowEmpty) — a pack with no puzzles
+  // stays editable but invisible in the game.
+
+  mountPackRoutes({
+    route: 'asocijacije-packs',
+    dir: dirs.asocijacijePacksDir,
+    listKey: 'packs',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const lax = parseAsocijacijePack(raw, { id, allowEmpty: true });
+      const obj = (raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? raw
+        : {}) as Record<string, unknown>;
+      const name =
+        (lax.pack?.name) ??
+        (typeof obj.name === 'string' ? obj.name : undefined) ??
+        id;
+      // Prefer the parsed puzzles; fall back to the raw array so a broken
+      // pack can still be opened and repaired in the editor.
+      const puzzles = lax.pack
+        ? lax.pack.puzzles
+        : Array.isArray(obj.puzzles)
+          ? obj.puzzles
+          : [];
+      const puzzleCount = puzzles.length;
+      const kvizPuzzleCount = lax.pack ? countKvizPuzzles(lax.pack) : 0;
+      // Strict re-check (needs ≥1 puzzle) gates in-game visibility.
+      const strict = parseAsocijacijePack(raw, { id });
+      return {
+        id,
+        name,
+        description: lax.pack?.description,
+        count: puzzleCount,
+        puzzleCount,
+        kvizPuzzleCount,
+        puzzles,
+        visibleInGame: strict.pack !== null,
+        error: strict.pack ? undefined : (strict.error ?? lax.error ?? undefined),
+      };
+    },
+    create: (_body, name) => ({
+      ok: true,
+      data: { name, description: '', puzzles: [] },
+    }),
+    replace: (body) => {
+      const parsed = parseAsocijacijePack(body, { allowEmpty: true });
+      if (!parsed.pack) return { ok: false, error: parsed.error ?? 'Nevažeći paket' };
       return { ok: true, data: parsed.pack };
     },
   });

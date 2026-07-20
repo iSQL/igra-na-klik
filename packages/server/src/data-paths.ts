@@ -41,6 +41,7 @@ export const CONTENT_DIR_NAMES = [
   'tajni-agenti-packs',
   'gluvo-doba-packs',
   'spijun-packs',
+  'asocijacije-packs',
 ] as const;
 
 export const TIMING_FILE_NAME = 'timing-config.json';

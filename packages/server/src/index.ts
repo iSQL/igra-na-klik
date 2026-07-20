@@ -27,7 +27,12 @@ import {
   parseTajniAgentiImport,
   KVIZ_BANK_PACK_ID,
   QUIZ_QUESTION_BANK,
+  ASOCIJACIJE_BANK,
+  ASOCIJACIJE_BANK_PACK_ID,
+  countKvizPuzzles,
 } from '@igra/shared';
+import type { AsocijacijePackSummary } from '@igra/shared';
+import { listAsocijacijePackSummaries } from './game/games/asocijacije/asocijacije-pack-resolver.js';
 import type { KoSamJaImportQuestion, KvizQuestionType } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
@@ -84,6 +89,10 @@ const GLUVO_DOBA_PACKS_DIR = resolveContentDir(
 const SPIJUN_PACKS_DIR = resolveContentDir(
   'spijun-packs',
   process.env.SPIJUN_PACKS_DIR
+);
+const ASOCIJACIJE_PACKS_DIR = resolveContentDir(
+  'asocijacije-packs',
+  process.env.ASOCIJACIJE_PACKS_DIR
 );
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = resolveTimingFile(process.env.TIMING_CONFIG_FILE);
@@ -238,6 +247,29 @@ app.get('/api/spijun-packs', async (_req, res) => {
   }
 });
 
+// Asocijacije puzzle packs — summaries only (manifests carry answers). The
+// built-in bank is prepended as the pseudo-pack so clients list it normally.
+app.get('/api/asocijacije-packs', async (_req, res) => {
+  try {
+    const packs = await listAsocijacijePackSummaries(ASOCIJACIJE_PACKS_DIR);
+    const bank: AsocijacijePackSummary = {
+      id: ASOCIJACIJE_BANK_PACK_ID,
+      name: 'Ugrađene slagalice',
+      puzzleCount: ASOCIJACIJE_BANK.length,
+      kvizPuzzleCount: countKvizPuzzles({
+        id: ASOCIJACIJE_BANK_PACK_ID,
+        name: '',
+        puzzles: ASOCIJACIJE_BANK,
+      }),
+      visibleInGame: true,
+    };
+    res.json({ packs: [bank, ...packs] });
+  } catch (err) {
+    console.error('Failed to read asocijacije packs directory:', err);
+    res.status(500).json({ error: 'Failed to read asocijacije packs' });
+  }
+});
+
 app.get('/api/ko-sam-ja-packs', async (_req, res) => {
   try {
     const entries = await readdir(KO_SAM_JA_PACKS_DIR, { withFileTypes: true });
@@ -374,6 +406,7 @@ app.use(
     tajniAgentiPacksDir: TAJNI_AGENTI_PACKS_DIR,
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
     spijunPacksDir: SPIJUN_PACKS_DIR,
+    asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
@@ -387,6 +420,7 @@ app.use(
       { name: 'tajni-agenti-packs', path: TAJNI_AGENTI_PACKS_DIR },
       { name: 'gluvo-doba-packs', path: GLUVO_DOBA_PACKS_DIR },
       { name: 'spijun-packs', path: SPIJUN_PACKS_DIR },
+      { name: 'asocijacije-packs', path: ASOCIJACIJE_PACKS_DIR },
     ],
     timingFile: TIMING_CONFIG_FILE,
     extraFiles: [QUIZ_FEEDBACK_FILE],
@@ -431,6 +465,7 @@ const httpServer = createServer(app);
 const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN];
 const { roomManager } = setupSocket(httpServer, socketOrigins, {
   questionPacksDir: QUESTION_PACKS_DIR,
+  asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
 });
 
 if (SINGLE_ROOM_MODE) {
@@ -767,6 +802,7 @@ httpServer.listen(PORT, () => {
   console.log(`Gluvo doba packs dir: ${GLUVO_DOBA_PACKS_DIR}`);
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   console.log(`Spijun packs dir: ${SPIJUN_PACKS_DIR}`);
+  console.log(`Asocijacije packs dir: ${ASOCIJACIJE_PACKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }

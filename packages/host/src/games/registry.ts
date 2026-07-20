@@ -18,6 +18,7 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   'bolji-zivot': () => import('./bolji-zivot/BoljiZivotHost'),
   'hot-potato': () => import('./hot-potato/HotPotatoHost'),
   spijun: () => import('./spijun/SpijunHost'),
+  asocijacije: () => import('./asocijacije/AsocijacijeHost'),
 };
 
 let prefetchStarted = false;

@@ -80,6 +80,9 @@ export function registerGameHandlers(
       spijunDiscussionSeconds: data.spijunDiscussionSeconds,
       spijunPack: data.spijunPack,
       spijunTutorial: data.spijunTutorial,
+      asocijacijeMode: data.asocijacijeMode,
+      asocijacijePackIds: data.asocijacijePackIds,
+      customAsocijacijePuzzles: data.customAsocijacijePuzzles,
       language: data.language,
     });
     if (result.error) {

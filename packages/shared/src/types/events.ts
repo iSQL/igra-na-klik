@@ -18,6 +18,7 @@ import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 import type { HotPotatoMode } from './hot-potato.js';
 import type { SpijunPack } from '../games/spijun-import.js';
+import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -127,6 +128,14 @@ export interface ClientToServerEvents {
     spijunDiscussionSeconds?: number;
     spijunPack?: SpijunPack;
     spijunTutorial?: boolean;
+    // Asocijacije: 'klasik' (fields open on tap) or 'kviz' (a field opens by
+    // answering its multiple-choice question). Re-validated server-side.
+    asocijacijeMode?: AsocijacijeMode;
+    // Selected Asocijacije puzzle packs (ids from GET /api/asocijacije-packs;
+    // the pseudo-id ASOCIJACIJE_BANK_PACK_ID selects the built-in bank).
+    asocijacijePackIds?: string[];
+    // Inline puzzle import (host .json upload) — wins over the pack selection.
+    customAsocijacijePuzzles?: AsocijacijePuzzle[];
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

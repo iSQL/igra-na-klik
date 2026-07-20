@@ -23,6 +23,7 @@ import type {
   TajniAgentiMode,
   HotPotatoMode,
   SpijunLocation,
+  AsocijacijePackSummary,
 } from '@igra/shared';
 import {
   getRecentPackIds,
@@ -269,6 +270,13 @@ export function GameSelectScreen() {
   const [spijunPackId, setSpijunPackId] = useState('');
   const [spijunDiscussion, setSpijunDiscussion] = useState(420);
   const [spijunTutorial, setSpijunTutorial] = useState(false);
+  const [asocijacijePacks, setAsocijacijePacks] = useState<
+    AsocijacijePackSummary[]
+  >([]);
+  const [asocijacijePackId, setAsocijacijePackId] = useState('__bank__');
+  const [asocijacijeMode, setAsocijacijeMode] = useState<'klasik' | 'kviz'>(
+    'klasik'
+  );
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
@@ -307,6 +315,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setSpijunPacks([]);
+      });
+    fetch('/api/asocijacije-packs')
+      .then((r) => (r.ok ? r.json() : { packs: [] }))
+      .then((data: { packs?: AsocijacijePackSummary[] }) => {
+        if (!cancelled) setAsocijacijePacks(data.packs ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAsocijacijePacks([]);
       });
     return () => {
       cancelled = true;
@@ -398,6 +414,10 @@ export function GameSelectScreen() {
         payload.spijunPack = { name: pack.name, locations: pack.locations };
       }
       if (spijunTutorial) payload.spijunTutorial = true;
+    }
+    if (game.id === 'asocijacije') {
+      payload.asocijacijeMode = asocijacijeMode;
+      payload.asocijacijePackIds = [asocijacijePackId];
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -1097,6 +1117,49 @@ export function GameSelectScreen() {
                         )}
                       </div>
                     </>
+                  )}
+                  {game.id === 'asocijacije' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Mod
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        <Pill
+                          active={asocijacijeMode === 'klasik'}
+                          onClick={() => setAsocijacijeMode('klasik')}
+                        >
+                          Klasik
+                        </Pill>
+                        <Pill
+                          active={asocijacijeMode === 'kviz'}
+                          onClick={() => setAsocijacijeMode('kviz')}
+                        >
+                          Kviz
+                        </Pill>
+                      </div>
+                      {asocijacijePacks.length > 0 && (
+                        <>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Slagalice
+                          </span>
+                          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                            {asocijacijePacks.map((p) => (
+                              <Pill
+                                key={p.id}
+                                active={asocijacijePackId === p.id}
+                                onClick={() => setAsocijacijePackId(p.id)}
+                              >
+                                {p.name || p.id} (
+                                {asocijacijeMode === 'kviz'
+                                  ? p.kvizPuzzleCount
+                                  : p.puzzleCount}
+                                )
+                              </Pill>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                   {game.id === 'bolji-zivot' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

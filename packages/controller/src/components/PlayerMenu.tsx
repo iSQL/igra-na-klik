@@ -4,6 +4,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { useT } from '../i18n/useT';
 import { AvatarPickerModal } from './AvatarPickerModal';
 import { LanguageSwitch } from './LanguageSwitch';
+import { QuizFeedbackMenu } from './QuizFeedbackMenu';
 
 type ConfirmKind = 'leave' | 'close' | 'stop' | null;
 
@@ -183,6 +184,10 @@ export function PlayerMenu({ inGame = false }: { inGame?: boolean }) {
                 setAvatarOpen(true);
               }}
             />
+
+            {/* Kviz: report/rate the current question (renders only when a
+                kviz question is on screen). */}
+            <QuizFeedbackMenu />
 
             <div style={{ height: '1px', background: 'var(--line2)', margin: '0.15rem 0' }} />
 

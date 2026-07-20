@@ -350,6 +350,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Vruć krompir',
     'game.hot-potato.description':
       'Bomba sa skrivenim tajmerom kruži — kaži reč iz kategorije i prosledi. Kod koga pukne, ispada!',
+    'game.asocijacije.name': 'Asocijacije',
+    'game.asocijacije.description':
+      'TV Slagalica: 4 kolone × 4 polja i konačno rešenje. Otvaraj polja, pogađaj kolone i vikni konačno rešenje! Klasik ili kviz mod.',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'Kako se igra →',
     'gameSelect.howToPlayLabel': 'Kako se igra',
@@ -775,6 +778,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.name': 'Hot Potato',
     'game.hot-potato.description':
       'A bomb with a hidden timer goes around — say a word from the category and pass it on. Whoever holds it when it blows is out!',
+    'game.asocijacije.name': 'Associations',
+    'game.asocijacije.description':
+      'TV "Slagalica" associations: 4 columns × 4 fields and a final solution. Open fields, guess columns and call the final answer! Classic or quiz mode.',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'How to play →',
     'gameSelect.howToPlayLabel': 'How to play',

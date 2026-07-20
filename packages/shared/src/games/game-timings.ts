@@ -95,6 +95,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'asocijacije',
+    gameName: 'Asocijacije',
+    fields: [
+      { key: 'BOARD_RESULTS_DURATION', label: 'Prikaz table na kraju', min: 3, max: 40, def: 10 },
+      { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 6 },
+    ],
+  },
+  {
     gameId: 'tajni-agenti',
     gameName: 'Tajni agenti',
     fields: [

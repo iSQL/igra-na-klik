@@ -55,6 +55,7 @@ COPY ko-sam-ja-packs    ./seed/ko-sam-ja-packs
 COPY tajni-agenti-packs ./seed/tajni-agenti-packs
 COPY gluvo-doba-packs   ./seed/gluvo-doba-packs
 COPY spijun-packs       ./seed/spijun-packs
+COPY asocijacije-packs  ./seed/asocijacije-packs
 
 ENV PORT=3001
 ENV SAME_ORIGIN_DEPLOY=true

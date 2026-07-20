@@ -29,6 +29,7 @@ import { GluvoDobaModule } from '../game/games/gluvo-doba/GluvoDobaModule.js';
 import { BoljiZivotModule } from '../game/games/bolji-zivot/BoljiZivotModule.js';
 import { HotPotatoModule } from '../game/games/hot-potato/HotPotatoModule.js';
 import { SpijunModule } from '../game/games/spijun/SpijunModule.js';
+import { AsocijacijeModule } from '../game/games/asocijacije/AsocijacijeModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -37,7 +38,7 @@ import { hostRoom, playerRoom } from './rooms.js';
 export function setupSocket(
   httpServer: HttpServer,
   corsOrigins: string | string[],
-  options?: { questionPacksDir?: string }
+  options?: { questionPacksDir?: string; asocijacijePacksDir?: string }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
@@ -69,6 +70,7 @@ export function setupSocket(
   // so concurrent rooms playing the same game don't share mutable state.
   const gameRegistry = new GameRegistry();
   const questionPacksDir = options?.questionPacksDir ?? '';
+  const asocijacijePacksDir = options?.asocijacijePacksDir ?? '';
   gameRegistry.register(() => new TestGameModule());
   gameRegistry.register(() => new QuizGameModule(questionPacksDir));
   gameRegistry.register(() => new DrawGuessModule());
@@ -84,6 +86,7 @@ export function setupSocket(
   gameRegistry.register(() => new BoljiZivotModule());
   gameRegistry.register(() => new HotPotatoModule(questionPacksDir));
   gameRegistry.register(() => new SpijunModule());
+  gameRegistry.register(() => new AsocijacijeModule(asocijacijePacksDir));
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

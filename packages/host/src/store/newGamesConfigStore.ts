@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
+  AsocijacijeMode,
   GluvoDobaDeathReveal,
   HotPotatoMode,
   TajniAgentiMode,
@@ -36,6 +37,10 @@ interface NewGamesConfigStore {
   spijunDiscussionSeconds: number;
   spijunPackId: string;
   spijunTutorial: boolean;
+  // Asocijacije: mode (klasik/kviz) and selected puzzle pack id
+  // ('__bank__' = built-in slagalice).
+  asocijacijeMode: AsocijacijeMode;
+  asocijacijePackId: string;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -56,6 +61,8 @@ interface NewGamesConfigStore {
   setSpijunDiscussionSeconds: (n: number) => void;
   setSpijunPackId: (id: string) => void;
   setSpijunTutorial: (v: boolean) => void;
+  setAsocijacijeMode: (m: AsocijacijeMode) => void;
+  setAsocijacijePackId: (id: string) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -79,6 +86,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       spijunDiscussionSeconds: 420,
       spijunPackId: '',
       spijunTutorial: false,
+      asocijacijeMode: 'klasik',
+      asocijacijePackId: '__bank__',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -99,6 +108,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setSpijunDiscussionSeconds: (n) => set({ spijunDiscussionSeconds: n }),
       setSpijunPackId: (id) => set({ spijunPackId: id }),
       setSpijunTutorial: (v) => set({ spijunTutorial: v }),
+      setAsocijacijeMode: (m) => set({ asocijacijeMode: m }),
+      setAsocijacijePackId: (id) => set({ asocijacijePackId: id }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),
