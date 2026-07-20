@@ -189,6 +189,7 @@ export function setupSocket(
         });
         socket.to(found.roomCode).emit('room:player-reconnected', {
           playerId: found.playerId,
+          player: roomManager.toPublicPlayer(player),
         });
 
         // Catch the returning player up on lobby chat.

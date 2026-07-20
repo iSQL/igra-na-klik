@@ -26,7 +26,13 @@ export interface ServerToClientEvents {
   'room:player-joined': (data: { player: PublicPlayer }) => void;
   'room:player-left': (data: { playerId: string }) => void;
   'room:player-removed': (data: { playerId: string }) => void;
-  'room:player-reconnected': (data: { playerId: string }) => void;
+  // Carries the full player (not just the id) so a client can add-or-update:
+  // a returning player must reappear even if the client had already dropped
+  // them from its roster (e.g. after grace expiry).
+  'room:player-reconnected': (data: {
+    playerId: string;
+    player: PublicPlayer;
+  }) => void;
   'room:player-updated': (data: { player: PublicPlayer }) => void;
   'room:state-update': (data: { room: PublicRoom }) => void;
   'room:remote-host-changed': (data: {

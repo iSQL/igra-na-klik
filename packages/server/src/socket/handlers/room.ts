@@ -152,6 +152,7 @@ export function registerRoomHandlers(
         socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
         socket.to(found.roomCode).emit('room:player-reconnected', {
           playerId: found.playerId,
+          player: roomManager.toPublicPlayer(player),
         });
         if (room.status === 'lobby' && room.chatMessages.length > 0) {
           socket.emit('room:chat-history', { messages: room.chatMessages });
@@ -175,9 +176,11 @@ export function registerRoomHandlers(
 
     socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
     if (reclaimed) {
-      // The slot already exists on the host's roster — just un-grey it.
+      // The slot already exists on the host's roster — just un-grey it (or
+      // re-add it if that client had already dropped the player).
       socket.to(room.code).emit('room:player-reconnected', {
         playerId: player.id,
+        player: roomManager.toPublicPlayer(player),
       });
     } else {
       socket.to(room.code).emit('room:player-joined', {

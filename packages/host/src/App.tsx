@@ -54,8 +54,10 @@ export function App() {
       removePlayer(playerId);
     });
 
-    socket.on('room:player-reconnected', ({ playerId }) => {
-      setPlayerConnected(playerId, true);
+    socket.on('room:player-reconnected', ({ playerId, player }) => {
+      // Upsert: re-add the player if we'd already dropped them, else un-grey.
+      if (player) addPlayer(player);
+      else setPlayerConnected(playerId, true);
     });
 
     socket.on('room:player-updated', ({ player }) => {

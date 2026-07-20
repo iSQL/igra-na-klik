@@ -48,8 +48,19 @@ export const useRoomStore = create<RoomStore>((set) => ({
       players: room.players as PublicPlayer[],
       remoteHostPlayerId: room.remoteHostPlayerId ?? null,
     }),
+  // Upsert: a returning player (rejoin / reconnect / reclaim) may already be
+  // on the roster (greyed) or may have been dropped — either way end up with
+  // exactly one up-to-date entry.
   addPlayer: (player) =>
-    set((state) => ({ players: [...state.players, player] })),
+    set((state) =>
+      state.players.some((p) => p.id === player.id)
+        ? {
+            players: state.players.map((p) =>
+              p.id === player.id ? { ...p, ...player } : p
+            ),
+          }
+        : { players: [...state.players, player] }
+    ),
   removePlayer: (playerId) =>
     set((state) => ({
       players: state.players.filter((p) => p.id !== playerId),

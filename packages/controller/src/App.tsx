@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { DrawOp } from '@igra/shared';
+import type { DrawOp, PublicPlayer } from '@igra/shared';
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
@@ -340,16 +340,46 @@ export function App() {
       setConnected(true);
     });
 
-    socket.on('room:player-joined', ({ player: newPlayer }) => {
+    // Upsert a player into the local roster (add if new, replace if present).
+    const upsertPlayer = (incoming: PublicPlayer) => {
       usePlayerStore.setState((state) => {
         if (!state.room) return state;
+        const exists = state.room.players.some((p) => p.id === incoming.id);
         return {
           room: {
             ...state.room,
-            players: [...state.room.players, newPlayer],
+            players: exists
+              ? state.room.players.map((p) =>
+                  p.id === incoming.id ? { ...p, ...incoming } : p
+                )
+              : [...state.room.players, incoming],
           },
         };
       });
+    };
+
+    socket.on('room:player-joined', ({ player: newPlayer }) => {
+      upsertPlayer(newPlayer);
+    });
+
+    // A returning player (token reconnect or name reclaim). The server now
+    // sends the full player, so re-add them even if grace expiry had already
+    // dropped them from this roster — without this the remote-host admin
+    // couldn't see (or start a game with) someone who rejoined.
+    socket.on('room:player-reconnected', ({ playerId, player }) => {
+      if (player) upsertPlayer(player);
+      else
+        usePlayerStore.setState((state) => {
+          if (!state.room) return state;
+          return {
+            room: {
+              ...state.room,
+              players: state.room.players.map((p) =>
+                p.id === playerId ? { ...p, isConnected: true } : p
+              ),
+            },
+          };
+        });
     });
 
     socket.on('room:remote-host-changed', ({ remoteHostPlayerId }) => {
@@ -541,6 +571,7 @@ export function App() {
       socket.off('disconnect');
       socket.off('player:joined');
       socket.off('room:player-joined');
+      socket.off('room:player-reconnected');
       socket.off('room:player-left');
       socket.off('room:player-removed');
       socket.off('room:player-updated');
