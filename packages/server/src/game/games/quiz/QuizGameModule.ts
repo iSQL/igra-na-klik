@@ -37,7 +37,13 @@ import {
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import { recordQuizFeedback } from '../../quiz-feedback.js';
-import type { QuizAnswer, QuizInternalState } from './QuizState.js';
+import type { DiplomaCandidate } from '@igra/shared';
+import type {
+  QuizAnswer,
+  QuizInternalState,
+  QuizPlayerStats,
+  QuizRoundShame,
+} from './QuizState.js';
 import { inlineQuestionsToRuntime, resolveQuizPack } from './quiz-pack-resolver.js';
 import {
   SERBIA_DECAY_KM,
@@ -135,6 +141,8 @@ export class QuizGameModule extends BaseGameModule {
       scramblePool: [],
       scrambleFixed: 0,
       dominoProgress: new Map(),
+      playerStats: new Map(),
+      lastShame: null,
     };
 
     // Reset feedback bookkeeping for this match. Bank keys are always known
@@ -663,6 +671,9 @@ export class QuizGameModule extends BaseGameModule {
     }
     // matrica is scored on submit (in onPlayerAction); nothing to do here.
 
+    // Fold this round into the cross-game diploma stats + build the Zid srama.
+    this.accumulateStats(room, question);
+
     this.state.phase = 'showing-results';
     const rich =
       question?.type === 'geo' ||
@@ -674,6 +685,215 @@ export class QuizGameModule extends BaseGameModule {
     this.state.phaseTimeRemaining = rich
       ? (this.timings.RICH_RESULTS_DURATION ?? RICH_RESULTS_DURATION)
       : (this.timings.SHOWING_RESULTS_DURATION ?? SHOWING_RESULTS_DURATION);
+  }
+
+  private static emptyStats(): QuizPlayerStats {
+    return {
+      answered: 0,
+      correct: 0,
+      wrong: 0,
+      wrongStreakCur: 0,
+      wrongStreakMax: 0,
+      timeSamples: 0,
+      slownessSum: 0,
+    };
+  }
+
+  /**
+   * Fold the just-finished round into per-player stats and compute this round's
+   * "Zid srama". Runs once per round at results time — the single point where
+   * every question type's transient correctness/timing is still known before
+   * `answers` is cleared for the next round.
+   */
+  private accumulateStats(room: Room, question: KvizQuestionFull | undefined): void {
+    if (!question) {
+      this.state.lastShame = null;
+      return;
+    }
+    const timeLimitMs = Math.max(1, question.timeLimit * 1000);
+    // Per-round timeMs for connected answerers (drives the "Puž" trophy).
+    const roundTimeMs = new Map<string, number>();
+
+    for (const id of this.state.expectedAnswererIds) {
+      const stats =
+        this.state.playerStats.get(id) ?? QuizGameModule.emptyStats();
+      const answer = this.state.answers.get(id);
+      // Text types store only a SOLVED answer; a wrong-only attempt shows up in
+      // emojiLastGuess, so count that as an attempt too.
+      const attempted = !!answer || this.state.emojiLastGuess.has(id);
+
+      let correct = false;
+      let timeMs: number | undefined;
+      if (answer) {
+        switch (answer.kind) {
+          case 'choice':
+            correct = answer.correct;
+            timeMs = answer.timeMs;
+            break;
+          case 'text':
+            correct = true;
+            timeMs = answer.timeMs;
+            break;
+          case 'matrix':
+            correct = answer.points >= 500;
+            break;
+          case 'value':
+            correct = (this.state.lastRoundScores.get(id) ?? 0) >= 500;
+            timeMs = Math.round((1 - answer.speedFraction) * timeLimitMs);
+            break;
+          case 'pin':
+          case 'order':
+          case 'domino':
+            correct = (this.state.lastRoundScores.get(id) ?? 0) >= 500;
+            break;
+        }
+      }
+
+      if (attempted) {
+        stats.answered++;
+        if (correct) {
+          stats.correct++;
+          stats.wrongStreakCur = 0;
+        } else {
+          stats.wrong++;
+          stats.wrongStreakCur++;
+          stats.wrongStreakMax = Math.max(
+            stats.wrongStreakMax,
+            stats.wrongStreakCur
+          );
+        }
+      }
+
+      if (timeMs !== undefined) {
+        const slowness = Math.max(0, Math.min(1, timeMs / timeLimitMs));
+        stats.slownessSum += slowness;
+        stats.timeSamples++;
+        roundTimeMs.set(id, timeMs);
+      }
+      this.state.playerStats.set(id, stats);
+    }
+
+    this.state.lastShame = this.buildRoundShame(room, timeLimitMs, roundTimeMs);
+  }
+
+  /** Slowest answerer + anyone on a ≥3 wrong streak, connected players only. */
+  private buildRoundShame(
+    room: Room,
+    timeLimitMs: number,
+    roundTimeMs: Map<string, number>
+  ): QuizRoundShame | null {
+    const isConnected = (id: string) =>
+      room.players.some((p) => p.id === id && p.isConnected);
+    const playerOf = (id: string) => room.players.find((p) => p.id === id);
+
+    // Puž: the round's slowest answer, only if genuinely slow (>60% of clock)
+    // and at least two people answered — no shame in a fast, sparse round.
+    let snail: QuizRoundShame['snail'] = null;
+    if (roundTimeMs.size >= 2) {
+      let snailId: string | null = null;
+      let snailTime = -1;
+      for (const [id, t] of roundTimeMs) {
+        if (isConnected(id) && t > snailTime) {
+          snailTime = t;
+          snailId = id;
+        }
+      }
+      const p = snailId ? playerOf(snailId) : undefined;
+      if (p && snailTime >= timeLimitMs * 0.6) {
+        snail = {
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          timeMs: snailTime,
+        };
+      }
+    }
+
+    const wrongStreak: QuizRoundShame['wrongStreak'] = [];
+    for (const id of this.state.expectedAnswererIds) {
+      if (!isConnected(id)) continue;
+      const s = this.state.playerStats.get(id);
+      const p = playerOf(id);
+      if (s && p && s.wrongStreakCur >= 3) {
+        wrongStreak.push({
+          playerId: p.id,
+          name: p.name,
+          avatarColor: p.avatarColor,
+          streak: s.wrongStreakCur,
+        });
+      }
+    }
+
+    return snail || wrongStreak.length > 0 ? { snail, wrongStreak } : null;
+  }
+
+  /**
+   * Rich end-of-game diploma candidates from the accumulated stats. Merged with
+   * the generic score-based layer by GameManager; the winner is protected from
+   * shame titles there.
+   */
+  getAwardCandidates(room: Room): DiplomaCandidate[] {
+    const candidates: DiplomaCandidate[] = [];
+    const entries = [...this.state.playerStats.entries()]
+      .filter(([id]) => room.players.some((p) => p.id === id))
+      .map(([id, s]) => ({
+        id,
+        s,
+        accuracy: s.answered > 0 ? s.correct / s.answered : 0,
+        avgSlowness: s.timeSamples > 0 ? s.slownessSum / s.timeSamples : null,
+      }))
+      .filter((e) => e.s.answered > 0);
+
+    if (entries.length === 0) return candidates;
+    const timed = entries.filter(
+      (e): e is typeof e & { avgSlowness: number } => e.avgSlowness !== null
+    );
+
+    // Sigurica — accurate but deliberate (a compliment; ranks above Puž so a
+    // slow-but-accurate player gets praised, not shamed).
+    const sig = timed.filter((e) => e.accuracy >= 0.7 && e.avgSlowness >= 0.4);
+    if (sig.length > 0) {
+      const s = sig.reduce((a, b) => (b.avgSlowness > a.avgSlowness ? b : a));
+      candidates.push({ playerId: s.id, awardId: 'sigurica', priority: 58 });
+    }
+
+    // Najbrži prst — quick on the trigger, poor on the answers.
+    const fastWrong = timed.filter((e) => e.accuracy < 0.5 && e.s.answered >= 2);
+    if (fastWrong.length > 0) {
+      const fp = fastWrong.reduce((a, b) => (b.avgSlowness < a.avgSlowness ? b : a));
+      if (fp.avgSlowness <= 0.5) {
+        candidates.push({ playerId: fp.id, awardId: 'najbrzi-prst', priority: 55 });
+      }
+    }
+
+    // Gospodar panike — the most wrong answers.
+    const paniker = entries.reduce((a, b) => (b.s.wrong > a.s.wrong ? b : a));
+    if (paniker.s.wrong >= 2) {
+      candidates.push({
+        playerId: paniker.id,
+        awardId: 'gospodar-panike',
+        priority: 50,
+      });
+    }
+
+    // Kamikaza — answers everything, lands little.
+    const maxAnswered = Math.max(...entries.map((e) => e.s.answered));
+    const kamikaze = entries.find(
+      (e) => e.s.answered === maxAnswered && e.accuracy < 0.4
+    );
+    if (kamikaze) {
+      candidates.push({ playerId: kamikaze.id, awardId: 'kamikaza', priority: 48 });
+    }
+
+    // Puž — the overall slowest.
+    if (timed.length > 0) {
+      const puz = timed.reduce((a, b) => (b.avgSlowness > a.avgSlowness ? b : a));
+      if (puz.avgSlowness >= 0.5) {
+        candidates.push({ playerId: puz.id, awardId: 'puz', priority: 45 });
+      }
+    }
+
+    return candidates;
   }
 
   private currentQuestion(): KvizQuestionFull | undefined {
@@ -828,6 +1048,8 @@ export class QuizGameModule extends BaseGameModule {
         break;
 
       case 'showing-results': {
+        // Zid srama for the round just finished (null when nobody earned one).
+        if (this.state.lastShame) data.shame = this.state.lastShame;
         if (question.type === 'geo') {
           data.geoResult = this.buildGeoResult(room, question);
           this.fillRichResultPlayerData(room, playerData);

@@ -18,6 +18,7 @@ import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
 import type { GluvoDobaPack } from '../games/gluvo-doba-import.js';
 import type { HotPotatoMode } from './hot-potato.js';
 import type { SpijunPack } from '../games/spijun-import.js';
+import type { PlayerAward } from '../games/awards.js';
 import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
 
 export interface ServerToClientEvents {
@@ -53,7 +54,12 @@ export interface ServerToClientEvents {
   // the operations array in data.host; full snapshots (undo/clear/phase
   // changes/reconnect) remain the authority and replace it wholesale.
   'game:ops-append': (data: { gameId: string; ops: DrawOp[] }) => void;
-  'game:ended': (data: { finalScores: { playerId: string; score: number }[] }) => void;
+  'game:ended': (data: {
+    finalScores: { playerId: string; score: number }[];
+    // Funny consolation diplomas — one per player (see games/awards.ts). May be
+    // absent for team games that don't rank players by score.
+    awards?: PlayerAward[];
+  }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
   'room:chat-message': (data: { message: ChatMessage }) => void;
   'room:chat-history': (data: { messages: ChatMessage[] }) => void;

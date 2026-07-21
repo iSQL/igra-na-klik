@@ -45,3 +45,4 @@ export * from './games/spijun-tutorial.js';
 export * from './types/asocijacije.js';
 export * from './games/asocijacije-bank.js';
 export * from './games/asocijacije-import.js';
+export * from './games/awards.js';

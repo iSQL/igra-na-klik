@@ -1,4 +1,4 @@
-import type { Room, GameState, DrawOp } from '@igra/shared';
+import type { Room, GameState, DrawOp, DiplomaCandidate } from '@igra/shared';
 
 export interface IGameModule {
   readonly gameId: string;
@@ -43,6 +43,16 @@ export interface IGameModule {
   ): GameState | null;
 
   onEnd(room: Room, gameState: GameState): void;
+
+  /**
+   * Optional hook called by GameManager at game end (before the module's state
+   * is discarded) to contribute game-specific consolation diplomas ("utešne
+   * diplome"). Return richer candidates than the generic score-only layer can —
+   * e.g. Kviz's "Puž" (slowest) or "Gospodar panike" (most wrong). GameManager
+   * merges these with the generic candidates and resolves them via
+   * `allocateDiplomas`. Games without an override just get the generic layer.
+   */
+  getAwardCandidates?(room: Room): DiplomaCandidate[];
 
   /**
    * Optional hook polled by GameManager after onPlayerAction returns null.

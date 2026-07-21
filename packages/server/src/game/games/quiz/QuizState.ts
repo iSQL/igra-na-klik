@@ -27,6 +27,42 @@ export type QuizAnswer =
   // results time. In-flight progress lives in dominoProgress.
   | { kind: 'domino'; streak: number };
 
+/**
+ * Cross-round accumulator for the end-of-game "utešne diplome". Every field is
+ * folded in at results time (see `accumulateStats`); it's the only per-player
+ * history the module keeps beyond `player.score`.
+ */
+export interface QuizPlayerStats {
+  /** Rounds where the player submitted (or attempted, for text) an answer. */
+  answered: number;
+  correct: number;
+  /** Attempted but not correct. */
+  wrong: number;
+  /** Consecutive attempted-wrong rounds so far (reset by a correct answer). */
+  wrongStreakCur: number;
+  wrongStreakMax: number;
+  /** Rounds contributing a normalized-slowness sample. */
+  timeSamples: number;
+  /** Sum of per-round slowness ∈ [0,1] (1 = used the whole clock). */
+  slownessSum: number;
+}
+
+/** One round's "Zid srama" snapshot, rendered on the TV after results. */
+export interface QuizRoundShame {
+  snail: {
+    playerId: string;
+    name: string;
+    avatarColor: string;
+    timeMs: number;
+  } | null;
+  wrongStreak: {
+    playerId: string;
+    name: string;
+    avatarColor: string;
+    streak: number;
+  }[];
+}
+
 export interface QuizInternalState {
   questions: KvizQuestionFull[];
   currentQuestionIndex: number;
@@ -67,4 +103,8 @@ export interface QuizInternalState {
    * player errs or finishes; `wrongAt` = the pos where they missed (if any).
    */
   dominoProgress: Map<string, { pos: number; streak: number; done: boolean; wrongAt?: number }>;
+  /** Cross-round stats feeding the end-of-game diplomas. */
+  playerStats: Map<string, QuizPlayerStats>;
+  /** The most recent round's "Zid srama"; null when nobody earned one. */
+  lastShame: QuizRoundShame | null;
 }

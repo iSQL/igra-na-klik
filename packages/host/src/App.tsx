@@ -7,6 +7,7 @@ import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 import { prefetchGameComponents } from './games/registry';
+import { Diplome } from './components/Diplome';
 import { useT } from './i18n/useT';
 
 export function App() {
@@ -25,7 +26,7 @@ export function App() {
     clearChat,
     reset: resetRoom,
   } = useRoomStore();
-  const { setGameState, resetGame } = useGameStore();
+  const { setGameState, resetGame, setAwards } = useGameStore();
 
   // Warm the lazy game chunks once the room is up so starting a game
   // doesn't stall on a chunk download.
@@ -111,11 +112,18 @@ export function App() {
       });
     });
 
-    socket.on('game:ended', () => {
-      setTimeout(() => {
-        resetGame();
-        setStatus('lobby');
-      }, 3000);
+    socket.on('game:ended', ({ awards }) => {
+      // Show the "utešne diplome" overlay when the game ranked players; hold
+      // long enough to read them before dropping back to the lobby.
+      const hasAwards = !!awards && awards.length > 0;
+      setAwards(hasAwards ? awards! : null);
+      setTimeout(
+        () => {
+          resetGame();
+          setStatus('lobby');
+        },
+        hasAwards ? 12000 : 3000
+      );
     });
 
     socket.on('room:destroyed', () => {
@@ -183,6 +191,7 @@ export function App() {
       {status === 'lobby' && <LobbyScreen />}
       {status === 'game-select' && <GameSelectScreen />}
       {status === 'in-game' && <GameScreen />}
+      <Diplome />
     </>
   );
 }

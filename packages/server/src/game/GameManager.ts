@@ -6,7 +6,7 @@ import type {
   SocketData,
   GameState,
 } from '@igra/shared';
-import { GAME_DEFINITIONS } from '@igra/shared';
+import { GAME_DEFINITIONS, genericScoreCandidates, allocateDiplomas } from '@igra/shared';
 import { RoomManager } from '../room/RoomManager.js';
 import { GameRegistry } from './GameRegistry.js';
 import type { IGameModule } from './IGameModule.js';
@@ -308,7 +308,27 @@ export class GameManager {
       score: p.score,
     }));
 
-    this.io.to(roomCode).emit('game:ended', { finalScores });
+    // Utešne diplome: generic score-based candidates (every game) merged with
+    // any rich per-game candidates. Skipped when scores don't rank players
+    // (team games tie everyone) — genericScoreCandidates returns [] there and
+    // the winner-protection set is empty, so no misleading "Šampion" is handed
+    // out.
+    const lowerScoreWins = !!GAME_DEFINITIONS[active.gameId]?.lowerScoreWins;
+    const genericCandidates = genericScoreCandidates(finalScores, lowerScoreWins);
+    let awards: ReturnType<typeof allocateDiplomas> | undefined;
+    if (genericCandidates.length > 0) {
+      const richCandidates = active.module.getAwardCandidates?.(room) ?? [];
+      const winners = genericCandidates
+        .filter((c) => c.awardId === 'sampion')
+        .map((c) => c.playerId);
+      awards = allocateDiplomas(
+        [...richCandidates, ...genericCandidates],
+        room.players.map((p) => p.id),
+        { positiveOnlyPlayerIds: winners }
+      );
+    }
+
+    this.io.to(roomCode).emit('game:ended', { finalScores, awards });
 
     logger.info('game_ended', {
       room: roomCode,

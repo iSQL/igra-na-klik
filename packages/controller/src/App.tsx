@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { DrawOp, PublicPlayer } from '@igra/shared';
+import type { DrawOp, PlayerAward, PublicPlayer } from '@igra/shared';
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from './socket';
 import { usePlayerStore } from './store/playerStore';
@@ -63,6 +63,7 @@ function GameEndedOverlay({
   placement: {
     rank: number;
     points: number;
+    award: PlayerAward | null;
     standings: {
       playerId: string;
       name: string;
@@ -74,6 +75,11 @@ function GameEndedOverlay({
 }) {
   const t = useT();
   const myId = usePlayerStore.getState().player?.id;
+  const toneColor: Record<PlayerAward['tone'], string> = {
+    positive: 'var(--success)',
+    shame: 'var(--danger)',
+    neutral: 'var(--accent)',
+  };
   return (
     <div
       style={{
@@ -130,6 +136,44 @@ function GameEndedOverlay({
               points: placement.points,
             })}
           </p>
+        )}
+        {placement?.award && (
+          <div
+            style={{
+              marginTop: '0.9rem',
+              background: 'var(--bg-secondary)',
+              border: `1px solid ${toneColor[placement.award.tone]}`,
+              borderRadius: '16px',
+              padding: '0.9rem 1rem',
+              animation: 'igra-pop .7s',
+            }}
+          >
+            <div style={{ fontSize: '2rem', lineHeight: 1 }}>
+              {placement.award.emoji}
+            </div>
+            <p
+              className="display"
+              style={{
+                margin: '0.35rem 0 0',
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                color: toneColor[placement.award.tone],
+              }}
+            >
+              {placement.award.title}
+            </p>
+            {placement.award.subtitle && (
+              <p
+                style={{
+                  margin: '0.2rem 0 0',
+                  fontSize: '0.85rem',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {placement.award.subtitle}
+              </p>
+            )}
+          </div>
         )}
         {placement && placement.standings.length > 0 && (
           <div
@@ -290,6 +334,8 @@ export function App() {
   const [finalPlacement, setFinalPlacement] = useState<{
     rank: number;
     points: number;
+    /** This player's own funny diploma (utešna titula), if any. */
+    award: PlayerAward | null;
     /** Everyone's final placement — rendered under the own-rank badge. */
     standings: {
       playerId: string;
@@ -491,7 +537,7 @@ export function App() {
       });
     });
 
-    socket.on('game:ended', ({ finalScores }) => {
+    socket.on('game:ended', ({ finalScores, awards }) => {
       // Surface a quick "Igra je završena" notice so players (especially
       // when the remote host triggered "Završi igru") see why the game UI
       // is about to vanish, instead of being snapped back to the lobby
@@ -531,7 +577,8 @@ export function App() {
             rank: sorted.findIndex((x) => x.score === s.score) + 1 || i + 1,
           };
         });
-        setFinalPlacement({ rank, points: mine.score, standings });
+        const myAward = awards?.find((a) => a.playerId === myId) ?? null;
+        setFinalPlacement({ rank, points: mine.score, award: myAward, standings });
       } else {
         setFinalPlacement(null);
       }

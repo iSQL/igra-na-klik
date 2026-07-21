@@ -12,6 +12,7 @@ import { GeoMap } from './components/GeoMap';
 import { BrojTimeline } from './components/BrojTimeline';
 import { MediaPanel } from './components/MediaPanel';
 import { PixelatedImage } from './components/PixelatedImage';
+import { ZidSrama, type RoundShame } from './components/ZidSrama';
 import {
   DominoBoard,
   DominoResults,
@@ -663,6 +664,10 @@ export default function QuizGameHost() {
           totalQuestions={totalQuestions}
           timeRemaining={timeRemaining}
         />
+      )}
+
+      {phase === 'showing-results' && data.shame != null && (
+        <ZidSrama shame={data.shame as RoundShame} />
       )}
 
       {phase === 'leaderboard' && data.leaderboard != null && (
