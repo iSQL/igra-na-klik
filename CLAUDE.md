@@ -4,295 +4,142 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen, dev: `localhost:5173/host/` or `localhost:3001/host/` through the proxy), players join from phones as "controllers" (dev: `localhost:5174/play/` or `localhost:3001/play/`) via a 2-letter room code or QR. Real-time via Socket.io. Ships with games including: Kviz (unified quiz with per-question **types**: obicno / geo pin-on-map / broj slider / audio / YouTube video / emoji riddle — see its section below; it absorbed the former standalone games "Pogodi gde je", "Foto kviz", "Pogodi broj" and "Emoji zagonetke"), Crtaj i pogodi (draw & guess), Lažov (Fibbage-style bluffing), Dve istine i laž, Ko bi pre, Lažni umetnik (Fake Artist), Slepi telefoni (Telestrations / Gartic Phone-style drawing chain), Ko sam ja (personal-question party game where players guess each other's answers), Pronađi par (Spot It), Tajni agenti (Codenames-style team game), Zavet (Omerta/Cabo-style memory card game with Slavic-mythology cards; internal game id stays `bolji-zivot` — see its section below and [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md)), Gluvo doba (Mafia/Werewolf social deduction with Slavic-mythology roles — see its section below and the public rules page at `GET /gluvo-doba`), and Asocijacije (TV "Slagalica" associations: 4 columns × 4 fields + a final solution, with a klasik and a multiple-choice **kviz** mode — see its section below). A per-device **EN/SR language switch** (localStorage, default Serbian) translates the platform chrome plus three games (Crtaj i pogodi, Slepi telefoni, Pronađi par); the other games' in-game screens stay Serbian (Latin) by design — see the i18n section below.
-
-**Visual identity** follows [brand.md](brand.md) (zabari.net "Sunrise Hill": navy `#1D3557`/`#162E4E`, gold `#C29B47`, cream `#F5EBE0`). Type is **Baloo 2** for display/headings (`--font-display`, `--font-caps`) and **Manrope** for body — a deliberate divergence from brand.md's original Marcellus/Cormorant serif pairing: the classical serifs read too stiff/narrow for a playful party game, so a rounded display + clean Manrope sans were chosen to match the "vibe" (Baloo 2 replaced the original Fredoka pick: Fredoka lacks the Serbian glyphs c/c/dj so they fell back to Manrope and jumped inside headings) while keeping the navy/gold/cream palette. The apps use the navy (reverse) canvas, the landing page and `/admin` editors use the cream canvas. All colors flow through the CSS custom properties in `packages/host/src/styles/global.css` and `packages/controller/src/styles/global.css` (identical token sets — keep them in sync); functional palettes that must stay in code are `AVATAR_COLORS` ([constants.ts](packages/shared/src/constants.ts)), `QUIZ_OPTION_COLORS` / `KO_SAM_JA_FIXED_OPTION_COLORS` (paired with `OPTION_TEXT_COLORS` in the controller's quiz [AnswerButtons.tsx](packages/controller/src/games/quiz/components/AnswerButtons.tsx) — keys must match the hexes exactly), and the Tajni agenti team constants (host + controller). Fonts ship via `@fontsource/baloo-2` + `@fontsource/manrope` in host & controller; the landing/admin pages load them from Google Fonts. Brand favicons live in `packages/{host,controller}/public/` and `packages/server/assets/brand/` (served at `/favicon.*`); PWA icons in `packages/controller/public/icons/` are the mark on a cream square.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen), players join from their phones as "controllers" via a room code or QR. Real-time over Socket.io. 15 mini-games (plus a `test-game` dev module that is registered server-side but deliberately absent from `GAME_DEFINITIONS`), all content and in-game text in Serbian (Latin) by design.
 
 ## Commands
 
-Runs from the repo root (npm workspaces):
+npm workspaces, all run from the repo root:
 
 ```bash
-npm install                 # install all workspace deps (do once)
-npm run build:shared        # build @igra/shared — REQUIRED before dev/build (host & server import its compiled dist)
-npm run dev                 # build:shared, then concurrently run server + host + controller
-npm run dev:server          # just the server (tsx watch)
-npm run dev:host            # just the host (Vite)
-npm run dev:controller      # just the controller (Vite)
-npm run build               # full production build of all 4 packages
-npm run clean               # rimraf dist/ and node_modules/
+npm install                 # once
+npm run build:shared        # REQUIRED before dev/build — others import @igra/shared's dist/
+npm run dev                 # build:shared, then server + host + controller concurrently
+npm run dev:server          # tsx watch
+npm run dev:host            # Vite :5173
+npm run dev:controller      # Vite :5174
+npm run build               # production build of all 4 packages
 ```
 
-No test runner, no linter configured. "Testing" means `npm run dev` and exercising the flow in two browser tabs (host + controller).
+Dev URLs: landing `localhost:3001/`, host `:3001/host/` (or `:5173/host/`), controller `:3001/play/` (or `:5174/play/`), admin `:3001/admin`.
 
-There is no single-test command because there are no tests. If you add a test harness, document the invocation here.
+**No test runner and no linter are configured.** "Testing" means `npm run dev` plus exercising the flow in two browser tabs (host + controller). There is no single-test command; if you add a harness, document its invocation here.
+
+The `free-dev-ports` skill ([.claude/skills/free-dev-ports/](.claude/skills/free-dev-ports/)) kills leftover node processes holding 3001/5173/5174.
 
 ## Architecture
 
-### Monorepo layout
+### Monorepo
 
-Four npm workspaces under `packages/`:
+- **`@igra/shared`** — pure TS compiled with `tsc -b`. Single source of truth for types, constants, socket event contracts, `GAME_DEFINITIONS`, content validators and built-in content banks. All three other packages consume its **compiled `dist/`**, so it must be rebuilt after any change there.
+- **`@igra/server`** — Node + Express + Socket.io, ESM (`"type": "module"` — imports in compiled output need `.js` extensions). Rooms live in an in-memory `Map` and are lost on restart (acceptable).
+- **`@igra/host`** — React + Vite + Zustand + Framer Motion + Howler. TV screen, `base: '/host/'`.
+- **`@igra/controller`** — React + Vite + Zustand, PWA via `vite-plugin-pwa`, `base: '/play/'`.
 
-- **`@igra/shared`** — pure TypeScript, compiled with `tsc -b` to `dist/`. Single source of truth for types, constants, socket event contracts, and the `GAME_DEFINITIONS` registry. Host, controller, and server all consume its built output, so it MUST be rebuilt (`npm run build:shared`) after type changes before the other packages will pick them up.
-- **`@igra/server`** — Node + Express + Socket.io, `tsx watch` in dev. In-memory `Map<string, Room>` (rooms lost on restart — acceptable).
-- **`@igra/host`** — React + Vite + Zustand + Framer Motion + Howler.js. Renders on the TV/laptop big screen.
-- **`@igra/controller`** — React + Vite + Zustand, installable as a PWA via `vite-plugin-pwa`.
+### Socket contract
 
-### Socket event contract
+[packages/shared/src/types/events.ts](packages/shared/src/types/events.ts) defines `ClientToServerEvents` / `ServerToClientEvents` — the canonical client↔server contract. **Every new socket event goes through it.** Most gameplay does *not* need a new event: game actions ride the generic `game:player-action` (and host-owned flow control rides `host:game-action`).
 
-[packages/shared/src/types/events.ts](packages/shared/src/types/events.ts) defines `ClientToServerEvents` and `ServerToClientEvents`. This file is the canonical contract between client and server — **every new socket event must go through it** so both sides stay typed. Game-specific events (`quiz:*`, `draw:*`, `fibbage:*`) live alongside the platform events (`host:*`, `player:*`, `room:*`, `game:*`) in the same maps.
+### Adding a game — six wiring points
 
-### Pluggable game framework
+Miss any one and the game breaks end-to-end:
 
-A game is wired up in five places — missing any of them breaks the game end-to-end:
+1. `GameDefinition` in [packages/shared/src/games/registry.ts](packages/shared/src/games/registry.ts) (`id`, `name`, min/max players, `supportsHostless`, …).
+2. Server module in `packages/server/src/game/games/<id>/` implementing [IGameModule](packages/server/src/game/IGameModule.ts) (`onStart`, `onPlayerAction`, `onTick`, `onPlayerDisconnect`, `onEnd`, plus optional `validateStart`, `onHostAction`, `getAwardCandidates`). Extend `BaseGameModule` for no-op defaults.
+3. Register the module in [packages/server/src/socket/setup.ts](packages/server/src/socket/setup.ts).
+4. Host component + lazy entry in [packages/host/src/games/registry.ts](packages/host/src/games/registry.ts).
+5. Controller component + lazy entry in [packages/controller/src/games/registry.ts](packages/controller/src/games/registry.ts).
+6. A `GAME_RULES` entry in [packages/server/src/uputstva-page.ts](packages/server/src/uputstva-page.ts) — the public `/uputstva` hub lists only games that have one, so the game silently disappears from it otherwise.
 
-1. **Registry entry** in [packages/shared/src/games/registry.ts](packages/shared/src/games/registry.ts) — `GameDefinition` with `id`, `name`, `minPlayers`, `maxPlayers`, `description`.
-2. **Server module** in `packages/server/src/game/games/<game-id>/` implementing `IGameModule` (lifecycle hooks: `onStart`, `onPlayerAction`, `onTick`, `onPlayerDisconnect`, `onEnd`). Extend `BaseGameModule` for no-op defaults.
-3. **Server registration** in [packages/server/src/socket/setup.ts](packages/server/src/socket/setup.ts) — adds the module instance to the `GameRegistry`.
-4. **Host component** in `packages/host/src/games/<game-id>/` plus a lazy entry in [packages/host/src/games/registry.ts](packages/host/src/games/registry.ts).
-5. **Controller component** in `packages/controller/src/games/<game-id>/` plus a lazy entry in [packages/controller/src/games/registry.ts](packages/controller/src/games/registry.ts).
+Optional knobs a game opts into rather than reinvents: `GAME_ROUND_CONFIG` ([round-config.ts](packages/shared/src/games/round-config.ts)) for the round-count selector (UI options + server clamp in one place), and `GAME_TIMING_DEFS` for admin-tunable wait durations (see below).
 
-`GameManager` on the server runs a 1-second tick loop, routes `game:player-action` through `onPlayerAction`, and emits `game:state-update` (room-wide broadcast with `playerData` **stripped** — controllers may freely render its shared "host view" data; only host sockets get the full state) vs `game:player-state` (per-player slice with own private data only — don't leak other players' private state). The host and controller each have a `GameRouter` that reads `gameId` from the gameStore and dynamic-imports the matching component.
+### GameManager — privacy and lifecycle rules
 
-### Room / reconnection
+[GameManager](packages/server/src/game/GameManager.ts) runs a 1s tick loop and owns the two-channel state emission:
 
-- Room codes: 3 uppercase chars excluding `O/I/L` (ambiguous). Length is `ROOM_CODE_LENGTH` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts) — change there if you need longer codes (the controller's JoinScreen reads the same constant). See [packages/shared/src/utils/room-code.ts](packages/shared/src/utils/room-code.ts). Code generation is bounded: at `MAX_ROOMS` (200) or after 100 collision retries `createRoom`/`createHostlessRoom` return `null` and the handler answers with a "server full" error — never loop unbounded here, an exhausted code space used to hang the whole event loop.
-- **Abuse guards** (public-deploy hardening): per-socket rate limits live in [packages/server/src/socket/rate-limit.ts](packages/server/src/socket/rate-limit.ts) — room create/join 1/s, `game:player-action` 60/s (drawing batches are ~20/s), `host:game-action` 20/s, start/stop 2/s, avatar 4/s; chat has its own 750ms throttle. Player names are clamped server-side (`MAX_PLAYER_NAME_LENGTH`) in `RoomManager.joinRoom`. Socket messages are capped at 512KB (`maxHttpBufferSize`). A host socket re-emitting `host:create-room` silently tears down its previous room first (see `destroyRoom`'s `silentHostSocketId` — emitting `room:destroyed` to the requesting socket would trigger the host client's auto-recreate loop).
-- Reconnect tokens (UUIDs) are stored in the controller's `localStorage` and passed via `socket.handshake.auth`. On disconnect, the server starts a **5-minute** grace timer (`RECONNECT_GRACE_MS` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts)) — long enough that a phone screen going dark mid-round doesn't lose the seat. Reconnecting within the window restores the player's seat, score, and active game state (the current phase is replayed so the controller jumps straight back into the round).
-- Two distinct disconnect events: `room:player-left` is the **transient** "grey out" signal that fires immediately on disconnect, while `room:player-removed` is **permanent** — fires only after grace expires or the host kicks. Game modules' destructive `onPlayerDisconnect` work (skipping a drawer's turn etc.) is deferred until the grace window expires, so brief blips don't burn turns.
-- Controller acquires a screen Wake Lock (`useWakeLock`) while in a room to keep the screen alive on most browsers; ignore failures — older browsers/iOS Safari may not grant it.
-- **Kick / reclaim**: host has an × on each player chip → emits `host:kick-player`, server invalidates the reconnect token and emits `room:kicked` to that controller (which leaves the room). Conversely, if a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh `player:join-room` with the same name will **reclaim** a disconnected slot — score and avatar are preserved and a new reconnect token is minted.
-- **Voluntary leave** (`player:leave-room`): the controller has a "Napusti sobu" button (with confirmation modal) visible in lobby, game-select, and during games. A regular player leaving is equivalent to being kicked. If the leaver was holding the remote-host control in a room **with** a host screen, the server tears the entire room down: stops any active game, emits `room:kicked` to every remaining controller, emits `room:destroyed` to the host (which clears state and immediately re-requests `host:create-room`), and deletes the room from `RoomManager`. In a **hostless** room the claim instead transfers to the next connected player (see the hostless section).
-- **Server-initiated disconnect quirk**: when the server calls `sock.disconnect(true)` (kick, leave, room destroy), socket.io-client does NOT auto-reconnect — the controller's `disconnect` handler in [packages/controller/src/App.tsx](packages/controller/src/App.tsx) manually calls `socket.connect()` when reason is `"io server disconnect"` so the next join attempt isn't buffered forever.
-- Rooms are **not** auto-deleted when the last player leaves — the room belongs to the host. Only the host disconnecting, an explicit cleanup, or a remote-host-leave cascade removes the room.
+- `game:state-update` — room-wide broadcast with `playerData` **stripped**. Anything a controller may see goes in the shared/`hostData` half.
+- `game:player-state` — per-player slice carrying only that player's private data.
 
-### Mobile admin / remote host
+**Secret information must never enter the broadcast half** — that's the recurring bug class across Gluvo doba, Špijun, Tajni agenti, Zavet and Kviz (unrevealed answers). Card faces, roles, correct indices and unrevealed words stay server-side until the reveal phase.
 
-Any one player can claim the host's controls from their phone via `player:claim-remote-host`; the server stores `remoteHostPlayerId` on the room and broadcasts `room:remote-host-changed`. While held, that controller renders [packages/controller/src/screens/GameSelectScreen.tsx](packages/controller/src/screens/GameSelectScreen.tsx) — a phone-friendly mirror of the host's game-select screen — and can start/stop games, pick kviz packs, import question files, etc. The remote-host also gets a "Završi igru" overlay button during gameplay ([packages/controller/src/components/StopGameButton.tsx](packages/controller/src/components/StopGameButton.tsx)) that emits `host:stop-game` (server already accepts it from either the host or the remote-host — see `canControl` in [packages/server/src/socket/handlers/game.ts](packages/server/src/socket/handlers/game.ts)). Releasing (`player:release-remote-host`) or disconnecting clears the claim. Useful when nobody is near the TV; it is **not** a separate role — the holder is still a normal player in whatever game they start.
+Two cross-game patterns worth knowing before touching any module:
 
-### Hostless rooms (no TV screen)
+- **Snapshot-based early-exit** — collection phases snapshot the expected player-id set at phase entry and check completion against it. Mid-grace disconnected players stay in the snapshot (so a sleeping phone doesn't shrink the denominator and steal a slot); past-grace removal via `onPlayerDisconnect` prunes it.
+- **Per-game score reset** — `startGame` zeroes every `player.score` before `onStart`. Don't re-implement it inside a module.
 
-Rooms can also be created straight from a phone — the controller's join screen has a "Napravi sobu" button that emits `player:create-room`. The server (`RoomManager.createHostlessRoom`) creates a room with `hostless: true`, `hostSocketId: null`, joins the creator as a regular player, and hands them the remote-host claim automatically — all the remote-host plumbing above applies unchanged.
+At game end, `getAwardCandidates()` plus a generic score-based layer feed `allocateDiplomas` ([awards.ts](packages/shared/src/games/awards.ts)) so every player leaves with a consolation diploma.
 
-- **Game gating**: only games with `supportsHostless: true` in `GAME_DEFINITIONS` (currently every game) can start in a hostless room. Validated server-side in `GameManager.startGame`; the controller's game-select greys the rest out with "Zahteva TV ekran". To make another game hostless-capable, ensure its controller UI shows everything the TV would (the shared data already arrives via the stripped `game:state-update` broadcast), then flip the flag.
-- **Control transfer instead of teardown**: when the holder leaves voluntarily or their grace period expires, `RoomManager.transferRemoteHost` hands the claim to the next connected player and broadcasts `room:remote-host-changed`; the room is only destroyed by an explicit `host:close-room` (the "Zatvori sobu" button) or the idle sweeper. `hostConnected` stays `false` forever, so the sweeper judges hostless rooms purely by whether any player is still connected.
-- **Hostless-only controller renders** (all key off `room.hostless` from the player store): Kviz, Lažov and Ko sam ja show the full standings via the shared [HostlessLeaderboard](packages/controller/src/components/HostlessLeaderboard.tsx) instead of just the player's own rank; Crtaj i pogodi guessers get a read-only [SpectatorCanvas](packages/controller/src/games/draw-guess/components/SpectatorCanvas.tsx) above the guess input (`host.operations` already reaches every controller) and turn results include per-player scores; Lažov shows the question above the vote options and the full reveal (`data.results`: real answer + who fooled whom); Ko sam ja shows the question above the guess buttons and the full round reveal (correct answer + everyone's guesses); Slepi telefoni renders the whole current chain (texts + mini canvases from `chainBeingRevealed`, shown all at once rather than the TV's step-by-step animation) on every phone during reveal, with the control holder's next-chain button underneath; Kviz **geo questions** show the round photo on the phone (full-screen in showing-question via the shared [PhotoFrame](packages/controller/src/components/PhotoFrame.tsx), plus the tap-to-expand thumbnail in the MapPinPicker header that all rooms get) and the results map with everyone's pins + the gold true-location marker on the phone's GeoMap (`markers` prop); Kviz **audio/video questions** play the clip on the phone (there is no TV to play it); Tajni agenti shows waiting players (not the active guesser/spymaster) a read-only 5×5 board via `WaitingBoard` in the clue-giving/guessing phases (the active guesser always taps the board on their phone, and spymasters always see their secret key, so those were already phone-native); Pronađi par stacks the read-only `data.centerCard` above the player's tappable personal card during racing (both `SpotItCard`s at a shared smaller `dualCardSizeRef` size) so the match can be found without the TV. TV-mode phone UX is deliberately unchanged — players should look at the TV when there is one.
+### Rooms, reconnection, disconnects
 
-### Drawing data flow (Crtaj i pogodi)
+- Room codes: `ROOM_CODE_LENGTH` (3) uppercase chars excluding `O/I/L`. Generation is **bounded** — at `MAX_ROOMS` (200) or after 100 collision retries the create call returns `null` and the handler answers "server full". Never loop unbounded there; an exhausted code space used to hang the event loop.
+- Reconnect tokens (UUIDs) live in the controller's localStorage and travel via `socket.handshake.auth`. On disconnect the server starts a `RECONNECT_GRACE_MS` (5 min) timer; reconnecting inside it restores seat, score, and replays the current phase.
+- Two distinct events: `room:player-left` is the **transient** grey-out on disconnect; `room:player-removed` is **permanent** (grace expired or kicked). Destructive `onPlayerDisconnect` work is deferred until grace expires so blips don't burn turns.
+- A returning player who lost their token can **reclaim** a disconnected slot by joining with the same name (score and avatar preserved).
+- **Server-initiated disconnect quirk**: on `sock.disconnect(true)` socket.io-client does *not* auto-reconnect, so the controller manually calls `socket.connect()` when the reason is `"io server disconnect"` ([controller App.tsx](packages/controller/src/App.tsx)).
+- Rooms are **not** deleted when the last player leaves — the room belongs to the host.
+- Abuse guards for public deploys: per-socket rate limits in [rate-limit.ts](packages/server/src/socket/rate-limit.ts), server-side name clamping, 512KB `maxHttpBufferSize`.
 
-Controller collects touch points in **normalized 0–1 coordinates**, batches every ~50ms, emits `draw:stroke-data`, server re-broadcasts to host + guessers. Host canvas scales the normalized points back up to its actual size. Don't send absolute pixel coordinates — devices have different aspect ratios.
+### Remote host & hostless rooms
 
-### Kviz — question types & packs
+Any one player can claim the host controls from their phone (`player:claim-remote-host`); the holder renders a phone mirror of the game-select screen and may start/stop games. Server-side permission checks accept either the host socket or the remote-host (`canControl` in [handlers/game.ts](packages/server/src/socket/handlers/game.ts)).
 
-Kviz is the platform's unified quiz: every question carries a `type` — `obicno` (classic 2–4-option multiple choice, optional image), `audio` (an uploaded mp3/ogg/m4a plays, then multiple choice), `video` (a YouTube embed — `videoId` + optional `startSeconds`/`endSeconds` — plays via `youtube-nocookie.com`, then multiple choice), `geo` (photo + pin-on-map, the old "Pogodi gde je" mechanic), `broj` (slider number guess, the old "Pogodi broj" mechanic) and `emoji` (emoji-string riddle, free-text answer with fuzzy matching + `accept[]` alternates and always-on progressive letter hints — the absorbed former standalone game "Emoji zagonetke"). The shared types are the discriminated unions in [packages/shared/src/types/quiz.ts](packages/shared/src/types/quiz.ts) (`KvizQuestion` client-safe vs `KvizQuestionFull` with answers); the single validator for both packs and inline imports is `parseQuizImport(input, { context: 'pack' | 'inline', allowEmpty? })` in [packages/shared/src/games/quiz-import.ts](packages/shared/src/games/quiz-import.ts) — `pack` context allows pack-relative `imageFile`/`audioFile`/`mapId`, `inline` (host file upload) allows URLs only. A bare JSON array still parses as all-`obicno` (legacy packs and old localStorage imports keep working). Per-type default `timeLimit`: obicno/audio/video 15s, geo 30s, broj 25s, emoji 20s (`KVIZ_DEFAULT_TIME_LIMIT`).
+Rooms can also be created with no TV at all (`player:create-room` → `hostless: true`, creator auto-gets the claim). Only games with `supportsHostless: true` may start there (validated server-side). Hostless controller UIs key off `room.hostless` and render what the TV would have shown (full leaderboards, spectator canvas, the geo map, audio/video playback…). **TV-mode phone UX stays deliberately unchanged** — with a TV present, players should look at the TV.
 
-- **Phase machine is unchanged** (`showing-question → answering → showing-results → leaderboard`); question types only change what renders in each phase and which answer action is accepted: `quiz:answer {optionIndex}` (choice types), `quiz:pin {pin:{x,y}}` (geo), `quiz:guess {value}` (broj), `quiz:text {text}` (emoji — wrong guesses may retry until the clock runs out; only a correct one locks) — all via the generic `game:player-action`. Audio/video media mounts once per question (keyed by question index) across showing-question + answering so the phase flip doesn't restart it; it plays on the TV, and on phones in hostless rooms. Emoji questions show the emoji string on the TV (and on the phone), match answers via `checkEmojiGuess`/`normalizeEmojiAnswer` (quiz-import.ts — case/diacritic/punctuation-insensitive, plus the `accept[]` list), and reveal letters progressively (30/50/70/85% of the window, up to ~55% of letters) in the public `data.hint`; the answer itself stays server-side until results.
-- **Scoring caps at 1000/question for every type** ([scoring.ts](packages/server/src/game/games/quiz/scoring.ts)): choice = speed (`1000 × timeRemaining/timeLimit` when correct); geo = closeness only, `1000·exp(-km/decayKm)` with `decayKm = 220` for Serbia or `bboxDiagonalKm/3` for a custom map; broj = closeness × speed (`pointsForGuess`, K=6, SPEED_FLOOR=0.5, range-normalized to `max−min`); emoji = speed at the moment of the first correct guess (same formula as choice). Geo/broj/emoji results phases run `RICH_RESULTS_DURATION` (default 8s, tunable) instead of the 5s choice results.
-- **Packs** live in `question-packs/` (override `QUESTION_PACKS_DIR`): `<id>.json` manifest `{name, description?, maps?, questions}` + optional sibling `<id>/` asset folder (images, audio, custom-map images) served at `/kviz-files/<id>/<file>` — the mount serves ONLY files one level inside a pack folder and never `*.json`, because **manifests now carry answers** (correctIndex, lat/lng, broj `answer`). For the same reason `GET /api/question-packs` returns **summaries only** (id, name, count, per-type counts), with the built-in bank prepended as the pseudo-pack `KVIZ_BANK_PACK_ID` (`'__bank__'`) so clients treat it as a regular list item. **Pack selection is a multi-select**: the checked packs ride `host:start-game` as `quizPackIds: string[]` plus an optional `quizTypes: KvizQuestionType[]` question-type filter (omitted = all types; both game-select screens keep "all checked" as `null` locally so newly added packs auto-include, and disable start when the pack × type intersection yields 0 questions). The server ([quiz-pack-resolver.ts](packages/server/src/game/games/quiz/quiz-pack-resolver.ts) per id, pooled + filtered in `QuizGameModule.loadPacks`, async — the module waits in showing-question until questions land) concatenates every resolved pack, applies the type filter (an emptied pool falls back to unfiltered, then to `QUIZ_QUESTION_BANK`), shuffles and slices to `roundCount`. Inline `customQuestions` (host `.json` upload, persisted in localStorage `igra-quiz-custom` together with the pack/type selection) still works, wins over the pack selection, but can't use pack assets or custom maps. Flat legacy images stay at `/quiz-images/<file>` (`question-packs/_images/`).
-- **Geo questions & maps**: pin coordinates flow as normalized `{x, y}` ∈ [0, 1] and are reprojected to lat/lng on the server via [packages/shared/src/games/serbia-projection.ts](packages/shared/src/games/serbia-projection.ts) before haversine scoring (`packLatLngToPin`/`packPinToLatLng` pick mercator-bbox vs the calibrated Serbia projection based on whether the question references a map — use those anywhere a pin meets a question). The bundled Serbia raster lives at `packages/{host,controller}/src/games/quiz/assets/serbia-map.png` (1901×2386, conic-style — see the assets README for recalibration rules; third copy at `packages/server/assets/serbia-map.png` served at `/admin/serbia-map.png` for the editor). **Custom maps are per-pack, referenced per-question**: the manifest's `maps: Record<mapId, {imageFile, bbox}>` block holds north-up Web Mercator exports (don't crop after export — the bbox numbers are the image edges); a geo question opts in with `mapId`, and its lat/lng must fall inside that bbox (else inside Serbia bounds). Clients receive `mapImageUrl` and the `GeoMap` components swap the bundled image, measuring aspect ratio from the load — pins/zoom/pan are map-agnostic. Example: `question-packs/geo-zabari.json`.
-- **Migration**: `scripts/migrate-to-kviz.ts` (one-shot, `npx tsx`) converted the legacy `geo-packs/` and `pogodi-broj-packs/` into kviz packs (`geo-test`, `geo-zabari`, `primeri`, plus the old built-in broj bank as the `pogodi-broj` pack). The legacy dirs can be deleted once the migrated packs are verified in-game; the script no longer runs after the legacy parsers were removed.
+### Drawing data flow
 
-### Content admin editors (kviz, ko-sam-ja, tajni-agenti, gluvo-doba…)
+Controllers collect touch points in **normalized 0–1 coordinates**, batch every ~50ms, and emit; the host scales back up to its canvas size. Never send absolute pixels — devices differ in aspect ratio. Drawing ops are appended via the tiny `game:ops-append` event (`getPendingOpsAppend`) instead of re-broadcasting a growing state array (that was O(n²) traffic per turn).
 
-The `ADMIN_TOKEN` gate (`X-Admin-Token` header, set in `.env`) enables the content editors, now a **single unified single-page app served at `/admin`** ([admin-app.ts](packages/server/src/admin/admin-app.ts)): a navy sidebar switches between games client-side (no reload), a compact pack-picker dropdown selects the pack, and Kviz + Ko sam ja use a searchable, type-filterable, drag-reorderable **table** plus a slide-in **editor sheet**. The **Kviz** view is the flagship — a type-tab sheet (obicno/audio/video/geo/broj/emoji) covering everything: image upload, audio upload with `<audio>` preview, YouTube id + thumbnail preview, broj numeric fields, emoji riddle fields (emojis/answer/comma-separated accept list), and a geo click-to-place map picker (Serbia default or a pack custom map); custom maps are managed in the "⚙ Podaci" settings sheet (name/description + "Mape packa" bbox upload). The manifest saves via whole-file `PUT /api/admin/quiz-packs/:id` — the client always sends the full manifest (name/description/maps/questions) so a per-question save doesn't drop pack metadata (legacy array packs upgrade to the manifest format on first save); binary assets go through `POST /api/admin/quiz-packs/:id/file` (`{kind:'image'|'audio', dataBase64}` → `<uuid>.<ext>` in the pack folder) and geo math stays server-side via the stateless `POST /api/admin/pin-convert` (pin ↔ lat/lng, mercator when a bbox is passed). The other views are Ko sam ja (personal-question packs, all four shapes, in the table+sheet), Tajni agenti (word chips), Gluvo doba (role toggles grouped by team — see the Gluvo doba section) and Špijun (locations + inline roles — edited as a **local working copy saved explicitly** because the server requires ≥2 roles per location even for drafts, so an incremental per-keystroke PUT would be rejected). The legacy per-game routes (`/admin/kviz`, `/admin/ko-sam-ja`, …) now **302 to `/admin`**. The whole SPA is one TS template literal in [admin-app.ts](packages/server/src/admin/admin-app.ts) — its inline CSS/JS must avoid backticks and the dollar-brace sequence (the only `${…}` are real TS interpolations of pre-serialized constants), and it embeds the token gate + `Admin` JS runtime that the removed `admin-shell.ts` used to provide. Shared server plumbing lives in [packages/server/src/admin/admin-common.ts](packages/server/src/admin/admin-common.ts) (requireAdmin, slugify, atomic JSON writes); the API router is [content-admin.ts](packages/server/src/admin/content-admin.ts) with per-type routes under `/api/admin/{quiz-packs,ko-sam-ja-packs,tajni-agenti-packs,…}`. Key policy: **reads are lax, writes accept drafts** — packs that fail the strict in-game check stay editable but invisible in the game (the API response carries `visibleInGame` + `error` so the page can say why); deleting a kviz pack also removes its asset folder.
+## Content: packs, admin, timings
 
-### Timing editor (configurable "wait" durations)
+Most games' content is **file-backed JSON packs** in repo-root directories (`question-packs/`, `ko-sam-ja-packs/`, `tajni-agenti-packs/`, `gluvo-doba-packs/`, `spijun-packs/`, `asocijacije-packs/`), each with an env override. Shared validators live in `packages/shared/src/games/*-import.ts` and are used by both the runtime and the admin API.
 
-The same `ADMIN_TOKEN` gate enables the **Timinzi** view of the `/admin` SPA — a per-game editor for the **wait/pause phase durations** (results, leaderboard, intro, narration), NOT the active-input timers (answering, drawing, voting), which stay hardcoded as gameplay balance. Which fields are tunable + their labels/bounds/defaults live in one shared table, [GAME_TIMING_DEFS](packages/shared/src/games/game-timings.ts) (keyed by `module.gameId`, keys match the `*_DURATION` constant names). The admin PUT re-validates through `parseTimingOverrides` (clamps to each field's min/max, drops values equal to the default so the file stays minimal). Overrides persist in a single JSON file at the repo root — `timing-config.json` (override with `TIMING_CONFIG_FILE`; gitignored). The server store is [timing-config.ts](packages/server/src/game/timing-config.ts) (`initTimingConfig` at bootstrap, cached, `getGameTimings(gameId)` returns the clamped **overrides only**). Each game module resolves its slice at `onStart` into `private timings` and reads `this.timings.KEY ?? CONST` — so the module's own constant is always the runtime fallback; the metadata `def` is display-only and can never change gameplay if it drifts. To make another duration tunable: add a field to the game's `GAME_TIMING_DEFS` entry, then swap that const usage to `this.timings.KEY ?? KEY` in the module. Router: [timing-admin.ts](packages/server/src/admin/timing-admin.ts) (`GET/PUT /api/admin/timing-config`); the editing UI is the Timinzi view in [admin-app.ts](packages/server/src/admin/admin-app.ts). Slepi telefoni has no field (its reveal is user-driven).
+- **Manifests carry answers**, so the public `GET /api/<x>-packs` endpoints return **summaries only**, and the kviz asset mount serves only files one level inside a pack folder and never `*.json`.
+- **Reads are lax, writes accept drafts**: a pack that fails the strict in-game check stays editable but invisible in-game (`visibleInGame` + `error` in the API response).
+- **Admin SPA** at `/admin` ([admin-app.ts](packages/server/src/admin/admin-app.ts)), gated by `ADMIN_TOKEN` (`X-Admin-Token` header). One TS template literal containing the whole page — its inline CSS/JS **must avoid backticks and `${`** (the only `${…}` are real TS interpolations). Same constraint applies to the other inline-HTML pages: landing (in [index.ts](packages/server/src/index.ts)), [/uputstva](packages/server/src/uputstva-page.ts), [/gluvo-doba](packages/server/src/gluvo-doba-page.ts), [/kviz-generator](packages/server/src/kviz-generator-page.ts). Shared server helpers: [admin-common.ts](packages/server/src/admin/admin-common.ts) (requireAdmin, slugify, atomic writes), API router [content-admin.ts](packages/server/src/admin/content-admin.ts).
+- **Timing editor** ("Timinzi" view) tunes **wait/pause durations only** (results, leaderboard, intro, narration) — never active-input timers, which stay hardcoded as gameplay balance. Tunable fields are declared in [GAME_TIMING_DEFS](packages/shared/src/games/game-timings.ts); modules resolve their slice at `onStart` and read `this.timings.KEY ?? KEY_CONST`, so the module constant is always the runtime fallback. Overrides persist to `timing-config.json` (gitignored).
+- **Data admin** ("Podaci" view, [data-admin.ts](packages/server/src/admin/data-admin.ts)): zip backup of all content + factory reset from `SEED_DIR` (deploy mode only — reset is refused in dev so it can't wipe the tracked repo).
 
-### Ko sam ja (personal-question game)
+## Games
 
-Ko sam ja is a Kviz/Lažov hybrid where each round is about a *subject* player (round-robin assigned at game start) and others guess what the subject answered. Lives in [packages/server/src/game/games/ko-sam-ja/](packages/server/src/game/games/ko-sam-ja/). Phase machine: `collecting-upfront → [showing-question → (subject-picking for peer/pickN only) → guessing → showing-results → leaderboard] × N → ended`. Scoring: Quiz time-based formula for guessers + `+200 per wrong guess` flat bonus to the subject.
+All 16 game ids are in [registry.ts](packages/shared/src/games/registry.ts); server modules, host and controller components all live under matching `<id>/` folders. Non-obvious things worth knowing:
 
-Four question shapes (discriminated by the `shape` field; validator at [packages/shared/src/games/ko-sam-ja-import.ts](packages/shared/src/games/ko-sam-ja-import.ts)):
-- `fixed` — 2–4 author-supplied options, answered privately during the one-time upfront collection phase.
-- `peer` — without `options`: text must contain `{peer1}`/`{peer2}` and server auto-generates two peer-name buttons. With `options`: 2–4 author-written buttons that may contain `{peer1}`/`{peer2}`/`{subject}` placeholders. Answered just-in-time during `subject-picking` after two random co-players are bound.
-- `free` — subject types a free-text answer upfront. Without `options`: server samples 3 distractors from other players' free-text answers (falls back to `KO_SAM_JA_FREE_FALLBACK` bank when the pool is thin). With `options` (1–3 author-written offered answers, may contain `{subject}` and optionally `{peer1}`/`{peer2}` which bind to up to two random co-players at round time — round skips if there aren't enough peers): those fully define the distractor set — no sampling — shown alongside the subject's typed answer.
-- `pickN` — server expands one button per connected co-player up to `maxPeers` (default 4). Optional `optionTemplate` like `"sa {peer}"` wraps each button; optional `extraOptions` (1–4 extra buttons that may reference `{subject}`/`{peer1}`/`{peer2}` — the latter two bind to the first two of the chosen peers — but not the bare `{peer}`) gets appended and the merged list is shuffled.
+- **Kviz** (`quiz`) — the unified quiz that absorbed several former standalone games. Every question has a `type`: `obicno` / `audio` / `video` (YouTube) / `geo` (pin on map) / `broj` (slider) / `emoji` (fuzzy free text). The phase machine (`showing-question → answering → showing-results → leaderboard`) is type-independent; types only change what renders and which action is accepted. Scoring caps at 1000/question for every type ([scoring.ts](packages/server/src/game/games/quiz/scoring.ts)). Types + validator: [quiz.ts](packages/shared/src/types/quiz.ts), [quiz-import.ts](packages/shared/src/games/quiz-import.ts). Geo pins travel as normalized `{x,y}` and are reprojected via [serbia-projection.ts](packages/shared/src/games/serbia-projection.ts) (use `packLatLngToPin`/`packPinToLatLng` anywhere a pin meets a question — they pick mercator-bbox vs the calibrated Serbia projection). Pack selection is multi-select plus an optional question-type filter.
+- **Zavet** (id stays `bolji-zivot`) — Cabo-style memory card game, **lower score wins** (`lowerScoreWins` in the registry; leaderboards sort ascending — don't reuse descending components). Private peeks are sub-phase-scoped and never replayed on reconnect (memory *is* the game). Full rules: [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md).
+- **Gluvo doba** — Mafia/Werewolf with Slavic-mythology roles. Roles are **data** ([gluvo-doba-roles.ts](packages/shared/src/games/gluvo-doba-roles.ts)) and night resolution is a **pure function with a strict order** ([night-resolution.ts](packages/server/src/game/games/gluvo-doba/night-resolution.ts)) — add roles by extending the tables and the pipeline, not with if-branches. Anti-tell rule: every living player gets a visually identical night grid.
+- **Tajni agenti** — three modes (`classic` / `duet` / `coop`) with different team, key and turn-budget rules, picked at game-select and re-validated in `validateStart`.
+- **Asocijacije** — always a single board (deliberately *not* in `GAME_ROUND_CONFIG`); klasik and kviz modes.
+- **Tutorial mode** (Gluvo doba, Zavet, Špijun) — phase timers stop ticking and the host advances phases via a `*:next-phase` host action. Only the boolean `tutorialMode` is shared; hints are computed client-side from each player's own `playerData` so nothing leaks.
 
-Custom packs live in `ko-sam-ja-packs/` at the repo root (override via `KO_SAM_JA_PACKS_DIR`). Server endpoint `GET /api/ko-sam-ja-packs` lists summaries; host UI in [packages/host/src/components/KoSamJaImportButton.tsx](packages/host/src/components/KoSamJaImportButton.tsx) mirrors the Quiz import flow (file picker + server-pack dropdown, persists in `localStorage` under `igra-ko-sam-ja-custom`). Host's game-select card carries an additional `family`/`nsfw` toggle (persisted via [packages/host/src/store/koSamJaConfigStore.ts](packages/host/src/store/koSamJaConfigStore.ts)) — both fields are sent via `host:start-game`'s `koSamJaCategory` / `customKoSamJaQuestions` payload extensions and re-validated server-side. Built-in default bank (family-only) lives in [packages/shared/src/games/ko-sam-ja-questions.ts](packages/shared/src/games/ko-sam-ja-questions.ts).
+## i18n
 
-### Gluvo doba (Mafia/Werewolf social deduction)
+A deliberately **partial** EN/SR layer — don't assume everything is translatable. Strings and `translate()` live in [strings.ts](packages/shared/src/i18n/strings.ts) (flat dotted keys, `en → sr → raw key` fallback); host and controller each have a `useLanguageStore` (persisted per device, key `igra-language`, default `sr`) and a `useT()` hook. **Not room-synced** — TV and phone can differ.
 
-Slavic-mythology Mafia: TV narrates the day/night cycle, phones carry secret roles; night actions and day voting happen on phones, day discussion is live out-loud. Lives in [packages/server/src/game/games/gluvo-doba/](packages/server/src/game/games/gluvo-doba/). Phase machine: `podela-uloga → noc → [osveta] → zora → diskusija → glasanje → [osveta] → presuda → noc … → kraj → ended` (the final role reveal must stay in the `kraj` phase — emitting `ended` immediately tears the game down).
+Translated: platform chrome, game-select cards, and three games (Crtaj i pogodi, Slepi telefoni, Pronađi par). **Serbian by design**: every other game's in-game screens, validator error strings, and the built-in content banks. When adding a string to a translated surface add both `sr` and `en`; when touching an untranslated game, leave its strings Serbian.
 
-- **Roles are data** in [packages/shared/src/games/gluvo-doba-roles.ts](packages/shared/src/games/gluvo-doba-roles.ts): `GLUVO_DOBA_ROLES` (name/team/description/nightPrompt/`nightActionType`/hint group), `compositionFor(n, opts)` builds the deck per player-count band (6–8 / 9–12 / 13–15; the dark core is a Vukodlak "kum" who picks the victim + a Vampir who executes it and inherits the pack if the Vukodlak dies — resolved by a kill-priority hierarchy in night-resolution, not a tally; the dark side then scales through specialists — Todorac blocker, Drekavac false-scan, Bauk vote-mute), plus an optional Bajačica (medium) host toggle. Vila, Lesnik and Morana are deliberately NOT in the built-in bands — they're available only through custom role packs. The Vračara's investigation returns deliberately ambiguous `GLUVO_DOBA_HINT_GROUPS` mixing teams. Add a new role by extending the tables + the resolution pipeline, not with if-branches.
-- **Night resolution** is a pure function in [night-resolution.ts](packages/server/src/game/games/gluvo-doba/night-resolution.ts) with a strict order: block → unblock → enchant/redirect → wolf kill (skipped on a configured peaceful first night) → Morana kill (even nights) → Zmaj protect → Zduhać one-time passive intercept (publicly reveals him) → investigate → fear → whisper aggregate.
-- **Anti-tell rule**: every living player gets a visually identical night target grid (powerless roles submit an anonymous "šapat sumnje" whisper; the top-2 aggregate shows at dawn). Never put role-conditional data in the shared `hostData` — secret info flows only through `playerData` slices. Public by design: `rolesInPlay` (open setup), `knezRevealed`, `zduhacSaved`, `mutedToday`.
-- **Host config** (payload fields `gluvoDoba*` in events.ts, persisted in the host's `newGamesConfigStore`): discussion timer, death reveal (`role`/`team`/`none`), peaceful first night, neutral toggle, Vila toggle.
-- **Rules page**: static Serbian HTML at `GET /gluvo-doba` ([packages/server/src/gluvo-doba-page.ts](packages/server/src/gluvo-doba-page.ts)) — the current-roles section renders from `GLUVO_DOBA_ROLES`, so role text edits show up there automatically; planned/future roles are a static list on the same page.
-- The room default `maxPlayers` was raised to 15 for this game (rooms, not game definitions, gate joins).
-- **Role packs (modes)**: an admin-curated pack (`gluvo-doba-packs/<id>.json`, `{ name?, wolves, roles }`) can replace the built-in bands. Shared model in [gluvo-doba-import.ts](packages/shared/src/games/gluvo-doba-import.ts): `parseGluvoDobaPack` (validates the wolf count 1–6 + role ids from `GLUVO_DOBA_PACK_ROLE_IDS`) and `dealRolesFromPack` (**balanced by player count**, not "every enabled special that fits": the non-village seats are fixed by `threatBudgetFor(n)` — 2 at 6–8 / 3 at 9–12 / 4 at 13–15 — and split between Sile Mraka and an optional neutral or two, so enabling everything in "haos mod" can't hand the dark side a majority; neutrals count against that budget rather than the village, `pack.wolves` is honored up to the dark share with extra Vukodlaci filling any dark shortfall, and the remaining `n − budget` seats are always villagers — enabled village specials first, then Domaćini). `GET /api/gluvo-doba-packs` lists valid packs with full content; the host/controller game-select shows a "Mod" picker and sends the chosen pack in `host:start-game`'s `gluvoDobaPack` (re-validated server-side in `GluvoDobaModule.onStart`). When a pack is chosen it fully defines the roster, so the neutral/vila/bajačica toggles are hidden/ignored; the death-reveal / first-night / discussion rules still apply. Editor: [gluvo-doba-editor-page.ts](packages/server/src/admin/gluvo-doba-editor-page.ts). Dir override: `GLUVO_DOBA_PACKS_DIR`.
-- **Tutorial mode** (`gluvoDobaTutorial` in `host:start-game`, 🎓 toggle on both game-select screens): phase timers don't tick — the host/remote-host advances phases via the `gluvo:next-phase` host action (executes exactly what the timeout would; early-finish on all-acted/all-voted still applies). Guide content lives in [gluvo-doba-tutorial.ts](packages/shared/src/games/gluvo-doba-tutorial.ts) (TV phase explainers, personalized phone hints, "Tok igre" cheat lines) and clients key off `data.tutorialMode`. The floating "?" roles modal (`RolesInPlayButton`) and the guidance texts ("niko ne priča 🤫", "Pričajte uživo…", "Nikome ne pokazuj ekran!", ghost "smeju da lažu") are **tutorial-only** — a normal game keeps a clean UI; mechanic/status banners (blocked, muted, peaceful-night note, Vampir-leader, Zduhać shield) always render. Anti-tell holds: only the boolean `tutorialMode` is shared; hints are computed client-side from each player's own `playerData`, and the osveta hint stays neutral while `osvetaPublic` is false (a night-context Suđaja death must not leak).
+The only server-side language plumbing is the draw-guess word bank (`language` rides `host:start-game` as a content hint).
 
-### Tajni agenti (game modes)
+## Branding
 
-Tajni agenti has three modes, picked on the game-select screen (host: `newGamesConfigStore.tajniAgentiMode`, controller: local state) and sent as `tajniAgentiMode` in `host:start-game` (re-validated in `validateStart`: classic needs ≥4 connected, duet/coop need ≥2 — the registry `minPlayers` is 2, and both game-selects auto-fall back classic→duet under 4 players so the start button can't trip the server error):
+Follows [brand.md](brand.md) (navy `#1D3557`, gold `#C29B47`, cream `#F5EBE0`) with **Baloo 2** display + **Manrope** body — a deliberate divergence from brand.md's serif pairing (serifs read too stiff for a party game; Fredoka was dropped for missing Serbian glyphs). All colors flow through CSS custom properties in `packages/{host,controller}/src/styles/global.css` — **identical token sets, keep them in sync**. Functional palettes that must stay in code: `AVATAR_COLORS` ([constants.ts](packages/shared/src/constants.ts)) and the quiz option colors (host + controller keys must match hexes exactly).
 
-- **classic** — the original two competing teams, each with a spymaster. Unchanged flow.
-- **duet** — cooperative Codenames: Duet. Two sides (still `red`/`blue` internally), NO spymaster role: everyone always sees their own side of the double key (`TajniAgentiSecretCard.duet`, standard distribution constant `DUET_KEY_DISTRIBUTION` — 9 agents / 3 assassins / 13 bystanders per side, 15 distinct agents). Sides alternate; the giving side (`currentTeam`, any member may submit the clue — first wins) clues about ITS key and the *other* side taps; reveals adjudicate against the giver's key. Agents reveal green (`type: 'agent'`), a bystander only marks `bystanderFor: [giverSide]` (card stays live for the other direction; server rejects re-taps against the same side, controller greys them), an assassin on the giver's side loses instantly. Shared budget `turnsRemaining` starts at 9 (`TAJNI_AGENTI_COOP_TURNS`); every turn (incl. timeouts) costs 1; 0 with agents left → loss.
-- **coop** — one spymaster + guessers vs the board. Everyone is auto-assigned to `COOP_TEAM` ('blue') in `onStart` (team-selection is only the spymaster claim); board is the classic one with blue starting (9 blue). Same 9-point budget: each turn costs 1, revealing a red "enemy" card costs 1 EXTRA, neutral just ends the turn, assassin = loss; find all 9 blue to win.
+## Serving & deployment
 
-Coop-mode endings use `winner: 'players' | null` (win/loss) + reasons `out-of-turns`/`abandoned` (see `TajniAgentiEndedData`); `state.gameOver` — not `winner` — signals the decided game (coop losses have `winner === null`). Disconnects: duet ends (`abandoned`) if a side empties; coop promotes a new spymaster or ends when <2 remain.
+The Express server is the single public entry point.
 
-### Zavet (Omerta/Cabo-style memory card game, id `bolji-zivot`)
+- `/` static landing (no bundle, no room creation — safe for bots and link previews), `/host/` host bundle, `/play/` controller bundle. `/host` and `/play` 301 to the slashed forms (needs `strict routing` so the redirect doesn't loop).
+- **Dev fallback**: when `packages/<pkg>/dist/index.html` is missing, Express proxies `/host/**` and `/play/**` to Vite. The check tests `index.html`, **not** the `dist/` folder — Vite leaves empty `dist/` dirs behind, which would flip the server into prod-static mode that serves only 404s.
+- The proxy uses `pathFilter` (function form) rather than `app.use('/host', …)`: mount-stripping would turn `/host/` into `/` at Vite, which redirects back to `/host/` → infinite loop. `ws: true` carries both socket.io upgrades and Vite HMR.
+- **LAN testing**: set `HOST_ORIGIN`/`CONTROLLER_ORIGIN` to your LAN IP so CORS accepts them; see [README.md](README.md).
+- **Deploy** (Docker/Coolify): all editable content is file-backed and path resolution is centralized in [data-paths.ts](packages/server/src/data-paths.ts). With `DATA_DIR` set (baked to `/data` in the [Dockerfile](Dockerfile)) content lives on a persistent volume; `seedDataDirs()` copies bundled defaults from `SEED_DIR` **only into missing/empty dirs**, so redeploys never clobber admin edits. Without `DATA_DIR`, everything resolves to the repo-root folders (dev mode).
 
-Cabo-style card game themed on Slavic mythology (originally on the "Srećni
-ljudi" TV series — rethemed in place, the internal game id, `bz:*` actions,
-phase names and `BZ_*` constants keep the old names, same precedent as
-`pogodi-godinu` → "Pogodi broj"). Creatures deliberately overlap with Gluvo
-doba (shared universe). Each player has a **family of 4 face-down cards** on
-fixed positions (2×2 on the phone); card values 0–13 are "uroci" (curses —
-LOWER IS BETTER).
-Full rules + balance rationale: [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md).
-Server module in [packages/server/src/game/games/bolji-zivot/](packages/server/src/game/games/bolji-zivot/),
-deck + scoring helpers in [packages/shared/src/games/bolji-zivot-deck.ts](packages/shared/src/games/bolji-zivot-deck.ts),
-client types in [packages/shared/src/types/bolji-zivot.ts](packages/shared/src/types/bolji-zivot.ts). 2–6 players, 45-card deck, hostless-capable.
+### Environment variables
 
-- **Phase machine** (`GameState.phase` === the `sub` field in data): `peeking →
-  [await-draw → holding → (power-select → reaction? → peek-show/power-look/racija-show)?]
-  × N → riska? → reveal → …rounds… → final-leaderboard → ended`. The **slap
-  window** (UI name: **„Presek"** — internal identifiers stay `slap`/`bz:slap`)
-  **is parallel**, not a phase, and has **no timer** — it opens when a
-  0–9 card lands on the discard and closes on a correct slap, any discard-top
-  change, or the next player drawing from the pile (`bz:draw`). On the phone
-  the floating **"!" button is a unified quick-action hub** (local state,
-  silent — others don't see the press): it opens a popup listing whichever
-  actions are live — Presek/slap (arms the own 2×2 grid with red frames —
-  gridMode 'slap' — and a tap on a card is the attempt; one attempt per window
-  via `seat.slapAttempted`, `data.slap.id` increments per window so clients
-  reset local state), the Zduhać reaction (the `reaction` phase timer is only
-  **3s** — `REACTION_DURATION` — then the action auto-finalizes), and the
-  "Zavet!" call (confirm step; there is no separate Zavet button anymore).
-- **Core rule**: powers (5 Suđaja peek-own, 6 Vračara peek-other, 7 Podmenak
-  blind-swap, 8 Gromovnik raid/"Grom", 9 Veštica look-swap) activate ONLY when
-  the card is drawn from the pile and discarded
-  directly (`bz:discard`); swaps and discard-pile takes never trigger powers.
-  Timeout auto-discards also skip the power (it needs target selection).
-- **Anti-leak**: card faces live only server-side. Public `data` may carry
-  faces only for: discard top, grom (racija) reveals, failed slap/Zduhać reveals, and
-  the end-of-round `reveal`. Private peeks flow through `playerData.visible`
-  and are **sub-phase-scoped** — cleared at turn end and never re-sent on
-  reconnect (memory is the game). Position changes from other players' actions
-  are announced publicly via `changedSlots` + `lastAction` (Serbian strings
-  built server-side; the game is Serbian-only in-game by design).
-- **Specials**: Vesna(10)+Morana(11) pair in one family scores 0 (helper
-  `bzRoundSum`; constants still named `BZ_MALINA_V`/`BZ_OZREN_V`); Zduhać(12,
-  `BZ_POPARA_V`) is a reaction — targeted player gets a `reaction` window to
-  tap their believed-Zduhać slot (wrong guess = public reveal + penalty card);
-  the single Drekavac(13, `BZ_RISKA_V`) gives its non-caller holder one extra
-  swap-only turn after the "Zavet!" call (`riska` phase), announced publicly.
-  Caller must be STRICTLY lowest for 0 points, else sum + 20 penalty
-  (`BZ_CALL_PENALTY`); leaderboard sorts ASCENDING (fewer curses wins) — don't
-  reuse descending leaderboard components. The registry flag `lowerScoreWins`
-  marks this inversion for platform-level consumers: the controller's
-  post-game placement badge (`game:ended` in controller App.tsx) ranks
-  ascending for such games.
-- **Card-movement FX**: the module emits a structured `data.lastMove`
-  (`BZMove`: id + steps `{from, to, face?}` over endpoints deck / discard /
-  hand:<id> / slot:<id>:<pos>) alongside the textual `lastAction`. `face` may
-  only be set when the card is publicly known (discard, slap, Zduhać,
-  Drekavac) — secret moves fly as card backs. Both clients render it via
-  `BZFxLayer` (duplicated per package like BZCard): ghost cards fly between
-  `data-bz-anchor` DOM anchors (missing anchors are skipped silently), plus a
-  Grom screen flash, a Zduhać shield pop, a table shake on `riska`, and
-  staggered `bz-flip-in` reveals (keyframes `bz-*` in both global.css files).
-- All interactions ride the generic `game:player-action` event (`bz:*` actions);
-  no new socket events were added. Round count uses the generic `roundCount` /
-  `GAME_ROUND_CONFIG` knob; wait-phase durations are in `GAME_TIMING_DEFS`
-  (`/admin/timinzi`), active-input timers stay hardcoded in the module.
-- **Tutorial mode** (`boljiZivotTutorial` in `host:start-game`, toggle on both
-  game-select screens): phase timers don't tick — the host/remote-host advances
-  phases via the `bz:next-phase` host action (executes exactly what the timeout
-  would); the parallel slap window is event-driven (no timer) so it behaves
-  identically in tutorial mode. Clients read
-  `data.tutorialMode` and show guide content from
-  [bolji-zivot-tutorial.ts](packages/shared/src/games/bolji-zivot-tutorial.ts)
-  (TV phase explainers, personalized phone hints, "?" rules sheet) — none of it
-  renders in a normal game.
-
-Note for ANY new game: the public instructions hub at `GET /uputstva`
-([packages/server/src/uputstva-page.ts](packages/server/src/uputstva-page.ts))
-only lists games that have a `GAME_RULES` entry there — add one (short Serbian
-rules HTML) as a sixth wiring step, or the game silently won't appear on the
-page.
-
-### Asocijacije (TV "Slagalica" associations)
-
-Turn-based associations board modelled on the Serbian TV game. Server module in [packages/server/src/game/games/asocijacije/](packages/server/src/game/games/asocijacije/), shared types in [packages/shared/src/types/asocijacije.ts](packages/shared/src/types/asocijacije.ts), content model + validator in [asocijacije-import.ts](packages/shared/src/games/asocijacije-import.ts), built-in puzzles in [asocijacije-bank.ts](packages/shared/src/games/asocijacije-bank.ts). 2–8 players, hostless-capable, individual (not team) round-robin scoring.
-
-- **Board model**: a *puzzle* is 4 columns (letters A/B/C/D by index) × 4 fields + a `finalSolution`. Each `AsocijacijeField` has a `word` (the association revealed) and, for kviz mode, an optional `question` + `wrongOptions[]` (the correct answer is always `word`, merged into the shuffled options server-side). A puzzle is **kviz-capable** iff every field has a usable question (`isKvizCapablePuzzle`). A game is **always a single board** (one random puzzle from the pool) — Asocijacije is deliberately NOT in `GAME_ROUND_CONFIG`, so no round selector renders and the module hard-codes `slice(0, 1)`.
-- **Two modes** (`asocijacijeMode` in `host:start-game`, klasik/kviz): klasik reveals a field on tap; kviz opens the field's multiple-choice question first (a wrong answer forfeits the turn). Column & final-solution guesses are **always free-text typed** in both modes, fuzzy-matched via `checkEmojiGuess` (+ per-solution `acceptSolution`/`acceptFinal`).
-- **Turn machine** (`AsocijacijeTurnPhase`): a turn begins in `awaiting-open` when closed fields remain, else `awaiting-guess` (so a fully-open board can still be guessed). From `awaiting-open` you open one field (→ `awaiting-guess`, or kviz → `answering-field`) or attempt the final; from `awaiting-guess` you guess a column, guess the final, or pass. **Correct → score + you continue; any wrong guess or a `TURN_DURATION` (45s) timeout passes the turn.** Scoring caps mirror the TV game: kviz field-open +100, column +300, final +1000 (constants in [AsocijacijeState.ts](packages/server/src/game/games/asocijacije/AsocijacijeState.ts)). Board ends when the final is guessed → `board-results` → next board or `leaderboard` → `ended`.
-- **Anti-cheat**: unrevealed words / column solutions / the final never enter the broadcast board view; the active question is sent WITHOUT the correct index (the server holds it in `answering.correctIndex`). The whole board lives in the broadcast `hostData` (so every controller and the TV render it); `playerData` carries only `isActive`. The controller board is interactive only for the active player; non-active players in a TV room just watch, hostless rooms show everyone the read-only board. Wait-phase durations (`BOARD_RESULTS_DURATION`, `LEADERBOARD_DURATION`) are in `GAME_TIMING_DEFS`; the 45s turn timer stays hardcoded.
-- **Packs**: `asocijacije-packs/<id>.json` (override `ASOCIJACIJE_PACKS_DIR`), manifest `{ name?, description?, puzzles: [...] }`; **manifests carry answers**, so `GET /api/asocijacije-packs` returns summaries only (puzzleCount + kvizPuzzleCount + visibleInGame). Only **file-backed packs** are listed — the in-code `ASOCIJACIJE_BANK` (`ASOCIJACIJE_BANK_PACK_ID` `'__bank__'`) is NOT a selectable pseudo-pack anymore; it's kept solely as a silent server-side fallback when nothing resolves (the bundled content ships as the real seed pack `opste.json`). The game-select "Slagalice" picker is **single-select, filtered by the chosen mode** (klasik → `puzzleCount>0`, kviz → `kvizPuzzleCount>0`), and a reconcile effect keeps the selection valid / auto-picks the first pack; empty selection → omit `asocijacijePackIds` so the server falls back to the bank. The server resolves the chosen pack by id (`asocijacije-pack-resolver.ts`, sync at game start); in kviz mode only kviz-capable puzzles are used. Admin editor: the "Asocijacije" view in the `/admin` SPA (kind `asoc` in [admin-app.ts](packages/server/src/admin/admin-app.ts)) is a **compact puzzle table + slide-in 4×4 sheet** (mirrors the kviz table/sheet via the shared `makeSheet`); each add/edit/delete PUTs the whole manifest through `ctx.putPack` (no local dirty state).
-
-### Cross-game reliability patterns
-
-Two recurring server-side patterns worth knowing about when touching any game module:
-
-- **Snapshot-based early-exit** — in submission/answer collection phases (Quiz `answering`, Fibbage `writing-answers`/`voting`, Foto Kviz `answering`, Ko sam ja `collecting-upfront`/`guessing`), each module snapshots the set of expected player IDs at phase entry and uses that set for "did everyone answer?" checks. Disconnected mid-grace players stay in the snapshot — round runs until they reconnect-and-answer or the timer expires. Past-grace removal (via `onPlayerDisconnect`, which `setup.ts` fires only after the 5-minute grace timer) prunes the snapshot so the round can early-exit again. Without this, a phone screen sleep mid-round used to "shrink the denominator" and steal an answering slot from a player about to reconnect.
-- **Per-game score reset** — [packages/server/src/game/GameManager.ts](packages/server/src/game/GameManager.ts) `startGame` zeroes every `player.score` before calling `module.onStart`. Each game is its own match; don't re-implement a score-reset inside the module.
-
-### Internationalization (i18n) & Serbian-only content
-
-There is now a **per-device EN/SR language switch** — a small, deliberately *partial* i18n layer, not a full retrofit. Don't assume everything is translatable.
-
-- **Strings & helper** live in [packages/shared/src/i18n/strings.ts](packages/shared/src/i18n/strings.ts): a flat dotted-key dictionary `STRINGS: Record<Language, Record<string, string>>` plus `translate(lang, key, params)` (interpolates `{name}`-style tokens; falls back `en → sr → raw key`). `Language = 'sr' | 'en'` and `DEFAULT_LANGUAGE = 'sr'` live in `i18n/types.ts`; all of it is re-exported from `@igra/shared`.
-- **Per-device preference (NOT room-synced)**: host and controller each have a `useLanguageStore` (Zustand `persist`, localStorage key `igra-language`), a `useT()` hook (`src/i18n/useT.ts`), and a `LanguageSwitch` component placed on the lobby / join / game-select screens. Each device keeps its own choice — the host TV and a phone can differ.
-- **Translated surfaces**: the three games **Crtaj i pogodi, Slepi telefoni, Pronađi par** (host + controller, fully), all platform chrome (lobby, join, game-select, GameScreen overlay buttons, reconnect/kick/leave prompts, PlayerList, QR, import/config panels), and every game-select card via `t('game.<id>.name')` / `t('game.<id>.description')`. The Serbian values in `GAME_DEFINITIONS` stay as the runtime default (server-safe); English comes from the dictionary.
-- **Still Serbian by design** (don't half-translate these): the in-game screens of the other games (Kviz — all question types, Lažov, Ko sam ja, Tajni agenti…), the shared-validator error strings (`quiz-import`, `ko-sam-ja-import`, `tajni-agenti-import` — surfaced as `result.error`), and the built-in gameplay content banks (`fibbage-questions`, `ko-sam-ja-questions`, plus the Serbian half of `draw-words`).
-- **draw-guess words are the only server-side language plumbing**: the host's language rides along in the `host:start-game` payload (`language?` field) purely as a content hint, threaded `handlers/game.ts → GameManager.startGame → DrawGuessModule.onStart`, which calls `getDrawWordBank(lang)` (EN/SR banks in [draw-words.ts](packages/shared/src/games/draw-words.ts)). This is **not** a room-wide language sync.
-- **Static landing page** (`/`, inline HTML in [packages/server/src/index.ts](packages/server/src/index.ts)) has its own SR/EN toggle + inline `<script>` that reads/writes the Zustand-persist localStorage shape `{"state":{"language":"x"},"version":0}` under `igra-language`. It only stays in sync with the apps **same-origin** (prod, or dev through the `:3001` proxy — not when opening Vite directly on `:5173`/`:5174`, a different origin). The inline script must avoid `${` and backticks (the whole page is a JS template literal).
-
-When adding a string to a translated surface, add **both** `sr` and `en` entries to `strings.ts` and render via `useT()` — don't hardcode. When touching one of the untranslated games, leave its in-game strings Serbian.
-
-### URL structure & dev/prod serving
-
-The Express server is the single public entry point — the same binary serves the landing page, proxies to Vite in dev, and serves the static dist bundles in prod.
-
-- `/` → static landing HTML (inline in [packages/server/src/index.ts](packages/server/src/index.ts)) with "Pridruži se igri" CTA → `/play/` and "Kreiraj novu sobu" → `/host/`. No bundle, no room creation — safe for link previews and bots.
-- `/host/` → host bundle (Vite `base: '/host/'`).
-- `/play/` → controller bundle (Vite `base: '/play/'`).
-- `/host` and `/play` (no slash) → 301 redirect to slashed forms, query string preserved. Requires `app.set('strict routing', true)` so the redirect handler doesn't also fire on the already-slashed form and loop.
-- Dev fallback: if `packages/<host|controller>/dist/index.html` doesn't exist, Express mounts `http-proxy-middleware` for `/host/**` and `/play/**` pointing at Vite (`localhost:5173` / `:5174`). The check is `existsSync(dist + '/index.html')`, **not** just `existsSync(dist)` — Vite sometimes leaves an empty `dist/` behind which would make a bare existsSync return true and steer the server into prod-static mode that serves nothing but 404s.
-- The proxy uses `pathFilter: (pathname) => pathname === '/host' || pathname.startsWith('/host/')` (function form) instead of `app.use('/host', proxy)`. Express's mount-stripping would otherwise turn `/host/` into `/` at Vite, and Vite (configured with `base: '/host/'`) would 302-redirect `/` → `/host/` causing an infinite loop.
-- The proxy has `ws: true` for socket.io upgrades AND Vite HMR — both pass through.
-
-## LAN / single-room modes
-
-For real-phone testing, create a root `.env` with `HOST_ORIGIN=http://<LAN-IP>:5173` and `CONTROLLER_ORIGIN=http://<LAN-IP>:5174` so CORS accepts LAN origins. Vite dev servers already bind `0.0.0.0`. Open `http://<LAN-IP>:5173/host/` (or `:3001/host/` through the proxy) on the TV; phones hit `:5174/play/` (or `:3001/play/`). Set `SINGLE_ROOM_MODE=true` (root `.env`) plus `VITE_SINGLE_ROOM=true` (`packages/controller/.env`) to let controllers auto-fetch the active room code so players only type a name. See [README.md](README.md) for full instructions.
-
-## Persistent content & backups (deploy vs dev)
-
-All editable content (kviz/ko-sam-ja/tajni-agenti/gluvo-doba/spijun packs + their uploaded images/audio/custom-maps, and the `timing-config.json` overrides) is **file-backed**, and path resolution is centralized in [packages/server/src/data-paths.ts](packages/server/src/data-paths.ts):
-
-- **Dev / legacy** (no `DATA_DIR`): every content dir resolves to the repo-root folder exactly as before — edits write straight into the working copy. Factory reset is *refused* in this mode so it can't wipe the tracked repo.
-- **Deploy** (`DATA_DIR` set — baked to `/data` in the [Dockerfile](Dockerfile), mounted as a persistent volume by [docker-compose.yml](docker-compose.yml) / a Coolify volume): content lives on the volume so it survives image rebuilds. The pristine bundled defaults are baked into `SEED_DIR` (`/app/seed`), and `seedDataDirs()` copies each pack dir into the volume **only if that dir is missing/empty** — a fresh deploy ships the bundled packs, but later admin edits are never clobbered on redeploy. A per-dir env override (`QUESTION_PACKS_DIR` etc.) still wins over `DATA_DIR`.
-
-The admin **"Podaci" view** ([data-admin.ts](packages/server/src/admin/data-admin.ts), `GET /api/admin/backup` + `POST /api/admin/reset-defaults` + `GET /api/admin/data-status`, all under the `ADMIN_TOKEN` gate) adds: **backup** = a `.zip` (via `archiver`) of every content dir + uploaded assets + timing file, fetched with the token header and downloaded client-side; **factory reset** = restore everything from `SEED_DIR` (deploy-mode only, double-confirmed, re-inits the timing cache via `onReset`). Coolify setup: add a persistent volume mounted at `/data` (the image already sets `DATA_DIR=/data`, `SEED_DIR=/app/seed`) + set `ADMIN_TOKEN`.
-
-## Environment variables
-
-- `DATA_DIR` — persistent volume for editable content in deploy (default unset = dev/repo-root mode; the Docker image sets it to `/data`). When set, all pack dirs + `timing-config.json` live under it, seeded from `SEED_DIR` on first boot.
-- `SEED_DIR` — baked-in default content used to seed a fresh `DATA_DIR` and to power the admin factory reset (Docker image sets it to `/app/seed`).
-- `QUESTION_PACKS_DIR` — directory of kviz pack manifests + per-pack asset folders (default `question-packs/`); each `<id>.json` may have a sibling `<id>/` folder served at `/kviz-files/<id>/<file>`.
-- `KO_SAM_JA_PACKS_DIR` — directory of `.json` Ko sam ja packs (default `ko-sam-ja-packs/`).
-- `ADMIN_TOKEN` — enables the admin editors under `/admin` (kviz, ko-sam-ja, tajni-agenti, gluvo-doba, spijun, asocijacije, timinzi; unset = disabled).
-- `TAJNI_AGENTI_PACKS_DIR` — directory of Tajni agenti word packs (default `tajni-agenti-packs/`).
-- `GLUVO_DOBA_PACKS_DIR` — directory of Gluvo doba role packs (default `gluvo-doba-packs/`).
-- `ASOCIJACIJE_PACKS_DIR` — directory of Asocijacije puzzle packs (default `asocijacije-packs/`).
-- `TIMING_CONFIG_FILE` — JSON file of admin-configured wait-phase durations (default `timing-config.json` at repo root; gitignored, edited via `/admin/timinzi`).
-- `HOST_ORIGIN` / `CONTROLLER_ORIGIN` — CORS origins for LAN play.
-- `SAME_ORIGIN_DEPLOY=true` — single-container deploy (host + controller served from server).
-- `SINGLE_ROOM_MODE=true` (+ `VITE_SINGLE_ROOM=true` for controller) — auto-fill the active room code.
+`PORT`, `HOST_ORIGIN` / `CONTROLLER_ORIGIN` (CORS), `SAME_ORIGIN_DEPLOY`, `SINGLE_ROOM_MODE` (+ `VITE_SINGLE_ROOM` for the controller) — auto-fill the active room code; `ADMIN_TOKEN` (unset = admin disabled), `DATA_DIR` / `SEED_DIR`, the per-content overrides `QUESTION_PACKS_DIR` / `KO_SAM_JA_PACKS_DIR` / `TAJNI_AGENTI_PACKS_DIR` / `GLUVO_DOBA_PACKS_DIR` / `SPIJUN_PACKS_DIR` / `ASOCIJACIJE_PACKS_DIR`, `TIMING_CONFIG_FILE`, `QUIZ_FEEDBACK_FILE`, `LOG_DIR` / `LOG_RETENTION_DAYS`, `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR`.
 
 ## Gotchas
 
-- After editing any file in `@igra/shared`, run `npm run build:shared` (or restart `npm run dev`, which does it first) before the server/host/controller will see the changes — they import from `dist/`, not `src/`.
-- Both Vite configs set `strictPort: true` because the Express dev proxy targets fixed ports (5173/5174). If `npm run dev` dies with "Port 5173 is already in use", kill the leftover node process — before strictPort, Vite would silently shift host→5174/controller→5175, which made `/play/` proxy to the *host* Vite ("did you mean to visit /host/play/?" errors) and `/host/` hit a dead port (MIME-type module errors).
-- Windows shell: bash is expected, not cmd/PowerShell. Use forward slashes and Unix idioms.
-- `packages/server` is ESM (`"type": "module"`); imports inside compiled output need `.js` extensions. `tsx` handles this in dev; `tsc` needs correctly-written imports.
-- If `/host/` or `/play/` returns 404 in dev through the proxy, check that `packages/<host|controller>/dist/` doesn't contain a stale or empty folder — the server picks dev vs prod mode by looking for `dist/index.html`. `rm -rf packages/host/dist packages/controller/dist` and let `tsx watch` restart (touch a TS file to trigger if needed).
-- Vite's HMR works through the Express dev proxy on `:3001` thanks to `ws: true` in `createProxyMiddleware`, but it's also fine to open Vite directly at `:5173/host/` or `:5174/play/` if HMR ever misbehaves.
-- The host's `window.history.replaceState(null, '', \`?code=${room.code}\`)` uses a relative URL so it preserves whatever path the host is loaded at (`/host?code=AB` in the new structure). Don't switch to an absolute URL — it would land on `/?code=AB` and trip the landing page instead.
+- After editing anything in `@igra/shared`, run `npm run build:shared` (or restart `npm run dev`) — consumers import `dist/`, not `src/`.
+- Both Vite configs set `strictPort: true` because the dev proxy targets fixed ports. On "Port 5173 already in use", kill the stale process (the `free-dev-ports` skill does this) — without strictPort Vite silently shifts ports and `/play/` ends up proxying to the *host* dev server.
+- If `/host/` or `/play/` 404s in dev, delete stale/empty `packages/{host,controller}/dist/` folders (see the dev-fallback rule above).
+- Inline-HTML pages are TS template literals: no backticks, no `${` in their embedded CSS/JS.
+- The host's `history.replaceState` for `?code=` uses a **relative** URL so it keeps the `/host` path; an absolute one would land on `/` and trip the landing page.
+- Windows machine, but bash idioms and forward slashes are expected.

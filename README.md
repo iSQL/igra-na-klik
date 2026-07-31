@@ -1,387 +1,177 @@
 # Igra Na Klik
 
-A party game platform where one device acts as the host display (TV/big screen) and players use their phones as controllers — like AirConsole, but self-hosted.
+A self-hosted party game platform: one device is the **host** display (TV, laptop, projector), everyone else plays from their **phone**. Like AirConsole, but you run it yourself — no app installs, no accounts, no per-seat licence.
 
-## How It Works
+15 mini-games ship in the box: quizzes, drawing games, bluffing games, social deduction, a card game. All in-game content is in Serbian (Latin); the platform chrome has an EN/SR switch.
 
-1. The TV/laptop loads the **host** at `/host/` — it automatically creates a room with a 2-letter code + QR code
-2. Players hit the **controller** at `/play/` from their phone (or scan the QR), then enter the room code and pick a name
-3. The host lobby shows all connected players in real-time
-4. When ready, the host picks a mini-game and starts
-5. The host (or any player with the remote-host control) can stop the game at any time to return to game selection; players can also leave a room mid-game from their phone
+## How it works
 
-The root `/` is a static landing page with a "Pridruži se igri" CTA → `/play/` and a subtle "Kreiraj novu sobu" link → `/host/`, plus a small **SR/EN toggle** (it shares the apps' `igra-language` preference same-origin). The host URL is intentionally separate so random visits, link previews, and bots don't spawn orphan rooms.
+1. The TV opens `/host/` — a room is created automatically with a 3-letter code and a QR code.
+2. Players open `/play/` on their phones (or scan the QR), enter the code and a name.
+3. The lobby fills up on the TV in real time.
+4. Someone picks a game and starts it. The TV shows the shared view; each phone shows that player's private controls.
+5. Stop the game any time to return to game selection. Players can leave, rejoin, or be kicked mid-game.
 
-## Tech Stack
+Two things that make it work in a real living room:
 
-| Package | Tech | Purpose |
+- **No TV required.** A player can create a room straight from their phone ("Napravi sobu"), or claim the host's controls remotely from within a normal room. Every game is playable this way — the phone renders what the TV would have shown.
+- **Phones fall asleep.** A disconnected player keeps their seat, score and game state for 5 minutes, and rejoins straight into the current round.
+
+The root `/` is a plain landing page (join CTA plus a subtle "create room" link) so bots and link previews don't spawn orphan rooms.
+
+## Games
+
+| Game | Players | ≈ min | What it is |
+|---|---|---|---|
+| Kviz | 2–8 | 10 | Timed quiz — classic, image, audio, YouTube, map-pin, number-slider and emoji-riddle questions |
+| Crtaj i pogodi | 2–8 | 10 | Draw & guess |
+| Lažni umetnik | 3–8 | 8 | Everyone draws the same word one stroke at a time — except the impostor who doesn't know it |
+| Lažov | 2–8 | 10 | Fibbage-style: write a fake answer, spot the real one |
+| Ko bi pre? | 3–8 | 8 | Vote who'd be first to do something |
+| Dve istine i laž | 3–8 | 8 | Two truths and a lie |
+| Slepi telefoni | 3–8 | 12 | Telestrations / Gartic Phone drawing chain |
+| Ko sam ja? | 3–8 | 10 | Guess how well you know each other |
+| Pronađi par | 2–12 | 5 | Spot It — find the one shared symbol, fastest wins |
+| Tajni agenti | 2–8 | 15 | Codenames, in three modes: classic, Duet, and co-op |
+| Gluvo doba | 6–15 | 20 | Mafia/Werewolf with Slavic-mythology roles |
+| Zavet | 2–6 | 15 | Cabo-style memory card game — **fewest points wins** |
+| Špijun | 3–8 | 12 | Everyone knows the secret location except the spy |
+| Asocijacije | 2–8 | 12 | TV "Slagalica" board: 4 columns × 4 fields + final solution |
+| Vruć krompir | 2–12 | 6 | Hidden-timer bomb passes around; say a word from the category |
+
+Public rules for every game: `/uputstva`. Gluvo doba has a dedicated rules page at `/gluvo-doba`.
+
+## Tech stack
+
+| Package | Stack | Role |
 |---|---|---|
-| `@igra/shared` | TypeScript | Shared types, constants, utilities |
-| `@igra/server` | Node.js, Express, Socket.io | WebSocket server, room management |
-| `@igra/host` | React, Vite, Zustand, Framer Motion, Howler.js | TV/big screen display |
-| `@igra/controller` | React, Vite, Zustand | Phone controller UI (PWA) |
+| `@igra/shared` | TypeScript | Types, socket contracts, constants, game registry, content validators |
+| `@igra/server` | Node, Express, Socket.io | WebSocket server, rooms, game modules, landing/admin pages |
+| `@igra/host` | React, Vite, Zustand, Framer Motion, Howler | TV display |
+| `@igra/controller` | React, Vite, Zustand | Phone controller (installable PWA) |
 
-## Project Structure
+npm workspaces monorepo; the server is the single public entry point in production and serves all three surfaces from one origin.
 
-```
-igra-na-klik/
-├── packages/
-│   ├── shared/          # Types, socket event contracts, constants, game definitions
-│   ├── server/          # WebSocket server + room system + game modules + landing page + dev proxy
-│   ├── host/            # Host display (React + Vite, port 5173, base: /host/)
-│   └── controller/      # Phone controller (React + Vite, port 5174, base: /play/)
-├── PLAN.md              # Full implementation plan
-├── package.json         # npm workspaces root
-└── tsconfig.base.json   # Shared TypeScript config
-```
+## Getting started
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm 9+
-
-### Setup
+Requires Node 18+ and npm 9+.
 
 ```bash
-# Install all dependencies
 npm install
-
-# Build the shared types package
-npm run build:shared
-
-# Start all three services (server + host + controller)
-npm run dev
+npm run build:shared     # required — the other packages import shared's compiled dist/
+npm run dev              # server + host + controller
 ```
 
-This starts:
-- **Server + landing + dev proxy** on `http://localhost:3001` (landing at `/`, proxies `/host/` → 5173 and `/play/` → 5174)
-- **Host** on `http://localhost:5173/host/` (direct Vite)
-- **Controller** on `http://localhost:5174/play/` (direct Vite)
+That starts:
 
-You can use either the proxied URLs (everything from `:3001`) or hit Vite directly. The proxied URLs match the production URL structure, so testing the full flow (landing → /host/ → /play/) doesn't require a build.
+- **`http://localhost:3001`** — server, landing page, API, and a dev proxy to both Vite servers
+- **`http://localhost:5173/host/`** — host (Vite direct)
+- **`http://localhost:5174/play/`** — controller (Vite direct)
 
-### Try It Out
+Open `http://localhost:3001/host/` in one tab and `http://localhost:3001/play/` in another, enter the code shown on the host, and start a game. Both ports work — going through `:3001` matches the production URL layout.
 
-1. Open `http://localhost:3001/` in a browser — you land on the join page; click "Kreiraj novu sobu" (or open `http://localhost:3001/host/` directly) — a room is created automatically
-2. Open `http://localhost:3001/play/` in another tab or on your phone
-3. Enter the 2-letter room code and a name
-4. The host screen updates to show the new player
-5. Pick a game and start!
+### Scripts
 
-### LAN Testing (phones on same Wi-Fi)
+| Command | Does |
+|---|---|
+| `npm run dev` | Builds shared, then runs all three services |
+| `npm run dev:server` / `dev:host` / `dev:controller` | One service at a time |
+| `npm run build:shared` | Rebuild `@igra/shared` — **needed after every change there** |
+| `npm run build` | Production build of all four packages |
+| `npm run clean` | Remove `dist/` and `node_modules/` |
 
-To test with real phones, expose the services on your local network:
+There is no test suite and no linter — verification is running the dev servers and playing through the flow.
 
-1. Find your PC's local IP (e.g. `192.168.1.42`):
-   ```bash
-   # Windows
-   ipconfig
-   # macOS/Linux
-   ip addr show | grep "inet "
-   ```
+## Playing on your LAN (real phones)
 
-2. Create a `.env` file in the project root:
+1. Find your machine's local IP (`ipconfig` on Windows, `ip addr` elsewhere), e.g. `192.168.1.42`.
+
+2. Create a `.env` in the repo root so Socket.io accepts LAN origins:
+
    ```env
    PORT=3001
    HOST_ORIGIN=http://192.168.1.42:5173
    CONTROLLER_ORIGIN=http://192.168.1.42:5174
    ```
 
-3. Start with `npm run dev`
+3. `npm run dev`, then open `http://192.168.1.42:3001/host/` on the TV.
 
-4. On your PC, open the host at `http://192.168.1.42:5173/host/` (direct) or `http://192.168.1.42:3001/host/` (through proxy — same UX)
+4. Phones scan the lobby QR code (it points at the controller automatically) or type the URL.
 
-5. The QR code on the lobby screen automatically points to the Vite controller port (`<lan-ip>:5174/play/`) — phones can scan it directly
+The Vite servers already bind `0.0.0.0`. Make sure your firewall allows ports 3001, 5173 and 5174 on the private network.
 
-6. On phones, open the URL from the QR code or go to `http://192.168.1.42:5174/play/` (or `:3001/play/`) and enter the room code
+### Single-room mode
 
-> **Note:** The Vite dev servers are configured with `host: true` so they bind to `0.0.0.0` and are accessible on LAN. The `.env` tells the Socket.io server to accept connections from the LAN origins (CORS). Make sure your firewall allows ports 3001, 5173, and 5174.
+If you only ever run one room at a time, players can skip typing the code entirely. Add `SINGLE_ROOM_MODE=true` to the root `.env` and `VITE_SINGLE_ROOM=true` to `packages/controller/.env` — the controller then fetches the active room code from the server and only asks for a name.
 
-### Single-room mode (home use)
+## Deployment
 
-If you only ever run one room at a time, you can enable single-room mode. Controllers will automatically fetch the active room code from the server — players only need to type their name, no code input needed.
-
-1. Add to your root `.env`:
-   ```env
-   SINGLE_ROOM_MODE=true
-   ```
-
-2. Create `packages/controller/.env`:
-   ```env
-   VITE_SINGLE_ROOM=true
-   ```
-
-3. Start normally with `npm run dev`.
-
-When the host opens a room, phones visiting the controller URL will see the code auto-filled and just need to enter their name. The room code field is hidden entirely.
-
-## Deployment (Docker / Coolify)
-
-The repo ships with a production [Dockerfile](Dockerfile) that packages all three services into a single container on one domain:
-
-- Static landing page at `/` (CTA → `/play/`, subtle link → `/host/`)
-- Host (TV screen) served at `/host/`
-- Controller (phones) served at `/play/`
-- Socket.io + API share the same origin, so no cross-origin CORS/WebSocket routing is needed
-- Bare `/host` and `/play` 301-redirect to their slashed forms with query strings preserved
-
-### Build & run locally
+The [Dockerfile](Dockerfile) builds everything into one container serving the landing page, host, controller, API and WebSocket from a single origin (`SAME_ORIGIN_DEPLOY=true`, no cross-origin CORS to configure).
 
 ```bash
 docker build -t igra-na-klik .
 docker run --rm -p 3001:3001 igra-na-klik
 ```
 
-Open `http://localhost:3001/host/` on the TV and `http://localhost:3001/play/` on each phone (or just `http://localhost:3001/` and click through the landing).
-
-### Same-room nights with Docker Compose
-
-For occasional in-home parties where everyone's on the same Wi-Fi, running the server locally keeps all traffic on your LAN (no round-trip to a VPS). The repo includes a [docker-compose.yml](docker-compose.yml) that wraps the Dockerfile with sensible defaults so you don't have to remember flags.
+For game nights at home, [docker-compose.yml](docker-compose.yml) wraps that with a persistent volume, single-room mode and a restart policy:
 
 ```bash
-docker compose up -d --build    # first time, or after pulling code changes
-docker compose up -d            # any subsequent night — starts instantly
-docker compose down             # when you're done
-docker compose logs -f          # if something looks wrong
+docker compose up -d --build    # first run, or after pulling changes
+docker compose up -d            # every night after that
+docker compose logs -f
+docker compose down
 ```
 
-Then on the TV/laptop hosting the game, open `http://<your-lan-ip>:3001/host/` (find your IP with `ipconfig` on Windows or `ip addr` on Linux/macOS — e.g. `http://192.168.1.42:3001/host/`). Phones scan the QR code on the lobby screen and land directly on `/play/`. `SINGLE_ROOM_MODE` is enabled in the compose file by default, so players only type their name — no room code entry.
+Then open `http://<your-lan-ip>:3001/host/` on the TV — everything stays on your LAN, no round trip to a server.
 
-**First-run setup:**
+### Coolify / VPS
 
-- Windows: allow port 3001 through Windows Defender Firewall for **Private** networks (you'll get a prompt on first run)
-- macOS: System Settings → Network → Firewall → allow Docker
-- Linux: `sudo ufw allow 3001/tcp` if you're running ufw
+Deploy as a **Docker Compose** application pointed at this repo, expose port 3001, and set your domain in the UI (Traefik terminates TLS). Compose rather than plain Dockerfile because the log directory needs a host-path bind, which Coolify only allows for compose apps.
 
-**Why Compose over `docker run`?** The compose file codifies the port mapping, the `SINGLE_ROOM_MODE` env var, and the restart policy so you get a one-command start each night. It also makes it trivial to add auxiliary services later (e.g. a reverse proxy for HTTPS) without changing how you launch things.
+Two things to set up:
 
-### Coolify (Hetzner VPS or similar)
+- A **persistent volume at `/data`** — all editable content lives there. `DATA_DIR=/data` and `SEED_DIR=/app/seed` are already baked into the image; on first boot the server copies bundled default content into any pack directory that's missing or empty, so redeploys never overwrite content you edited through the admin.
+- **`ADMIN_TOKEN`** in the environment UI (not committed) to enable the content editors.
 
-1. In Coolify, create a new **Application** → **Public Repository** (or your GitHub integration) pointing at this repo
-2. Choose **Dockerfile** as the build pack
-3. Set the exposed port to `3001`
-4. Add your domain; Coolify's Traefik terminates TLS and routes everything to the container
-5. (Optional) Set `SINGLE_ROOM_MODE=true` in the Coolify env vars if you want controllers to auto-fill the room code
+A `/health` endpoint backs the container healthcheck. Daily-rolling JSON logs go to `LOG_DIR` (`/storage/logs` in the image), kept for `LOG_RETENTION_DAYS`.
 
-The Dockerfile sets `SAME_ORIGIN_DEPLOY=true` internally, which tells the server to accept same-origin Socket.io connections without needing `HOST_ORIGIN` / `CONTROLLER_ORIGIN` configured.
-
-### Relevant env vars
+### Environment variables
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `3001` | HTTP + Socket.io port |
-| `SAME_ORIGIN_DEPLOY` | `true` in Docker | Relaxes CORS; host and controller share one origin |
-| `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so the controller auto-fills the active room |
-| `QUESTION_PACKS_DIR` | `./question-packs` | Override location of kviz pack manifests + per-pack asset folders |
-| `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Override location of Ko sam ja JSON question packs |
-| `TAJNI_AGENTI_PACKS_DIR` | `./tajni-agenti-packs` | Override location of Tajni agenti JSON word packs |
-| `ADMIN_TOKEN` | unset (editors disabled) | Enables the content admin editors under `/admin` (kviz, ko-sam-ja, tajni-agenti…) |
-| `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static dist locations (rarely needed) |
+| `HOST_ORIGIN` / `CONTROLLER_ORIGIN` | localhost dev ports | CORS origins for split-origin dev/LAN play |
+| `SAME_ORIGIN_DEPLOY` | `true` in Docker | One origin for everything; relaxes CORS |
+| `SINGLE_ROOM_MODE` | `false` | Exposes `/room-code` so controllers auto-fill the code |
+| `ADMIN_TOKEN` | unset (admin disabled) | Enables `/admin` and its `/api/admin/*` routes |
+| `DATA_DIR` | unset (repo root) | Persistent volume for all editable content |
+| `SEED_DIR` | `/app/seed` in Docker | Bundled default content; seeds `DATA_DIR`, powers factory reset |
+| `QUESTION_PACKS_DIR` | `./question-packs` | Kviz manifests + per-pack asset folders |
+| `KO_SAM_JA_PACKS_DIR` | `./ko-sam-ja-packs` | Ko sam ja packs |
+| `TAJNI_AGENTI_PACKS_DIR` | `./tajni-agenti-packs` | Tajni agenti word packs |
+| `GLUVO_DOBA_PACKS_DIR` | `./gluvo-doba-packs` | Gluvo doba role packs |
+| `SPIJUN_PACKS_DIR` | `./spijun-packs` | Špijun location packs |
+| `ASOCIJACIJE_PACKS_DIR` | `./asocijacije-packs` | Asocijacije puzzle packs |
+| `TIMING_CONFIG_FILE` | `./timing-config.json` | Admin-tuned wait-phase durations |
+| `QUIZ_FEEDBACK_FILE` | `./quiz-feedback.json` | In-game question feedback log |
+| `LOG_DIR` / `LOG_RETENTION_DAYS` | `./storage/logs`, 7 | Rolling JSON logs |
+| `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static bundle locations |
 
-### Content admin editors
+## Content: packs & the admin editor
 
-Set `ADMIN_TOKEN=<secret>` in `.env` and open `http://<server>:3001/admin`
-(redirects to the kviz editor; every page carries a nav across all the
-editors). After entering the token once (stored in the browser) you can
-create, edit and delete content for every game — the editors write the same
-files the game reads, so changes are live immediately:
+Most games read their content from JSON packs on disk, so you can add your own questions, words, locations and puzzles without touching code. Set `ADMIN_TOKEN` and open **`/admin`** — a single page with a sidebar per game, a searchable table and a slide-in editor. Enter the token once (it's stored in the browser). Edits write the same files the games read, so they're live immediately.
 
-- **`/admin/kviz`** — kviz packs with all five question types: obična
-  pitanja (2–4 answers, one correct, optional image), audio pitanja
-  (upload an mp3/ogg/m4a), video pitanja (YouTube id + optional start/end),
-  geo pitanja (upload a photo + click the location on the map of Serbia or a
-  pack custom map) and broj pitanja (slider range + true value). A pack can
-  carry **custom maps** (city/region scale instead of the whole country):
-  in the pack detail open "Mape packa", upload a north-up OSM export image
-  and enter its exact bbox (min/max lat/lng — the numbers from the OSM
-  Export panel). Don't crop the image after export — the bbox must match
-  the image edges exactly. Writes `question-packs/<id>.json` + a sibling
-  `<id>/` asset folder. Example: `question-packs/geo-zabari.json`.
-- **`/admin/ko-sam-ja`** — Ko sam ja packs: all four question shapes
-  (fixed / peer / free / pickN) with per-shape form fields and placeholder
-  hints. Writes `ko-sam-ja-packs/<id>.json`.
-- **`/admin/tajni-agenti`** — Tajni agenti word packs: one word per line with
-  a live unique-word counter. Writes `tajni-agenti-packs/<id>.json`.
+The editor covers Kviz (all question types, with image/audio upload, YouTube preview and a click-to-place map picker), Ko sam ja, Tajni agenti, Gluvo doba, Špijun, Asocijacije, plus two utility views: **Timinzi** (tune the pause/results durations per game — active answering timers stay fixed as gameplay balance) and **Podaci** (download a zip backup of all content; factory-reset back to the bundled defaults).
 
-Drafts are always saveable: packs that don't yet pass the in-game
-validation (empty quiz pack, fewer than 25 words, incomplete board…) stay
-visible in the editor with a "nevidljiv u igri" badge and simply don't appear
-in the game until they validate.
+Drafts always save: a pack that doesn't pass the in-game validation stays editable and is simply marked "nevidljiv u igri" until it does.
 
-## Current Status
+There's also **`/kviz-generator`** — a public, no-login page where anyone can build a kviz pack (questions plus bundled images and audio) entirely in the browser and export it as a zip. Hand that zip back to whoever runs the server and they import it from the admin's "Podaci" view. Geo questions are the exception: they need the server-side map projection, so they're authored in the admin editor.
 
-**All phases complete** — Kviz (with obična/audio/video/geo/broj question types — it absorbed the former Pogodi gde je, Foto kviz and Pogodi broj games), Crtaj i pogodi, Lažov, Slepi telefoni, Ko sam ja, Pronađi par, and Tajni agenti (Serbian content for the party games), with sounds, haptics, reconnection, and PWA support. A per-device **EN/SR language switch** covers the platform chrome and three of the games (Crtaj i pogodi, Slepi telefoni, Pronađi par).
+### Pack formats
 
-- [x] **Phase 1** — Monorepo scaffolding, room system, lobby UI, QR code join
-- [x] **Phase 2** — Pluggable game module framework with test game
-- [x] **Phase 3** — Quiz game (timed questions, speed-based scoring, animated leaderboard)
-- [x] **Phase 4** — Polish (sounds, haptics, reconnection, PWA, UX improvements)
-- [x] **Phase 5** — Draw & Guess (live canvas streaming, turn rotation, progressive hints)
-- [x] **Phase 6** — Lažov (Fibbage-style bluffing, Serbian-only content)
-- [x] **Phase 7** — Slepi telefoni (Telestrations / Gartic Phone-style drawing chain)
-- [x] **Phase 8** — Pogodi gde je (GeoGuessr-style location guessing — later merged into Kviz as the `geo` question type)
-- [x] **Phase 9** — Foto kviz (multiple-choice photo quiz — later retired; Kviz `obicno` questions support images directly)
-- [x] **Phase 10** — Ko sam ja (personal-question party game — players guess each other's answers, four question shapes including peer-name picks)
-- [x] **Phase 11** — Tajni agenti (Codenames-style team game — 5×5 word grid, Serbian-only content; three modes: classic two-team duel, cooperative Duet and spymaster-vs-board co-op, the latter two playable with just 2 players)
+Hand-writing packs works too. Validation for each lives in `packages/shared/src/games/*-import.ts` and reports Serbian error messages.
 
-### What's Implemented
-
-**Room System**
-- 2-letter room codes (excludes ambiguous chars O, I, L) — short enough to type without errors; tune via `ROOM_CODE_LENGTH` in [packages/shared/src/constants.ts](packages/shared/src/constants.ts)
-- Host creates room, players join by code or QR scan
-- QR code uses the actual server hostname and points straight at `/play/` (no room code in the URL — controllers fetch the active room code from `/room-code` in single-room mode, otherwise the player types it)
-- Players can leave a room from the controller at any time (lobby, game-select, mid-game) via the "Napusti sobu" button with a confirmation modal
-- If the player holding the remote-host control leaves, the room is destroyed: all other controllers are kicked, the host is reset, and a fresh room is created automatically
-
-**Language switch (EN / SR)**
-- A small **SR | EN** toggle on the host (lobby, game-select), the controller (join, lobby, game-select), and the static landing page
-- **Per-device** preference saved in `localStorage` (`igra-language`, default Serbian) — the TV and each phone keep their own choice; there is no room-wide language sync
-- Strings live in one shared dictionary ([packages/shared/src/i18n/strings.ts](packages/shared/src/i18n/strings.ts)) with a `translate()` helper and a `useT()` hook per app
-- **Translated**: all platform chrome (lobby, join, game-select, overlay/leave/reconnect/kick prompts, import & config panels), all nine game-select cards, and the three games **Crtaj i pogodi, Slepi telefoni, Pronađi par** (host + controller). In English mode, Crtaj i pogodi even draws from an English word bank (the host's language is passed to the server as a content hint)
-- **Still Serbian by design**: the in-game screens of the other six games, the shared import-validator error messages, and the built-in question content banks
-
-**Kviz (Quiz) — Serbian**
-- 30-question Serbian trivia bank (Latin script), 10 random per game
-- Phase flow: question preview → answering (15s) → in-place reveal → leaderboard
-- Speed-based scoring: faster correct answers score more (up to 1000 pts)
-- Animated leaderboard with rank change tracking (Framer Motion)
-- Question text stays visible on controllers during the answering phase (small header above the answer grid)
-- Reveal happens **in place** on the host (same QuestionDisplay + OptionGrid as `answering`, with a spring ✓ checkmark badge on the correct option and per-option vote-count chips) instead of switching to a separate bar-chart screen
-- Round-score chips appear below the grid after reveal so players see who picked up points
-- **Custom question import**: host can upload a `.json` file of custom questions on the game-select screen — replaces the default bank for that game; persists in `localStorage` across refreshes; cleared by clicking "Ukloni"
-
-**Sound & Haptics**
-- Host plays programmatically generated tones (no external audio files) via Howler.js
-- Tick sounds during countdowns, correct/wrong sounds on reveal, victory fanfare
-- Controller vibrates on answer tap, correct/wrong feedback
-
-**Reconnection**
-- Token-based reconnection with **5-minute** grace period — long enough that a phone screen going dark mid-round doesn't drop the player
-- Token stored in `localStorage` — survives page refresh
-- Players restored with score intact if they reconnect in time; the current phase is **replayed** to the returning controller so it jumps straight back into the round
-- Controller acquires a screen Wake Lock while in a room to fight phone auto-suspend (best-effort; iOS Safari may decline)
-- Destructive game-side disconnect handling (skipping a drawer's turn, etc.) is deferred until the grace window expires, so brief blips don't burn turns
-- `room:player-left` is a transient "grey out" signal; `room:player-removed` is the permanent removal that fires only after grace expires or the host kicks
-
-**Mobile admin (remote host)**
-- Any one player can claim the host's controls from their phone — useful when nobody's near the TV
-- Holder gets a phone-friendly game-select screen on the controller: start/stop games, pick mode, pick kviz packs, import question files
-- One claim at a time; releasing (or disconnecting) hands control back to the TV
-- The holder is still a normal player — not a separate spectator role
-
-**Kick / reclaim**
-- Host can remove a player with the × button on their chip in the lobby — kick invalidates the reconnect token so they can't slip back in via cached `localStorage`
-- If a returning player has lost their token (cleared cache, incognito, was kicked-then-rejoining), a fresh join with the same name **reclaims** the disconnected slot — score and avatar are preserved, a new token is minted
-
-**PWA (Controller)**
-- Installable as a standalone app on Android
-- Splash screen, theme color, touch-optimized layout
-- No zoom on input focus, overscroll prevention, safe-area support
-
-**Stop Game**
-- Host can stop the current game at any time via "Završi igru" button on the TV
-- Remote-host player gets the same control on their phone via an in-game overlay button with a confirmation modal
-- A brief "Igra je završena" overlay flashes on every controller before they snap back to the lobby (so players know *why* the screen changed)
-
-**Crtaj i pogodi (Draw & Guess)** — *covered by the EN/SR switch*
-- 105-word Serbian bank (Latin script) across easy/medium/hard difficulties, with a parallel English bank used when the host starts the game in English
-- Turn rotation with shuffled player order, 3 rounds by default
-- Drawer picks from 3 word choices (one per difficulty), 60s to draw
-- Live canvas streaming: normalized stroke points batched every 50ms
-- Progressive hints: letters reveal gradually as time elapses
-- Scoring: guessers earn up to 500 pts based on speed, drawer earns 100 per correct guesser
-- Full drawing toolbar on controller: 7 colors, 3 brush widths, clear button
-
-**Slepi telefoni (Telestrations / Gartic Phone-style)** — *UI covered by the EN/SR switch; player-written prompts are whatever players type*
-- 3–8 players; each player writes one starting phrase, then the chain rotates through alternating draw→guess→draw→guess steps
-- Host picks **1–4 rounds** on the game-select screen — each round is one full pass around the circle, so with N players and R rounds every chain ends up `1 + R × (N−1)` items long (one prompt plus R alternations per other player)
-- Rotation math skips multiples of N so no player ever draws or guesses on their own chain, even across pass boundaries
-- Only **one** prompt phase per game — subsequent rounds continue the same chain instead of restarting with fresh prompts
-- Reveal, voting, winner replay, and final leaderboard all happen **once** at the very end; players never see other chains' content mid-game
-- Reveal shows each chain whole — drawings paired with their guesses side-by-side on the same screen
-- Scoring: a single vote round at the end — each chain's votes go to its originator; final leaderboard ranks by total votes received
-- Reuses the Crtaj i pogodi drawing pad and canvas; strokes stay private until reveal
-
-**Lažov (Fibbage-style bluffing)** — *Serbian-only content*
-- 34-question Serbian trivia bank (Latin script), 5 questions per game
-- Phase flow: show question (5s) → write lies (30s) → vote (20s) → reveal (8s) → leaderboard
-- Players submit fake answers; all fakes + real answer shown as voting options
-- Scoring: +500 for finding the truth, +100 per voter fooled by your fake
-- Auto-finder detection: if a player types the real answer, they get truth credit and their submission is excluded from the voting pool
-- Duplicate fakes (case-insensitive) are merged — both fakers split the fool bonus
-- Players cannot vote for their own fake (visually grayed out)
-- All in-game UI strings hardcoded in Serbian (Latin) — Lažov is one of the six games not covered by the EN/SR switch (see **Language switch** below)
-
-**Kviz question types (geo / broj / audio / video)** — *Serbian-only content*
-- The unified Kviz plays mixed packs where every question has a `type`:
-  - **obicno** — classic 2–4-option multiple choice (optional image), speed-scored.
-  - **geo** — photo + pin-on-map (the old "Pogodi gde je"): pinch-zoom map of Serbia (or a pack's custom OSM-export map) on the phone, `points = round(1000 × exp(−distanceKm / decayKm))` with the decay scaled to the map's size; results show everyone's pins + the gold truth marker with connecting lines on the TV.
-  - **broj** — slider number guess (the old "Pogodi broj"): per-question min–max range, optional step/unit/mm:ss rendering, closeness × speed scoring (max 1000); results show a timeline of everyone's guesses.
-  - **audio** — an uploaded clip plays on the TV (on phones in hostless rooms), then multiple choice.
-  - **video** — a YouTube segment (`videoId` + optional start/end) embeds via youtube-nocookie, then multiple choice.
-  - **emoji** — an emoji string hides a movie/saying/thing (the old "Emoji zagonetke"): everyone types the answer (fuzzy match + accept list, retries allowed), letters reveal progressively as a hint, speed scoring.
-- Every type caps at 1000 points per question so mixed packs stay fair.
-- **Pack selection is a multi-select**: the round pools questions from every checked pack (the built-in bank is a regular list item) and an optional question-type filter narrows the pool.
-- **Privacy**: pack manifests carry the answers, so `GET /api/question-packs` returns summaries only and the chosen packs are resolved server-side (`quizPackIds`); the `/kviz-files` mount serves only per-pack assets, never manifests.
-
-**Ko sam ja (personal questions about players)** — *Serbian-only content*
-- 3–8 players; hybrid of Kviz (multiple-choice + speed scoring) and Lažov (subject-supplied answers).
-- **Premise**: each round is a personal question about a *subject* player ("Omiljena boja igrača Mare?", "Sa kim bi Mare otvorio kafić?"). Subject answers; everyone else guesses what subject picked.
-- **Two categories**: `family` (default) and `nsfw` (more personal/awkward). Host toggles per game on the game-select card. Single category per game; pack questions tagged so the host's choice filters the pool.
-- **Phase flow**: `collecting-upfront (≤120s) → [showing-question (4s) → (subject-picking 15s for peer/pickN) → guessing (15s) → showing-results (6s) → leaderboard (4s)] × N → ended`. Up to 8 rounds per game, round-robin subject assignment so every player is the subject at least once.
-- **Four question shapes**:
-  - **fixed** — author-supplied 2–4 options ("crvena/plava/zelena/žuta"). Subject answers privately during the upfront collection phase.
-  - **peer** — `{peer1}`/`{peer2}` placeholders bound at round time to two random co-players. Without `options`, server auto-generates two peer-name buttons. With `options`, author writes 2–4 buttons that can mix literal text with `{peer1}`/`{peer2}` references ("optužio {peer1}", "smestio {peer2}"). Subject picks at round time.
-  - **free** — subject types a free-text answer upfront (default 60 char limit, configurable 10–120). Server samples 3 distractors from other players' free-text answers across the game (falls back to a built-in bank if the pool is thin).
-  - **pickN** — "Most Likely To" style: server expands one button per connected co-player (capped at `maxPeers`, default 4). Optional `optionTemplate` like `"sa {peer}"` wraps each button; optional `extraOptions` mixes in literal non-peer buttons ("radije bi sam"). Merged list shuffled at round start.
-- **Scoring**: guessers earn the standard Quiz speed-based score (up to 1000 pts scaled by `timeRemaining / timeLimit`). The subject earns a flat **+200 per wrong guess** on their own question — rewards being unpredictable.
-- **Custom pack import**: same JSON pipeline as Quiz, but pointed at `ko-sam-ja-packs/` (override via `KO_SAM_JA_PACKS_DIR`). Host can drop a `.json` file or pick from server-discovered packs in a dropdown — persisted in `localStorage`. See "Ko sam ja Packs" below for the full schema.
-- **Disconnect tolerance**: subject disconnects mid-`subject-picking` skip the round to leaderboard; rounds whose subject never answered an upfront question are pruned on collection exit; everything else honours the standard 5-minute grace.
-- Host display: question text with subject name highlighted, faded option cards during `subject-picking`, full color grid during `guessing`, per-guesser breakdown + subject-bonus panel on `showing-results`, reused Quiz leaderboard between rounds.
-
-**Tajni agenti (Codenames-style)** — *Serbian-only content*
-- **2–8 players, three modes** picked on the game-select screen before starting (`tajniAgentiMode` in `host:start-game`): **Klasik** (the original two-team duel, needs 4+), **Duet** (cooperative Codenames: Duet — works from just 2 players) and **Kooperativni** (spymaster + guessers vs the board — also from 2 players). First **team mechanic** in the codebase — team rosters and spymaster roles live inside the game module rather than on the global `Player` shape.
-- **Klasik**: 4–8 players split across two teams (crveni / plavi), one spymaster per team, exactly as before.
-- **Duet**: two sides, no spymaster role — every player permanently sees their own side of a double key (9 agents / 3 assassins / 13 bystanders per side; 15 distinct agents total). Sides alternate giving clues to each other; guesses are judged against the clue-giver's key. Bystanders only "burn" the card for that direction, an assassin on the giver's side loses instantly, and the shared budget is **9 turns** to find all 15 agents.
-- **Kooperativni**: everyone is one team, one player claims (or is randomly assigned) the spymaster role. Same 25-card board; find all 9 agents before the shared pool of **9 points** runs out — every turn costs 1 point, revealing an enemy-coloured card costs 1 extra, the assassin ends it all.
-- **Phase flow**: `team-selection → [clue-giving (90s) → guessing (90s) → turn-results (5s)] × … → ended`. Klasik/Duet alternate sides each turn; Kooperativni keeps looping on the single team. The game ends on all-words-found, the assassin, or (Duet/Koop) an exhausted turn/point budget.
-- **Self-pick team selection**: each controller offers Crveni / Plavi buttons + a "Volim biti špijun" volunteer toggle. Server validates both teams ≥ 2 players and a max 1-player imbalance before allowing the host's "Počni rundu" button. Host also has a "Pomiri timove" auto-balance button that randomly distributes unassigned players. At phase exit the server picks one spymaster per team — preferring a random volunteer, falling back to a random teammate.
-- **Board**: 25 cards in a 5×5 grid; the starting team gets 9, the other 8, plus 7 neutral and 1 assassin (classic Codenames distribution). Starting team is random per game.
-- **Secret board protection**: the host TV and all controllers receive only the *public* card list (word + revealed state; type only present for revealed cards). The full colour-keyed board is sent **only** inside `playerData[playerId]` to the two spymasters, so walking past the TV cannot leak the answer key.
-- **Clue submission**: active-team spymaster types a single Serbian word + a count (1–9). Guesses are then `count + 1` per turn (classic Codenames "bonus" guess).
-- **Reveal adjudication** on each tap: own team's card → keeps guessing; opposing team's card or neutral → turn flips; **assassin** → other team wins immediately; revealing the opponent's last card hands them the win.
-- **Reconnect safety**: spymaster snapshotted at `clue-giving` entry. Past-grace spymaster disconnect promotes a random teammate (resets the clue-giving timer); if a whole team empties out, the other team wins by `opponent-finished`. Brief mid-round blips (5-minute grace) leave the role intact.
-- **Custom word packs**: host can upload a JSON file or pick from server-discovered packs in `tajni-agenti-packs/` (override via `TAJNI_AGENTI_PACKS_DIR`). Mirrors the Quiz / Ko sam ja flow — `localStorage` key `igra-tajni-agenti-custom` persists the selection between sessions. See "Tajni agenti Packs" below for the schema.
-- **Built-in bank**: ~290-word Serbian Latin-script bank in `packages/shared/src/games/tajni-agenti-words.ts`, used when no custom pack is selected.
-- Host display: red/blue score banners, current-team indicator with prominent shifted-up clue + remaining-guesses counter during `guessing`, animated tile reveals (Framer Motion), per-turn log on `turn-results`, full-screen team-colour winner banner on `ended`.
-- Controller display: phase- and role-aware — team picker + volunteer toggle during `team-selection`, single-word input + number stepper for the active spymaster, secret colour mini-board for any spymaster, tap-to-guess 5×5 grid + "Završi potez" button for the active team's guessers, spectator copy + final winner banner for everyone else.
-
-## Architecture
-
-### Room System
-
-- Host creates a room → gets a 2-letter code (`ROOM_CODE_LENGTH` in `packages/shared/src/constants.ts`, excludes ambiguous chars like O, I, L)
-- Players join by code → server assigns UUID + avatar color + reconnect token
-- Reconnect tokens stored in `localStorage` — if a player disconnects and reconnects within the 5-minute grace window, they're restored (score + active phase replayed)
-- Returning with a fresh token but the same name **reclaims** a disconnected slot; host can kick a player with the × on their chip in the lobby
-- Players can voluntarily leave via the controller's "Napusti sobu" button — server emits `player:leave-room`, treated like a kick. If the leaver was holding the remote-host control, the entire room is torn down (all other controllers receive `room:kicked`, host receives `room:destroyed` and immediately requests a fresh room)
-- The client side handles server-initiated `socket.disconnect(true)` by reconnecting on the `"io server disconnect"` reason — socket.io-client does not auto-reconnect in that case, and without manual reconnect the next join attempt would buffer forever
-
-### Kviz Packs
-
-Kviz packs live in `question-packs/` at the repo root (override via `QUESTION_PACKS_DIR`). A pack is a `<id>.json` manifest plus an optional sibling `<id>/` asset folder (images, audio, custom-map images) served at `/kviz-files/<id>/<file>`:
-
-```
-question-packs/
-├── geo-zabari.json            # manifest
-└── geo-zabari/
-    ├── map.png                # custom map image (referenced by maps.main)
-    └── f253a1d3….jpg          # question photo
-```
-
-Manifest format (mixed question types; a bare JSON array of `obicno` questions also still parses):
+**Kviz** — `question-packs/<id>.json` plus an optional sibling `<id>/` folder for images, audio and custom map images (served at `/kviz-files/<id>/<file>`):
 
 ```json
 {
@@ -389,7 +179,7 @@ Manifest format (mixed question types; a bare JSON array of `obicno` questions a
   "maps": { "main": { "imageFile": "map.png", "bbox": { "minLat": 44.25, "maxLat": 44.52, "minLng": 21.11, "maxLng": 21.32 } } },
   "questions": [
     { "text": "Koji je glavni grad Srbije?", "options": ["Niš", "Beograd"], "correctIndex": 1 },
-    { "type": "geo", "imageFile": "f253a1d3….jpg", "caption": "Centar", "lat": 44.43, "lng": 21.22, "mapId": "main" },
+    { "type": "geo", "imageFile": "trg.jpg", "caption": "Centar", "lat": 44.43, "lng": 21.22, "mapId": "main" },
     { "type": "broj", "text": "Koliko km ima Dunav?", "answer": 2850, "min": 1000, "max": 4000, "unit": "km" },
     { "type": "audio", "text": "Koja je ovo pesma?", "audioFile": "pesma.mp3", "options": ["A", "B"], "correctIndex": 0 },
     { "type": "video", "text": "Koje boje je auto?", "videoId": "dQw4w9WgXcQ", "startSeconds": 10, "endSeconds": 25, "options": ["crven", "plav"], "correctIndex": 0 },
@@ -398,163 +188,88 @@ Manifest format (mixed question types; a bare JSON array of `obicno` questions a
 }
 ```
 
-Validation lives in `packages/shared/src/games/quiz-import.ts` (`parseQuizImport`); geo lat/lng must fall inside the referenced map's bbox (else inside Serbia's bounds). Because manifests carry the answers, `GET /api/question-packs` returns **summaries only** — the host sends the checked `quizPackIds` (multi-select; the built-in bank is the pseudo-pack `__bank__`) plus an optional `quizTypes` type filter, and the server resolves the questions from disk. The host can still import a local `.json` file on the game-select screen (URL-based media only, no pack assets); that import persists in the host's `localStorage` until removed. Rich packs are authored in the `/admin` Kviz editor.
+A bare array of classic questions also parses. Custom maps must be north-up Web Mercator exports whose bbox matches the image edges exactly (don't crop after exporting); a geo question's coordinates must fall inside the map it references, or inside Serbia if it references none.
 
-### Ko sam ja Packs
-
-Ko sam ja serves question packs from `ko-sam-ja-packs/` (override via `KO_SAM_JA_PACKS_DIR`). Each pack is a single `.json` file containing an array of questions tagged with one of four shapes:
+**Ko sam ja** — an array of questions, each tagged `family` or `nsfw` and one of four shapes. `text` must contain `{subject}`:
 
 ```json
 [
-  {
-    "shape": "fixed",
-    "category": "family",
-    "text": "Omiljena boja igrača {subject}?",
-    "options": ["crvena", "plava", "zelena", "žuta"]
-  },
-  {
-    "shape": "peer",
-    "category": "family",
-    "text": "Sa kim bi {subject} radije išao na put, sa {peer1} ili {peer2}?"
-  },
-  {
-    "shape": "peer",
-    "category": "nsfw",
-    "text": "{subject} bi pre…",
-    "options": ["javno priznao laž", "ćutao zauvek", "optužio {peer1}", "smestio {peer2}"]
-  },
-  {
-    "shape": "free",
-    "category": "family",
-    "text": "Posao iz snova igrača {subject}?",
-    "maxLength": 50
-  },
-  {
-    "shape": "pickN",
-    "category": "family",
-    "text": "Sa kim bi {subject} otvorio kafić?",
-    "optionTemplate": "sa {peer}",
-    "extraOptions": ["radije bi sam", "ne bi otvarao kafić"],
-    "maxPeers": 4
-  }
+  { "shape": "fixed",  "category": "family", "text": "Omiljena boja igrača {subject}?", "options": ["crvena", "plava", "zelena"] },
+  { "shape": "peer",   "category": "family", "text": "S kim bi {subject} radije na put, sa {peer1} ili {peer2}?" },
+  { "shape": "free",   "category": "family", "text": "Posao iz snova igrača {subject}?", "maxLength": 50 },
+  { "shape": "pickN",  "category": "family", "text": "S kim bi {subject} otvorio kafić?", "optionTemplate": "sa {peer}", "extraOptions": ["radije bi sam"], "maxPeers": 4 }
 ]
 ```
 
-**Common fields** (all shapes):
-- `shape` — one of `fixed`, `peer`, `free`, `pickN`
-- `category` — `family` or `nsfw` (host picks one per game)
-- `text` — must contain `{subject}` exactly once (interpolated to the subject's name at runtime)
+`fixed` questions are answered privately before the game; `peer` and `pickN` bind real co-players at round time; `free` lets the subject type an answer and the server builds distractors from the other players' answers.
 
-**Shape-specific rules**:
-- `fixed` — 2–4 unique `options`. No `{peer*}` allowed in text. Subject answers privately upfront.
-- `peer` — without `options`: text must contain `{peer1}` and `{peer2}` exactly once each. With `options`: 2–4 unique entries that may contain `{peer1}`/`{peer2}`/`{subject}` placeholders. Subject picks at round time after two random co-players are bound.
-- `free` — optional `maxLength` (10–120 chars, default 60). No `options`, no `{peer*}`. Subject types upfront; server samples 3 distractors from other players' free-text answers.
-- `pickN` — optional `optionTemplate` (must contain `{peer}` exactly once, e.g. `"sa {peer}"`), optional `maxPeers` (2–8, default 4), optional `extraOptions` (1–4 unique literal buttons that may reference `{subject}` but not `{peer*}`). Server expands one button per peer up to the cap; extras are appended and the merged list is shuffled.
+**Tajni agenti** — 25–500 unique words, either a flat array or `{ "name": "...", "words": [...] }`. The board samples 25 per game.
 
-Validation lives in [packages/shared/src/games/ko-sam-ja-import.ts](packages/shared/src/games/ko-sam-ja-import.ts). The same validator runs both on the host (file picker) and the server (`/api/ko-sam-ja-packs` endpoint and `host:start-game` re-check), with Serbian error messages on failure.
+**Gluvo doba** — a curated role set that replaces the built-in composition bands:
 
-Sample pack: [ko-sam-ja-packs/sample-mix.json](ko-sam-ja-packs/sample-mix.json) — ~70 mixed-shape questions across both categories.
+```json
+{ "name": "4 - 1 - 1", "wolves": 1, "roles": ["vampir", "todorac", "drekavac", "bauk", "vidovnjak", "zmaj"] }
+```
 
-### Tajni agenti Packs
+The deal stays balanced by player count — enabling everything can't hand the dark side a majority.
 
-Tajni agenti serves word packs from `tajni-agenti-packs/` (override via `TAJNI_AGENTI_PACKS_DIR`). Each pack is a single `.json` file — either a flat array of strings or an object with optional `name` plus a `words` array:
+**Špijun** — locations with at least two roles each:
+
+```json
+{ "name": "Osnovni", "locations": [ { "location": "Aerodrom", "roles": ["Pilot", "Čistačica", "Putnik"] } ] }
+```
+
+**Asocijacije** — puzzles of 4 columns × 4 fields plus a final solution. Adding `question` + `wrongOptions` to every field makes the puzzle usable in the multiple-choice "kviz" mode as well as classic:
 
 ```json
 {
-  "name": "Standardni paket",
-  "words": ["sunce", "mesec", "zvezda", "oblak", "kiša", "..."]
+  "name": "Primer paketa",
+  "puzzles": [{
+    "finalSolution": "FUDBAL",
+    "columns": [{
+      "solution": "LOPTA",
+      "fields": [{ "word": "OKRUGLA", "question": "Kog je oblika lopta?", "wrongOptions": ["KOCKASTA", "TROUGLASTA", "RAVNA"] }]
+    }]
+  }]
 }
 ```
 
-Rules:
-- 25–500 unique words per pack (duplicates are deduplicated case-insensitively)
-- Each word ≤ 30 characters, trimmed, non-empty
-- The board needs 25 cards per game — the server randomly samples 25 from whichever pack is active
+Pack manifests contain the answers, so the public listing endpoints return summaries only — never the content itself.
 
-Validation lives in [packages/shared/src/games/tajni-agenti-import.ts](packages/shared/src/games/tajni-agenti-import.ts). The same validator runs on the host (file picker) and the server (`/api/tajni-agenti-packs` endpoint and `host:start-game` re-check), with Serbian error messages on failure.
+## Project structure
 
-Sample pack: [tajni-agenti-packs/standardni.json](tajni-agenti-packs/standardni.json) — 142 family-safe Serbian words to demonstrate the import flow.
-
-### Game Module System
-
-Each mini-game implements the `IGameModule` interface on the server:
-
-```typescript
-interface IGameModule {
-  readonly gameId: string;
-  onStart(room: Room, customContent?: unknown): GameState;
-  onPlayerAction(room: Room, state: GameState, playerId: string, action: string, data: Record<string, unknown>): GameState | null;
-  onTick(room: Room, state: GameState, deltaMs: number): GameState | null;
-  onPlayerDisconnect(room: Room, state: GameState, playerId: string): GameState | null;
-  onEnd(room: Room, state: GameState): void;
-}
+```
+packages/
+  shared/       # types, socket contracts, constants, game registry, validators, content banks
+  server/       # Socket.io server, rooms, game modules, landing + admin + rules pages, dev proxy
+  host/         # TV display (Vite, port 5173, base /host/)
+  controller/   # phone controller PWA (Vite, port 5174, base /play/)
+question-packs/ ko-sam-ja-packs/ tajni-agenti-packs/
+gluvo-doba-packs/ spijun-packs/ asocijacije-packs/    # editable content
+docs/           # design references and planning notes
+CLAUDE.md       # architecture guide (also useful for humans)
+PLAN.md         # original implementation plan
+brand.md        # visual identity
 ```
 
-Host and controller each have a `GameRouter` that lazy-loads the appropriate React component by `gameId`.
+Adding a game means touching the shared registry, a server module, both client registries, and the rules page — see [CLAUDE.md](CLAUDE.md) for the wiring steps and the conventions that keep secret state off the broadcast channel.
 
-### Socket Events
+## URLs
 
-**Room events:**
-
-| Event | Direction | Description |
-|---|---|---|
-| `host:create-room` | host → server | Create a new room |
-| `host:room-created` | server → host | Room created with code |
-| `host:kick-player` | host → server | Remove a player and invalidate their reconnect token |
-| `player:join-room` | controller → server | Join room by code (also reclaims a disconnected slot if name matches) |
-| `player:joined` | server → controller | Join confirmed |
-| `player:leave-room` | controller → server | Voluntary leave (lobby/select/in-game) — kicks the leaver, and if they hold the remote-host control destroys the entire room |
-| `player:claim-remote-host` | controller → server | Claim mobile-admin control of game selection |
-| `player:release-remote-host` | controller → server | Release mobile-admin control |
-| `room:player-joined` | server → all | Broadcast: new player |
-| `room:player-left` | server → all | Broadcast: player disconnected (transient — grey out) |
-| `room:player-removed` | server → all | Broadcast: player permanently gone (kicked or grace expired) |
-| `room:player-reconnected` | server → all | Broadcast: player restored |
-| `room:kicked` | server → controller | This controller was kicked by the host (or by a remote-host-leave cascade) |
-| `room:destroyed` | server → host | Room torn down (remote-host leaver cascade); host clears state and immediately requests a fresh room |
-| `room:remote-host-changed` | server → all | Mobile-admin claim changed (or released) |
-
-**Game events:**
-
-| Event | Direction | Description |
-|---|---|---|
-| `host:start-game` | host → server | Host starts selected game |
-| `host:stop-game` | host → server | Host stops current game |
-| `game:started` | server → all | Game has started |
-| `game:state-update` | server → host | Full game state update |
-| `game:player-state` | server → controller | Per-player game state (private data) |
-| `game:player-action` | controller → server | Player sends a game action |
-| `game:phase-changed` | server → all | Game phase transition |
-| `game:ended` | server → all | Game finished with final scores |
-
-### Adding a New Game
-
-1. Add a `GameDefinition` entry in `packages/shared/src/games/registry.ts`
-2. Create a server module implementing `IGameModule` in `packages/server/src/game/games/`
-3. Register it in `packages/server/src/socket/setup.ts`
-4. Create host and controller React components in their respective `src/games/` directories
-5. Add lazy-import entries in `packages/host/src/games/registry.ts` and `packages/controller/src/games/registry.ts`
-
-### URL structure & dev proxy
-
-In production (Docker / Coolify) the Express server alone serves everything on port 3001:
-
-| Path | What it serves |
+| Path | What |
 |---|---|
-| `/` | Static landing HTML (no React bundle, no room creation — safe to crawl) |
-| `/host/` | Host bundle from `packages/host/dist` |
-| `/play/` | Controller bundle from `packages/controller/dist` |
-| `/host`, `/play` | 301 → slashed form (query string preserved) |
-| `/api/*`, `/socket.io/*`, `/kviz-files/*`, `/quiz-images/*`, `/health`, `/room-code` | Backend endpoints |
+| `/` | Landing page (join CTA, create-room link, SR/EN toggle) |
+| `/play/` | Controller (phones) |
+| `/host/` | Host display (TV) |
+| `/uputstva` | Rules for every game |
+| `/gluvo-doba` | Gluvo doba rules and role reference |
+| `/admin` | Content editors (requires `ADMIN_TOKEN`) |
+| `/kviz-generator` | Public, no-login kviz pack builder (exports a zip) |
+| `/health` | Healthcheck |
 
-In dev (`npm run dev`), Vite dev servers run alongside the Express server. Both `host` and `controller` are configured with `base: '/host/'` / `'/play/'` so direct Vite URLs match production. The Express server detects missing `dist/` folders (specifically a missing `index.html` — handles the case where Vite leaves an empty dist behind) and falls back to `http-proxy-middleware`, forwarding `/host/**` → Vite 5173 and `/play/**` → Vite 5174 (with `ws: true` so HMR WebSockets pass through). The proxy uses `pathFilter` instead of `app.use('/host', proxy)` to preserve the `/host` prefix — Express's mount-stripping would otherwise make Vite 302-redirect back to itself causing a loop.
+## Troubleshooting
 
-Express has `strict routing` enabled so `/host` and `/host/` are distinct routes (required for the bare → slashed redirects to not match the already-slashed form and loop).
-
-### Ports
-
-| Service | Port | Dev URL |
-|---|---|---|
-| Server (landing + proxy + API) | 3001 | `http://localhost:3001/` |
-| Host (Vite dev) | 5173 | `http://localhost:5173/host/` |
-| Controller (Vite dev) | 5174 | `http://localhost:5174/play/` |
+- **"Port 5173 is already in use"** — a previous dev server is still running. Kill it; the ports are fixed on purpose (the dev proxy targets them), so Vite won't silently move to another one.
+- **`/host/` or `/play/` returns 404 in dev** — a stale `packages/host/dist` or `packages/controller/dist` is making the server serve static files instead of proxying to Vite. Delete those folders and restart.
+- **Changes to `@igra/shared` don't show up** — run `npm run build:shared` (or restart `npm run dev`); the other packages import the compiled output.
+- **Phones can't connect on LAN** — check `HOST_ORIGIN`/`CONTROLLER_ORIGIN` in `.env` match the IP you're actually browsing to, and that the firewall allows the ports on the private network.
