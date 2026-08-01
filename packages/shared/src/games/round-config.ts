@@ -23,6 +23,9 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   // Špijun: a "round" is one full location+spy deal (discussions are long,
   // so the default is a single round).
   spijun: { options: [1, 2, 3], default: 1, min: 1, max: 5 },
+  // Penali: a "round" is one full rotation — every player shoots once and
+  // keeps once — so the turn count scales with the room.
+  penali: { options: [1, 2, 3], default: 2, min: 1, max: 5 },
   // Asocijacije is intentionally NOT here — a game is always a single board.
 };
 

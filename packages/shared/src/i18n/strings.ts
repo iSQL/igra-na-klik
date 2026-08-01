@@ -353,6 +353,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.asocijacije.name': 'Asocijacije',
     'game.asocijacije.description':
       'TV Slagalica: 4 kolone × 4 polja i konačno rešenje. Otvaraj polja, pogađaj kolone i vikni konačno rešenje! Klasik ili kviz mod.',
+    'game.penali.name': 'Penali',
+    'game.penali.description':
+      'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'Kako se igra →',
     'gameSelect.howToPlayLabel': 'Kako se igra',
@@ -367,6 +370,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameTag.speed': 'Brzina',
     'gameTag.team': 'Timska',
     'gameTag.cards': 'Kartaška',
+    'gameTag.action': 'Akcija',
 
     'game.quiz.blurb': 'Pitanja na vreme — najbrži nosi poene.',
     'game.quiz.rule1':
@@ -439,6 +443,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.rule1': 'Bomba sa skrivenim tajmerom kruži među igračima.',
     'game.hot-potato.rule2': 'Kaži reč iz zadate kategorije i prosledi dalje.',
     'game.hot-potato.rule3': 'Kod koga „pukne" — ispada iz igre.',
+    'game.penali.blurb': 'Šutiraj, brani, pogodi ćošak.',
+    'game.penali.rule1':
+      'U svakom dvoboju jedan igrač šutira, a drugi brani — svi dođu na red.',
+    'game.penali.rule2':
+      'Šuter nišani po golu i pušta prst kad je snaga prava; jače je opasnije, ali manje precizno.',
+    'game.penali.rule3':
+      'Golman naslepo bira jedan od šest uglova. Gol nosi 100 poena (ćošak 150), odbrana 150.',
   },
 
   en: {
@@ -781,6 +792,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.asocijacije.name': 'Associations',
     'game.asocijacije.description':
       'TV "Slagalica" associations: 4 columns × 4 fields and a final solution. Open fields, guess columns and call the final answer! Classic or quiz mode.',
+    'game.penali.name': 'Penalties',
+    'game.penali.description':
+      'Take the penalty or keep the goal — aim, judge the power and find the corner. The keeper picks a side blind!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'How to play →',
     'gameSelect.howToPlayLabel': 'How to play',
@@ -795,6 +809,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameTag.speed': 'Speed',
     'gameTag.team': 'Team',
     'gameTag.cards': 'Cards',
+    'gameTag.action': 'Action',
 
     'game.quiz.blurb': 'Timed questions — fastest scores the most.',
     'game.quiz.rule1':
@@ -871,6 +886,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'A bomb with a hidden timer passes among the players.',
     'game.hot-potato.rule2': 'Say a word from the given category and pass it on.',
     'game.hot-potato.rule3': 'Whoever it "blows" on — is out of the game.',
+    'game.penali.blurb': 'Shoot, dive, find the corner.',
+    'game.penali.rule1':
+      'Each duel pairs one shooter with one keeper — everyone gets both roles.',
+    'game.penali.rule2':
+      'The shooter aims across the goal and releases at the right power; harder is scarier but less accurate.',
+    'game.penali.rule3':
+      'The keeper blindly picks one of six corners. A goal is 100 points (150 in the corner), a save 150.',
   },
 };
 

@@ -199,6 +199,20 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Poslednji preživeli pobeđuje.</li>
 </ul>`,
   },
+  penali: {
+    emoji: '⚽',
+    requiresTv: true,
+    body: `<p>Penal dvoboj: u svakom udarcu jedan igrač šutira, a drugi brani. Rotacija ide u krug, pa svako dođe na red i kao šuter i kao golman.</p>
+<ul>
+<li><strong>Šuter</strong> drži prst na golu na telefonu i pomera nišan gde želi da pogodi. Dok drži prst, traka snage ide gore-dole — <strong>pusti prst</strong> kad je snaga prava.</li>
+<li><strong>Jači udarac</strong> je teže odbraniti, ali je manje precizan — najjači šutevi umeju da odu preko gola.</li>
+<li><strong>Golman</strong> naslepo bira jedan od šest uglova (levo/sredina/desno × gore/dole). Ne vidi gde šuter nišani, kao ni šuter njega. Strane su iste kao na TV-u.</li>
+<li>Ceo udarac se gleda na TV-u — lopta leti, golman se baca, sudi se odmah.</li>
+<li><strong>Poeni:</strong> gol 100 (a pravo u ćošak 150), odbrana 150. Preko gola ili u stativu — niko ništa.</li>
+<li>Ako neko ne stigne da odigra: šuteru se računa slab, ofarban udarac, a golman koji nije izabrao ugao ostaje da stoji i ne dobija poene ni ako lopta dođe pravo na njega.</li>
+</ul>
+<p class="tip">Broj rundi se bira pre početka — jedna runda znači da svako šutira i brani po jednom.</p>`,
+  },
 };
 
 function playerRange(def: { minPlayers: number; maxPlayers: number }): string {

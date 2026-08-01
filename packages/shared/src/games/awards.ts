@@ -101,6 +101,35 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'shame',
     subtitle: 'Uvek odgovara, retko pogodi',
   },
+  // Penali
+  'zlatna-rukavica': {
+    id: 'zlatna-rukavica',
+    title: 'Zlatna rukavica',
+    emoji: '🧤',
+    tone: 'positive',
+    subtitle: 'Najviše odbrana na golu',
+  },
+  snajperista: {
+    id: 'snajperista',
+    title: 'Snajperista',
+    emoji: '🎯',
+    tone: 'positive',
+    subtitle: 'Golovi tačno u ćošak',
+  },
+  'u-tribine': {
+    id: 'u-tribine',
+    title: 'U tribine',
+    emoji: '🚀',
+    tone: 'shame',
+    subtitle: 'Lopta se još nije vratila',
+  },
+  'statue-of-liberty': {
+    id: 'statue-of-liberty',
+    title: 'Statua',
+    emoji: '🗿',
+    tone: 'shame',
+    subtitle: 'Golman koji se nije ni pomerio',
+  },
   // Neutral fillers — guarantee everyone gets a diploma
   'dusa-drustva': {
     id: 'dusa-drustva',

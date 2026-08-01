@@ -30,6 +30,7 @@ import { BoljiZivotModule } from '../game/games/bolji-zivot/BoljiZivotModule.js'
 import { HotPotatoModule } from '../game/games/hot-potato/HotPotatoModule.js';
 import { SpijunModule } from '../game/games/spijun/SpijunModule.js';
 import { AsocijacijeModule } from '../game/games/asocijacije/AsocijacijeModule.js';
+import { PenaliModule } from '../game/games/penali/PenaliModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -87,6 +88,7 @@ export function setupSocket(
   gameRegistry.register(() => new HotPotatoModule(questionPacksDir));
   gameRegistry.register(() => new SpijunModule());
   gameRegistry.register(() => new AsocijacijeModule(asocijacijePacksDir));
+  gameRegistry.register(() => new PenaliModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

@@ -103,6 +103,15 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'penali',
+    gameName: 'Penali',
+    fields: [
+      { key: 'INTRO_DURATION', label: 'Najava dvoboja', min: 2, max: 15, def: 4 },
+      { key: 'SHOT_DURATION', label: 'Snimak udarca', min: 4, max: 20, def: 7 },
+      { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 6 },
+    ],
+  },
+  {
     gameId: 'tajni-agenti',
     gameName: 'Tajni agenti',
     fields: [

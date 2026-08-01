@@ -95,6 +95,7 @@ const CATEGORY_COLOR: Record<GameCategory, string> = {
   speed: '#e06a5e',
   team: '#6d9bd1',
   cards: '#c29b47',
+  action: '#57b380',
 };
 
 // Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
@@ -104,6 +105,7 @@ const FILTER_CATEGORIES: GameCategory[] = [
   'bluff',
   'party',
   'speed',
+  'action',
   'team',
   'cards',
 ];
@@ -163,6 +165,13 @@ export function GameSelectScreen() {
     (s) => s.setTajniAgentiMode
   );
   const setHotPotatoMode = useNewGamesConfigStore((s) => s.setHotPotatoMode);
+  // Selected individually (not read off the whole-store object) so the
+  // pack-reconcile effect below depends on stable, primitive values.
+  const asocijacijeMode = useNewGamesConfigStore((s) => s.asocijacijeMode);
+  const asocijacijePackId = useNewGamesConfigStore((s) => s.asocijacijePackId);
+  const setAsocijacijePackId = useNewGamesConfigStore(
+    (s) => s.setAsocijacijePackId
+  );
   const connectedCount = players.filter((p) => p.isConnected).length;
   // Classic needs 4+ players — with fewer, silently fall back to duet so
   // the start button can't fire a server-side validation error.
@@ -226,23 +235,23 @@ export function GameSelectScreen() {
 
   // Keep the selected Asocijacije pack valid for the current mode: if the
   // chosen pack isn't usable (or none is chosen), fall back to the first one.
+  //
+  // Two things keep this from looping. The write is guarded on the value
+  // actually changing — with no valid packs (server down, or no kviz-capable
+  // pack in kviz mode) the fallback is '' and the stored id is already '', so
+  // re-setting it would spin forever: zustand's set() hands out a new state
+  // object even when the value is identical, which re-renders every subscriber
+  // and re-fires this effect. And the deps are primitives plus a stable
+  // selected setter, not the whole store object (whose identity changes on
+  // every unrelated config write).
   useEffect(() => {
-    const valid = validAsocijacijePacks(
-      asocijacijePacks,
-      newGamesConfig.asocijacijeMode
-    );
-    const stillValid = valid.some(
-      (p) => p.id === newGamesConfig.asocijacijePackId
-    );
-    if (!stillValid) {
-      newGamesConfig.setAsocijacijePackId(valid[0]?.id ?? '');
+    const valid = validAsocijacijePacks(asocijacijePacks, asocijacijeMode);
+    const fallbackId = valid[0]?.id ?? '';
+    const stillValid = valid.some((p) => p.id === asocijacijePackId);
+    if (!stillValid && asocijacijePackId !== fallbackId) {
+      setAsocijacijePackId(fallbackId);
     }
-  }, [
-    asocijacijePacks,
-    newGamesConfig.asocijacijeMode,
-    newGamesConfig.asocijacijePackId,
-    newGamesConfig,
-  ]);
+  }, [asocijacijePacks, asocijacijeMode, asocijacijePackId, setAsocijacijePackId]);
 
   useEffect(() => {
     if (!errorMessage) return;

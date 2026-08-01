@@ -19,7 +19,8 @@ export type GameCategory =
   | 'party'
   | 'speed'
   | 'team'
-  | 'cards';
+  | 'cards'
+  | 'action';
 
 export interface GameDefinition {
   id: string;

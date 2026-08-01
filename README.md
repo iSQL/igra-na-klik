@@ -2,7 +2,7 @@
 
 A self-hosted party game platform: one device is the **host** display (TV, laptop, projector), everyone else plays from their **phone**. Like AirConsole, but you run it yourself — no app installs, no accounts, no per-seat licence.
 
-15 mini-games ship in the box: quizzes, drawing games, bluffing games, social deduction, a card game. All in-game content is in Serbian (Latin); the platform chrome has an EN/SR switch.
+16 mini-games ship in the box: quizzes, drawing games, bluffing games, social deduction, a card game and a 3D penalty shootout. All in-game content is in Serbian (Latin); the platform chrome has an EN/SR switch.
 
 ## How it works
 
@@ -38,6 +38,7 @@ The root `/` is a plain landing page (join CTA plus a subtle "create room" link)
 | Špijun | 3–8 | 12 | Everyone knows the secret location except the spy |
 | Asocijacije | 2–8 | 12 | TV "Slagalica" board: 4 columns × 4 fields + final solution |
 | Vruć krompir | 2–12 | 6 | Hidden-timer bomb passes around; say a word from the category |
+| Penali | 2–10 | 8 | 3D penalty shootout — aim and time your power, keeper dives blind (**needs a TV**) |
 
 Public rules for every game: `/uputstva`. Gluvo doba has a dedicated rules page at `/gluvo-doba`.
 
@@ -47,7 +48,7 @@ Public rules for every game: `/uputstva`. Gluvo doba has a dedicated rules page 
 |---|---|---|
 | `@igra/shared` | TypeScript | Types, socket contracts, constants, game registry, content validators |
 | `@igra/server` | Node, Express, Socket.io | WebSocket server, rooms, game modules, landing/admin pages |
-| `@igra/host` | React, Vite, Zustand, Framer Motion, Howler | TV display |
+| `@igra/host` | React, Vite, Zustand, Framer Motion, Howler, three.js | TV display |
 | `@igra/controller` | React, Vite, Zustand | Phone controller (installable PWA) |
 
 npm workspaces monorepo; the server is the single public entry point in production and serves all three surfaces from one origin.

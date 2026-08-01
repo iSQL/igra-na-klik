@@ -165,6 +165,7 @@ const CATEGORY_COLOR: Record<GameCategory, string> = {
   speed: '#e06a5e', // danger
   team: '#6d9bd1', // blue
   cards: '#c29b47', // gold
+  action: '#57b380', // success green
 };
 
 // Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
@@ -174,6 +175,7 @@ const FILTER_CATEGORIES: GameCategory[] = [
   'bluff',
   'party',
   'speed',
+  'action',
   'team',
   'cards',
 ];

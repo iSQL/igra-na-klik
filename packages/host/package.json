@@ -18,10 +18,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "socket.io-client": "^4.8.1",
+    "three": "^0.185.1",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/howler": "^2.2.12",
+    "@types/three": "^0.185.3",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

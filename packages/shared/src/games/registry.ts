@@ -196,6 +196,21 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     estimatedMinutes: 12,
     supportsHostless: true,
   },
+  penali: {
+    id: 'penali',
+    name: 'Penali',
+    minPlayers: 2,
+    maxPlayers: 10,
+    description:
+      'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
+    icon: '⚽',
+    accent: 'lime',
+    category: 'action',
+    estimatedMinutes: 8,
+    // NOT hostless: the 3D replay of the shot on the TV is the whole payoff,
+    // and a phone-only version would be two buttons and a text verdict.
+    supportsHostless: false,
+  },
   'hot-potato': {
     id: 'hot-potato',
     name: 'Vruć krompir',

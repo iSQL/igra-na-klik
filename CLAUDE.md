@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen), players join from their phones as "controllers" via a room code or QR. Real-time over Socket.io. 15 mini-games (plus a `test-game` dev module that is registered server-side but deliberately absent from `GAME_DEFINITIONS`), all content and in-game text in Serbian (Latin) by design.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen), players join from their phones as "controllers" via a room code or QR. Real-time over Socket.io. 16 mini-games (plus a `test-game` dev module that is registered server-side but deliberately absent from `GAME_DEFINITIONS`), all content and in-game text in Serbian (Latin) by design.
 
 ## Commands
 
@@ -107,6 +107,7 @@ All 16 game ids are in [registry.ts](packages/shared/src/games/registry.ts); ser
 - **Gluvo doba** — Mafia/Werewolf with Slavic-mythology roles. Roles are **data** ([gluvo-doba-roles.ts](packages/shared/src/games/gluvo-doba-roles.ts)) and night resolution is a **pure function with a strict order** ([night-resolution.ts](packages/server/src/game/games/gluvo-doba/night-resolution.ts)) — add roles by extending the tables and the pipeline, not with if-branches. Anti-tell rule: every living player gets a visually identical night grid.
 - **Tajni agenti** — three modes (`classic` / `duet` / `coop`) with different team, key and turn-budget rules, picked at game-select and re-validated in `validateStart`.
 - **Asocijacije** — always a single board (deliberately *not* in `GAME_ROUND_CONFIG`); klasik and kviz modes.
+- **Penali** — the only `supportsHostless: false` game and the only 3D one. three.js lives exclusively in the host's lazy `penali` chunk ([PitchScene.ts](packages/host/src/games/penali/PitchScene.ts), vanilla three, no react-three-fiber, no assets — everything is primitives), so the main bundle is unaffected. Shooter and keeper commit **blind and simultaneously**: during `aiming` only commitment booleans may enter `hostData`, never the aim or the chosen zone. Balance constants in [penali-rules.ts](packages/shared/src/games/penali-rules.ts) were tuned by simulation (~73% goals / 24% saves; a shot down the middle is worth ~68 expected points against ~120 for one placed near a post) — re-simulate before changing them. A keeper who lets the clock run out scores 0 even if the ball comes to them, and the auto-shot for a timed-out shooter is jittered, so neither side can farm points by doing nothing.
 - **Tutorial mode** (Gluvo doba, Zavet, Špijun) — phase timers stop ticking and the host advances phases via a `*:next-phase` host action. Only the boolean `tutorialMode` is shared; hints are computed client-side from each player's own `playerData` so nothing leaks.
 
 ## i18n
