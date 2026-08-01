@@ -1,9 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
+import { deriveFxEvents, type BitkaFxEvent, type BitkaFxSnapshot } from './fx/fx-events';
+
+// three.js ulazi tek ovde i to u zasebnom chunk-u: mapa se vidi odmah, efekti
+// se priključe kad se učita. Telefon ovaj modul nikad ne dohvata.
+const BitkaFx = lazy(() => import('./fx/BitkaFx'));
 
 const PANEL_IN = { opacity: 0, y: 26 };
 const PANEL_AT = { opacity: 1, y: 0 };
@@ -63,6 +68,19 @@ export default function BitkaHost() {
     else play('correct');
   }, [phase, host, play]);
 
+  // Vizuelni događaji se izvode iz RAZLIKE dva uzastopna stanja, pa se svaki
+  // odigra tačno jednom — isti princip kao zvuk iznad, samo generalizovan.
+  const [fxEvents, setFxEvents] = useState<BitkaFxEvent[]>([]);
+  const prevSnapRef = useRef<BitkaFxSnapshot | null>(null);
+  const fxIdRef = useRef(0);
+  useEffect(() => {
+    if (!host || !phase) return;
+    const snapshot: BitkaFxSnapshot = { phase, host };
+    const events = deriveFxEvents(prevSnapRef.current, snapshot, () => ++fxIdRef.current);
+    prevSnapRef.current = snapshot;
+    if (events.length) setFxEvents(events);
+  }, [host, phase]);
+
   // Odbrojavanje u poslednjih 5 sekundi aktivnih faza.
   useEffect(() => {
     if (!gameState) return;
@@ -81,7 +99,7 @@ export default function BitkaHost() {
 
   if (!gameState || !host) return null;
   if (phase === 'rezultat' || phase === 'ended') {
-    return <FinalBoard host={host} />;
+    return <FinalBoard host={host} fxEvents={fxEvents} />;
   }
 
   const seconds = Math.ceil(gameState.timeRemaining);
@@ -162,7 +180,11 @@ export default function BitkaHost() {
           highlightIds={host.selectableIds}
           focusId={host.duel?.territoryId ?? null}
           maxHeightCss="54vh"
-        />
+        >
+          <Suspense fallback={null}>
+            <BitkaFx events={fxEvents} />
+          </Suspense>
+        </BitkaMapView>
         <Standings players={host.players} activeId={host.activePlayerId ?? null} />
       </div>
 
@@ -527,7 +549,7 @@ function Standings({ players, activeId }: { players: BitkaPlayerView[]; activeId
   );
 }
 
-function FinalBoard({ host }: { host: BitkaHostData }) {
+function FinalBoard({ host, fxEvents }: { host: BitkaHostData; fxEvents: BitkaFxEvent[] }) {
   const board = host.leaderboard ?? [];
   return (
     <div
@@ -552,7 +574,12 @@ function FinalBoard({ host }: { host: BitkaHostData }) {
           board={host.board}
           players={host.players}
           maxHeightCss="52vh"
-        />
+        >
+          {/* Slavlje nad pobednikovim zamkom — 'pobeda' stiže baš na ovaj ekran. */}
+          <Suspense fallback={null}>
+            <BitkaFx events={fxEvents} />
+          </Suspense>
+        </BitkaMapView>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {board.map((entry) => (
             <motion.div

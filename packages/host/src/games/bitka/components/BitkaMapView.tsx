@@ -14,6 +14,11 @@ interface BitkaMapViewProps {
   maxHeightCss?: string;
   /** Ispisuj imena teritorija (na telefonu se guši, na TV-u ne). */
   showNames?: boolean;
+  /**
+   * Sloj preko mape, u istoj kutiji i istim [0,1] koordinatama — tu ide FX
+   * platno. Namerno `children`, a ne `fx` prop: mapa ne zna za three.js.
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -30,6 +35,7 @@ export function BitkaMapView({
   focusId,
   maxHeightCss = '62vh',
   showNames = true,
+  children,
 }: BitkaMapViewProps) {
   // Odnos stranica se meri iz same slike — mape su različitih dimenzija.
   const [ratio, setRatio] = useState<number>(3 / 2);
@@ -161,6 +167,9 @@ export function BitkaMapView({
           </div>
         );
       })}
+
+      {/* Efekti idu iznad imena i zamkova — udar ne sme da bude zaklonjen. */}
+      {children}
     </div>
   );
 }
