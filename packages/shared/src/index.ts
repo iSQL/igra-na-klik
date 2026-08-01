@@ -48,3 +48,5 @@ export * from './games/asocijacije-import.js';
 export * from './games/awards.js';
 export * from './types/penali.js';
 export * from './games/penali-rules.js';
+export * from './types/slozilica.js';
+export * from './games/slozilica-rules.js';

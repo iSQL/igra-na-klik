@@ -1,3 +1,4 @@
+import { SLOZILICA_LETTER_DEFAULT } from '@igra/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
@@ -30,6 +31,7 @@ interface NewGamesConfigStore {
   hotPotatoKvizAnswerSeconds: number;
   // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
   drawGuessTimeLimit: number;
+  slozilicaLetters: number;
   // Zavet (bolji-zivot): tutorial mode (guided game — hints + admin-driven phases).
   boljiZivotTutorial: boolean;
   // Špijun: discussion length (seconds), location pack id ('' = built-in
@@ -57,6 +59,7 @@ interface NewGamesConfigStore {
   setHotPotatoMode: (m: HotPotatoMode) => void;
   setHotPotatoKvizAnswerSeconds: (n: number) => void;
   setDrawGuessTimeLimit: (n: number) => void;
+  setSlozilicaLetters: (n: number) => void;
   setBoljiZivotTutorial: (v: boolean) => void;
   setSpijunDiscussionSeconds: (n: number) => void;
   setSpijunPackId: (id: string) => void;
@@ -82,6 +85,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       hotPotatoMode: 'sequential',
       hotPotatoKvizAnswerSeconds: 5,
       drawGuessTimeLimit: 60,
+      slozilicaLetters: SLOZILICA_LETTER_DEFAULT,
       boljiZivotTutorial: false,
       spijunDiscussionSeconds: 420,
       spijunPackId: '',
@@ -105,6 +109,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setHotPotatoKvizAnswerSeconds: (n) =>
         set({ hotPotatoKvizAnswerSeconds: n }),
       setDrawGuessTimeLimit: (n) => set({ drawGuessTimeLimit: n }),
+      setSlozilicaLetters: (n) => set({ slozilicaLetters: n }),
       setBoljiZivotTutorial: (v) => set({ boljiZivotTutorial: v }),
       setSpijunDiscussionSeconds: (n) => set({ spijunDiscussionSeconds: n }),
       setSpijunPackId: (id) => set({ spijunPackId: id }),

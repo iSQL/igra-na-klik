@@ -103,6 +103,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'slozilica',
+    gameName: 'Složilica',
+    fields: [
+      { key: 'NAJAVA_DURATION', label: 'Odbrojavanje pre slova', min: 2, max: 15, def: 4 },
+      { key: 'REZULTATI_DURATION', label: 'Prikaz rezultata runde', min: 4, max: 40, def: 12 },
+    ],
+  },
+  {
     gameId: 'penali',
     gameName: 'Penali',
     fields: [

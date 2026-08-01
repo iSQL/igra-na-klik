@@ -26,6 +26,9 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   // Penali: a "round" is one full rotation — every player shoots once and
   // keeps once — so the turn count scales with the room.
   penali: { options: [1, 2, 3], default: 2, min: 1, max: 5 },
+  // Složilica: a "round" is one set of seven letters — each takes a full
+  // minute plus the reveal, so three is already a decent sitting.
+  slozilica: { options: [1, 2, 3], default: 3, min: 1, max: 3 },
   // Asocijacije is intentionally NOT here — a game is always a single board.
 };
 

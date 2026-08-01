@@ -101,6 +101,28 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'shame',
     subtitle: 'Uvek odgovara, retko pogodi',
   },
+  // Složilica
+  slovoslagac: {
+    id: 'slovoslagac',
+    title: 'Slovoslagač',
+    emoji: '🔤',
+    tone: 'positive',
+    subtitle: 'Najduža reč u partiji',
+  },
+  'hodajuci-recnik': {
+    id: 'hodajuci-recnik',
+    title: 'Hodajući rečnik',
+    emoji: '📖',
+    tone: 'positive',
+    subtitle: 'Najviše pronađenih reči',
+  },
+  'prazan-papir': {
+    id: 'prazan-papir',
+    title: 'Prazan papir',
+    emoji: '📄',
+    tone: 'shame',
+    subtitle: 'Runde bez ijedne reči',
+  },
   // Penali
   'zlatna-rukavica': {
     id: 'zlatna-rukavica',

@@ -3,6 +3,8 @@ import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
+  SLOZILICA_LETTER_OPTIONS,
+  SLOZILICA_LETTER_DEFAULT,
   KVIZ_CATEGORIES,
   kvizCategory,
   normalizeEmojiAnswer,
@@ -166,6 +168,7 @@ const CATEGORY_COLOR: Record<GameCategory, string> = {
   team: '#6d9bd1', // blue
   cards: '#c29b47', // gold
   action: '#57b380', // success green
+  word: '#6fc2bb', // cyan
 };
 
 // Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
@@ -176,6 +179,7 @@ const FILTER_CATEGORIES: GameCategory[] = [
   'party',
   'speed',
   'action',
+  'word',
   'team',
   'cards',
 ];
@@ -256,6 +260,9 @@ export function GameSelectScreen() {
   const [fakeArtistStrokes, setFakeArtistStrokes] = useState(2);
   const [koBiPreRounds, setKoBiPreRounds] = useState(8);
   const [drawGuessTimeLimit, setDrawGuessTimeLimit] = useState(60);
+  const [slozilicaLetters, setSlozilicaLetters] = useState(
+    SLOZILICA_LETTER_DEFAULT
+  );
   const [gluvoDobaDiscussion, setGluvoDobaDiscussion] = useState(180);
   const [gluvoDeathReveal, setGluvoDeathReveal] =
     useState<GluvoDobaDeathReveal>('team');
@@ -439,6 +446,9 @@ export function GameSelectScreen() {
     }
     if (game.id === 'draw-guess') {
       payload.drawTimeLimit = drawGuessTimeLimit;
+    }
+    if (game.id === 'slozilica') {
+      payload.slozilicaLetters = slozilicaLetters;
     }
     if (game.id === 'quiz') {
       // Inline file import wins; otherwise the pack multi-select travels as
@@ -1222,6 +1232,14 @@ export function GameSelectScreen() {
                       onSelect={(n) =>
                         setRoundCounts((prev) => ({ ...prev, [game.id]: n }))
                       }
+                    />
+                  )}
+                  {game.id === 'slozilica' && (
+                    <RoundsConfig
+                      label="Broj slova"
+                      value={slozilicaLetters}
+                      options={[...SLOZILICA_LETTER_OPTIONS]}
+                      onSelect={setSlozilicaLetters}
                     />
                   )}
                   {game.id === 'draw-guess' && (

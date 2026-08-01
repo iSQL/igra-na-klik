@@ -1,5 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { GAME_DEFINITIONS, GAME_ROUND_CONFIG, DRAW_GUESS_TIME_OPTIONS } from '@igra/shared';
+import {
+  GAME_DEFINITIONS,
+  GAME_ROUND_CONFIG,
+  DRAW_GUESS_TIME_OPTIONS,
+  SLOZILICA_LETTER_OPTIONS,
+} from '@igra/shared';
 import type {
   HostStartGamePayload,
   GluvoDobaPack,
@@ -96,6 +101,7 @@ const CATEGORY_COLOR: Record<GameCategory, string> = {
   team: '#6d9bd1',
   cards: '#c29b47',
   action: '#57b380',
+  word: '#6fc2bb',
 };
 
 // Single-tag filter chips (compound 'drawing-bluff' is covered by drawing+bluff).
@@ -106,6 +112,7 @@ const FILTER_CATEGORIES: GameCategory[] = [
   'party',
   'speed',
   'action',
+  'word',
   'team',
   'cards',
 ];
@@ -373,6 +380,8 @@ export function GameSelectScreen() {
         ? newGamesConfig.roundCounts[gameId] ??
           GAME_ROUND_CONFIG[gameId].default
         : undefined,
+      slozilicaLetters:
+        gameId === 'slozilica' ? newGamesConfig.slozilicaLetters : undefined,
       boljiZivotTutorial:
         gameId === 'bolji-zivot' && newGamesConfig.boljiZivotTutorial
           ? true
@@ -832,6 +841,14 @@ export function GameSelectScreen() {
           }
           options={GAME_ROUND_CONFIG[game.id].options}
           onSelect={(n) => newGamesConfig.setRoundCount(game.id, n)}
+        />
+      )}
+      {game.id === 'slozilica' && (
+        <PillRow
+          label="Broj slova"
+          value={newGamesConfig.slozilicaLetters}
+          options={[...SLOZILICA_LETTER_OPTIONS]}
+          onSelect={newGamesConfig.setSlozilicaLetters}
         />
       )}
       {game.id === 'draw-guess' && (

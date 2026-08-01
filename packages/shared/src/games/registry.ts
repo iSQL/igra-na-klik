@@ -196,6 +196,20 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     estimatedMinutes: 12,
     supportsHostless: true,
   },
+  slozilica: {
+    id: 'slozilica',
+    name: 'Složilica',
+    minPlayers: 2,
+    maxPlayers: 10,
+    description:
+      'Slova su podeljena, vreme teče — složi najdužu reč koju umeš. Duže reči nose mnogo više poena!',
+    icon: '🔤',
+    accent: 'cyan',
+    category: 'word',
+    estimatedMinutes: 5,
+    // Sve što treba je na telefonu (slova + unos), TV samo pojačava utisak.
+    supportsHostless: true,
+  },
   penali: {
     id: 'penali',
     name: 'Penali',

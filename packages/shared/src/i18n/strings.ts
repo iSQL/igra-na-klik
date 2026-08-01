@@ -353,6 +353,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.asocijacije.name': 'Asocijacije',
     'game.asocijacije.description':
       'TV Slagalica: 4 kolone × 4 polja i konačno rešenje. Otvaraj polja, pogađaj kolone i vikni konačno rešenje! Klasik ili kviz mod.',
+    'game.slozilica.name': 'Složilica',
+    'game.slozilica.description':
+      'Slova su podeljena, vreme teče — složi najdužu reč koju umeš. Duže reči nose mnogo više poena!',
     'game.penali.name': 'Penali',
     'game.penali.description':
       'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
@@ -371,6 +374,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameTag.team': 'Timska',
     'gameTag.cards': 'Kartaška',
     'gameTag.action': 'Akcija',
+    'gameTag.word': 'Reč igra',
 
     'game.quiz.blurb': 'Pitanja na vreme — najbrži nosi poene.',
     'game.quiz.rule1':
@@ -443,6 +447,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.hot-potato.rule1': 'Bomba sa skrivenim tajmerom kruži među igračima.',
     'game.hot-potato.rule2': 'Kaži reč iz zadate kategorije i prosledi dalje.',
     'game.hot-potato.rule3': 'Kod koga „pukne" — ispada iz igre.',
+    'game.slozilica.blurb': 'Složi najdužu reč od podeljenih slova.',
+    'game.slozilica.rule1':
+      'Svi dobijaju ista slova (7, 9 ili 11 — bira domaćin) i do dva minuta.',
+    'game.slozilica.rule2':
+      'Šalji reči dok traje vreme — svako slovo smeš da upotrebiš onoliko puta koliko ti je podeljeno.',
+    'game.slozilica.rule3':
+      'Računa se tvoja najduža reč: 3 slova 30 poena, 7 slova 300, a 9 slova čak 650. Kad završiš, tapni „Gotov“ da runda ne čeka džabe.',
     'game.penali.blurb': 'Šutiraj, brani, pogodi ćošak.',
     'game.penali.rule1':
       'U svakom dvoboju jedan igrač šutira, a drugi brani — svi dođu na red.',
@@ -792,6 +803,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.asocijacije.name': 'Associations',
     'game.asocijacije.description':
       'TV "Slagalica" associations: 4 columns × 4 fields and a final solution. Open fields, guess columns and call the final answer! Classic or quiz mode.',
+    'game.slozilica.name': 'Word Builder',
+    'game.slozilica.description':
+      'Letters are dealt and the clock runs — build the longest word you can. Longer words score far more!',
     'game.penali.name': 'Penalties',
     'game.penali.description':
       'Take the penalty or keep the goal — aim, judge the power and find the corner. The keeper picks a side blind!',
@@ -810,6 +824,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'gameTag.team': 'Team',
     'gameTag.cards': 'Cards',
     'gameTag.action': 'Action',
+    'gameTag.word': 'Word',
 
     'game.quiz.blurb': 'Timed questions — fastest scores the most.',
     'game.quiz.rule1':
@@ -886,6 +901,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'A bomb with a hidden timer passes among the players.',
     'game.hot-potato.rule2': 'Say a word from the given category and pass it on.',
     'game.hot-potato.rule3': 'Whoever it "blows" on — is out of the game.',
+    'game.slozilica.blurb': 'Build the longest word from the dealt letters.',
+    'game.slozilica.rule1':
+      'Everyone gets the same letters (7, 9 or 11 — the host picks) and up to two minutes.',
+    'game.slozilica.rule2':
+      'Submit words while the clock runs — each letter may be used as many times as it was dealt.',
+    'game.slozilica.rule3':
+      'Your longest word counts: 3 letters scores 30, seven scores 300, nine scores 650. Tap “Done” when you are finished so the round need not wait.',
     'game.penali.blurb': 'Shoot, dive, find the corner.',
     'game.penali.rule1':
       'Each duel pairs one shooter with one keeper — everyone gets both roles.',

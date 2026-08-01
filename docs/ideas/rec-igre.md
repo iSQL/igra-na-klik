@@ -24,9 +24,13 @@ event modelu, a igračima je svaka od ovih igara već poznata iz detinjstva.
   jedan tapom; ako većina ospori, poništava se. Društvo je validator.
 - Zahteva rečnik samo za proveru početnog slova, ne za postojanje reči.
 
-## 2. Reči od slova
+## 2. Reči od slova — ✅ IMPLEMENTIRANO kao **Složilica**
 
-**Igrači:** 2–8 · **Trajanje:** ~6 min · **Hostless:** može · **Trud:** srednji
+**Igrači:** 2–10 · **Trajanje:** ~8 min · **Hostless:** da
+
+> Ime nije „Slagalica“ namerno — to je naziv RTS-ovog kviza od 1993, a ovo je
+> isti tip proizvoda. Rečnik je rešen (252k reči, vidi LICENSE.md), unos je
+> tapkanje pločica umesto kucanja. Ostatak teksta ispod je originalni predlog.
 
 Sedam nasumičnih slova (sa razumnim odnosom samoglasnika), svako pravi
 najdužu reč. Slagaličin „Reči" u društvenom obliku.

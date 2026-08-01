@@ -15,7 +15,7 @@ Dva dela:
 
 ## Gde su rupe u ponudi
 
-Postojećih 16 igara po kategorijama:
+Postojećih 17 igara po kategorijama:
 
 | Kategorija | Igre |
 |---|---|
@@ -27,11 +27,13 @@ Postojećih 16 igara po kategorijama:
 | timska | Gluvo doba, Tajni agenti |
 | kartaška | Zavet |
 | akcija | Penali |
+| reč igra | Složilica |
 
-Ponuda je **zasićena u blefu, crtanju i kvizu**, a tri žanra ne postoje uopšte:
-**reč igre**, **fizičke igre** (soba umesto ekrana) i **ekonomija/rizik**
-(resurs kojim se upravlja, ulog koji se gubi). Druga grupa ispod cilja tačno te
-praznine.
+Ponuda je **zasićena u blefu, crtanju i kvizu**. Od tri žanra kojih nije bilo,
+**reč igre** su otvorene Složilicom (rečnik je rešen, pa je svaka sledeća reč
+igra sada jeftina), dok **fizičke igre** (soba umesto ekrana) i
+**ekonomija/rizik** (resurs kojim se upravlja, ulog koji se gubi) i dalje ne
+postoje. Druga grupa ispod cilja tačno te praznine.
 
 ## Šta platforma već daje, a šta akciona igra traži
 
@@ -85,8 +87,8 @@ Tu platforma stvarno dobija novu sposobnost.
 današnjem modelu, pa je rizik tehnički mali, a u nekoliko slučajeva sadržaj
 već postoji.
 
-- [rec-igre.md](rec-igre.md) — **Imena, gradovi, države** ⭐⭐, Reči od slova,
-  Vešala, Krokodil
+- [rec-igre.md](rec-igre.md) — **Imena, gradovi, države** ⭐⭐, ~~Reči od slova~~
+  (✅ implementirano kao **Složilica**), Vešala, Krokodil
 - [fizicke-igre.md](fizicke-igre.md) — **Pantomima** ⭐, **Foto izazov** ⭐⭐,
   Pogodi pesmu, Statue
 - [ekonomija-i-rizik.md](ekonomija-i-rizik.md) — **Licitacija** ⭐,

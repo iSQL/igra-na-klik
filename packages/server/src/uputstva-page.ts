@@ -199,6 +199,20 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Poslednji preživeli pobeđuje.</li>
 </ul>`,
   },
+  slozilica: {
+    emoji: '🔤',
+    body: `<p>Podeljena slova, do dva minuta — ko složi najdužu reč, nosi rundu.</p>
+<ul>
+<li>Svi igrači dobijaju <strong>ista slova</strong> i igraju istovremeno. Domaćin bira koliko ih je: <strong>7, 9 ili 11</strong> (podrazumevano 9 — tada je i najviši nivo bodova dostupan u većini rundi).</li>
+<li>Reč se slaže <strong>tapkanjem pločica</strong> na telefonu, pa ne moraš da tražiš č, ć, š, ž na tastaturi. Svaka pločica se troši — ako je „a" podeljeno jednom, u reči sme biti samo jedno „a".</li>
+<li>Šalji koliko god reči stigneš; <strong>računa se samo tvoja najduža</strong>, pa slobodno probaj.</li>
+<li>Bodovi rastu strmo: 3 slova 30, 5 slova 110, 7 slova 300, 9 slova 650, a 11 slova čak 1200 poena.</li>
+<li>Kad više nešto ne nalaziš, tapni <strong>„Gotov“</strong> — runda se zatvara čim to urade svi, pa se ne čeka pun tajmer. Možeš se i predomisliti dok runda traje.</li>
+<li>Reč mora da postoji u srpskom rečniku — imena i skraćenice uglavnom ne prolaze.</li>
+<li>Na kraju runde TV otkriva i <strong>najduže što je uopšte bilo moguće</strong> složiti.</li>
+</ul>
+<p class="tip">Igra ne zahteva TV — može i samo na telefonima.</p>`,
+  },
   penali: {
     emoji: '⚽',
     requiresTv: true,

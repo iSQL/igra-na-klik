@@ -117,6 +117,9 @@ export interface ClientToServerEvents {
     koBiPreRounds?: number;
     // Crtaj i pogodi: per-turn drawing time in seconds (60/120/180).
     drawTimeLimit?: number;
+    // Složilica: how many letter tiles to deal (7/9/11). Re-validated
+    // server-side via clampLetterCount.
+    slozilicaLetters?: number;
     // Generic round count for games in GAME_ROUND_CONFIG (quiz, draw-guess,
     // fibbage, ko-sam-ja, spot-it). Each module clamps it to its own range.
     roundCount?: number;

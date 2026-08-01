@@ -1,0 +1,8 @@
+# Rečnik se čita sa split('\n'). Uz core.autocrlf=true (podrazumevano na
+# Windowsu) git bi ga na checkout-u pretvorio u CRLF, pa bi svaka reč dobila
+# '\r' na kraju i sve provere bi tiho padale — u dev-u da, u Docker-u ne.
+# Zato mu se eksplicitno zaključava LF na svim platformama.
+packages/server/assets/recnik/*.txt text eol=lf
+
+# Isto važi za pack fajlove koje čitaju parseri i za JSON sadržaj uopšte.
+*.json text eol=lf

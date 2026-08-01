@@ -2,7 +2,7 @@
 
 A self-hosted party game platform: one device is the **host** display (TV, laptop, projector), everyone else plays from their **phone**. Like AirConsole, but you run it yourself — no app installs, no accounts, no per-seat licence.
 
-16 mini-games ship in the box: quizzes, drawing games, bluffing games, social deduction, a card game and a 3D penalty shootout. All in-game content is in Serbian (Latin); the platform chrome has an EN/SR switch.
+17 mini-games ship in the box: quizzes, word games, drawing games, bluffing games, social deduction, a card game and a 3D penalty shootout. All in-game content is in Serbian (Latin); the platform chrome has an EN/SR switch.
 
 ## How it works
 
@@ -39,6 +39,7 @@ The root `/` is a plain landing page (join CTA plus a subtle "create room" link)
 | Asocijacije | 2–8 | 12 | TV "Slagalica" board: 4 columns × 4 fields + final solution |
 | Vruć krompir | 2–12 | 6 | Hidden-timer bomb passes around; say a word from the category |
 | Penali | 2–10 | 8 | 3D penalty shootout — aim and time your power, keeper dives blind (**needs a TV**) |
+| Složilica | 2–10 | 5 | 7/9/11 letters, up to two minutes — build the longest word; validated against a 252k-word Serbian dictionary |
 
 Public rules for every game: `/uputstva`. Gluvo doba has a dedicated rules page at `/gluvo-doba`.
 
@@ -154,6 +155,7 @@ A `/health` endpoint backs the container healthcheck. Daily-rolling JSON logs go
 | `SPIJUN_PACKS_DIR` | `./spijun-packs` | Špijun location packs |
 | `ASOCIJACIJE_PACKS_DIR` | `./asocijacije-packs` | Asocijacije puzzle packs |
 | `TIMING_CONFIG_FILE` | `./timing-config.json` | Admin-tuned wait-phase durations |
+| `RECNIK_FILE` | bundled asset | Serbian word list for Složilica (ships in the image; override only to swap dictionaries) |
 | `QUIZ_FEEDBACK_FILE` | `./quiz-feedback.json` | In-game question feedback log |
 | `LOG_DIR` / `LOG_RETENTION_DAYS` | `./storage/logs`, 7 | Rolling JSON logs |
 | `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR` | baked into image | Override static bundle locations |
@@ -267,6 +269,12 @@ Adding a game means touching the shared registry, a server module, both client r
 | `/admin` | Content editors (requires `ADMIN_TOKEN`) |
 | `/kviz-generator` | Public, no-login kviz pack builder (exports a zip) |
 | `/health` | Healthcheck |
+
+## License
+
+**GNU AGPL v3** — see [LICENSE.md](LICENSE.md). In practice: run it at home however you like; if you deploy a *modified* version on a server other people use, you must offer those users the source of your modified version.
+
+The bundled Serbian word list (`packages/server/assets/recnik/sr-recnik.txt`) is derived from two free sources under their own terms and is attributed in the NOTICE section of [LICENSE.md](LICENSE.md). Regenerate it with `npx tsx scripts/build-recnik.ts`.
 
 ## Troubleshooting
 
