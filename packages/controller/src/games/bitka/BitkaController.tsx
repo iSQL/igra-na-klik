@@ -73,13 +73,11 @@ export default function BitkaController() {
   if (answering && question?.kind === 'izbor' && iAnswer) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.9rem', gap: '0.7rem' }}>
-        <Muted>
-          {phase === 'duel-odgovor'
-            ? me?.duelRole === 'napadac'
-              ? `Napadaš ${territoryName(host.duel?.territoryId)} · ${seconds}s`
-              : `Braniš ${territoryName(host.duel?.territoryId)} · ${seconds}s`
-            : `Osvajanje · ${seconds}s`}
-        </Muted>
+        {phase === 'duel-odgovor' && host.duel ? (
+          <DuelBanner host={host} me={me} seconds={seconds} />
+        ) : (
+          <Muted>Osvajanje · {seconds}s</Muted>
+        )}
         <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {question.text}
         </p>
@@ -115,6 +113,28 @@ export default function BitkaController() {
   }
 
   if (guessing && question?.kind === 'broj' && iAnswer && !me?.hasAnswered) {
+    if (phase === 'duel-broj' && host.duel) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ padding: '0.7rem 0.9rem 0' }}>
+            <DuelBanner host={host} me={me} seconds={seconds} />
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <BrojSlider
+              key={`duel:${question.text}`}
+              action="bitka:guess"
+              prompt={question.text}
+              imageUrl={question.imageUrl}
+              min={question.min ?? 0}
+              max={question.max ?? 100}
+              step={question.step}
+              unit={question.unit}
+              timeRemaining={seconds}
+            />
+          </div>
+        </div>
+      );
+    }
     return (
       <BrojSlider
         key={`${phase}:${question.text}`}
@@ -196,6 +216,9 @@ export default function BitkaController() {
   // --- čekanje / gledanje --------------------------------------------------
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.9rem', gap: '0.7rem', overflow: 'auto' }}>
+      {phase.startsWith('duel') && host.duel && (
+        <DuelBanner host={host} me={me} seconds={seconds} />
+      )}
       <Big>{waitTitle(phase, host, me, named)}</Big>
       {me?.lastOutcome && <Muted>{me.lastOutcome}</Muted>}
       {host.lastEvent && !me?.lastOutcome && <Muted>{host.lastEvent}</Muted>}
@@ -267,6 +290,97 @@ function waitTitle(
 
 // --- sitni delovi ------------------------------------------------------------
 
+/**
+ * Ko koga napada i za koju teritoriju. Napadaču i braniocu piše iz njihovog
+ * ugla („Napadaš Miku" / „Mika te napada"), posmatraču neutralno — bez toga
+ * se sa telefona ne zna ko je u dvoboju.
+ */
+function DuelBanner({
+  host,
+  me,
+  seconds,
+}: {
+  host: BitkaHostData;
+  me: BitkaControllerData | undefined;
+  seconds: number;
+}) {
+  const duel = host.duel!;
+  const attacker = host.players.find((p) => p.playerId === duel.attackerId);
+  const defender = host.players.find((p) => p.playerId === duel.defenderId);
+  const place = host.map.territories.find((t) => t.id === duel.territoryId)?.name ?? '';
+  const walls = host.board.find((st) => st.id === duel.territoryId)?.walls ?? 0;
+
+  const line =
+    me?.duelRole === 'napadac'
+      ? defender
+        ? `⚔️ Napadaš ${defender.name}`
+        : '⚔️ Napadaš ničiju zemlju'
+      : me?.duelRole === 'branilac'
+        ? `🛡️ ${attacker?.name ?? 'Protivnik'} te napada`
+        : `${attacker?.name ?? '?'} napada ${defender?.name ?? 'ničiju zemlju'}`;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.25rem',
+        padding: '0.55rem 0.7rem',
+        borderRadius: '10px',
+        background: 'var(--bg-card)',
+        borderLeft: `4px solid ${
+          me?.duelRole === 'branilac'
+            ? (defender?.avatarColor ?? 'var(--accent)')
+            : (attacker?.avatarColor ?? 'var(--accent)')
+        }`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+        <strong style={{ fontSize: '0.95rem' }}>{line}</strong>
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontWeight: 800,
+            color: seconds <= 5 ? 'var(--danger)' : 'var(--text-secondary)',
+          }}
+        >
+          {seconds}s
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        <span>za {place}</span>
+        {duel.onCastle && (
+          <>
+            <span>· 🏰</span>
+            <Walls walls={walls} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Preostali zidovi zamka — puna pločica je zid koji još stoji. */
+function Walls({ walls }: { walls: number }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: '3px' }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: '9px',
+            height: '9px',
+            borderRadius: '2px',
+            boxSizing: 'border-box',
+            background: i < walls ? '#F2CE74' : 'transparent',
+            border: i < walls ? 'none' : '1px solid rgba(255,255,255,0.35)',
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function Center({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -323,8 +437,16 @@ function Board({ host }: { host: BitkaHostData }) {
         >
           <span>{p.avatarEmoji}</span>
           <span style={{ flex: 1, fontWeight: 700 }}>{p.name}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            {p.eliminated ? 'ispao' : `${p.territories} ter. · ${p.walls} zid.`}
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {p.eliminated ? 'ispao' : <>{p.territories} ter. · <Walls walls={p.walls} /></>}
           </span>
           <strong style={{ color: 'var(--accent)' }}>{p.score}</strong>
         </div>

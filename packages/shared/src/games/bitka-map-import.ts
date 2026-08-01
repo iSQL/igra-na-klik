@@ -12,7 +12,7 @@
 
 import type { BitkaMap, BitkaMapSummary, BitkaPoint, BitkaTerritory } from '../types/bitka.js';
 import {
-  BITKA_IGRACA,
+  BITKA_MAX_IGRACA,
   BITKA_MIN_TERITORIJA,
   neighborsConnected,
   roundCoord,
@@ -203,10 +203,11 @@ export function parseBitkaMap(
       error: 'Mapa je razbijena na više odvojenih celina — poveži ih susedstvima',
     };
   }
-  if (castleSites && castleSites.length < BITKA_IGRACA) {
+  // Traži se najveći broj igrača, da ista mapa radi i u dvoje i u troje.
+  if (castleSites && castleSites.length < BITKA_MAX_IGRACA) {
     return {
       map: null,
-      error: `Ako zadaješ mesta za zamkove, mora ih biti bar ${BITKA_IGRACA} (ima ${castleSites.length})`,
+      error: `Ako zadaješ mesta za zamkove, mora ih biti bar ${BITKA_MAX_IGRACA} (ima ${castleSites.length})`,
     };
   }
 

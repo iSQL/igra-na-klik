@@ -9,8 +9,13 @@
 
 import type { BitkaPoint, BitkaTerritory } from '../types/bitka.js';
 
-/** Igra je Triviador-verna: tačno tri igrača, tri zamka. */
-export const BITKA_IGRACA = 3;
+/**
+ * Svaki igrač drži tačno jedan zamak, pa je broj igrača i broj zamkova.
+ * Dvoje je čist duel; troje je Triviador-verno i gornja granica — sa četvrtim
+ * bi mapa od devet teritorija bila pretesna, a boje se počinju mešati.
+ */
+export const BITKA_MIN_IGRACA = 2;
+export const BITKA_MAX_IGRACA = 3;
 
 /** Zamak nosi najviše poena — zato se i napada. */
 export const BITKA_ZAMAK_BODOVI = 1000;
@@ -32,6 +37,14 @@ export const BITKA_MIN_TERITORIJA = 9;
 
 /** Koliko rundi osvajanja najviše, ako se mapa ne popuni ranije. */
 export const BITKA_MAX_OSVAJANJE_RUNDI = 6;
+
+/**
+ * Rat traje dok ne ostane samo jedan zamak — to je ceo smisao igre. Ovo je
+ * samo zaštita od zaglavljene partije (npr. svi promašuju iz runde u rundu):
+ * kad se dostigne, pobeđuje najveći zbir poena. Nije podesivo, jer nije
+ * balans nego osigurač.
+ */
+export const BITKA_MAX_RATNIH_RUNDI = 25;
 
 /** Vrednost teritorije u poenima. */
 export function territoryValue(t: Pick<BitkaTerritory, 'value'>): number {

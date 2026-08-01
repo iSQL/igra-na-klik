@@ -15,10 +15,13 @@
  */
 
 import { createServer } from 'http';
+import { mkdtempSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { io, type Socket } from 'socket.io-client';
 import { setupSocket } from '../packages/server/src/socket/setup.js';
+import { initTimingConfig } from '../packages/server/src/game/timing-config.js';
 import {
   duelOutcome,
   resolveBrojDuel,
@@ -34,7 +37,8 @@ function arg(name: string): string | undefined {
 }
 
 const MAP_ID = arg('map');
-const ROUNDS = Number(arg('rounds') ?? 2);
+/** Koliko igrača sedne za sto (2 ili 3). */
+const PLAYERS = Math.max(2, Math.min(3, Number(arg('players') ?? 3)));
 
 // --- anti-leak ---------------------------------------------------------------
 
@@ -152,6 +156,25 @@ async function main(): Promise<void> {
       : `pravila duela: ${ruleFailures.length} greška(ka)`
   );
 
+  // Rat traje dok ne padne pretposlednji zamak, pa partija ume da bude duga.
+  // Pauze se skraćuju na admin minimume (isti put kojim ih i domaćin podešava)
+  // — aktivni tajmeri se ionako ne čekaju, jer klijenti odgovaraju odmah pa
+  // faza završi ranije.
+  const timingFile = path.join(mkdtempSync(path.join(tmpdir(), 'bitka-')), 'timing.json');
+  writeFileSync(
+    timingFile,
+    JSON.stringify({
+      osvajanje: {
+        UVOD_DURATION: 3,
+        PITANJE_NAJAVA_DURATION: 2,
+        REZULTAT_DURATION: 3,
+        DUEL_REZULTAT_DURATION: 3,
+        LEADERBOARD_DURATION: 4,
+      },
+    })
+  );
+  initTimingConfig(timingFile);
+
   const httpServer = createServer();
   setupSocket(httpServer, '*', {
     questionPacksDir: path.join(REPO_ROOT, 'question-packs'),
@@ -170,7 +193,7 @@ async function main(): Promise<void> {
   const roomCode = created.roomCode;
   console.log(`soba ${roomCode}`);
 
-  const names = ['Pera', 'Mika', 'Zika'];
+  const names = ['Pera', 'Mika', 'Zika'].slice(0, PLAYERS);
   const players: AnySocket[] = [];
   const ids: string[] = [];
   for (const name of names) {
@@ -184,8 +207,8 @@ async function main(): Promise<void> {
   console.log(`igrači: ${names.join(', ')}`);
 
   // Najsvežije stanje po igraču — kontroler ga inače drži u store-u.
-  const latest: (GameStateLite | null)[] = [null, null, null];
-  const privateData: (Record<string, unknown> | null)[] = [null, null, null];
+  const latest: (GameStateLite | null)[] = names.map(() => null);
+  const privateData: (Record<string, unknown> | null)[] = names.map(() => null);
   let ended = false;
   let endedPayload: unknown = null;
 
@@ -312,7 +335,6 @@ async function main(): Promise<void> {
   host.emit('host:start-game' as never, {
     gameId: 'osvajanje',
     bitkaMapId: MAP_ID,
-    roundCount: ROUNDS,
   } as never);
 
   const startError = new Promise<never>((_, reject) => {
@@ -334,7 +356,7 @@ async function main(): Promise<void> {
     finished,
     startError,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('partija nije završila u 6 minuta')), 360_000)
+      setTimeout(() => reject(new Error('partija nije završila u 20 minuta')), 1_200_000)
     ),
   ]);
 
@@ -343,10 +365,19 @@ async function main(): Promise<void> {
   const finalHost = (latest[0]?.data.host ?? {}) as Record<string, unknown>;
   const board = (finalHost.board as { ownerId: string | null }[] | undefined) ?? [];
   const neutral = board.filter((t) => t.ownerId === null).length;
+  const finalPlayers =
+    (finalHost.players as { name: string; walls: number; eliminated: boolean }[] | undefined) ?? [];
+  const standing = finalPlayers.filter((p) => p.walls > 0);
+  const lastRound = typeof finalHost.round === 'number' ? finalHost.round : 0;
 
   console.log('\n--- rezultat ---');
   console.log(`viđene faze (${seenPhases.size}): ${[...seenPhases].join(', ')}`);
   console.log(`teritorija: ${board.length}, neutralnih na kraju: ${neutral}`);
+  console.log(`ratnih rundi: ${lastRound}`);
+  console.log(
+    `zamkova na kraju: ${standing.length} (${standing.map((p) => p.name).join(', ') || '—'})`
+  );
+  console.log(`ispali: ${finalPlayers.filter((p) => p.eliminated).map((p) => p.name).join(', ') || '—'}`);
   console.log(`završni payload: ${JSON.stringify(endedPayload)}`);
 
   const required = [
@@ -375,6 +406,15 @@ async function main(): Promise<void> {
   if (leaks.length > 0) {
     console.error(`\nFAIL — anti-leak (${leaks.length}):`);
     for (const leak of [...new Set(leaks)]) console.error(`  ${leak}`);
+    failed = true;
+  }
+  // Partija sme da se završi samo tako što ostane jedan zamak — ili tako što
+  // udari osigurač od zaglavljene partije. Sve između znači da je rat prekinut
+  // prerano (upravo bug koji je uveo podesiv broj rundi).
+  if (standing.length > 1 && lastRound < 25) {
+    console.error(
+      `\nFAIL — igra je stala u ${lastRound}. rundi a ${standing.length} zamka još stoje.`
+    );
     failed = true;
   }
   if (!failed) console.log('\nOK — ceo tok prošao, bez curenja u broadcastu.');

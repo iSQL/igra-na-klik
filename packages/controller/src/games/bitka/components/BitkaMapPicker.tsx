@@ -308,13 +308,33 @@ export function BitkaMapPicker({
                 left: `${t.label.x * 100}%`,
                 top: `${t.label.y * 100}%`,
                 transform: 'translate(-50%, -50%)',
-                fontSize: '1.1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '2px',
                 lineHeight: 1,
                 pointerEvents: 'none',
                 filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))',
               }}
             >
-              🏰
+              <span style={{ fontSize: '1.1rem' }}>🏰</span>
+              {/* Koliko je zidova ostalo mora da se vidi i na telefonu —
+                  bez toga se ne zna koliko je zamak blizu pada. */}
+              <span style={{ display: 'flex', gap: '2px' }}>
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '1px',
+                      boxSizing: 'border-box',
+                      background: i < st.walls ? '#F2CE74' : 'transparent',
+                      border: i < st.walls ? 'none' : '1px solid rgba(255,255,255,0.6)',
+                    }}
+                  />
+                ))}
+              </span>
             </div>
           );
         })}

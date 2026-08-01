@@ -16,15 +16,16 @@ import type {
   Room,
 } from '@igra/shared';
 import {
-  BITKA_IGRACA,
+  BITKA_MAX_IGRACA,
   BITKA_MAX_OSVAJANJE_RUNDI,
+  BITKA_MAX_RATNIH_RUNDI,
+  BITKA_MIN_IGRACA,
   BITKA_ODBRANA_BONUS,
   BITKA_ZAMAK_BODOVI,
   BITKA_ZID_BONUS,
   BITKA_ZIDOVI,
   KVIZ_BANK_PACK_ID,
   QUIZ_QUESTION_BANK,
-  clampGameRounds,
   shuffled,
   territoryValue,
 } from '@igra/shared';
@@ -56,7 +57,6 @@ import {
 interface BitkaStartOptions {
   bitkaMapId?: unknown;
   quizPackIds?: unknown;
-  roundCount?: unknown;
 }
 
 /** Pak sa broj-pitanjima koji se dovlači kad izabrani pakovi nemaju nijedno. */
@@ -105,9 +105,11 @@ export class BitkaModule extends BaseGameModule {
   }
 
   validateStart(room: Room, customContent?: unknown): string | null {
+    // Platforma proverava samo minimum, pa se gornja granica brani ovde —
+    // svaki igrač mora da dobije svoj zamak.
     const connected = room.players.filter((p) => p.isConnected).length;
-    if (connected !== BITKA_IGRACA) {
-      return `Osvajanje se igra u tačno ${BITKA_IGRACA} igrača — trenutno vas je ${connected}.`;
+    if (connected > BITKA_MAX_IGRACA) {
+      return `Osvajanje se igra u ${BITKA_MIN_IGRACA} ili ${BITKA_MAX_IGRACA} igrača — trenutno vas je ${connected}.`;
     }
     if (!this.pickMap(customContent)) {
       return 'Nema nijedne ispravne mape — napravi je u /admin → Mape.';
@@ -148,7 +150,9 @@ export class BitkaModule extends BaseGameModule {
       osvajanjeRound: 0,
       pickQueue: [],
       round: 0,
-      totalRounds: clampGameRounds(this.gameId, cc.roundCount),
+      // Nije podesivo: rat traje dok ne padne pretposlednji zamak, a ovo je
+      // samo osigurač od zaglavljene partije.
+      totalRounds: BITKA_MAX_RATNIH_RUNDI,
       turnOrder: [],
       turnPointer: 0,
       activePlayerId: null,
@@ -896,6 +900,12 @@ export class BitkaModule extends BaseGameModule {
       .filter((p) => !this.state.eliminated.has(p.id))
       .sort((a, b) => b.score - a.score);
     this.state.winnerId = standing[0]?.id ?? null;
+    // Normalno se pobeđuje rušenjem svih tuđih zamkova; ako je udario
+    // osigurač od zaglavljene partije, to treba i reći.
+    this.state.lastEvent =
+      standing.length <= 1
+        ? `${this.nameOf(room, this.state.winnerId)} je ostao jedini sa zamkom!`
+        : `Bitka se otegla — pobeđuje najveći zbir poena.`;
     this.state.activePlayerId = null;
     this.state.duel = null;
     this.state.phase = 'rezultat';

@@ -1963,9 +1963,14 @@ function kvizCatById(id){
   // teritorija, nepovezan graf) ne prolazi strogu proveru, pa server ne bi
   // primio svaki međukorak.
 
-  var bmWork = null;   // { mapId, name, description, imageFile, imageUrl, territories, mode, draft, selected, linkFrom }
+  var bmWork = null;   // vidi renderBitka za pun oblik
   var BM_COLORS = ['#c75146','#4f80b8','#5fa173','#c29b47','#8b6bae','#4f9e96','#ce7c3a','#c26588'];
   var BM_MIN_TERR = 9;
+  var BM_MODES = ['crtaj','tacke','uredi','susedi'];
+  /** Koliko piksela daleko klik još „hvata" postojeće teme ili granicu. */
+  var BM_SNAP_PX = 12;
+  /** Ispod ove razdaljine (u normalizovanim jedinicama) tačke su ista tačka. */
+  var BM_WELD = 0.0025;
 
   function bmSlug(s){
     var from = 'čćžšđČĆŽŠĐ', to = 'cczsdcczsd', out = '';
@@ -2007,6 +2012,96 @@ function kvizCatById(id){
     return inside;
   }
   function bmAnchor(t){ return t.label || bmCentroid(t.polygon); }
+
+  // --- lepljenje granica ----------------------------------------------------
+  // Susedne teritorije moraju da dele TAČNO iste tačke, inače između njih
+  // ostaje pukotina koja se vidi na TV-u. Zato se svaki klik hvata za
+  // postojeće teme, a pomeranje teme vuče i sve tačke koje na njoj sede.
+
+  /** Razdaljina u pikselima na trenutno prikazanoj mapi (mapa nije kvadrat). */
+  function bmPxDist(a, b, rect){
+    var dx = (a.x - b.x) * rect.width, dy = (a.y - b.y) * rect.height;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+  /** Najbliža postojeća tema u dometu; vraća { t, index, point } ili null. */
+  function bmSnapVertex(pt, rect, skipId){
+    var best = null, bestD = BM_SNAP_PX;
+    bmWork.territories.forEach(function(t){
+      if (skipId && t.id === skipId) return;
+      t.polygon.forEach(function(p, i){
+        var d = bmPxDist(pt, p, rect);
+        if (d < bestD){ bestD = d; best = { t: t, index: i, point: { x:p.x, y:p.y } }; }
+      });
+    });
+    return best;
+  }
+  /** Sve tačke (na svim teritorijama) koje sede na istom mestu kao data. */
+  function bmCoincident(pt){
+    var out = [];
+    bmWork.territories.forEach(function(t){
+      t.polygon.forEach(function(p, i){
+        if (Math.abs(p.x - pt.x) < BM_WELD && Math.abs(p.y - pt.y) < BM_WELD) out.push({ t: t, index: i });
+      });
+    });
+    return out;
+  }
+  function bmPathLen(points){
+    var sum = 0;
+    for (var i=1;i<points.length;i++){
+      var dx = points[i].x - points[i-1].x, dy = points[i].y - points[i-1].y;
+      sum += Math.sqrt(dx*dx + dy*dy);
+    }
+    return sum;
+  }
+  /**
+   * Tačke granice teritorije t IZMEĐU teme i i teme j. Oko poligona postoje
+   * dva puta; uzima se kraći, jer je to granica koja te dvoje zaista deli.
+   * Tako novi oblik prati stvarnu (krivu) liniju suseda umesto da je preseče
+   * pravom. Ako ti treba više od pola tuđe granice, klikni usput još jednu
+   * njegovu temu — svaki skok je onda kraći put.
+   */
+  function bmArc(t, i, j){
+    var poly = t.polygon, n = poly.length, k;
+    var fwd = [], bwd = [];
+    for (k=(i+1)%n; k!==j; k=(k+1)%n) fwd.push({ x:poly[k].x, y:poly[k].y });
+    for (k=(i-1+n)%n; k!==j; k=(k-1+n)%n) bwd.push({ x:poly[k].x, y:poly[k].y });
+    var lenF = bmPathLen([poly[i]].concat(fwd, [poly[j]]));
+    var lenB = bmPathLen([poly[i]].concat(bwd, [poly[j]]));
+    return lenF <= lenB ? fwd : bwd;
+  }
+  /** Najbliža ivica poligona i mesto na njoj — za ubacivanje nove teme. */
+  function bmClosestEdge(t, pt, rect){
+    var poly = t.polygon, best = null, bestD = BM_SNAP_PX * 1.5;
+    for (var i=0;i<poly.length;i++){
+      var a = poly[i], b = poly[(i+1)%poly.length];
+      var ax = a.x*rect.width, ay = a.y*rect.height;
+      var bx = b.x*rect.width, by = b.y*rect.height;
+      var px = pt.x*rect.width, py = pt.y*rect.height;
+      var vx = bx-ax, vy = by-ay, len2 = vx*vx + vy*vy;
+      var u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px-ax)*vx + (py-ay)*vy) / len2));
+      var cx = ax + u*vx, cy = ay + u*vy;
+      var d = Math.sqrt((px-cx)*(px-cx) + (py-cy)*(py-cy));
+      if (d < bestD){
+        bestD = d;
+        best = { after: i, point: { x: bmRound(cx/rect.width), y: bmRound(cy/rect.height) } };
+      }
+    }
+    return best;
+  }
+  /** Nova teritorija koja deli bar dve teme sa starom je njen sused. */
+  function bmAutoLink(newT){
+    bmWork.territories.forEach(function(other){
+      if (other.id === newT.id) return;
+      var shared = 0;
+      newT.polygon.forEach(function(p){
+        other.polygon.forEach(function(q){
+          if (Math.abs(p.x-q.x) < BM_WELD && Math.abs(p.y-q.y) < BM_WELD) shared++;
+        });
+      });
+      if (shared >= 2 && !bmLinked(newT, other)) bmToggleLink(newT, other);
+    });
+  }
+
   function bmHit(pt){
     for (var i=bmWork.territories.length-1; i>=0; i--){
       if (bmInside(pt, bmWork.territories[i].polygon)) return bmWork.territories[i];
@@ -2110,6 +2205,18 @@ function kvizCatById(id){
         + 'transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;'
         + 'background:#ffd66b;pointer-events:none"></span>';
     });
+    // Teme izabrane teritorije — u režimu „Tačke" se prevlače, dupli klik briše.
+    var selT = bmById(bmWork.selected);
+    if (bmWork.mode === 'tacke' && selT){
+      selT.polygon.forEach(function(p, i){
+        var on = bmWork.vertex === i;
+        overlay += '<span data-vertex="'+i+'" title="Prevuci da pomeriš, klikni pa obriši dugmetom"'
+          + ' style="position:absolute;left:'+(p.x*100)+'%;top:'+(p.y*100)+'%;'
+          + 'transform:translate(-50%,-50%);width:'+(on?15:11)+'px;height:'+(on?15:11)+'px;border-radius:2px;'
+          + 'background:'+(on?'#c75146':'#fff')+';border:2px solid '+(on?'#fff':'#1d3557')+';box-sizing:border-box;'
+          + 'pointer-events:auto;cursor:grab"></span>';
+      });
+    }
     labels.innerHTML = overlay;
 
     list.innerHTML = bmWork.territories.length === 0
@@ -2142,20 +2249,92 @@ function kvizCatById(id){
     $('bm-rename').disabled = !sel;
     $('bm-value').disabled = !sel;
     $('bm-del').disabled = !sel;
+    if (bmWork.mode === 'tacke' && sel){
+      $('bm-sel').innerHTML += ' <span class="hint" style="margin:0">'
+        + sel.polygon.length + ' tačaka'
+        + (bmWork.vertex !== null ? ' · izabrana ' + (bmWork.vertex + 1) + '.' : '')
+        + '</span>';
+    }
+    var delv = $('bm-del-vertex');
+    if (delv) delv.disabled = !(bmWork.mode === 'tacke' && sel && bmWork.vertex !== null);
   }
 
   function bmSetMode(mode){
     bmWork.mode = mode;
     bmWork.draft = [];
+    bmWork.steps = [];
+    bmWork.vertex = null;
     bmWork.linkFrom = null;
-    ['crtaj','uredi','susedi'].forEach(function(m){
+    BM_MODES.forEach(function(m){
       var b = $('bm-mode-'+m); if (b) b.className = 'btn' + (m===mode ? ' btn-primary' : '');
     });
     $('bm-help').textContent =
-      mode === 'crtaj' ? 'Klikći po granici naselja. „Zatvori oblik" pravi teritoriju, „Poništi tačku" briše poslednju.'
-      : mode === 'susedi' ? 'Klikni jednu pa drugu teritoriju da uključiš ili isključiš susedstvo.'
+      mode === 'crtaj'
+        ? 'Klikći po granici. Klik blizu postojeće teme se zalepi za nju; dva uzastopna lepljenja na istog suseda povuku njegovu granicu tačno kakva jeste. „Zatvori oblik" pravi teritoriju.'
+      : mode === 'tacke'
+        ? 'Izaberi teritoriju pa prevuci belu temu. Klik na temu je bira (pa se briše dugmetom desno), klik na granicu ubacuje novu. Teme koje dele granicu pomeraju se zajedno.'
+      : mode === 'susedi'
+        ? 'Klikni jednu pa drugu teritoriju da uključiš ili isključiš susedstvo.'
       : 'Klikni teritoriju da je izabereš. Zlatnu tačku prevuci da pomeriš ime.';
+    var close = $('bm-close-shape'); if (close) close.style.display = mode === 'crtaj' ? '' : 'none';
+    var undo = $('bm-undo-point'); if (undo) undo.style.display = mode === 'crtaj' ? '' : 'none';
+    var delv = $('bm-del-vertex'); if (delv) delv.style.display = mode === 'tacke' ? '' : 'none';
     bmPaint();
+  }
+
+  /** Jedan klik u režimu crtanja — lepljenje za teme i praćenje tuđe granice. */
+  function bmDrawClick(pt, rect){
+    var snap = bmSnapVertex(pt, rect);
+    var point = snap ? { x: snap.point.x, y: snap.point.y } : pt;
+    var prev = bmWork.steps.length ? bmWork.steps[bmWork.steps.length-1].snap : null;
+    var added;
+
+    if (snap && prev && prev.terrId === snap.t.id && prev.index !== snap.index){
+      // Oba kraja sede na istom susedu → uzmi njegovu granicu između njih,
+      // umesto da povučeš pravu liniju preko njegovog oblika.
+      added = bmArc(snap.t, prev.index, snap.index).concat([point]);
+    } else {
+      added = [point];
+    }
+    added.forEach(function(p){ bmWork.draft.push(p); });
+    bmWork.steps.push({ count: added.length, snap: snap ? { terrId: snap.t.id, index: snap.index } : null });
+  }
+
+  /** Poništi poslednji klik — i ceo komad granice koji je uz njega došao. */
+  function bmUndoStep(){
+    var step = bmWork.steps.pop();
+    if (!step) return;
+    bmWork.draft.length = Math.max(0, bmWork.draft.length - step.count);
+  }
+
+  /** Obriši izabranu temu; poligon ne sme ispod tri tačke. */
+  function bmDeleteVertex(){
+    var t = bmById(bmWork.selected);
+    if (!t || bmWork.vertex === null) return;
+    if (t.polygon.length <= 3){ showErr('Poligon mora imati bar 3 tačke.'); return; }
+    t.polygon.splice(bmWork.vertex, 1);
+    bmWork.vertex = null;
+    bmPaint();
+  }
+
+  /**
+   * Posle prevlačenja: ako je tema sletela tačno na svog suseda u ISTOM
+   * poligonu, to je dupla tačka koja ništa ne opisuje — spoji ih u jednu.
+   * (Bez ovoga izgleda kao da je tačka obrisana, a zapravo su dve jedna na
+   * drugoj.)
+   */
+  function bmCollapseDuplicate(t, index){
+    if (!t || t.polygon.length <= 3) return index;
+    var n = t.polygon.length;
+    var cur = t.polygon[index];
+    var prev = t.polygon[(index - 1 + n) % n];
+    var next = t.polygon[(index + 1) % n];
+    var same = function(a, b){
+      return Math.abs(a.x - b.x) < BM_WELD && Math.abs(a.y - b.y) < BM_WELD;
+    };
+    if (same(cur, prev)){ t.polygon.splice(index, 1); return (index - 1 + n) % n; }
+    if (same(cur, next)){ t.polygon.splice((index + 1) % n, 1); return index; }
+    return index;
   }
 
   function renderBitka(host, ctx){
@@ -2169,7 +2348,7 @@ function kvizCatById(id){
         imageFile: p.imageFile || '',
         imageUrl: p.imageUrl || '',
         territories: JSON.parse(JSON.stringify(p.territories || [])),
-        mode: 'crtaj', draft: [], selected: null, linkFrom: null
+        mode: 'crtaj', draft: [], steps: [], selected: null, vertex: null, linkFrom: null
       };
     }
 
@@ -2186,11 +2365,13 @@ function kvizCatById(id){
           + '<div>'
           + '<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
           + '<button class="btn" id="bm-mode-crtaj">Crtaj</button>'
+          + '<button class="btn" id="bm-mode-tacke">Tačke</button>'
           + '<button class="btn" id="bm-mode-uredi">Izmeni</button>'
           + '<button class="btn" id="bm-mode-susedi">Susedi</button>'
           + '<span style="flex:1"></span>'
           + '<button class="btn" id="bm-close-shape">Zatvori oblik</button>'
           + '<button class="btn" id="bm-undo-point">Poništi tačku</button>'
+          + '<button class="btn" id="bm-del-vertex">Obriši tačku</button>'
           + '</div>'
           + '<p class="hint" id="bm-help" style="margin:0 0 .5rem"></p>'
           + '<div id="bm-stage" style="position:relative;width:100%;background:#0b1728;border-radius:12px;overflow:hidden;user-select:none">'
@@ -2247,36 +2428,120 @@ function kvizCatById(id){
       };
     }
 
-    // Prevlačenje sidra imena. Sluša se na sloju sa sidrima (bubbling), a
-    // pomeranje/otpuštanje na celoj sceni da prst sme da izađe iz kruga.
-    var dragging = null, justDragged = false;
+    // Prevlačenje: sidro imena u „Izmeni", tema poligona u „Tačke". Sluša se
+    // na sloju sa ručkama (bubbling), a pomeranje/otpuštanje na celoj sceni da
+    // prst sme da izađe iz ručke.
+    //
+    // drag.welded je ključ za deljene granice: pri hvatanju teme se pokupe
+    // SVE tačke (i na drugim teritorijama) koje sede na istom mestu, pa se
+    // pomeraju zajedno. Bez toga se sused otcepi čim pomeriš jednu temu.
+    var drag = null, justDragged = false;
     $('bm-labels').onpointerdown = function(ev){
-      var anchorId = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-anchor');
-      if (bmWork.mode !== 'uredi' || !anchorId) return;
-      dragging = anchorId;
+      var el = ev.target;
+      if (!el || !el.getAttribute) return;
+      var anchorId = el.getAttribute('data-anchor');
+      var vertex = el.getAttribute('data-vertex');
+
+      if (bmWork.mode === 'uredi' && anchorId){
+        drag = { kind: 'anchor', id: anchorId };
+      } else if (bmWork.mode === 'tacke' && vertex !== null){
+        var t = bmById(bmWork.selected); if (!t) return;
+        drag = {
+          kind: 'vertex',
+          terrId: t.id,
+          index: Number(vertex),
+          welded: bmCoincident(t.polygon[Number(vertex)])
+        };
+      } else {
+        return;
+      }
       stage.setPointerCapture(ev.pointerId);
       ev.preventDefault();
     };
     stage.onpointermove = function(ev){
-      if (!dragging) return;
-      var t = bmById(dragging); if (!t) return;
-      t.label = pointAt(ev);
+      if (!drag) return;
+      var pt = pointAt(ev);
+      if (drag.kind === 'anchor'){
+        var t = bmById(drag.id); if (t) t.label = pt;
+      } else {
+        drag.welded.forEach(function(ref){ ref.t.polygon[ref.index] = { x: pt.x, y: pt.y }; });
+      }
       justDragged = true;
       bmPaint();
     };
     stage.onpointerup = function(ev){
-      if (!dragging) return;
-      dragging = null;
+      if (!drag) return;
+      if (drag.kind === 'vertex'){
+        // Izabrana je tema koju si upravo dirao — dugme „Obriši tačku" radi
+        // i kad si je samo kliknuo, bez pomeranja.
+        bmWork.vertex = drag.index;
+        if (justDragged && drag.welded.length){
+          // Na otpuštanju se tema još jednom zalepi za najbližu tuđu, pa
+          // granica ostaje deljena i kad je prevučeš „skoro" na mesto.
+          var moved = drag.welded[0].t.polygon[drag.welded[0].index];
+          var ownIds = {};
+          drag.welded.forEach(function(ref){ ownIds[ref.t.id] = true; });
+          var rect = stage.getBoundingClientRect();
+          var near = null, nearD = BM_SNAP_PX;
+          bmWork.territories.forEach(function(t){
+            if (ownIds[t.id]) return;
+            t.polygon.forEach(function(p){
+              var d = bmPxDist(moved, p, rect);
+              if (d < nearD){ nearD = d; near = { x:p.x, y:p.y }; }
+            });
+          });
+          if (near) drag.welded.forEach(function(ref){ ref.t.polygon[ref.index] = { x: near.x, y: near.y }; });
+          // Ako je sletela na svog suseda u istom poligonu, spoji ih.
+          bmWork.vertex = bmCollapseDuplicate(bmById(drag.terrId), drag.index);
+        }
+      }
+      drag = null;
       try { stage.releasePointerCapture(ev.pointerId); } catch (e) {}
+      bmPaint();
     };
 
     stage.onclick = function(ev){
-      if (dragging) return;
+      if (drag) return;
       if (justDragged){ justDragged = false; return; }
       var pt = pointAt(ev);
+      var rect = stage.getBoundingClientRect();
+
       if (bmWork.mode === 'crtaj'){
-        bmWork.draft.push(pt); bmPaint(); return;
+        bmDrawClick(pt, rect); bmPaint(); return;
       }
+
+      if (bmWork.mode === 'tacke'){
+        var sel = bmById(bmWork.selected);
+        // Klik na granicu izabrane teritorije ubacuje novu temu; sve ostalo
+        // menja izbor.
+        if (sel){
+          // Klik NA postojeću temu je bira, ne ubacuje novu. Indeks se traži
+          // po razdaljini, a ne preko event targeta — pointerup je već
+          // precrtao sloj, pa taj element više ne postoji.
+          var onVertex = -1;
+          sel.polygon.forEach(function(p, i){
+            if (onVertex === -1 && bmPxDist(pt, p, rect) < BM_SNAP_PX) onVertex = i;
+          });
+          if (onVertex !== -1){
+            bmWork.vertex = onVertex;
+            bmPaint();
+            return;
+          }
+          var edge = bmClosestEdge(sel, pt, rect);
+          if (edge){
+            sel.polygon.splice(edge.after + 1, 0, edge.point);
+            bmWork.vertex = edge.after + 1;
+            bmPaint();
+            return;
+          }
+        }
+        var hitV = bmHit(pt);
+        bmWork.selected = hitV ? hitV.id : null;
+        bmWork.vertex = null;
+        bmPaint();
+        return;
+      }
+
       var hit = bmHit(pt);
       if (bmWork.mode === 'uredi'){
         bmWork.selected = hit ? hit.id : null; bmPaint(); return;
@@ -2298,12 +2563,17 @@ function kvizCatById(id){
       if (!name){ showErr('Unesi ime.'); return; }
       var t = { id: bmUniqueId(bmSlug(name)), name: name, polygon: bmWork.draft.slice(), neighbors: [] };
       bmWork.territories.push(t);
+      // Ko deli bar dve teme, deli i granicu — susedstvo se podrazumeva.
+      bmAutoLink(t);
       bmWork.draft = [];
+      bmWork.steps = [];
       bmWork.selected = t.id;
+      bmWork.vertex = null;
       bmPaint();
     };
-    $('bm-undo-point').onclick = function(){ bmWork.draft.pop(); bmPaint(); };
-    ['crtaj','uredi','susedi'].forEach(function(m){
+    $('bm-undo-point').onclick = function(){ bmUndoStep(); bmPaint(); };
+    $('bm-del-vertex').onclick = function(){ bmDeleteVertex(); };
+    BM_MODES.forEach(function(m){
       $('bm-mode-'+m).onclick = function(){ bmSetMode(m); };
     });
 

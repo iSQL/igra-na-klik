@@ -243,16 +243,19 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   osvajanje: {
     id: 'osvajanje',
     name: 'Osvajanje',
-    // Triviador-verno: tri zamka, tri boje na mapi. Modul dodatno odbija start
-    // ako ih nije tačno toliko — platforma proverava samo minimum.
-    minPlayers: 3,
+    // Jedan zamak po igraču. Platforma proverava samo minimum, pa modul
+    // dodatno odbija start ako ih je više od tri.
+    minPlayers: 2,
     maxPlayers: 3,
     description:
-      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Ko sruši tri zida tuđeg zamka, uzima sve!',
+      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Igra traje dok ne ostane samo jedan zamak!',
     icon: '🏰',
     accent: 'gold',
     category: 'quiz',
-    estimatedMinutes: 18,
+    // Bez zadatog broja rundi — traje dok ne padne pretposlednji zamak. Sa
+    // igračima koji dobro odgovaraju dueli češće idu na tiebreak, pa opsada
+    // traje; ovo je realna, ne najbolja procena.
+    estimatedMinutes: 25,
     // Tabla (vlasništvo, zidovi, geometrija mape) ide u broadcast, pa telefon
     // može da prikaže sve što bi TV pokazao.
     supportsHostless: true,
