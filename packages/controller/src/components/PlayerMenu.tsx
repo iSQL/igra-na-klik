@@ -5,6 +5,7 @@ import { useT } from '../i18n/useT';
 import { AvatarPickerModal } from './AvatarPickerModal';
 import { LanguageSwitch } from './LanguageSwitch';
 import { QuizFeedbackMenu } from './QuizFeedbackMenu';
+import { BitkaBoardMenu } from './BitkaBoardMenu';
 
 type ConfirmKind = 'leave' | 'close' | 'stop' | null;
 
@@ -188,6 +189,10 @@ export function PlayerMenu({ inGame = false }: { inGame?: boolean }) {
             {/* Kviz: report/rate the current question (renders only when a
                 kviz question is on screen). */}
             <QuizFeedbackMenu />
+
+            {/* Osvajanje: spisak teritorija + tabla (renderuje se samo u toj
+                igri). Izbor sa spiska zatvara popup da bi se videla mapa. */}
+            <BitkaBoardMenu onPicked={() => setOpen(false)} />
 
             <div style={{ height: '1px', background: 'var(--line2)', margin: '0.15rem 0' }} />
 

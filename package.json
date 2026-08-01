@@ -10,6 +10,8 @@
     "dev:server": "npm run dev -w @igra/server",
     "dev:host": "npm run dev -w @igra/host",
     "dev:controller": "npm run dev -w @igra/controller",
+    "predev": "node scripts/dev-clean.mjs",
+    "predev:server": "node scripts/dev-clean.mjs",
     "dev": "npm run build:shared && concurrently \"npm:dev:server\" \"npm:dev:host\" \"npm:dev:controller\"",
     "build": "npm run build:shared && npm run build -w @igra/server && npm run build -w @igra/host && npm run build -w @igra/controller",
     "clean": "rimraf packages/*/dist packages/*/node_modules node_modules"

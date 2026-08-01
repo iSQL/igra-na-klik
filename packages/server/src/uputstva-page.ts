@@ -234,6 +234,7 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li><strong>Redosled:</strong> prvo ide pitanje sa brojem. Ko je najbliži, ima prednost ako se kasnije dvoje otimaju o istu teritoriju.</li>
 <li><strong>Zamak:</strong> svi istovremeno tapnu teritoriju na telefonu. Ako izaberete istu, dobija je onaj sa boljim uvodnim rezultatom, a ostali biraju ponovo.</li>
 <li><strong>Osvajanje:</strong> svima stiže isto pitanje. Ko je tačan, uzima jednu slobodnu teritoriju — brži bira pre sporijeg. Ko promaši, u toj rundi ne dobija ništa.</li>
+<li>Bira se <strong>samo uz svoju zemlju</strong>, da država raste u komadu. Ako ti je sve susedno već zauzeto, otvara se cela mapa.</li>
 <li><strong>Rat:</strong> na potezu biraš susednu tuđu ili ničiju teritoriju. Ti i branilac dobijate isto pitanje, naslepo. Ako si jedini tačan — teritorija je tvoja; ako je samo branilac tačan — odbranio je i dobija <strong>100</strong> poena.</li>
 <li><strong>Nerešeno</strong> (oba tačna ili oba netačna) rešava pitanje sa brojem: bliži pobeđuje, a na istom odstupanju odlučuje brzina. Ko ne odgovori, ne može dobiti.</li>
 <li><strong>Opsada:</strong> zamak ima <strong>tri zida</strong>. Svaki dobijen duel ruši jedan (+200 poena). Kad padne treći, napadač uzima zamak <em>i svu zemlju</em> branioca — a branilac ispada iz igre.</li>

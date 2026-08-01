@@ -19,7 +19,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../..', '.env') });
 // stdout-only if the log dir isn't writable. See logger.ts.
 import { initFileLogging } from './logger.js';
 initFileLogging();
-import { existsSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import { readdir, readFile } from 'fs/promises';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import {
@@ -536,12 +536,37 @@ app.get('/play', (req, res) => {
 const hasControllerBuild = existsSync(path.join(CONTROLLER_DIST_DIR, 'index.html'));
 const hasHostBuild = existsSync(path.join(HOST_DIST_DIR, 'index.html'));
 
+/**
+ * Kad se servira statički bandl, uz putanju ide i kada je napravljen — bez toga
+ * se ne razlikuje svež build od jučerašnjeg, a stariji bandl izgleda kao da
+ * "izmene ne rade". U repo-režimu (bez DATA_DIR, tj. lokalni rad) dodaje se i
+ * uputstvo, jer je tu zamrznut bandl skoro uvek greška, a ne namera.
+ */
+function buildBanner(dir: string, pkg: 'host' | 'controller'): string {
+  let stamp = 'nepoznato';
+  try {
+    stamp = statSync(path.join(dir, 'index.html')).mtime.toLocaleString('sv-SE');
+  } catch {
+    // Nedostupan mtime ne sme da obori start — banner je informativan.
+  }
+  const hint =
+    process.env.DATA_DIR || process.env.NODE_ENV === 'production'
+      ? ''
+      : `\n  ↳ STATIČKI BANDL: izmene u packages/${pkg}/src se NE vide dok ne uradiš` +
+        `\n    "npm run build -w @igra/${pkg}". Za HMR obriši packages/${pkg}/dist` +
+        ' (to radi i "npm run dev").';
+  return `(build: ${stamp})${hint}`;
+}
+
 if (hasControllerBuild) {
   app.use('/play', express.static(CONTROLLER_DIST_DIR));
   app.get('/play/*', (_req, res) => {
     res.sendFile(path.join(CONTROLLER_DIST_DIR, 'index.html'));
   });
-  console.log(`Serving controller from ${CONTROLLER_DIST_DIR} at /play`);
+  console.log(
+    `Serving controller from ${CONTROLLER_DIST_DIR} at /play ` +
+      buildBanner(CONTROLLER_DIST_DIR, 'controller')
+  );
 } else {
   // Dev fallback: proxy /play to the controller's Vite dev server. Vite
   // is configured with base: '/play/' so asset URLs already carry the
@@ -566,7 +591,9 @@ if (hasHostBuild) {
   app.get('/host/*', (_req, res) => {
     res.sendFile(path.join(HOST_DIST_DIR, 'index.html'));
   });
-  console.log(`Serving host from ${HOST_DIST_DIR} at /host`);
+  console.log(
+    `Serving host from ${HOST_DIST_DIR} at /host ` + buildBanner(HOST_DIST_DIR, 'host')
+  );
 } else {
   app.use(
     createProxyMiddleware({

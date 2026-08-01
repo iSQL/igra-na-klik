@@ -325,9 +325,18 @@ async function main(): Promise<void> {
       selectable.length > 0
     ) {
       acted.add(i);
+      // Pravi igrač opseda zamak, ne luta po mapi. Bez ovoga se zidovi skoro
+      // nikad ne potroše, pa partija završi na osiguraču od 25 rundi i
+      // eliminacija se uopšte ne testira.
+      const board = (host.board as { id: string; ownerId: string | null; castle: boolean; walls: number }[]) ?? [];
+      const castle = selectable.find((id) => {
+        const cell = board.find((c) => c.id === id);
+        return cell && cell.castle && cell.walls > 0 && cell.ownerId !== ids[i];
+      });
+      const target = castle ?? selectable[Math.floor(Math.random() * selectable.length)];
       players[i].emit('game:player-action' as never, {
         action: 'bitka:pick',
-        data: { territoryId: selectable[Math.floor(Math.random() * selectable.length)] },
+        data: { territoryId: target },
       } as never);
     }
   }

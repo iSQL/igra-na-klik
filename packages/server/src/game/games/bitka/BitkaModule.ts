@@ -270,7 +270,7 @@ export class BitkaModule extends BaseGameModule {
 
     if (this.state.phase === 'osvajanje-izbor') {
       if (playerId !== this.state.activePlayerId) return null;
-      if (this.state.board.get(territoryId)?.ownerId !== null) return null;
+      if (!this.freePickTargets(playerId).includes(territoryId)) return null;
       this.claimFree(room, playerId, territoryId);
       return this.buildGameState(room);
     }
@@ -614,9 +614,23 @@ export class BitkaModule extends BaseGameModule {
   }
 
   /**
+   * Slobodne teritorije koje igrač sme da uzme: **samo one uz njegovu zemlju**,
+   * da bi država rasla u komadu a ne u mrljama po mapi. Ako mu je sve susedno
+   * već zauzeto, otvara se cela mapa — inače bi opkoljen igrač ostao bez poteza.
+   */
+  private freePickTargets(playerId: string): string[] {
+    const free = this.freeTerritoryIds();
+    const adjacent = free.filter((id) =>
+      (this.territoryById.get(id)?.neighbors ?? []).some(
+        (n) => this.state.board.get(n)?.ownerId === playerId
+      )
+    );
+    return adjacent.length > 0 ? adjacent : free;
+  }
+
+  /**
    * Istekao je tajmer za biranje. Igrač je pitanje pogodio, pa mu zemlja i
-   * pripada — bira se umesto njega, po mogućstvu uz njegovu teritoriju da mapa
-   * ostane pristojno povezana.
+   * pripada — bira se umesto njega, iz istog skupa koji bi i sam imao.
    */
   private autoPickFree(room: Room): void {
     const playerId = this.state.activePlayerId;
@@ -624,17 +638,11 @@ export class BitkaModule extends BaseGameModule {
       this.nextPicker(room);
       return;
     }
-    const free = this.freeTerritoryIds();
-    if (free.length === 0) {
+    const pool = this.freePickTargets(playerId);
+    if (pool.length === 0) {
       this.nextPicker(room);
       return;
     }
-    const adjacent = free.filter((id) =>
-      (this.territoryById.get(id)?.neighbors ?? []).some(
-        (n) => this.state.board.get(n)?.ownerId === playerId
-      )
-    );
-    const pool = adjacent.length > 0 ? adjacent : free;
     this.claimFree(room, playerId, shuffled(pool)[0]);
   }
 
@@ -1218,7 +1226,9 @@ export class BitkaModule extends BaseGameModule {
     if (phase === 'osvajanje-izbor') {
       hostData.activePlayerId = this.state.activePlayerId;
       hostData.pickQueue = [...this.state.pickQueue];
-      hostData.selectableIds = this.freeTerritoryIds();
+      hostData.selectableIds = this.state.activePlayerId
+        ? this.freePickTargets(this.state.activePlayerId)
+        : [];
     }
     if (phase === 'napad-izbor') {
       hostData.activePlayerId = this.state.activePlayerId;
@@ -1332,7 +1342,7 @@ export class BitkaModule extends BaseGameModule {
       data.selectableIds = this.baseEligibleIds();
       data.myBaseChoice = this.state.baseChoice.get(playerId) ?? null;
     } else if (phase === 'osvajanje-izbor' && this.state.activePlayerId === playerId) {
-      data.selectableIds = this.freeTerritoryIds();
+      data.selectableIds = this.freePickTargets(playerId);
     } else if (phase === 'napad-izbor' && this.state.activePlayerId === playerId) {
       data.selectableIds = this.attackTargets(playerId);
     }

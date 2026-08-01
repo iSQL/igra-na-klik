@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BitkaMapView, BitkaPlayerView, BitkaTerritoryState } from '@igra/shared';
 import { pointInPolygon } from '@igra/shared';
 
@@ -31,6 +31,13 @@ interface BitkaMapPickerProps {
   selectedId?: string | null;
   focusId?: string | null;
   onSelect?: (territoryId: string) => void;
+  /**
+   * Popuni sav prostor koji roditelj da (roditelj mora biti flex sa
+   * `flex:1; minHeight:0`). Meri se kutija, jer se od `aspect-ratio` i
+   * `max-height` u CSS-u širina ne preračunava nazad — mapa bi ostala
+   * uska ili bi prelila.
+   */
+  fill?: boolean;
   maxHeightCss?: string;
 }
 
@@ -51,14 +58,28 @@ export function BitkaMapPicker({
   selectedId,
   focusId,
   onSelect,
+  fill,
   maxHeightCss = '46dvh',
 }: BitkaMapPickerProps) {
+  const boxRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [ratio, setRatio] = useState(3 / 2);
+
+  useEffect(() => {
+    if (!fill) return;
+    const el = boxRef.current;
+    if (!el) return;
+    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fill]);
 
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const singleStartRef = useRef<SinglePointerStart | null>(null);
@@ -222,7 +243,12 @@ export function BitkaMapPicker({
     if (pointersRef.current.size === 0) singleStartRef.current = null;
   };
 
-  return (
+  // U `fill` režimu se veličina računa iz izmerene kutije: uzmi ono što je
+  // uže — širinu kutije, ili širinu koju dozvoljava njena visina.
+  const filled = fill && box.w > 0 && box.h > 0;
+  const width = filled ? Math.min(box.w, box.h * ratio) : 0;
+
+  const mapEl = (
     <div
       ref={wrapperRef}
       onPointerDown={handlePointerDown}
@@ -231,7 +257,7 @@ export function BitkaMapPicker({
       onPointerCancel={handlePointerCancel}
       style={{
         position: 'relative',
-        width: `min(100%, calc(${maxHeightCss} * ${ratio}))`,
+        width: filled ? `${width}px` : `min(100%, calc(${maxHeightCss} * ${ratio}))`,
         aspectRatio: `${ratio}`,
         margin: '0 auto',
         background: '#0B1728',
@@ -366,6 +392,23 @@ export function BitkaMapPicker({
           ↻
         </button>
       )}
+    </div>
+  );
+
+  if (!fill) return mapEl;
+  return (
+    <div
+      ref={boxRef}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {filled ? mapEl : null}
     </div>
   );
 }
