@@ -29,6 +29,10 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   // Složilica: a "round" is one set of seven letters — each takes a full
   // minute plus the reveal, so three is already a decent sitting.
   slozilica: { options: [1, 2, 3], default: 3, min: 1, max: 3 },
+  // Osvajanje: a "round" is one full pass of the war phase — every surviving
+  // player attacks once. The base pick and the land-grab rounds run before it
+  // and aren't counted here.
+  osvajanje: { options: [2, 3, 4], default: 3, min: 1, max: 6 },
   // Asocijacije is intentionally NOT here — a game is always a single board.
 };
 

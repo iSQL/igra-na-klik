@@ -1,0 +1,107 @@
+{
+  "name": "Test mreža",
+  "description": "Razvojna mapa — 9 pravougaonih teritorija u mreži 3×3. Služi da se mehanika igre testira pre nego što stigne prava iscrtana mapa.",
+  "imageFile": "map.png",
+  "territories": [
+    {
+      "id": "breza",
+      "name": "Breza",
+      "polygon": [
+        { "x": 0.02, "y": 0.03 },
+        { "x": 0.32, "y": 0.03 },
+        { "x": 0.32, "y": 0.31 },
+        { "x": 0.02, "y": 0.31 }
+      ],
+      "neighbors": ["vrelo", "lug"]
+    },
+    {
+      "id": "vrelo",
+      "name": "Vrelo",
+      "polygon": [
+        { "x": 0.35, "y": 0.03 },
+        { "x": 0.65, "y": 0.03 },
+        { "x": 0.65, "y": 0.31 },
+        { "x": 0.35, "y": 0.31 }
+      ],
+      "neighbors": ["dubrava", "kamen"]
+    },
+    {
+      "id": "dubrava",
+      "name": "Dubrava",
+      "polygon": [
+        { "x": 0.68, "y": 0.03 },
+        { "x": 0.98, "y": 0.03 },
+        { "x": 0.98, "y": 0.31 },
+        { "x": 0.68, "y": 0.31 }
+      ],
+      "neighbors": ["trnje"]
+    },
+    {
+      "id": "lug",
+      "name": "Lug",
+      "polygon": [
+        { "x": 0.02, "y": 0.36 },
+        { "x": 0.32, "y": 0.36 },
+        { "x": 0.32, "y": 0.64 },
+        { "x": 0.02, "y": 0.64 }
+      ],
+      "neighbors": ["kamen", "ravniste"]
+    },
+    {
+      "id": "kamen",
+      "name": "Kamen",
+      "polygon": [
+        { "x": 0.35, "y": 0.36 },
+        { "x": 0.65, "y": 0.36 },
+        { "x": 0.65, "y": 0.64 },
+        { "x": 0.35, "y": 0.64 }
+      ],
+      "neighbors": ["trnje", "jasen"],
+      "value": 300
+    },
+    {
+      "id": "trnje",
+      "name": "Trnje",
+      "polygon": [
+        { "x": 0.68, "y": 0.36 },
+        { "x": 0.98, "y": 0.36 },
+        { "x": 0.98, "y": 0.64 },
+        { "x": 0.68, "y": 0.64 }
+      ],
+      "neighbors": ["zvono"]
+    },
+    {
+      "id": "ravniste",
+      "name": "Ravnište",
+      "polygon": [
+        { "x": 0.02, "y": 0.69 },
+        { "x": 0.32, "y": 0.69 },
+        { "x": 0.32, "y": 0.97 },
+        { "x": 0.02, "y": 0.97 }
+      ],
+      "neighbors": ["jasen"]
+    },
+    {
+      "id": "jasen",
+      "name": "Jasen",
+      "polygon": [
+        { "x": 0.35, "y": 0.69 },
+        { "x": 0.65, "y": 0.69 },
+        { "x": 0.65, "y": 0.97 },
+        { "x": 0.35, "y": 0.97 }
+      ],
+      "neighbors": ["zvono"]
+    },
+    {
+      "id": "zvono",
+      "name": "Zvono",
+      "polygon": [
+        { "x": 0.68, "y": 0.69 },
+        { "x": 0.98, "y": 0.69 },
+        { "x": 0.98, "y": 0.97 },
+        { "x": 0.68, "y": 0.97 }
+      ],
+      "neighbors": []
+    }
+  ]
+}

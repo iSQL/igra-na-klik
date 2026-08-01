@@ -43,6 +43,8 @@ interface NewGamesConfigStore {
   // ('__bank__' = built-in slagalice).
   asocijacijeMode: AsocijacijeMode;
   asocijacijePackId: string;
+  // Osvajanje: which drawn map to play ('' = auto-pick the first valid one).
+  bitkaMapId: string;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -66,6 +68,7 @@ interface NewGamesConfigStore {
   setSpijunTutorial: (v: boolean) => void;
   setAsocijacijeMode: (m: AsocijacijeMode) => void;
   setAsocijacijePackId: (id: string) => void;
+  setBitkaMapId: (id: string) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -93,6 +96,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       asocijacijeMode: 'klasik',
       // '' = auto-pick the first pack valid for the current mode.
       asocijacijePackId: '',
+      // '' = auto-pick the first map that passes the strict check.
+      bitkaMapId: '',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -116,6 +121,7 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setSpijunTutorial: (v) => set({ spijunTutorial: v }),
       setAsocijacijeMode: (m) => set({ asocijacijeMode: m }),
       setAsocijacijePackId: (id) => set({ asocijacijePackId: id }),
+      setBitkaMapId: (id) => set({ bitkaMapId: id }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

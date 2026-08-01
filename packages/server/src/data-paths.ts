@@ -42,6 +42,8 @@ export const CONTENT_DIR_NAMES = [
   'gluvo-doba-packs',
   'spijun-packs',
   'asocijacije-packs',
+  // Osvajanje: <id>.json manifest + <id>/ folder sa otpremljenom slikom mape.
+  'bitka-maps',
 ] as const;
 
 export const TIMING_FILE_NAME = 'timing-config.json';

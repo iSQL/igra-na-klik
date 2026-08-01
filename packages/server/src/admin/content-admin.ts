@@ -14,6 +14,7 @@ import {
   parseGluvoDobaPack,
   parseSpijunPack,
   parseAsocijacijePack,
+  parseBitkaMap,
   countKvizPuzzles,
   TAJNI_AGENTI_MIN_WORDS,
   TAJNI_AGENTI_MAX_WORDS,
@@ -50,6 +51,8 @@ interface ContentDirs {
   gluvoDobaPacksDir: string;
   spijunPacksDir: string;
   asocijacijePacksDir: string;
+  /** Osvajanje: <id>.json + <id>/ folder sa otpremljenom slikom mape. */
+  bitkaMapsDir: string;
 }
 
 const MAX_IMAGE_BASE64 = 8_000_000; // ~6 MB binary after decode
@@ -840,6 +843,92 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
       if (!parsed.pack) return { ok: false, error: parsed.error ?? 'Nevažeći paket' };
       return { ok: true, data: parsed.pack };
     },
+  });
+
+  // ---------- Osvajanje: mape ---------------------------------------------------
+  // Manifest je <id>.json, otpremljena slika živi u <id>/ pored njega. Editor
+  // crta poligone preko slike i snima celu mapu jednim PUT-om; nedovršena mapa
+  // (premalo teritorija, nepovezan graf, nema slike) ostaje editabilna ali
+  // `visibleInGame: false`, pa je game-select ne nudi.
+
+  mountPackRoutes({
+    route: 'bitka-maps',
+    dir: dirs.bitkaMapsDir,
+    listKey: 'maps',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const lax = parseBitkaMap(raw, { id, allowEmpty: true });
+      const strict = parseBitkaMap(raw, { id });
+      const territories = lax.map?.territories ?? [];
+      return {
+        id,
+        name: lax.map?.name ?? id,
+        description: lax.map?.description,
+        imageFile: lax.map?.imageFile || undefined,
+        imageUrl: lax.map?.imageFile
+          ? `/bitka-files/${id}/${lax.map.imageFile}`
+          : undefined,
+        count: territories.length,
+        territoryCount: territories.length,
+        territories,
+        castleSites: lax.map?.castleSites,
+        visibleInGame: strict.map !== null,
+        error: strict.map ? undefined : (strict.error ?? lax.error ?? undefined),
+      };
+    },
+    create: (_body, name) => ({
+      ok: true,
+      data: { name, description: '', imageFile: '', territories: [] },
+    }),
+    replace: (body) => {
+      const parsed = parseBitkaMap(body, { allowEmpty: true });
+      if (!parsed.map) return { ok: false, error: parsed.error ?? 'Nevažeća mapa' };
+      // `id` je ime fajla, ne sadržaj — ne upisuje se u manifest.
+      const { id: _ignored, ...data } = parsed.map;
+      return { ok: true, data };
+    },
+    afterDelete: async (id) => {
+      await rm(path.join(dirs.bitkaMapsDir, id), { recursive: true, force: true });
+    },
+  });
+
+  // Slika mape: POST /bitka-maps/:id/file { dataBase64 } → upisuje <uuid>.<ext>
+  // u folder mape i vraća { file, url }. Editor upiše `imageFile` u mapu i
+  // sačuva je običnim PUT-om. Stara slika se briše da folder ne raste.
+  router.post('/bitka-maps/:id/file', async (req, res) => {
+    const id = req.params.id;
+    if (!PACK_ID_RE.test(id)) {
+      badId(res);
+      return;
+    }
+    const manifestPath = path.join(dirs.bitkaMapsDir, `${id}.json`);
+    if (!(await fileExists(manifestPath))) {
+      res.status(404).json({ error: 'Mapa ne postoji.' });
+      return;
+    }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const decoded = decodeBase64Media(body.dataBase64, 'image');
+    if (!decoded.ok) {
+      res.status(400).json({ error: decoded.error });
+      return;
+    }
+    const fileName = `${randomUUID()}.${decoded.ext}`;
+    const mapDir = path.join(dirs.bitkaMapsDir, id);
+    try {
+      await mkdir(mapDir, { recursive: true });
+      await writeFile(path.join(mapDir, fileName), decoded.data);
+      // Mapa nosi tačno jednu sliku — obriši sve ostalo iz njenog foldera.
+      for (const entry of await readdir(mapDir)) {
+        if (entry !== fileName) {
+          await rm(path.join(mapDir, entry), { recursive: true, force: true });
+        }
+      }
+    } catch (err) {
+      console.error('content-admin: failed to write bitka map image:', err);
+      res.status(500).json({ error: 'Ne mogu da sačuvam sliku.' });
+      return;
+    }
+    res.status(201).json({ file: fileName, url: `/bitka-files/${id}/${fileName}` });
   });
 
   return router;

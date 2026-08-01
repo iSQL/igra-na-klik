@@ -4,7 +4,9 @@ import type { KvizValueType } from '@igra/shared';
 import { socket } from '../../../socket';
 
 /**
- * Slider input for broj questions. Emits `quiz:guess { value }` on lock.
+ * Slider input for broj questions. Emits `quiz:guess { value }` on lock —
+ * `action` overrides that for other games that ask a numeric question
+ * (Osvajanje uses it for the duel tiebreaker).
  * Mount with `key={questionIndex}` so the local value resets per question.
  */
 export function BrojSlider({
@@ -17,6 +19,7 @@ export function BrojSlider({
   unit,
   valueType,
   timeRemaining,
+  action = 'quiz:guess',
 }: {
   prompt: string;
   emoji?: string;
@@ -27,6 +30,7 @@ export function BrojSlider({
   unit?: string;
   valueType?: KvizValueType;
   timeRemaining: number;
+  action?: string;
 }) {
   const stepSize = step && step > 0 ? step : 1;
   const snap = (v: number) => {
@@ -42,10 +46,7 @@ export function BrojSlider({
   const lock = () => {
     if (sent) return;
     setSent(true);
-    socket.emit('game:player-action', {
-      action: 'quiz:guess',
-      data: { value },
-    });
+    socket.emit('game:player-action', { action, data: { value } });
   };
 
   return (

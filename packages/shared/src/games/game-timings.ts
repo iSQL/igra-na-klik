@@ -111,6 +111,17 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'osvajanje',
+    gameName: 'Osvajanje',
+    fields: [
+      { key: 'UVOD_DURATION', label: 'Uvod (upoznavanje mape)', min: 3, max: 20, def: 7 },
+      { key: 'PITANJE_NAJAVA_DURATION', label: 'Čitanje pitanja pre odgovaranja', min: 2, max: 12, def: 4 },
+      { key: 'REZULTAT_DURATION', label: 'Prikaz rezultata pitanja', min: 3, max: 20, def: 6 },
+      { key: 'DUEL_REZULTAT_DURATION', label: 'Prikaz ishoda napada', min: 3, max: 20, def: 6 },
+      { key: 'LEADERBOARD_DURATION', label: 'Rang lista na kraju', min: 4, max: 40, def: 14 },
+    ],
+  },
+  {
     gameId: 'penali',
     gameName: 'Penali',
     fields: [

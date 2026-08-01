@@ -123,6 +123,28 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'shame',
     subtitle: 'Runde bez ijedne reči',
   },
+  // Osvajanje
+  vojvoda: {
+    id: 'vojvoda',
+    title: 'Vojvoda',
+    emoji: '⚔️',
+    tone: 'positive',
+    subtitle: 'Najviše osvojenih teritorija',
+  },
+  zidar: {
+    id: 'zidar',
+    title: 'Zidar',
+    emoji: '🧱',
+    tone: 'positive',
+    subtitle: 'Zamak koji se ne da',
+  },
+  'gost-u-svojoj-zemlji': {
+    id: 'gost-u-svojoj-zemlji',
+    title: 'Gost u svojoj zemlji',
+    emoji: '🚪',
+    tone: 'shame',
+    subtitle: 'Ni osvojio, ni odbranio',
+  },
   // Penali
   'zlatna-rukavica': {
     id: 'zlatna-rukavica',

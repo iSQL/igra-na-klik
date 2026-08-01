@@ -26,6 +26,7 @@ import type {
   HotPotatoMode,
   SpijunLocation,
   AsocijacijePackSummary,
+  BitkaMapSummary,
 } from '@igra/shared';
 import {
   getRecentPackIds,
@@ -284,6 +285,9 @@ export function GameSelectScreen() {
   >([]);
   // '' = auto-pick the first pack valid for the current mode.
   const [asocijacijePackId, setAsocijacijePackId] = useState('');
+  const [bitkaMaps, setBitkaMaps] = useState<BitkaMapSummary[]>([]);
+  // '' = auto-pick the first map that passes the strict check (derived below).
+  const [bitkaMapChoice, setBitkaMapChoice] = useState('');
   const [asocijacijeMode, setAsocijacijeMode] = useState<'klasik' | 'kviz'>(
     'klasik'
   );
@@ -334,6 +338,14 @@ export function GameSelectScreen() {
       .catch(() => {
         if (!cancelled) setAsocijacijePacks([]);
       });
+    fetch('/api/bitka-maps')
+      .then((r) => (r.ok ? r.json() : { maps: [] }))
+      .then((data: { maps?: BitkaMapSummary[] }) => {
+        if (!cancelled) setBitkaMaps(data.maps ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBitkaMaps([]);
+      });
     return () => {
       cancelled = true;
     };
@@ -379,6 +391,12 @@ export function GameSelectScreen() {
   // back to duet so start can't fire a server-side validation error.
   const effectiveTajniMode: TajniAgentiMode =
     tajniMode === 'classic' && connectedCount < 4 ? 'duet' : tajniMode;
+  // Osvajanje: derive the effective map so a stale choice can't wedge the
+  // start button — no write-back effect needed.
+  const validBitkaMaps = bitkaMaps.filter((m) => m.visibleInGame);
+  const bitkaMapId = validBitkaMaps.some((m) => m.id === bitkaMapChoice)
+    ? bitkaMapChoice
+    : (validBitkaMaps[0]?.id ?? '');
 
   const handleStart = (game: GameDefinition) => {
     if (connectedCount < effMinPlayers(game)) return;
@@ -439,6 +457,12 @@ export function GameSelectScreen() {
       payload.asocijacijeMode = asocijacijeMode;
       // Empty selection → omit (server falls back to the built-in bank).
       if (asocijacijePackId) payload.asocijacijePackIds = [asocijacijePackId];
+    }
+    if (game.id === 'osvajanje') {
+      // Osvajanje draws its questions from the same kviz pack multi-select.
+      if (bitkaMapId) payload.bitkaMapId = bitkaMapId;
+      const ids = effectiveQuizPackIds(quizPacks, quizPackIds);
+      if (ids.length > 0) payload.quizPackIds = ids;
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -1197,6 +1221,44 @@ export function GameSelectScreen() {
                           </div>
                         );
                       })()}
+                    </div>
+                  )}
+                  {game.id === 'osvajanje' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Mapa
+                      </span>
+                      {validBitkaMaps.length === 0 ? (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--danger, #E5533C)' }}>
+                          Nema ispravne mape (napravi je u /admin → Mape).
+                        </span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          {validBitkaMaps.map((m) => (
+                            <Pill
+                              key={m.id}
+                              active={bitkaMapId === m.id}
+                              onClick={() => setBitkaMapChoice(m.id)}
+                            >
+                              {m.name} ({m.territoryCount})
+                            </Pill>
+                          ))}
+                        </div>
+                      )}
+                      {/* Pitanja dolaze iz istih kviz paketa; tip pitanja bira
+                          igra sama (obično/uljez + broj za tiebreak). */}
+                      <QuizConfig
+                        packs={quizPacks}
+                        selectedIds={quizPackIds}
+                        setSelectedIds={setQuizPackIds}
+                        selectedTypes={quizTypes}
+                        setSelectedTypes={setQuizTypes}
+                        imported={null}
+                        setImported={() => {}}
+                        error={null}
+                        setError={() => {}}
+                        hideImport
+                      />
                     </div>
                   )}
                   {game.id === 'bolji-zivot' && (

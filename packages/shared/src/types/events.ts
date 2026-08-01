@@ -151,6 +151,12 @@ export interface ClientToServerEvents {
     asocijacijePackIds?: string[];
     // Inline puzzle import (host .json upload) — wins over the pack selection.
     customAsocijacijePuzzles?: AsocijacijePuzzle[];
+    // Osvajanje: which drawn map to play (id from GET /api/bitka-maps). The
+    // server re-resolves and re-validates it, and falls back to the first
+    // valid map when the field is missing. Its questions ride the shared
+    // `quizPackIds` field — the game only ever uses obicno/uljez + broj, so
+    // `quizTypes` doesn't apply to it.
+    bitkaMapId?: string;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

@@ -240,4 +240,21 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // stiže i do telefona, pa se ceo tok vidi i bez TV-a.
     supportsHostless: true,
   },
+  osvajanje: {
+    id: 'osvajanje',
+    name: 'Osvajanje',
+    // Triviador-verno: tri zamka, tri boje na mapi. Modul dodatno odbija start
+    // ako ih nije tačno toliko — platforma proverava samo minimum.
+    minPlayers: 3,
+    maxPlayers: 3,
+    description:
+      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Ko sruši tri zida tuđeg zamka, uzima sve!',
+    icon: '🏰',
+    accent: 'gold',
+    category: 'quiz',
+    estimatedMinutes: 18,
+    // Tabla (vlasništvo, zidovi, geometrija mape) ide u broadcast, pa telefon
+    // može da prikaže sve što bi TV pokazao.
+    supportsHostless: true,
+  },
 };

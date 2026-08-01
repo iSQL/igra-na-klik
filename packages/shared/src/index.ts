@@ -50,3 +50,6 @@ export * from './types/penali.js';
 export * from './games/penali-rules.js';
 export * from './types/slozilica.js';
 export * from './games/slozilica-rules.js';
+export * from './types/bitka.js';
+export * from './games/bitka-rules.js';
+export * from './games/bitka-map-import.js';

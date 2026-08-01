@@ -1,0 +1,351 @@
+import { useCallback, useMemo, useRef, useState } from 'react';
+import type { BitkaMapView, BitkaPlayerView, BitkaTerritoryState } from '@igra/shared';
+import { pointInPolygon } from '@igra/shared';
+
+const NEUTRAL = '#8a91a2';
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+/** Pomeraj (u CSS px) preko kog se dodir tumači kao prevlačenje, ne kao tap. */
+const TAP_THRESHOLD = 8;
+
+interface SinglePointerStart {
+  x: number;
+  y: number;
+  panAtStart: { x: number; y: number };
+  moved: boolean;
+}
+
+interface PinchStart {
+  midpoint: { x: number; y: number };
+  distance: number;
+  zoomAtStart: number;
+  panAtStart: { x: number; y: number };
+}
+
+interface BitkaMapPickerProps {
+  map: BitkaMapView;
+  board: BitkaTerritoryState[];
+  players: BitkaPlayerView[];
+  /** Teritorije koje se smeju tapnuti; prazno = mapa je samo za gledanje. */
+  selectableIds?: string[];
+  selectedId?: string | null;
+  focusId?: string | null;
+  onSelect?: (territoryId: string) => void;
+  maxHeightCss?: string;
+}
+
+/**
+ * Mapa na telefonu — tap bira teritoriju, dva prsta zumiraju, prevlačenje
+ * pomera kad je zumirano.
+ *
+ * Gesture matematika je ista kao kod kviz geo mape (ista normalizovana [0,1]
+ * osnova); jedina razlika je što se umesto pina radi **pogodak u poligon** nad
+ * istim koordinatama. Ispod mape stoji i lista dugmadi — mapa je lepa, ali
+ * lista je ta koja garantuje precizan izbor na malom ekranu.
+ */
+export function BitkaMapPicker({
+  map,
+  board,
+  players,
+  selectableIds,
+  selectedId,
+  focusId,
+  onSelect,
+  maxHeightCss = '46dvh',
+}: BitkaMapPickerProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [ratio, setRatio] = useState(3 / 2);
+
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const singleStartRef = useRef<SinglePointerStart | null>(null);
+  const pinchStartRef = useRef<PinchStart | null>(null);
+
+  const selectable = useMemo(() => new Set(selectableIds ?? []), [selectableIds]);
+  const stateById = useMemo(() => new Map(board.map((st) => [st.id, st])), [board]);
+  const ownerColor = useMemo(() => {
+    const byId = new Map(players.map((p) => [p.playerId, p.avatarColor]));
+    return (playerId: string | null) => (playerId ? (byId.get(playerId) ?? NEUTRAL) : NEUTRAL);
+  }, [players]);
+
+  const clampPan = useCallback(
+    (next: { x: number; y: number }, currentZoom: number) => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return next;
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+      return {
+        x: Math.min(0, Math.max(w * (1 - currentZoom), next.x)),
+        y: Math.min(0, Math.max(h * (1 - currentZoom), next.y)),
+      };
+    },
+    []
+  );
+
+  /** Tap → normalizovane koordinate → teritorija ispod prsta. */
+  const pickAtClient = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!onSelect || selectable.size === 0) return;
+      const inner = contentRef.current;
+      if (!inner) return;
+      const rect = inner.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const point = {
+        x: (clientX - rect.left) / rect.width,
+        y: (clientY - rect.top) / rect.height,
+      };
+      if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return;
+      // Odozgo nadole — poslednje iscrtana teritorija je i vizuelno na vrhu.
+      for (let i = map.territories.length - 1; i >= 0; i--) {
+        const t = map.territories[i];
+        if (!selectable.has(t.id)) continue;
+        if (pointInPolygon(point, t.polygon)) {
+          onSelect(t.id);
+          return;
+        }
+      }
+    },
+    [map, onSelect, selectable]
+  );
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 1) {
+      singleStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        panAtStart: { ...pan },
+        moved: false,
+      };
+      pinchStartRef.current = null;
+    } else if (pointersRef.current.size === 2) {
+      const pts = Array.from(pointersRef.current.values());
+      pinchStartRef.current = {
+        midpoint: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+        distance: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1,
+        zoomAtStart: zoom,
+        panAtStart: { ...pan },
+      };
+      if (singleStartRef.current) singleStartRef.current.moved = true;
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size === 2 && pinchStartRef.current) {
+      const pts = Array.from(pointersRef.current.values());
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const newMid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      const start = pinchStartRef.current;
+      const clampedZoom = Math.max(
+        MIN_ZOOM,
+        Math.min(MAX_ZOOM, start.zoomAtStart * (newDist / start.distance))
+      );
+
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const contentX = (start.midpoint.x - wrapperRect.left - start.panAtStart.x) / start.zoomAtStart;
+      const contentY = (start.midpoint.y - wrapperRect.top - start.panAtStart.y) / start.zoomAtStart;
+      const nextPan = {
+        x: newMid.x - wrapperRect.left - contentX * clampedZoom,
+        y: newMid.y - wrapperRect.top - contentY * clampedZoom,
+      };
+      setZoom(clampedZoom);
+      setPan(clampPan(nextPan, clampedZoom));
+      return;
+    }
+
+    if (pointersRef.current.size === 1 && singleStartRef.current) {
+      const dx = e.clientX - singleStartRef.current.x;
+      const dy = e.clientY - singleStartRef.current.y;
+      if (Math.hypot(dx, dy) > TAP_THRESHOLD) singleStartRef.current.moved = true;
+      if (zoom > 1 && singleStartRef.current.moved) {
+        setPan(
+          clampPan(
+            {
+              x: singleStartRef.current.panAtStart.x + dx,
+              y: singleStartRef.current.panAtStart.y + dy,
+            },
+            zoom
+          )
+        );
+      }
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+
+    if (
+      pointersRef.current.size === 0 &&
+      singleStartRef.current &&
+      !singleStartRef.current.moved &&
+      !pinchStartRef.current
+    ) {
+      pickAtClient(e.clientX, e.clientY);
+    }
+
+    if (pointersRef.current.size < 2) pinchStartRef.current = null;
+    // Prelaz sa dva prsta na jedan: novo sidro, inače mapa poskoči.
+    if (pointersRef.current.size === 1) {
+      const [remaining] = Array.from(pointersRef.current.values());
+      singleStartRef.current = {
+        x: remaining.x,
+        y: remaining.y,
+        panAtStart: { ...pan },
+        moved: true,
+      };
+    }
+    if (pointersRef.current.size === 0) singleStartRef.current = null;
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchStartRef.current = null;
+    if (pointersRef.current.size === 1) {
+      const [remaining] = Array.from(pointersRef.current.values());
+      singleStartRef.current = {
+        x: remaining.x,
+        y: remaining.y,
+        panAtStart: { ...pan },
+        moved: true,
+      };
+    }
+    if (pointersRef.current.size === 0) singleStartRef.current = null;
+  };
+
+  return (
+    <div
+      ref={wrapperRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={{
+        position: 'relative',
+        width: `min(100%, calc(${maxHeightCss} * ${ratio}))`,
+        aspectRatio: `${ratio}`,
+        margin: '0 auto',
+        background: '#0B1728',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        touchAction: 'none',
+        userSelect: 'none',
+      }}
+    >
+      <div
+        ref={contentRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transformOrigin: '0 0',
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          willChange: 'transform',
+        }}
+      >
+        <img
+          src={map.imageUrl}
+          alt={map.name}
+          draggable={false}
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+              setRatio(img.naturalWidth / img.naturalHeight);
+            }
+          }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'fill',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <svg
+          viewBox="0 0 1 1"
+          preserveAspectRatio="none"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+        >
+          {map.territories.map((t) => {
+            const st = stateById.get(t.id);
+            const owned = !!st?.ownerId;
+            const isPick = selectable.has(t.id);
+            const isSelected = selectedId === t.id;
+            const isFocus = focusId === t.id;
+            return (
+              <polygon
+                key={t.id}
+                points={t.polygon.map((p) => `${p.x},${p.y}`).join(' ')}
+                fill={ownerColor(st?.ownerId ?? null)}
+                fillOpacity={isSelected ? 0.72 : owned ? 0.45 : isPick ? 0.3 : 0.14}
+                stroke={isSelected || isFocus ? '#F2CE74' : isPick ? '#F2CE74' : 'rgba(255,255,255,0.85)'}
+                strokeWidth={isSelected || isFocus ? 4 : isPick ? 3 : 1.5}
+                strokeDasharray={isPick && !isSelected && !isFocus ? '6 4' : undefined}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
+        </svg>
+
+        {map.territories.map((t) => {
+          const st = stateById.get(t.id);
+          if (!st?.castle || st.walls <= 0) return null;
+          return (
+            <div
+              key={t.id}
+              style={{
+                position: 'absolute',
+                left: `${t.label.x * 100}%`,
+                top: `${t.label.y * 100}%`,
+                transform: 'translate(-50%, -50%)',
+                fontSize: '1.1rem',
+                lineHeight: 1,
+                pointerEvents: 'none',
+                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))',
+              }}
+            >
+              🏰
+            </div>
+          );
+        })}
+      </div>
+
+      {zoom > 1.01 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            padding: '6px 10px',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            background: 'rgba(0,0,0,0.6)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+          }}
+          aria-label="Resetuj prikaz"
+        >
+          ↻
+        </button>
+      )}
+    </div>
+  );
+}

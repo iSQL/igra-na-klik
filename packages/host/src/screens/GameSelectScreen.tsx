@@ -13,6 +13,7 @@ import type {
   GameCategory,
   GameDefinition,
   AsocijacijePackSummary,
+  BitkaMapSummary,
 } from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
@@ -188,10 +189,14 @@ export function GameSelectScreen() {
       : newGamesConfig.tajniAgentiMode;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
+  // Osvajanje: the effective map is DERIVED, not stored — a stored id that
+  // stops being valid would need a write-back effect, and those are exactly
+  // what the Asocijacije comment below warns about.
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const [asocijacijePacks, setAsocijacijePacks] = useState<
     AsocijacijePackSummary[]
   >([]);
+  const [bitkaMaps, setBitkaMaps] = useState<BitkaMapSummary[]>([]);
   // Which game's config popup is open, and which game's rules modal is open.
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [rulesGameId, setRulesGameId] = useState<string | null>(null);
@@ -224,6 +229,14 @@ export function GameSelectScreen() {
       })
       .catch(() => {
         if (!cancelled) setAsocijacijePacks([]);
+      });
+    fetch('/api/bitka-maps')
+      .then((r) => (r.ok ? r.json() : { maps: [] }))
+      .then((data: { maps?: BitkaMapSummary[] }) => {
+        if (!cancelled) setBitkaMaps(data.maps ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBitkaMaps([]);
       });
     return () => {
       cancelled = true;
@@ -266,6 +279,11 @@ export function GameSelectScreen() {
     return () => clearTimeout(handle);
   }, [errorMessage]);
 
+  const validBitkaMaps = bitkaMaps.filter((m) => m.visibleInGame);
+  const bitkaMapId = validBitkaMaps.some((m) => m.id === newGamesConfig.bitkaMapId)
+    ? newGamesConfig.bitkaMapId
+    : (validBitkaMaps[0]?.id ?? '');
+
   const handleSelect = (gameId: string) => {
     const def = GAME_DEFINITIONS[gameId];
     if (def && connectedCount < effMinPlayers(def)) return;
@@ -282,11 +300,15 @@ export function GameSelectScreen() {
         ? spijunPacks.find((p) => p.id === newGamesConfig.spijunPackId)
         : undefined;
 
-    // Kviz-mode Vruć krompir draws from the same pack selection as Kviz.
+    // Kviz-mode Vruć krompir and Osvajanje draw from the same pack selection
+    // as Kviz (Osvajanje only ever uses obicno/uljez + broj, so the type
+    // filter it sends along is harmless — the module picks what it needs).
     const hotPotatoKviz =
       gameId === 'hot-potato' && newGamesConfig.hotPotatoMode === 'kviz';
     const quizImport =
-      gameId === 'quiz' || hotPotatoKviz ? useQuizImportStore.getState() : null;
+      gameId === 'quiz' || hotPotatoKviz || gameId === 'osvajanje'
+        ? useQuizImportStore.getState()
+        : null;
     // Inline file import wins over the pack multi-select (quiz only — the
     // hot-potato kviz mode supports packs, not inline files).
     const customQuestions =
@@ -407,6 +429,8 @@ export function GameSelectScreen() {
         gameId === 'asocijacije' && newGamesConfig.asocijacijePackId
           ? [newGamesConfig.asocijacijePackId]
           : undefined,
+      bitkaMapId:
+        gameId === 'osvajanje' ? (bitkaMapId || undefined) : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -425,6 +449,33 @@ export function GameSelectScreen() {
   const renderConfig = (game: GameDefinition) => (
     <>
       {game.id === 'quiz' && <QuizImportButton />}
+      {game.id === 'osvajanje' && (
+        <>
+          {validBitkaMaps.length === 0 ? (
+            <p
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--danger)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              Nema nijedne ispravne mape — napravi je u /admin → Mape.
+            </p>
+          ) : (
+            <TextPillRow
+              label="Mapa"
+              value={bitkaMapId}
+              options={validBitkaMaps.map((m) => ({
+                value: m.id,
+                label: `${m.name} (${m.territoryCount})`,
+              }))}
+              onSelect={newGamesConfig.setBitkaMapId}
+            />
+          )}
+          <QuizImportButton />
+        </>
+      )}
       {game.id === 'asocijacije' && (
         <>
           <TextPillRow

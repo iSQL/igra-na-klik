@@ -29,6 +29,7 @@ import {
   QUIZ_QUESTION_BANK,
 } from '@igra/shared';
 import { listAsocijacijePackSummaries } from './game/games/asocijacije/asocijacije-pack-resolver.js';
+import { listBitkaMapSummaries } from './game/games/bitka/bitka-map-resolver.js';
 import type { KoSamJaImportQuestion, KvizQuestionType } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
@@ -89,6 +90,12 @@ const SPIJUN_PACKS_DIR = resolveContentDir(
 const ASOCIJACIJE_PACKS_DIR = resolveContentDir(
   'asocijacije-packs',
   process.env.ASOCIJACIJE_PACKS_DIR
+);
+// Osvajanje: mape se crtaju u adminu. Manifest je <id>.json, otpremljena slika
+// živi u <id>/ pored njega i služi se sa /bitka-files/<id>/<file>.
+const BITKA_MAPS_DIR = resolveContentDir(
+  'bitka-maps',
+  process.env.BITKA_MAPS_DIR
 );
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = resolveTimingFile(process.env.TIMING_CONFIG_FILE);
@@ -256,6 +263,19 @@ app.get('/api/asocijacije-packs', async (_req, res) => {
   }
 });
 
+// Osvajanje — mape za selektor na game-select ekranu. Geometrija nije tajna
+// (svi vide tablu), ali je velika, pa lista nosi samo sažetke; punu mapu
+// razrešava server na startu partije.
+app.get('/api/bitka-maps', async (_req, res) => {
+  try {
+    const maps = await listBitkaMapSummaries(BITKA_MAPS_DIR);
+    res.json({ maps });
+  } catch (err) {
+    console.error('Failed to read bitka maps directory:', err);
+    res.status(500).json({ error: 'Failed to read bitka maps' });
+  }
+});
+
 app.get('/api/ko-sam-ja-packs', async (_req, res) => {
   try {
     const entries = await readdir(KO_SAM_JA_PACKS_DIR, { withFileTypes: true });
@@ -379,6 +399,25 @@ app.use(
   express.static(QUESTION_PACKS_DIR, { maxAge: '7d', etag: true })
 );
 
+// Slike mapa za Osvajanje: /bitka-files/<mapId>/<file>. Isti guard kao kod
+// kviza — služi se samo jedan nivo unutar foldera mape i nikad *.json, da se
+// manifest ne bi mogao povući mimo API-ja.
+app.use(
+  '/bitka-files',
+  cors({ origin: corsOrigins }),
+  (req, res, next) => {
+    if (
+      !/^\/[a-zA-Z0-9_-]+\/[^/]+$/.test(req.path) ||
+      req.path.toLowerCase().endsWith('.json')
+    ) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  },
+  express.static(BITKA_MAPS_DIR, { maxAge: '7d', etag: true })
+);
+
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
 // (kviz, ko-sam-ja, tajni-agenti… packs). See ADMIN_TOKEN in
@@ -393,6 +432,7 @@ app.use(
     gluvoDobaPacksDir: GLUVO_DOBA_PACKS_DIR,
     spijunPacksDir: SPIJUN_PACKS_DIR,
     asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
+    bitkaMapsDir: BITKA_MAPS_DIR,
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
@@ -407,6 +447,7 @@ app.use(
       { name: 'gluvo-doba-packs', path: GLUVO_DOBA_PACKS_DIR },
       { name: 'spijun-packs', path: SPIJUN_PACKS_DIR },
       { name: 'asocijacije-packs', path: ASOCIJACIJE_PACKS_DIR },
+      { name: 'bitka-maps', path: BITKA_MAPS_DIR },
     ],
     timingFile: TIMING_CONFIG_FILE,
     extraFiles: [QUIZ_FEEDBACK_FILE],
@@ -452,6 +493,7 @@ const socketOrigins = SAME_ORIGIN_DEPLOY ? '*' : [HOST_ORIGIN, CONTROLLER_ORIGIN
 const { roomManager } = setupSocket(httpServer, socketOrigins, {
   questionPacksDir: QUESTION_PACKS_DIR,
   asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
+  bitkaMapsDir: BITKA_MAPS_DIR,
 });
 
 if (SINGLE_ROOM_MODE) {
@@ -789,6 +831,7 @@ httpServer.listen(PORT, () => {
   console.log(`Tajni agenti packs dir: ${TAJNI_AGENTI_PACKS_DIR}`);
   console.log(`Spijun packs dir: ${SPIJUN_PACKS_DIR}`);
   console.log(`Asocijacije packs dir: ${ASOCIJACIJE_PACKS_DIR}`);
+  console.log(`Bitka maps dir: ${BITKA_MAPS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }

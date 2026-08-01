@@ -293,6 +293,7 @@ function kvizCatById(id){
     { id:'gluvo-doba',   label:'Gluvo doba',   icon:'🌙', route:'gluvo-doba-packs',   listKey:'packs', kind:'gluvo',  itemNoun:'uloga' },
     { id:'spijun',       label:'Špijun',       icon:'🔍', route:'spijun-packs',       listKey:'packs', kind:'spijun', itemNoun:'lokacija' },
     { id:'asocijacije',  label:'Asocijacije',  icon:'🧩', route:'asocijacije-packs',  listKey:'packs', kind:'asoc',   itemNoun:'slagalica' },
+    { id:'osvajanje',    label:'Mape',         icon:'🏰', route:'bitka-maps',         listKey:'maps',  kind:'bitka',  itemNoun:'teritorija' },
     { id:'prigovori',    label:'Prigovori',    icon:'🚩', route:null,                 listKey:null,    kind:'feedback', itemNoun:'' },
     { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' },
     { id:'podaci',       label:'Podaci',       icon:'💾', route:null,                 listKey:null,    kind:'data',    itemNoun:'' }
@@ -1954,6 +1955,410 @@ function kvizCatById(id){
     };
   }
 
+  // ---------- Osvajanje: mape (teritorije se crtaju preko otpremljene slike) ----
+  // Mape su ilustracije, ne geografija — sve koordinate su normalizovane [0,1]
+  // preko slike, pa se isti brojevi koriste i na TV-u i na telefonu.
+  //
+  // Radi se nad LOKALNOM kopijom i snima jednim PUT-om: mapa u izradi (premalo
+  // teritorija, nepovezan graf) ne prolazi strogu proveru, pa server ne bi
+  // primio svaki međukorak.
+
+  var bmWork = null;   // { mapId, name, description, imageFile, imageUrl, territories, mode, draft, selected, linkFrom }
+  var BM_COLORS = ['#c75146','#4f80b8','#5fa173','#c29b47','#8b6bae','#4f9e96','#ce7c3a','#c26588'];
+  var BM_MIN_TERR = 9;
+
+  function bmSlug(s){
+    var from = 'čćžšđČĆŽŠĐ', to = 'cczsdcczsd', out = '';
+    for (var i=0;i<s.length;i++){
+      var ch = s.charAt(i), at = from.indexOf(ch);
+      out += at >= 0 ? to.charAt(at) : ch;
+    }
+    return out.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+/,'').replace(/-+$/,'').slice(0,40);
+  }
+  function bmUniqueId(base){
+    var taken = {};
+    bmWork.territories.forEach(function(t){ taken[t.id] = true; });
+    var root = base || 'teritorija', candidate = root, n = 1;
+    while (taken[candidate]){ n++; candidate = root + '-' + n; }
+    return candidate;
+  }
+  function bmRound(v){ return Math.round(v * 10000) / 10000; }
+  function bmCentroid(poly){
+    if (!poly.length) return { x:0.5, y:0.5 };
+    var a2 = 0, cx = 0, cy = 0;
+    for (var i=0, j=poly.length-1; i<poly.length; j=i++){
+      var p = poly[j], q = poly[i], cross = p.x*q.y - q.x*p.y;
+      a2 += cross; cx += (p.x+q.x)*cross; cy += (p.y+q.y)*cross;
+    }
+    if (Math.abs(a2) < 1e-12){
+      var sx = 0, sy = 0;
+      poly.forEach(function(p){ sx += p.x; sy += p.y; });
+      return { x: sx/poly.length, y: sy/poly.length };
+    }
+    return { x: cx/(3*a2), y: cy/(3*a2) };
+  }
+  function bmInside(pt, poly){
+    var inside = false;
+    for (var i=0, j=poly.length-1; i<poly.length; j=i++){
+      var a = poly[i], b = poly[j];
+      if ((a.y > pt.y) === (b.y > pt.y)) continue;
+      if (pt.x < (b.x-a.x)*(pt.y-a.y)/(b.y-a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  function bmAnchor(t){ return t.label || bmCentroid(t.polygon); }
+  function bmHit(pt){
+    for (var i=bmWork.territories.length-1; i>=0; i--){
+      if (bmInside(pt, bmWork.territories[i].polygon)) return bmWork.territories[i];
+    }
+    return null;
+  }
+  function bmById(id){
+    for (var i=0;i<bmWork.territories.length;i++) if (bmWork.territories[i].id===id) return bmWork.territories[i];
+    return null;
+  }
+  function bmLinked(a, b){ return (a.neighbors||[]).indexOf(b.id) >= 0 || (b.neighbors||[]).indexOf(a.id) >= 0; }
+  function bmToggleLink(a, b){
+    if (bmLinked(a, b)){
+      a.neighbors = (a.neighbors||[]).filter(function(id){ return id !== b.id; });
+      b.neighbors = (b.neighbors||[]).filter(function(id){ return id !== a.id; });
+    } else {
+      a.neighbors = (a.neighbors||[]).concat([b.id]);
+    }
+  }
+  function bmPoints(poly){
+    return poly.map(function(p){ return bmRound(p.x) + ',' + bmRound(p.y); }).join(' ');
+  }
+
+  /** Ista pravila kao strogi validator na serveru — prikazana uživo. */
+  function bmProblem(){
+    var t = bmWork.territories;
+    if (!bmWork.imageFile) return 'Otpremi sliku mape.';
+    if (t.length < BM_MIN_TERR) return 'Treba bar ' + BM_MIN_TERR + ' teritorija (ima ' + t.length + ').';
+    for (var i=0;i<t.length;i++){
+      if (t[i].polygon.length < 3) return 'Teritorija "' + t[i].name + '" nema zatvoren oblik.';
+    }
+    var isolated = null;
+    t.forEach(function(x){
+      var deg = (x.neighbors||[]).length;
+      t.forEach(function(y){ if (y!==x && (y.neighbors||[]).indexOf(x.id)>=0) deg++; });
+      if (deg === 0 && !isolated) isolated = x.name;
+    });
+    if (isolated) return 'Teritorija "' + isolated + '" nema nijednog suseda.';
+    // Povezanost grafa (obostrano).
+    var adj = {};
+    t.forEach(function(x){ adj[x.id] = {}; });
+    t.forEach(function(x){
+      (x.neighbors||[]).forEach(function(id){ if (adj[id]){ adj[x.id][id]=1; adj[id][x.id]=1; } });
+    });
+    var seen = {}, queue = [t[0].id]; seen[t[0].id] = 1;
+    while (queue.length){
+      var cur = queue.shift();
+      for (var k in adj[cur]) if (!seen[k]){ seen[k]=1; queue.push(k); }
+    }
+    var reached = 0; for (var s in seen) reached++;
+    if (reached !== t.length) return 'Mapa je razbijena na odvojene celine — poveži ih susedstvima.';
+    return null;
+  }
+
+  function bmPaint(){
+    var svg = $('bm-svg'), list = $('bm-list'), status = $('bm-status');
+    if (!svg) return;
+    var parts = '';
+
+    // Veze susedstava idu ispod oblika da ne prekrivaju granice.
+    bmWork.territories.forEach(function(t, i){
+      (t.neighbors||[]).forEach(function(id){
+        var other = bmById(id); if (!other) return;
+        var a = bmAnchor(t), b = bmAnchor(other);
+        parts += '<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'"'
+          + ' stroke="rgba(255,255,255,.55)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>';
+      });
+    });
+
+    bmWork.territories.forEach(function(t, i){
+      var selected = bmWork.selected === t.id, linking = bmWork.linkFrom === t.id;
+      parts += '<polygon data-terr="'+esc(t.id)+'" points="'+bmPoints(t.polygon)+'"'
+        + ' fill="'+BM_COLORS[i % BM_COLORS.length]+'" fill-opacity="'+(selected||linking?0.62:0.38)+'"'
+        + ' stroke="'+(selected||linking?'#ffd66b':'rgba(255,255,255,.9)')+'"'
+        + ' stroke-width="'+(selected||linking?3:2)+'" vector-effect="non-scaling-stroke"'
+        + ' style="cursor:pointer"/>';
+    });
+
+    if (bmWork.draft.length > 1){
+      parts += '<polyline points="'+bmPoints(bmWork.draft)+'" fill="none" stroke="#ffd66b"'
+        + ' stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>';
+    }
+    svg.innerHTML = parts;
+
+    // Sidra, tačke i imena su HTML iznad SVG-a: u viewBox-u 0..1 sa
+    // preserveAspectRatio="none" krug bi bio elipsa, a r bi se skalirao sa
+    // mapom. Ovako su uvek iste veličine u pikselima.
+    var labels = $('bm-labels'), overlay = '';
+    bmWork.territories.forEach(function(t){
+      var a = bmAnchor(t);
+      overlay += '<span data-anchor="'+esc(t.id)+'" style="position:absolute;left:'+(a.x*100)+'%;top:'+(a.y*100)+'%;'
+        + 'transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;'
+        + 'background:#1d3557;border:2px solid #ffd66b;box-sizing:border-box;'
+        + 'pointer-events:' + (bmWork.mode==='uredi' ? 'auto' : 'none') + ';cursor:grab"></span>'
+        + '<span style="position:absolute;left:'+(a.x*100)+'%;top:'+(a.y*100)+'%;'
+        + 'transform:translate(-50%,-190%);pointer-events:none;font:800 12px/1 system-ui;'
+        + 'color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap">'+esc(t.name)+'</span>';
+    });
+    bmWork.draft.forEach(function(p){
+      overlay += '<span style="position:absolute;left:'+(p.x*100)+'%;top:'+(p.y*100)+'%;'
+        + 'transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;'
+        + 'background:#ffd66b;pointer-events:none"></span>';
+    });
+    labels.innerHTML = overlay;
+
+    list.innerHTML = bmWork.territories.length === 0
+      ? '<div class="hint" style="margin:0">Još nema teritorija.</div>'
+      : bmWork.territories.map(function(t, i){
+          var deg = (t.neighbors||[]).length;
+          bmWork.territories.forEach(function(y){ if (y!==t && (y.neighbors||[]).indexOf(t.id)>=0) deg++; });
+          return '<div data-row="'+esc(t.id)+'" style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;border-radius:8px;cursor:pointer;'
+            + (bmWork.selected===t.id?'background:rgba(194,155,71,.18)':'') + '">'
+            + '<span style="width:10px;height:10px;border-radius:50%;background:'+BM_COLORS[i % BM_COLORS.length]+'"></span>'
+            + '<span style="flex:1;font-weight:700">'+esc(t.name)+'</span>'
+            + '<span class="hint" style="margin:0">'+deg+' sus.'+(t.value?' · '+t.value+'p':'')+'</span>'
+            + '</div>';
+        }).join('');
+
+    var rows = list.querySelectorAll('[data-row]');
+    for (var r=0;r<rows.length;r++) rows[r].onclick = function(){
+      bmWork.selected = this.getAttribute('data-row'); bmPaint();
+    };
+
+    var problem = bmProblem();
+    status.innerHTML = problem
+      ? '<span style="color:var(--red,#c75146);font-weight:800">Ne može u igru: '+esc(problem)+'</span>'
+      : '<span style="color:var(--green,#2f8f5b);font-weight:800">Spremna za igru · '+bmWork.territories.length+' teritorija</span>';
+
+    var sel = bmById(bmWork.selected);
+    $('bm-sel').innerHTML = sel
+      ? '<b>'+esc(sel.name)+'</b> <span class="hint" style="margin:0">id: '+esc(sel.id)+'</span>'
+      : '<span class="hint" style="margin:0">Nijedna teritorija nije izabrana.</span>';
+    $('bm-rename').disabled = !sel;
+    $('bm-value').disabled = !sel;
+    $('bm-del').disabled = !sel;
+  }
+
+  function bmSetMode(mode){
+    bmWork.mode = mode;
+    bmWork.draft = [];
+    bmWork.linkFrom = null;
+    ['crtaj','uredi','susedi'].forEach(function(m){
+      var b = $('bm-mode-'+m); if (b) b.className = 'btn' + (m===mode ? ' btn-primary' : '');
+    });
+    $('bm-help').textContent =
+      mode === 'crtaj' ? 'Klikći po granici naselja. „Zatvori oblik" pravi teritoriju, „Poništi tačku" briše poslednju.'
+      : mode === 'susedi' ? 'Klikni jednu pa drugu teritoriju da uključiš ili isključiš susedstvo.'
+      : 'Klikni teritoriju da je izabereš. Zlatnu tačku prevuci da pomeriš ime.';
+    bmPaint();
+  }
+
+  function renderBitka(host, ctx){
+    var p = ctx.pack;
+    if (!p){ bmWork = null; host.innerHTML = '<div class="empty">Napravi mapu, pa otpremi sliku i iscrtaj teritorije.</div>'; return; }
+    if (!bmWork || bmWork.mapId !== p.id){
+      bmWork = {
+        mapId: p.id,
+        name: p.name || p.id,
+        description: p.description || '',
+        imageFile: p.imageFile || '',
+        imageUrl: p.imageUrl || '',
+        territories: JSON.parse(JSON.stringify(p.territories || [])),
+        mode: 'crtaj', draft: [], selected: null, linkFrom: null
+      };
+    }
+
+    host.innerHTML =
+      '<label class="lbl">Naziv mape (vidi se pri izboru igre)</label>'
+      + '<input class="field" id="bm-name" maxlength="80" value="'+esc(bmWork.name)+'" style="max-width:340px">'
+      + '<div style="display:flex;gap:.5rem;align-items:center;margin:.8rem 0">'
+      + '<button class="btn" id="bm-upload">'+(bmWork.imageFile ? 'Zameni sliku' : 'Otpremi sliku mape')+'</button>'
+      + '<input type="file" id="bm-file" accept="image/*" style="display:none">'
+      + '<span class="hint" style="margin:0">PNG, JPG ili WEBP, do ~6 MB. Zamena slike ne dira iscrtane teritorije.</span>'
+      + '</div>'
+      + (bmWork.imageUrl
+        ? '<div style="display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:1rem;align-items:start">'
+          + '<div>'
+          + '<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
+          + '<button class="btn" id="bm-mode-crtaj">Crtaj</button>'
+          + '<button class="btn" id="bm-mode-uredi">Izmeni</button>'
+          + '<button class="btn" id="bm-mode-susedi">Susedi</button>'
+          + '<span style="flex:1"></span>'
+          + '<button class="btn" id="bm-close-shape">Zatvori oblik</button>'
+          + '<button class="btn" id="bm-undo-point">Poništi tačku</button>'
+          + '</div>'
+          + '<p class="hint" id="bm-help" style="margin:0 0 .5rem"></p>'
+          + '<div id="bm-stage" style="position:relative;width:100%;background:#0b1728;border-radius:12px;overflow:hidden;user-select:none">'
+          + '<img id="bm-img" src="'+esc(bmWork.imageUrl)+'" style="display:block;width:100%;height:auto">'
+          + '<svg id="bm-svg" viewBox="0 0 1 1" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></svg>'
+          + '<div id="bm-labels" style="position:absolute;inset:0;pointer-events:none"></div>'
+          + '</div>'
+          + '</div>'
+          + '<div>'
+          + '<div class="lbl" style="margin-top:0">Teritorije</div>'
+          + '<div id="bm-list" style="max-height:320px;overflow:auto;margin-bottom:.6rem"></div>'
+          + '<div id="bm-sel" style="margin-bottom:.4rem"></div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:.4rem">'
+          + '<button class="btn" id="bm-rename">Preimenuj</button>'
+          + '<button class="btn" id="bm-value">Vrednost</button>'
+          + '<button class="btn" id="bm-del">Obriši</button>'
+          + '</div>'
+          + '<p id="bm-status" style="margin:.8rem 0 0"></p>'
+          + '<div style="margin-top:.8rem"><button class="btn btn-primary" id="bm-save">Sačuvaj mapu</button></div>'
+          + '</div>'
+          + '</div>'
+        : '<div class="empty">Otpremi sliku mape da bi mogao da crtaš teritorije.</div>');
+
+    $('bm-name').oninput = function(){ bmWork.name = this.value.trim(); };
+    $('bm-upload').onclick = function(){ $('bm-file').click(); };
+    $('bm-file').onchange = function(){
+      var file = this.files && this.files[0];
+      if (!file || file.type.indexOf('image/') !== 0){ showErr('Izaberi sliku.'); return; }
+      var reader = new FileReader();
+      reader.onerror = function(){ showErr('Ne mogu da pročitam fajl.'); };
+      reader.onload = function(){
+        var b = String(reader.result || '');
+        if (b.length > 8000000){ showErr('Slika je prevelika (max ~6 MB).'); return; }
+        $('bm-upload').disabled = true;
+        api('POST', '/api/admin/bitka-maps/' + p.id + '/file', { dataBase64: b })
+          .then(function(d){
+            bmWork.imageFile = d.file; bmWork.imageUrl = d.url;
+            return bmSave(ctx, 'Slika otpremljena.');
+          })
+          .catch(function(e){ showErr(e.message); })
+          .then(function(){ var b2 = $('bm-upload'); if (b2) b2.disabled = false; });
+      };
+      reader.readAsDataURL(file);
+    };
+
+    if (!bmWork.imageUrl) return;
+
+    var stage = $('bm-stage'), svg = $('bm-svg');
+    function pointAt(ev){
+      var rect = stage.getBoundingClientRect();
+      return {
+        x: bmRound(Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width))),
+        y: bmRound(Math.max(0, Math.min(1, (ev.clientY - rect.top) / rect.height)))
+      };
+    }
+
+    // Prevlačenje sidra imena. Sluša se na sloju sa sidrima (bubbling), a
+    // pomeranje/otpuštanje na celoj sceni da prst sme da izađe iz kruga.
+    var dragging = null, justDragged = false;
+    $('bm-labels').onpointerdown = function(ev){
+      var anchorId = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-anchor');
+      if (bmWork.mode !== 'uredi' || !anchorId) return;
+      dragging = anchorId;
+      stage.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    };
+    stage.onpointermove = function(ev){
+      if (!dragging) return;
+      var t = bmById(dragging); if (!t) return;
+      t.label = pointAt(ev);
+      justDragged = true;
+      bmPaint();
+    };
+    stage.onpointerup = function(ev){
+      if (!dragging) return;
+      dragging = null;
+      try { stage.releasePointerCapture(ev.pointerId); } catch (e) {}
+    };
+
+    stage.onclick = function(ev){
+      if (dragging) return;
+      if (justDragged){ justDragged = false; return; }
+      var pt = pointAt(ev);
+      if (bmWork.mode === 'crtaj'){
+        bmWork.draft.push(pt); bmPaint(); return;
+      }
+      var hit = bmHit(pt);
+      if (bmWork.mode === 'uredi'){
+        bmWork.selected = hit ? hit.id : null; bmPaint(); return;
+      }
+      if (!hit){ bmWork.linkFrom = null; bmPaint(); return; }
+      if (!bmWork.linkFrom){ bmWork.linkFrom = hit.id; bmPaint(); return; }
+      if (bmWork.linkFrom === hit.id){ bmWork.linkFrom = null; bmPaint(); return; }
+      var from = bmById(bmWork.linkFrom);
+      if (from) bmToggleLink(from, hit);
+      bmWork.linkFrom = null;
+      bmPaint();
+    };
+
+    $('bm-close-shape').onclick = function(){
+      if (bmWork.draft.length < 3){ showErr('Treba bar 3 tačke.'); return; }
+      var name = window.prompt('Ime teritorije:', '');
+      if (name == null) return;
+      name = name.trim();
+      if (!name){ showErr('Unesi ime.'); return; }
+      var t = { id: bmUniqueId(bmSlug(name)), name: name, polygon: bmWork.draft.slice(), neighbors: [] };
+      bmWork.territories.push(t);
+      bmWork.draft = [];
+      bmWork.selected = t.id;
+      bmPaint();
+    };
+    $('bm-undo-point').onclick = function(){ bmWork.draft.pop(); bmPaint(); };
+    ['crtaj','uredi','susedi'].forEach(function(m){
+      $('bm-mode-'+m).onclick = function(){ bmSetMode(m); };
+    });
+
+    $('bm-rename').onclick = function(){
+      var t = bmById(bmWork.selected); if (!t) return;
+      var name = window.prompt('Novo ime:', t.name);
+      if (name == null) return;
+      name = name.trim();
+      if (name) t.name = name;   // id ostaje isti da susedstva ne popucaju
+      bmPaint();
+    };
+    $('bm-value').onclick = function(){
+      var t = bmById(bmWork.selected); if (!t) return;
+      var raw = window.prompt('Vrednost u poenima (prazno = podrazumevanih 200):', t.value != null ? String(t.value) : '');
+      if (raw == null) return;
+      raw = raw.trim();
+      if (!raw) delete t.value;
+      else {
+        var n = parseInt(raw, 10);
+        if (!(n > 0)){ showErr('Unesi pozitivan broj.'); return; }
+        t.value = n;
+      }
+      bmPaint();
+    };
+    $('bm-del').onclick = function(){
+      var t = bmById(bmWork.selected); if (!t) return;
+      if (!window.confirm('Obrisati "' + t.name + '"?')) return;
+      bmWork.territories = bmWork.territories.filter(function(x){ return x.id !== t.id; });
+      bmWork.territories.forEach(function(x){
+        x.neighbors = (x.neighbors||[]).filter(function(id){ return id !== t.id; });
+      });
+      bmWork.selected = null;
+      bmPaint();
+    };
+    $('bm-save').onclick = function(){
+      $('bm-save').disabled = true;
+      bmSave(ctx, 'Mapa sačuvana.')
+        .catch(function(e){ showErr(e.message); })
+        .then(function(){ var b = $('bm-save'); if (b) b.disabled = false; });
+    };
+
+    bmSetMode(bmWork.mode);
+  }
+
+  function bmSave(ctx, okMsg){
+    var body = {
+      name: bmWork.name || bmWork.mapId,
+      description: bmWork.description,
+      imageFile: bmWork.imageFile,
+      territories: bmWork.territories
+    };
+    return ctx.putPack(body, okMsg);
+  }
+
+  window.AdminApp.register('bitka',    { renderMain: renderBitka });
   window.AdminApp.register('tajni',    { renderMain: renderTajni });
   window.AdminApp.register('gluvo',    { renderMain: renderGluvo });
   window.AdminApp.register('spijun',   { renderMain: renderSpijun });

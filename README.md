@@ -154,6 +154,7 @@ A `/health` endpoint backs the container healthcheck. Daily-rolling JSON logs go
 | `GLUVO_DOBA_PACKS_DIR` | `./gluvo-doba-packs` | Gluvo doba role packs |
 | `SPIJUN_PACKS_DIR` | `./spijun-packs` | Špijun location packs |
 | `ASOCIJACIJE_PACKS_DIR` | `./asocijacije-packs` | Asocijacije puzzle packs |
+| `BITKA_MAPS_DIR` | `./bitka-maps` | Osvajanje maps (manifest + uploaded image per map) |
 | `TIMING_CONFIG_FILE` | `./timing-config.json` | Admin-tuned wait-phase durations |
 | `RECNIK_FILE` | bundled asset | Serbian word list for Složilica (ships in the image; override only to swap dictionaries) |
 | `QUIZ_FEEDBACK_FILE` | `./quiz-feedback.json` | In-game question feedback log |
@@ -237,6 +238,28 @@ The deal stays balanced by player count — enabling everything can't hand the d
 }
 ```
 
+**Osvajanje** — `bitka-maps/<id>.json` plus a sibling `<id>/` folder holding the uploaded map image (served at `/bitka-files/<id>/<file>`). Maps are illustrations, not projections: every coordinate is normalized `[0, 1]` over the image, so there is no lat/lng anywhere. Hand-writing one works, but `/admin` → **Mape** traces the polygons over the image and links neighbours by clicking pairs, which is far less painful.
+
+```json
+{
+  "name": "Žabari",
+  "imageFile": "map.png",
+  "territories": [
+    {
+      "id": "porodin",
+      "name": "Porodin",
+      "polygon": [{ "x": 0.31, "y": 0.12 }, { "x": 0.48, "y": 0.15 }, { "x": 0.44, "y": 0.33 }],
+      "label": { "x": 0.4, "y": 0.2 },
+      "neighbors": ["simicevo"],
+      "value": 300
+    }
+  ],
+  "castleSites": ["porodin", "simicevo", "oreovica"]
+}
+```
+
+`neighbors` is symmetrized on load, so writing each pair once is enough. `label` (optional) is where the name and castle icon sit — handy when a concave shape's centroid falls outside it. `value` (optional) overrides the default 200 points; `castleSites` (optional) restricts where castles may be founded. To be playable a map needs an existing image, **at least 9 territories** and a **connected** neighbour graph — otherwise it stays editable but never appears at game-select.
+
 Pack manifests contain the answers, so the public listing endpoints return summaries only — never the content itself.
 
 ## Project structure
@@ -248,7 +271,8 @@ packages/
   host/         # TV display (Vite, port 5173, base /host/)
   controller/   # phone controller PWA (Vite, port 5174, base /play/)
 question-packs/ ko-sam-ja-packs/ tajni-agenti-packs/
-gluvo-doba-packs/ spijun-packs/ asocijacije-packs/    # editable content
+gluvo-doba-packs/ spijun-packs/ asocijacije-packs/
+bitka-maps/                                           # editable content
 docs/           # design references and planning notes
 CLAUDE.md       # architecture guide (also useful for humans)
 PLAN.md         # original implementation plan

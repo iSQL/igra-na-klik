@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen), players join from their phones as "controllers" via a room code or QR. Real-time over Socket.io. 17 mini-games (plus a `test-game` dev module that is registered server-side but deliberately absent from `GAME_DEFINITIONS`), all content and in-game text in Serbian (Latin) by design.
+**Igra Na Klik** — a self-hosted AirConsole-style party game platform. One device is the "host" (TV/big screen), players join from their phones as "controllers" via a room code or QR. Real-time over Socket.io. 18 mini-games (plus a `test-game` dev module that is registered server-side but deliberately absent from `GAME_DEFINITIONS`), all content and in-game text in Serbian (Latin) by design.
 
 ## Commands
 
@@ -90,7 +90,7 @@ Controllers collect touch points in **normalized 0–1 coordinates**, batch ever
 
 ## Content: packs, admin, timings
 
-Most games' content is **file-backed JSON packs** in repo-root directories (`question-packs/`, `ko-sam-ja-packs/`, `tajni-agenti-packs/`, `gluvo-doba-packs/`, `spijun-packs/`, `asocijacije-packs/`), each with an env override. Shared validators live in `packages/shared/src/games/*-import.ts` and are used by both the runtime and the admin API.
+Most games' content is **file-backed JSON packs** in repo-root directories (`question-packs/`, `ko-sam-ja-packs/`, `tajni-agenti-packs/`, `gluvo-doba-packs/`, `spijun-packs/`, `asocijacije-packs/`, `bitka-maps/`), each with an env override. Shared validators live in `packages/shared/src/games/*-import.ts` and are used by both the runtime and the admin API.
 
 - **Manifests carry answers**, so the public `GET /api/<x>-packs` endpoints return **summaries only**, and the kviz asset mount serves only files one level inside a pack folder and never `*.json`.
 - **Reads are lax, writes accept drafts**: a pack that fails the strict in-game check stays editable but invisible in-game (`visibleInGame` + `error` in the API response).
@@ -100,7 +100,7 @@ Most games' content is **file-backed JSON packs** in repo-root directories (`que
 
 ## Games
 
-All 16 game ids are in [registry.ts](packages/shared/src/games/registry.ts); server modules, host and controller components all live under matching `<id>/` folders. Non-obvious things worth knowing:
+All 18 game ids are in [registry.ts](packages/shared/src/games/registry.ts); server modules, host and controller components all live under matching `<id>/` folders (Osvajanje is the one exception — its folders are `bitka/`). Non-obvious things worth knowing:
 
 - **Kviz** (`quiz`) — the unified quiz that absorbed several former standalone games. Every question has a `type`: `obicno` / `audio` / `video` (YouTube) / `geo` (pin on map) / `broj` (slider) / `emoji` (fuzzy free text). The phase machine (`showing-question → answering → showing-results → leaderboard`) is type-independent; types only change what renders and which action is accepted. Scoring caps at 1000/question for every type ([scoring.ts](packages/server/src/game/games/quiz/scoring.ts)). Types + validator: [quiz.ts](packages/shared/src/types/quiz.ts), [quiz-import.ts](packages/shared/src/games/quiz-import.ts). Geo pins travel as normalized `{x,y}` and are reprojected via [serbia-projection.ts](packages/shared/src/games/serbia-projection.ts) (use `packLatLngToPin`/`packPinToLatLng` anywhere a pin meets a question — they pick mercator-bbox vs the calibrated Serbia projection). Pack selection is multi-select plus an optional question-type filter.
 - **Zavet** (id stays `bolji-zivot`) — Cabo-style memory card game, **lower score wins** (`lowerScoreWins` in the registry; leaderboards sort ascending — don't reuse descending components). Private peeks are sub-phase-scoped and never replayed on reconnect (memory *is* the game). Full rules: [docs/bolji-zivot-dizajn.md](docs/bolji-zivot-dizajn.md).
@@ -109,6 +109,7 @@ All 16 game ids are in [registry.ts](packages/shared/src/games/registry.ts); ser
 - **Asocijacije** — always a single board (deliberately *not* in `GAME_ROUND_CONFIG`); klasik and kviz modes.
 - **Penali** — the only `supportsHostless: false` game and the only 3D one. three.js lives exclusively in the host's lazy `penali` chunk ([PitchScene.ts](packages/host/src/games/penali/PitchScene.ts), vanilla three, no react-three-fiber, no assets — everything is primitives), so the main bundle is unaffected. Shooter and keeper commit **blind and simultaneously**: during `aiming` only commitment booleans may enter `hostData`, never the aim or the chosen zone. Balance constants in [penali-rules.ts](packages/shared/src/games/penali-rules.ts) were tuned by simulation (~73% goals / 24% saves; a shot down the middle is worth ~68 expected points against ~120 for one placed near a post) — re-simulate before changing them. A keeper who lets the clock run out scores 0 even if the ball comes to them, and the auto-shot for a timed-out shooter is jittered, so neither side can farm points by doing nothing.
 - **Složilica** — word builder backed by a 252k-word Serbian dictionary at `packages/server/assets/recnik/sr-recnik.txt` (static asset, **not** `DATA_DIR` content; ships in the Docker image via the existing `assets/` copy). Loaded **lazily and cached** by [recnik.ts](packages/server/src/recnik.ts) — only the first word game in the process pays the ~16 MB. `validateStart` refuses the game if the file is missing rather than running a game where nothing validates. Regenerate with `npx tsx scripts/build-recnik.ts`; sources and licences are in LICENSE.md. Anti-leak: during `pisanje` only per-player word *counts* go in the broadcast — never the words, and never `bestPossible`.
+- **Osvajanje** (folders are `bitka/`) — Triviador/Konquiztador: exactly 3 players, one castle each, questions decide who expands and who takes whose land. **Maps are content, not code**: drawn in `/admin` → Mape over an uploaded PNG and stored in `bitka-maps/<id>.json` (+ `<id>/` holding the image, served at `/bitka-files/<id>/<file>`). Maps are *illustrations*, so there is **no geography** — no lat/lng, no bbox, no `serbia-projection`; every coordinate is normalized `{x,y} ∈ [0,1]` over the image, the same space the kviz geo pins use. Questions come from the ordinary kviz packs via the shared `quizPackIds` field (obicno/uljez for duels, broj for the tiebreaker; `pogodi-broj` is the fallback and, failing that, speed decides). Attack resolution is a **pure function** ([duel.ts](packages/server/src/game/games/bitka/duel.ts)) — change outcomes there, not with if-branches in the module. The map's strict check (≥9 territories, connected neighbour graph, image present) is what gates `visibleInGame`; a half-drawn map stays editable but never reaches game-select. Headless end-to-end + anti-leak run: `npx tsx scripts/test-bitka.mts`.
 - **Tutorial mode** (Gluvo doba, Zavet, Špijun) — phase timers stop ticking and the host advances phases via a `*:next-phase` host action. Only the boolean `tutorialMode` is shared; hints are computed client-side from each player's own `playerData` so nothing leaks.
 
 ## i18n
@@ -135,7 +136,7 @@ The Express server is the single public entry point.
 
 ### Environment variables
 
-`PORT`, `HOST_ORIGIN` / `CONTROLLER_ORIGIN` (CORS), `SAME_ORIGIN_DEPLOY`, `SINGLE_ROOM_MODE` (+ `VITE_SINGLE_ROOM` for the controller) — auto-fill the active room code; `ADMIN_TOKEN` (unset = admin disabled), `DATA_DIR` / `SEED_DIR`, the per-content overrides `QUESTION_PACKS_DIR` / `KO_SAM_JA_PACKS_DIR` / `TAJNI_AGENTI_PACKS_DIR` / `GLUVO_DOBA_PACKS_DIR` / `SPIJUN_PACKS_DIR` / `ASOCIJACIJE_PACKS_DIR`, `TIMING_CONFIG_FILE`, `RECNIK_FILE` (Složilica word list; defaults to the bundled asset), `QUIZ_FEEDBACK_FILE`, `LOG_DIR` / `LOG_RETENTION_DAYS`, `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR`.
+`PORT`, `HOST_ORIGIN` / `CONTROLLER_ORIGIN` (CORS), `SAME_ORIGIN_DEPLOY`, `SINGLE_ROOM_MODE` (+ `VITE_SINGLE_ROOM` for the controller) — auto-fill the active room code; `ADMIN_TOKEN` (unset = admin disabled), `DATA_DIR` / `SEED_DIR`, the per-content overrides `QUESTION_PACKS_DIR` / `KO_SAM_JA_PACKS_DIR` / `TAJNI_AGENTI_PACKS_DIR` / `GLUVO_DOBA_PACKS_DIR` / `SPIJUN_PACKS_DIR` / `ASOCIJACIJE_PACKS_DIR` / `BITKA_MAPS_DIR`, `TIMING_CONFIG_FILE`, `RECNIK_FILE` (Složilica word list; defaults to the bundled asset), `QUIZ_FEEDBACK_FILE`, `LOG_DIR` / `LOG_RETENTION_DAYS`, `HOST_DIST_DIR` / `CONTROLLER_DIST_DIR`.
 
 ## Gotchas
 

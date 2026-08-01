@@ -32,6 +32,7 @@ import { SpijunModule } from '../game/games/spijun/SpijunModule.js';
 import { AsocijacijeModule } from '../game/games/asocijacije/AsocijacijeModule.js';
 import { PenaliModule } from '../game/games/penali/PenaliModule.js';
 import { SlozilicaModule } from '../game/games/slozilica/SlozilicaModule.js';
+import { BitkaModule } from '../game/games/bitka/BitkaModule.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -40,7 +41,11 @@ import { hostRoom, playerRoom } from './rooms.js';
 export function setupSocket(
   httpServer: HttpServer,
   corsOrigins: string | string[],
-  options?: { questionPacksDir?: string; asocijacijePacksDir?: string }
+  options?: {
+    questionPacksDir?: string;
+    asocijacijePacksDir?: string;
+    bitkaMapsDir?: string;
+  }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
     ClientToServerEvents,
@@ -73,6 +78,7 @@ export function setupSocket(
   const gameRegistry = new GameRegistry();
   const questionPacksDir = options?.questionPacksDir ?? '';
   const asocijacijePacksDir = options?.asocijacijePacksDir ?? '';
+  const bitkaMapsDir = options?.bitkaMapsDir ?? '';
   gameRegistry.register(() => new TestGameModule());
   gameRegistry.register(() => new QuizGameModule(questionPacksDir));
   gameRegistry.register(() => new DrawGuessModule());
@@ -91,6 +97,7 @@ export function setupSocket(
   gameRegistry.register(() => new AsocijacijeModule(asocijacijePacksDir));
   gameRegistry.register(() => new PenaliModule());
   gameRegistry.register(() => new SlozilicaModule());
+  gameRegistry.register(() => new BitkaModule(questionPacksDir, bitkaMapsDir));
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 

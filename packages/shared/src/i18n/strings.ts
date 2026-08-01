@@ -356,6 +356,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Složilica',
     'game.slozilica.description':
       'Slova su podeljena, vreme teče — složi najdužu reč koju umeš. Duže reči nose mnogo više poena!',
+    'game.osvajanje.name': 'Osvajanje',
+    'game.osvajanje.description':
+      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Ko sruši tri zida tuđeg zamka, uzima sve!',
     'game.penali.name': 'Penali',
     'game.penali.description':
       'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
@@ -454,6 +457,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Šalji reči dok traje vreme — svako slovo smeš da upotrebiš onoliko puta koliko ti je podeljeno.',
     'game.slozilica.rule3':
       'Računa se tvoja najduža reč: 3 slova 30 poena, 7 slova 300, a 9 slova čak 650. Kad završiš, tapni „Gotov“ da runda ne čeka džabe.',
+    'game.osvajanje.blurb': 'Osvoji mapu kroz pitanja.',
+    'game.osvajanje.rule1':
+      'Tačno tri igrača. Svako bira svoj zamak, pa se kroz pitanja grabi slobodna zemlja.',
+    'game.osvajanje.rule2':
+      'U ratu napadaš suseda: oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
+    'game.osvajanje.rule3':
+      'Zamak ima tri zida. Ko ih sve sruši, uzima zamak i svu zemlju branioca — a branilac ispada.',
     'game.penali.blurb': 'Šutiraj, brani, pogodi ćošak.',
     'game.penali.rule1':
       'U svakom dvoboju jedan igrač šutira, a drugi brani — svi dođu na red.',
@@ -806,6 +816,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Word Builder',
     'game.slozilica.description':
       'Letters are dealt and the clock runs — build the longest word you can. Longer words score far more!',
+    'game.osvajanje.name': 'Conquest',
+    'game.osvajanje.description':
+      'Raise a castle, spread across the map through questions and attack your neighbours. Break three walls of a castle and you take everything!',
     'game.penali.name': 'Penalties',
     'game.penali.description':
       'Take the penalty or keep the goal — aim, judge the power and find the corner. The keeper picks a side blind!',
@@ -908,6 +921,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Submit words while the clock runs — each letter may be used as many times as it was dealt.',
     'game.slozilica.rule3':
       'Your longest word counts: 3 letters scores 30, seven scores 300, nine scores 650. Tap “Done” when you are finished so the round need not wait.',
+    'game.osvajanje.blurb': 'Conquer the map through questions.',
+    'game.osvajanje.rule1':
+      'Exactly three players. Everyone picks a castle, then free land is grabbed by answering questions.',
+    'game.osvajanje.rule2':
+      'In the war you attack a neighbour: both get the same question. The only one who is right wins it; if you match, a number question decides.',
+    'game.osvajanje.rule3':
+      'A castle has three walls. Break them all and you take the castle and every territory its owner held — and they are out.',
     'game.penali.blurb': 'Shoot, dive, find the corner.',
     'game.penali.rule1':
       'Each duel pairs one shooter with one keeper — everyone gets both roles.',
