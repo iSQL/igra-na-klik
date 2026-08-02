@@ -180,3 +180,17 @@ button {
     opacity: 1;
   }
 }
+
+/* Osvajanje: teritorija koju igrač na potezu sme da uzme — diše, da se ne
+   izgubi u crtežu mape. */
+@keyframes igra-bitka-ponuda {
+  0%,
+  100% {
+    fill-opacity: 0.42;
+    stroke-opacity: 1;
+  }
+  50% {
+    fill-opacity: 0.16;
+    stroke-opacity: 0.6;
+  }
+}

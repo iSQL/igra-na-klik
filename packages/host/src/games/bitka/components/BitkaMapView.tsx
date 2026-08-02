@@ -103,12 +103,18 @@ export function BitkaMapView({
               key={t.id}
               points={t.polygon.map((p) => `${p.x},${p.y}`).join(' ')}
               fill={ownerColor(st?.ownerId ?? null)}
-              fillOpacity={owned ? (isFocus ? 0.62 : 0.45) : isPick ? 0.28 : 0.16}
+              fillOpacity={owned ? (isFocus ? 0.62 : 0.45) : isPick ? 0.42 : 0.16}
               stroke={isFocus ? '#F2CE74' : isPick ? '#F2CE74' : 'rgba(255,255,255,0.9)'}
-              strokeWidth={isFocus ? 5 : isPick ? 3 : 2}
-              strokeDasharray={isPick && !isFocus ? '8 5' : undefined}
+              strokeWidth={isFocus ? 5 : isPick ? 6 : 2}
+              strokeDasharray={isPick && !isFocus ? '10 6' : undefined}
               vectorEffect="non-scaling-stroke"
-              style={isFocus ? { animation: 'igra-pop 0.5s ease-out' } : undefined}
+              style={
+                isFocus
+                  ? { animation: 'igra-pop 0.5s ease-out' }
+                  : isPick
+                    ? { animation: 'igra-bitka-ponuda 1.1s ease-in-out infinite' }
+                    : undefined
+              }
             />
           );
         })}

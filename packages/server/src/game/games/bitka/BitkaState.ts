@@ -11,10 +11,9 @@ import type {
 // Faze čekanja (podesive kroz /admin → Timinzi).
 export const UVOD_DURATION = 7;
 export const PITANJE_NAJAVA_DURATION = 4;
-// Kratko namerno: tačan odgovor se posle ove pauze i dalje vidi, jer ostaje na
-// ekranu kroz fazu biranja teritorije. Pauza služi samo da se rezultat primeti,
-// ne da se u njega gleda.
-export const REZULTAT_DURATION = 3;
+// Otkrivanje se gleda na ekranu pitanja — vidi se ko je šta odabrao i šta je
+// tačno — pa mora da traje bar koliko treba da se to pročita.
+export const REZULTAT_DURATION = 4;
 export const DUEL_REZULTAT_DURATION = 6;
 export const LEADERBOARD_DURATION = 14;
 

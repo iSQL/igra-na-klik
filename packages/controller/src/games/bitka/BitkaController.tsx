@@ -6,6 +6,7 @@ import {
   type BitkaFxEvent,
   type BitkaFxSnapshot,
   type BitkaHostData,
+  type BitkaPlayerView,
   type BitkaTerritoryState,
 } from '@igra/shared';
 import { socket } from '../../socket';
@@ -153,6 +154,7 @@ export default function BitkaController() {
           board={displayBoard}
           players={host.players}
           focusId={host.duel?.territoryId ?? null}
+          activePlayerId={host.activePlayerId ?? null}
           // Baš ovaj igrač NAJVIŠE treba da vidi kako mu je zamak pao — bez
           // ovoga je gledao samo trenutnu promenu boje na pola mape.
           fxEvents={fxEvents}
@@ -168,13 +170,24 @@ export default function BitkaController() {
   const guessing = phase === 'redosled-odgovor' || phase === 'duel-broj';
   const iAnswer = (host.expectedIds ?? []).includes(playerId);
 
-  if (answering && question?.kind === 'izbor' && iAnswer) {
+  // Otkrivanje ostaje na ekranu PITANJA: tu se vidi ko je šta odabrao i šta je
+  // tačno. Tek posle toga ide čist ekran za izbor teritorije.
+  const revealing = phase === 'osvajanje-rezultat' || phase === 'duel-rezultat';
+
+  if ((answering || revealing) && question?.kind === 'izbor' && iAnswer) {
+    const results = host.results ?? [];
+    const pickedBy = (index: number) =>
+      results
+        .filter((r) => r.optionIndex === index)
+        .map((r) => host.players.find((p) => p.playerId === r.playerId))
+        .filter((p): p is BitkaPlayerView => !!p);
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.9rem', gap: '0.7rem' }}>
-        {phase === 'duel-odgovor' && host.duel ? (
+        {phase.startsWith('duel') && host.duel ? (
           <DuelBanner host={host} me={me} seconds={seconds} />
         ) : (
-          <Muted>Osvajanje · {seconds}s</Muted>
+          <Muted>{revealing ? 'Tačan odgovor' : `Osvajanje · ${seconds}s`}</Muted>
         )}
         <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {question.text}
@@ -182,30 +195,73 @@ export default function BitkaController() {
         <div style={{ display: 'grid', gap: '0.6rem', flex: 1, alignContent: 'center' }}>
           {(question.options ?? []).map((o) => {
             const picked = me?.selectedIndex === o.index;
+            const correct = revealing && host.correctIndex === o.index;
+            const takers = revealing ? pickedBy(o.index) : [];
             return (
               <button
                 key={o.index}
-                disabled={me?.hasAnswered}
+                disabled={me?.hasAnswered || revealing}
                 onClick={() => {
                   haptics.success();
                   act('bitka:answer', { optionIndex: o.index });
                 }}
                 style={{
-                  padding: '1.1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.9rem 1rem',
                   fontSize: '1.05rem',
                   fontWeight: 800,
                   color: '#fff',
-                  background: o.color,
-                  border: picked ? '3px solid var(--text-primary)' : '3px solid transparent',
+                  textAlign: 'left',
+                  background: correct ? 'var(--success)' : o.color,
+                  border: correct
+                    ? '3px solid #fff'
+                    : picked
+                      ? '3px solid var(--text-primary)'
+                      : '3px solid transparent',
                   borderRadius: '14px',
-                  opacity: me?.hasAnswered && !picked ? 0.4 : 1,
+                  // U otkrivanju blede samo netačni; dok se odgovara, blede svi
+                  // osim onog koji sam izabrao.
+                  opacity: revealing ? (correct ? 1 : 0.45) : me?.hasAnswered && !picked ? 0.4 : 1,
                 }}
               >
-                {o.text}
+                {correct && <span style={{ fontSize: '1.1rem' }}>✓</span>}
+                <span style={{ flex: 1 }}>{o.text}</span>
+                {/* Ko je izabrao baš ovaj odgovor — po tome se vidi ko je
+                    pogodio, a ko je pao u istu zamku. */}
+                <span style={{ display: 'flex', gap: '0.2rem', flexShrink: 0 }}>
+                  {takers.map((p) => (
+                    <span
+                      key={p.playerId}
+                      title={p.name}
+                      style={{
+                        width: '1.7rem',
+                        height: '1.7rem',
+                        borderRadius: '50%',
+                        background: p.avatarColor,
+                        border:
+                          p.playerId === playerId ? '2px solid #fff' : '2px solid rgba(0,0,0,0.3)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      {p.avatarEmoji}
+                    </span>
+                  ))}
+                </span>
               </button>
             );
           })}
         </div>
+        {revealing && (
+          <Muted>
+            {results.some((r) => r.playerId === playerId && r.correct)
+              ? 'Pogodio si — biraš teritoriju.'
+              : 'Nisi pogodio ovaj put.'}
+          </Muted>
+        )}
       </div>
     );
   }
@@ -304,6 +360,7 @@ export default function BitkaController() {
           players={host.players}
           selectableIds={selectable}
           selectedId={chosen}
+          activePlayerId={host.activePlayerId ?? null}
           onSelect={send}
           fxEvents={fxEvents}
         />
@@ -328,20 +385,7 @@ export default function BitkaController() {
           {hostless ? (
             <BitkaHostlessPanel host={host} phase={phase} myPlayerId={playerId} />
           ) : (
-            <>
-              {phase.endsWith('-rezultat') && question?.kind === 'izbor' && host.correctIndex != null && (
-                <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
-                  Tačno: {question.options?.[host.correctIndex]?.text ?? ''}
-                </div>
-              )}
-              {phase.endsWith('-rezultat') && question?.kind === 'broj' && host.correctValue != null && (
-                <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
-                  Tačno: {host.correctValue}
-                  {question.unit ? ` ${question.unit}` : ''}
-                  {me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''}
-                </div>
-              )}
-            </>
+            <Reveal host={host} me={me} />
           )}
         </>
       }
@@ -366,6 +410,7 @@ export default function BitkaController() {
         board={displayBoard}
         players={host.players}
         focusId={host.duel?.territoryId ?? null}
+        activePlayerId={host.activePlayerId ?? null}
         fxEvents={fxEvents}
       />
     </MapStage>
@@ -606,6 +651,31 @@ function Big({ children }: { children: React.ReactNode }) {
     <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
       {children}
     </p>
+  );
+}
+
+/**
+ * Tačan odgovor na upravo završeno pitanje.
+ *
+ * Ne gleda se faza nego prisustvo polja: server `correctIndex`/`correctValue`
+ * šalje isključivo kad je pitanje gotovo. Otkad otkrivanje nema svoju fazu
+ * (biranje kreće odmah), vezivanje za `*-rezultat` bi ga sakrilo baš onom
+ * igraču koji je pogodio i sad bira.
+ */
+function Reveal({ host, me }: { host: BitkaHostData; me: BitkaControllerData | undefined }) {
+  const q = host.question;
+  if (!q) return null;
+  const line =
+    q.kind === 'izbor' && host.correctIndex != null
+      ? `Tačno: ${q.options?.[host.correctIndex]?.text ?? ''}`
+      : q.kind === 'broj' && host.correctValue != null
+        ? `Tačno: ${host.correctValue}${q.unit ? ` ${q.unit}` : ''}${
+            me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''
+          }`
+        : null;
+  if (!line) return null;
+  return (
+    <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>{line}</div>
   );
 }
 

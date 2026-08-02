@@ -194,9 +194,12 @@ export class BitkaBoardScene {
         t.targetSide.set(NEUTRAL_SIDE);
       }
 
+      // Ponuđene teritorije se dižu skoro koliko i meta napada i jače pulsiraju
+      // — igrač koji je na potezu mora da ih razazna sa fotelje, bez traženja.
       const focused = input.focusId === st.id;
-      t.targetY = focused ? LIFT : highlight.has(st.id) ? LIFT * 0.45 : 0;
-      t.glow = focused ? 0.55 : highlight.has(st.id) ? 0.3 : 0;
+      const offered = highlight.has(st.id);
+      t.targetY = focused ? LIFT : offered ? LIFT * 0.85 : 0;
+      t.glow = focused ? 0.6 : offered ? 0.85 : 0;
 
       if (!t.toppling) {
         const hasCastle = !!st.castle && st.walls > 0;
@@ -476,7 +479,7 @@ export class BitkaBoardScene {
       t.side.color.lerp(t.targetSide, 1 - Math.exp(-6 * dt));
       // Ponuđene i napadnute teritorije dišu — isto značenje kao isprekidana
       // zlatna kontura na 2D mapi.
-      const pulse = t.glow > 0 ? t.glow * (0.55 + 0.45 * Math.sin(this.clock * 4)) : 0;
+      const pulse = t.glow > 0 ? t.glow * (0.45 + 0.55 * Math.sin(this.clock * 4)) : 0;
       t.cap.emissiveIntensity = pulse;
       const y = damp(t.mesh.position.y, t.targetY, 7, dt);
       t.mesh.position.y = y;

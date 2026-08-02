@@ -463,7 +463,7 @@ export class BitkaModule extends BaseGameModule {
     });
     const first = this.state.priority[0];
     this.state.lastEvent = first
-      ? `${this.nameOf(room, first)} bira prvi u slučaju sudara.`
+      ? `${this.nameOf(room, first)} je najbliži — bira zamak prvi.`
       : '';
     this.state.phase = 'redosled-rezultat';
     this.state.phaseTimeRemaining = this.timings.REZULTAT_DURATION ?? REZULTAT_DURATION;
@@ -628,6 +628,9 @@ export class BitkaModule extends BaseGameModule {
         ? 'Niko nije odgovorio tačno — niko ne uzima zemlju.'
         : `Tačno: ${this.state.pickQueue.map((id) => this.nameOf(room, id)).join(', ')}.`;
 
+    // Otkrivanje ima svoju fazu i ostaje na ekranu PITANJA: tu se vidi ko je
+    // šta odabrao i koji je odgovor tačan. Tek sledeći ekran je izbor
+    // teritorije, i on je čist — bez pitanja.
     this.state.phase = 'osvajanje-rezultat';
     this.state.phaseTimeRemaining = this.timings.REZULTAT_DURATION ?? REZULTAT_DURATION;
   }
@@ -1232,10 +1235,6 @@ export class BitkaModule extends BaseGameModule {
       phase === 'osvajanje-pitanje' ||
       phase === 'osvajanje-odgovor' ||
       phase === 'osvajanje-rezultat' ||
-      // Pitanje se vidi i DOK se bira teritorija: nekad se čekalo da otkrivanje
-      // istekne pa da izbor počne, što je bilo mrtvo vreme. Sada izbor kreće
-      // odmah, a tačan odgovor i dalje stoji na ekranu pored njega.
-      phase === 'osvajanje-izbor' ||
       phase === 'duel-pitanje' ||
       phase === 'duel-odgovor' ||
       phase === 'duel-broj' ||
@@ -1243,9 +1242,6 @@ export class BitkaModule extends BaseGameModule {
     const revealing =
       phase === 'redosled-rezultat' ||
       phase === 'osvajanje-rezultat' ||
-      // Isto: pitanje je gotovo i odgovori su zaključani, pa otkrivanje tačnog
-      // ovde ništa ne odaje. Novo pitanje ionako počinje tek u `beginOsvajanje`.
-      phase === 'osvajanje-izbor' ||
       phase === 'duel-rezultat';
 
     const hostData: BitkaHostData = {

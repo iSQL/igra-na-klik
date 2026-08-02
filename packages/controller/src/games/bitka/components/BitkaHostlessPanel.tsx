@@ -124,8 +124,6 @@ function Body({
               : 'Poslednji izbor u ovoj rundi.'}
           </Small>
         )}
-        {/* Pitanje ostaje vidljivo i tokom biranja — otkriveno je maločas. */}
-        {host.question && <Question host={host} revealing />}
       </Card>
     );
   }
@@ -201,10 +199,21 @@ function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
           {q.options.map((o) => {
             const right = revealing && host.correctIndex === o.index;
+            // Ko je izabrao baš ovaj odgovor — isto kao na TV-u i na ekranu
+            // pitanja, pa se ishod svuda čita na isti način.
+            const takers = revealing
+              ? (host.results ?? [])
+                  .filter((r) => r.optionIndex === o.index)
+                  .map((r) => host.players.find((p) => p.playerId === r.playerId))
+                  .filter((p): p is BitkaPlayerView => !!p)
+              : [];
             return (
               <span
                 key={o.index}
                 style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
                   padding: '0.15rem 0.45rem',
                   borderRadius: '7px',
                   fontSize: '0.72rem',
@@ -214,7 +223,13 @@ function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean
                   opacity: revealing && !right ? 0.3 : 1,
                 }}
               >
-                {o.text}
+                {right && <span>✓</span>}
+                <span>{o.text}</span>
+                {takers.map((p) => (
+                  <span key={p.playerId} style={{ fontSize: '0.8rem' }}>
+                    {p.avatarEmoji}
+                  </span>
+                ))}
               </span>
             );
           })}

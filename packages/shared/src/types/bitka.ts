@@ -74,7 +74,7 @@ export interface BitkaMapView {
 
 export type BitkaPhase =
   | 'uvod'
-  // Broj-pitanje koje određuje prioritet (rešava sudare pri izboru baze).
+  // Broj-pitanje koje određuje redosled postavljanja zamkova.
   | 'redosled-pitanje'
   | 'redosled-odgovor'
   | 'redosled-rezultat'
@@ -115,7 +115,7 @@ export interface BitkaPlayerView {
   /** Preostali zidovi zamka; 0 kad je zamak pao. */
   walls: number;
   eliminated: boolean;
-  /** 1 = najbolji rezultat na pitanju redosleda; rešava sudare. */
+  /** 1 = najbolji rezultat na pitanju redosleda; taj prvi bira zamak. */
   priority: number;
 }
 

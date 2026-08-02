@@ -358,6 +358,7 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
   }
 
   if (phase === 'osvajanje-izbor') {
+    // Čist ekran: pitanje i tačan odgovor su odgledani u prethodnoj fazi.
     return (
       <Line
         title={`${named(host.activePlayerId)} bira slobodnu teritoriju`}
@@ -399,20 +400,50 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
             {q.options.map((o) => {
               const right = revealing && host.correctIndex === o.index;
+              // Ko je izabrao baš ovaj odgovor — avatari sede na samoj opciji,
+              // pa se ceo ishod pitanja čita sa jednog mesta.
+              const takers = revealing
+                ? (host.results ?? [])
+                    .filter((r) => r.optionIndex === o.index)
+                    .map((r) => host.players.find((p) => p.playerId === r.playerId))
+                    .filter((p): p is BitkaPlayerView => !!p)
+                : [];
               return (
                 <span
                   key={o.index}
                   style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
                     padding: '0.3rem 0.8rem',
                     borderRadius: '10px',
                     background: right ? 'var(--success)' : o.color,
+                    border: right ? '2px solid #fff' : '2px solid transparent',
                     opacity: revealing && !right ? 0.35 : 1,
                     color: '#fff',
                     fontWeight: 700,
                     transition: 'opacity 0.25s',
                   }}
                 >
-                  {o.text}
+                  {right && <span>✓</span>}
+                  <span>{o.text}</span>
+                  {takers.map((p) => (
+                    <span
+                      key={p.playerId}
+                      style={{
+                        width: '1.7rem',
+                        height: '1.7rem',
+                        borderRadius: '50%',
+                        background: p.avatarColor,
+                        border: '2px solid rgba(0,0,0,0.35)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      {p.avatarEmoji}
+                    </span>
+                  ))}
                 </span>
               );
             })}
@@ -432,21 +463,24 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        {(host.expectedIds ?? []).map((id) => {
-          const p = host.players.find((x) => x.playerId === id);
-          if (!p) return null;
-          const result = host.results?.find((r) => r.playerId === id);
-          const label = revealing
-            ? result?.correct
-              ? 'tačno'
-              : 'netačno'
-            : answered.has(id)
-              ? 'odgovorio'
-              : '…';
-          return <Chip key={id} player={p} dim={!revealing && !answered.has(id)} label={label} good={revealing ? result?.correct : undefined} />;
-        })}
-      </div>
+      {/* Dok se odgovara — ko je već potvrdio. U otkrivanju ovo nestaje, jer
+          avatari tada stoje na samim opcijama i ovo bi bilo isto dvaput. */}
+      {!revealing && (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {(host.expectedIds ?? []).map((id) => {
+            const p = host.players.find((x) => x.playerId === id);
+            if (!p) return null;
+            return (
+              <Chip
+                key={id}
+                player={p}
+                dim={!answered.has(id)}
+                label={answered.has(id) ? 'odgovorio' : '…'}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

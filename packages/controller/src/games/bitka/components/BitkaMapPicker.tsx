@@ -35,6 +35,8 @@ interface BitkaMapPickerProps {
   selectableIds?: string[];
   selectedId?: string | null;
   focusId?: string | null;
+  /** Ko je na potezu — njegov zamak pulsira, da se vidi ko trenutno igra. */
+  activePlayerId?: string | null;
   onSelect?: (territoryId: string) => void;
   /**
    * Popuni sav prostor koji roditelj da (roditelj mora biti flex sa
@@ -76,6 +78,7 @@ export function BitkaMapPicker({
   selectableIds,
   selectedId,
   focusId,
+  activePlayerId,
   onSelect,
   fill,
   maxHeightCss = '46dvh',
@@ -373,11 +376,18 @@ export function BitkaMapPicker({
                 key={t.id}
                 points={t.polygon.map((p) => `${p.x},${p.y}`).join(' ')}
                 fill={ownerColor(st?.ownerId ?? null)}
-                fillOpacity={isSelected ? 0.72 : owned ? 0.45 : isPick ? 0.3 : 0.14}
+                fillOpacity={isSelected ? 0.72 : owned ? 0.45 : isPick ? 0.42 : 0.14}
                 stroke={isSelected || isFocus ? '#F2CE74' : isPick ? '#F2CE74' : 'rgba(255,255,255,0.85)'}
-                strokeWidth={isSelected || isFocus ? 4 : isPick ? 3 : 1.5}
-                strokeDasharray={isPick && !isSelected && !isFocus ? '6 4' : undefined}
+                strokeWidth={isSelected || isFocus ? 4 : isPick ? 5 : 1.5}
+                strokeDasharray={isPick && !isSelected && !isFocus ? '8 5' : undefined}
                 vectorEffect="non-scaling-stroke"
+                // Ponuđene teritorije dišu — na malom ekranu se isprekidana
+                // linija sama po sebi lako izgubi u crtežu mape.
+                style={
+                  isPick && !isSelected && !isFocus
+                    ? { animation: 'igra-bitka-ponuda 1.1s ease-in-out infinite' }
+                    : undefined
+                }
               />
             );
           })}
@@ -444,6 +454,7 @@ export function BitkaMapPicker({
         {map.territories.map((t) => {
           const st = stateById.get(t.id);
           if (!st?.castle || st.walls <= 0) return null;
+          const active = !!activePlayerId && st.ownerId === activePlayerId;
           return (
             <div
               key={t.id}
@@ -461,7 +472,16 @@ export function BitkaMapPicker({
                 filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))',
               }}
             >
-              <span style={{ fontSize: '1.1rem' }}>🏰</span>
+              <span
+                className={active ? 'bitka-castle-active' : undefined}
+                style={{
+                  fontSize: active ? '1.4rem' : '1.1rem',
+                  display: 'inline-block',
+                  lineHeight: 1,
+                }}
+              >
+                🏰
+              </span>
               {/* Koliko je zidova ostalo mora da se vidi i na telefonu —
                   bez toga se ne zna koliko je zamak blizu pada. */}
               <span style={{ display: 'flex', gap: '2px' }}>

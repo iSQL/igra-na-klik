@@ -534,3 +534,35 @@ textarea {
     opacity: 0;
   }
 }
+
+/* Osvajanje: teritorija koju igrač na potezu sme da uzme — diše, da se ne
+   izgubi u crtežu mape. */
+@keyframes igra-bitka-ponuda {
+  0%,
+  100% {
+    fill-opacity: 0.42;
+    stroke-opacity: 1;
+  }
+  50% {
+    fill-opacity: 0.16;
+    stroke-opacity: 0.6;
+  }
+}
+
+/* Osvajanje: zamak igrača koji je na potezu diše. Telefon nema 3D teren gde
+   se zamak fizički uveća, pa je puls jedini znak ko trenutno igra. */
+@keyframes igra-bitka-zamak {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(242, 206, 116, 0.65));
+  }
+  50% {
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 12px rgba(242, 206, 116, 1));
+  }
+}
+
+.bitka-castle-active {
+  animation: igra-bitka-zamak 1.2s ease-in-out infinite;
+}

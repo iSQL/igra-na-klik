@@ -52,11 +52,6 @@ const NEVER = ['answer', 'options.correct', 'selectedIndex', 'myGuess', 'baseCho
 const REVEAL_PHASES = new Set([
   'redosled-rezultat',
   'osvajanje-rezultat',
-  // Otkriveni odgovor NAMERNO preživi u fazu biranja teritorije: pitanje je
-  // završeno i odgovori su zaključani, a izbor kreće odmah umesto da se čeka
-  // da otkrivanje istekne. Novo pitanje počinje tek u `beginOsvajanje`, pa se
-  // ovim ništa ne odaje unapred.
-  'osvajanje-izbor',
   'duel-rezultat',
   'rezultat',
   'ended',
