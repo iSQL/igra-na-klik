@@ -112,7 +112,7 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
   },
   {
     gameId: 'osvajanje',
-    gameName: 'Osvajanje',
+    gameName: 'Lokalni megdan',
     fields: [
       { key: 'UVOD_DURATION', label: 'Uvod (upoznavanje mape)', min: 3, max: 20, def: 7 },
       { key: 'PITANJE_NAJAVA_DURATION', label: 'Čitanje pitanja pre odgovaranja', min: 2, max: 12, def: 4 },

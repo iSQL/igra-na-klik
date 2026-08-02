@@ -38,8 +38,8 @@ const PHASE_TITLE: Record<string, string> = {
   'redosled-odgovor': 'Ko bira prvi?',
   'redosled-rezultat': 'Redosled je određen',
   'baza-izbor': 'Podignite zamkove',
-  'osvajanje-pitanje': 'Osvajanje',
-  'osvajanje-odgovor': 'Osvajanje',
+  'osvajanje-pitanje': 'Osvajanje zemlje',
+  'osvajanje-odgovor': 'Osvajanje zemlje',
   'osvajanje-rezultat': 'Tačan odgovor',
   'osvajanje-izbor': 'Biranje teritorije',
   'napad-izbor': 'Izbor mete',
@@ -196,7 +196,7 @@ export default function BitkaHost() {
             color: 'var(--text-primary)',
           }}
         >
-          {PHASE_TITLE[phase ?? ''] ?? 'Osvajanje'}
+          {PHASE_TITLE[phase ?? ''] ?? 'Lokalni megdan'}
         </h1>
         <span style={{ color: 'var(--dim)', fontSize: '1rem' }}>
           {host.round > 0
@@ -204,7 +204,7 @@ export default function BitkaHost() {
                 host.mode === 'runde' ? `/${host.totalRounds}` : ''
               } · zamkova još ${host.players.filter((p) => p.walls > 0).length}`
             : host.osvajanjeRound
-              ? `Osvajanje · ${host.osvajanjeRound}. pitanje`
+              ? `Osvajanje zemlje · ${host.osvajanjeRound}. pitanje`
               : host.map.name}
         </span>
         <span style={{ flex: 1 }} />

@@ -242,18 +242,21 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   },
   osvajanje: {
     id: 'osvajanje',
-    name: 'Osvajanje',
+    // Ime igre je „Lokalni megdan"; id ostaje `osvajanje` jer po njemu idu
+    // sačuvani timinzi, podešavanja i putanje modula — preimenovanje ida bi
+    // bila migracija, ne kozmetika.
+    name: 'Lokalni megdan',
     // Jedan zamak po igraču. Platforma proverava samo minimum, pa modul
     // dodatno odbija start ako ih je više od tri.
     minPlayers: 2,
     maxPlayers: 3,
     description:
-      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Igra traje dok ne ostane samo jedan zamak!',
+      'Podigni zamak, širi se preko mape kroz pitanja i izađi susedu na megdan. Ko sruši tri zida — uzima ceo posed!',
     icon: '🏰',
     accent: 'gold',
     category: 'quiz',
-    // Bez zadatog broja rundi — traje dok ne padne pretposlednji zamak. Sa
-    // igračima koji dobro odgovaraju dueli češće idu na tiebreak, pa opsada
+    // Procena za mod „do poslednjeg zamka"; na runde je kraće i predvidivije.
+    // Sa igračima koji dobro odgovaraju dueli češće idu na tiebreak, pa opsada
     // traje; ovo je realna, ne najbolja procena.
     estimatedMinutes: 25,
     // Tabla (vlasništvo, zidovi, geometrija mape) ide u broadcast, pa telefon

@@ -187,7 +187,7 @@ export default function BitkaController() {
         {phase.startsWith('duel') && host.duel ? (
           <DuelBanner host={host} me={me} seconds={seconds} />
         ) : (
-          <Muted>{revealing ? 'Tačan odgovor' : `Osvajanje · ${seconds}s`}</Muted>
+          <Muted>{revealing ? 'Tačan odgovor' : `Osvajanje zemlje · ${seconds}s`}</Muted>
         )}
         <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {question.text}

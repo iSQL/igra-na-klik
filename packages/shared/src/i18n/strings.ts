@@ -356,9 +356,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Složilica',
     'game.slozilica.description':
       'Slova su podeljena, vreme teče — složi najdužu reč koju umeš. Duže reči nose mnogo više poena!',
-    'game.osvajanje.name': 'Osvajanje',
+    'game.osvajanje.name': 'Lokalni megdan',
     'game.osvajanje.description':
-      'Podigni zamak, širi se preko mape kroz pitanja i napadaj susede. Igra traje dok ne ostane samo jedan zamak!',
+      'Podigni zamak, širi se preko mape kroz pitanja i izađi susedu na megdan. Ko sruši tri zida — uzima ceo posed!',
     'game.penali.name': 'Penali',
     'game.penali.description':
       'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
@@ -459,11 +459,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Računa se tvoja najduža reč: 3 slova 30 poena, 7 slova 300, a 9 slova čak 650. Kad završiš, tapni „Gotov“ da runda ne čeka džabe.',
     'game.osvajanje.blurb': 'Osvoji mapu kroz pitanja.',
     'game.osvajanje.rule1':
-      'Dva ili tri igrača. Svako bira svoj zamak, pa se kroz pitanja grabi slobodna zemlja.',
+      'Dva ili tri igrača. Zamkove postavljate redom — prvi bira onaj sa najboljim uvodnim rezultatom, i svi vide gde se ko utvrdio.',
     'game.osvajanje.rule2':
-      'U ratu napadaš suseda: oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
+      'Na megdanu oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
     'game.osvajanje.rule3':
-      'Zamak ima tri zida. Ko ih sve sruši, uzima zamak i svu zemlju branioca — a branilac ispada. Igra traje dok ne ostane jedan.',
+      'Zamak ima tri zida — dok ih rušiš, ostaješ na potezu. Ko sruši i treći, uzima zamak i svu zemlju branioca. Domaćin bira da li se igra do poslednjeg zamka ili 6, 9 odnosno 12 rundi.',
     'game.penali.blurb': 'Šutiraj, brani, pogodi ćošak.',
     'game.penali.rule1':
       'U svakom dvoboju jedan igrač šutira, a drugi brani — svi dođu na red.',
@@ -816,9 +816,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Word Builder',
     'game.slozilica.description':
       'Letters are dealt and the clock runs — build the longest word you can. Longer words score far more!',
-    'game.osvajanje.name': 'Conquest',
+    'game.osvajanje.name': 'Local Showdown',
     'game.osvajanje.description':
-      'Raise a castle, spread across the map through questions and attack your neighbours. The game runs until only one castle is left standing!',
+      'Raise a castle, spread across the map through questions and call your neighbour out. Break three walls and the whole estate is yours!',
     'game.penali.name': 'Penalties',
     'game.penali.description':
       'Take the penalty or keep the goal — aim, judge the power and find the corner. The keeper picks a side blind!',
@@ -923,11 +923,11 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Your longest word counts: 3 letters scores 30, seven scores 300, nine scores 650. Tap “Done” when you are finished so the round need not wait.',
     'game.osvajanje.blurb': 'Conquer the map through questions.',
     'game.osvajanje.rule1':
-      'Two or three players. Everyone picks a castle, then free land is grabbed by answering questions.',
+      'Two or three players. Castles are placed in turn — best intro answer picks first, and every castle is visible as it goes down.',
     'game.osvajanje.rule2':
-      'In the war you attack a neighbour: both get the same question. The only one who is right wins it; if you match, a number question decides.',
+      'In a showdown both of you get the same question. The only one who is right wins it; if you match, a number question decides.',
     'game.osvajanje.rule3':
-      'A castle has three walls. Break them all and you take the castle and every territory its owner held — and they are out. Play runs until one is left.',
+      'A castle has three walls — you keep the turn while you are breaking them. Break the third and you take the castle and all of its land. The host picks a run to the last castle, or 6, 9 or 12 rounds.',
     'game.penali.blurb': 'Shoot, dive, find the corner.',
     'game.penali.rule1':
       'Each duel pairs one shooter with one keeper — everyone gets both roles.',

@@ -42,7 +42,7 @@ function Context({ host, phase }: { host: BitkaHostData; phase: string }) {
     host.round > 0
       ? `Rat · runda ${host.round} · zamkova još ${standing}`
       : host.osvajanjeRound
-        ? `Osvajanje · ${host.osvajanjeRound}. pitanje`
+        ? `Osvajanje zemlje · ${host.osvajanjeRound}. pitanje`
         : phase === 'uvod'
           ? host.map.name
           : host.map.name;
