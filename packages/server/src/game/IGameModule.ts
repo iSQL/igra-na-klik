@@ -4,6 +4,18 @@ export interface IGameModule {
   readonly gameId: string;
 
   /**
+   * Simulation interval for this module, ms. Defaults to the platform's 1s
+   * tick, which is all a turn-based game needs. Continuous-input games (Splav)
+   * set ~33ms and take over their own broadcasting via `getPendingFrame` —
+   * returning a full GameState 30×/s would re-send the roster and every
+   * per-player slice on every frame.
+   *
+   * `onTick` receives the real interval as `deltaMs`, so a module never has to
+   * assume one second.
+   */
+  readonly tickIntervalMs?: number;
+
+  /**
    * Optional hook called by GameManager before onStart, after the platform's
    * generic minPlayers check. Return a string to refuse the start with that
    * message (which is forwarded to the host as a START_ERROR), or null to
@@ -77,4 +89,17 @@ export interface IGameModule {
    * Implementations must clear the pending ops on read so they fire once.
    */
   getPendingOpsAppend?(): DrawOp[] | null;
+
+  /**
+   * Optional hook polled by GameManager after every tick. Lets a fast-tick
+   * module publish a compact positional snapshot as a tiny `game:frame`
+   * broadcast instead of a full state update — the same delta trick as
+   * `getPendingOpsAppend`, applied to a simulation instead of a drawing.
+   *
+   * Frames carry only public data (the whole room sees the arena anyway), so
+   * they are broadcast unfiltered. Full state snapshots remain the authority
+   * for phases, scores and rosters. Implementations must clear the pending
+   * frame on read so it fires once.
+   */
+  getPendingFrame?(): unknown | null;
 }

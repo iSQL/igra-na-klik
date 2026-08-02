@@ -40,7 +40,7 @@ The root `/` is a plain landing page (join CTA plus a subtle "create room" link)
 | Vruć krompir | 2–12 | 6 | Hidden-timer bomb passes around; say a word from the category |
 | Penali | 2–10 | 8 | 3D penalty shootout — aim and time your power, keeper dives blind (**needs a TV**) |
 | Složilica | 2–10 | 5 | 7/9/11 letters, up to two minutes — build the longest word; validated against a 252k-word Serbian dictionary |
-| Lokalni megdan | 2–3 | 25 | Triviador-style map conquest: raise a castle, grab land by answering, then break your neighbour's three walls (3D board on the TV) |
+| KvizAtar | 2–3 | 25 | Triviador-style map conquest: raise a castle, grab land by answering, then break your neighbour's three walls (3D board on the TV) |
 
 Public rules for every game: `/uputstva`. Gluvo doba has a dedicated rules page at `/gluvo-doba`.
 
@@ -155,7 +155,7 @@ A `/health` endpoint backs the container healthcheck. Daily-rolling JSON logs go
 | `GLUVO_DOBA_PACKS_DIR` | `./gluvo-doba-packs` | Gluvo doba role packs |
 | `SPIJUN_PACKS_DIR` | `./spijun-packs` | Špijun location packs |
 | `ASOCIJACIJE_PACKS_DIR` | `./asocijacije-packs` | Asocijacije puzzle packs |
-| `BITKA_MAPS_DIR` | `./bitka-maps` | Lokalni megdan maps (manifest + uploaded image per map) |
+| `BITKA_MAPS_DIR` | `./bitka-maps` | KvizAtar maps (manifest + uploaded image per map) |
 | `TIMING_CONFIG_FILE` | `./timing-config.json` | Admin-tuned wait-phase durations |
 | `RECNIK_FILE` | bundled asset | Serbian word list for Složilica (ships in the image; override only to swap dictionaries) |
 | `QUIZ_FEEDBACK_FILE` | `./quiz-feedback.json` | In-game question feedback log |
@@ -239,7 +239,7 @@ The deal stays balanced by player count — enabling everything can't hand the d
 }
 ```
 
-**Lokalni megdan** — `bitka-maps/<id>.json` plus a sibling `<id>/` folder holding the uploaded map image (served at `/bitka-files/<id>/<file>`). Maps are illustrations, not projections: every coordinate is normalized `[0, 1]` over the image, so there is no lat/lng anywhere. Hand-writing one works, but `/admin` → **Mape** traces the polygons over the image and links neighbours by clicking pairs, which is far less painful. Its questions come from the ordinary kviz packs, so a map needs no questions of its own. (Folders and ids still read `bitka` / `osvajanje` — the game was renamed, but renaming an id would mean migrating saved timings and settings.)
+**KvizAtar** — `bitka-maps/<id>.json` plus a sibling `<id>/` folder holding the uploaded map image (served at `/bitka-files/<id>/<file>`). Maps are illustrations, not projections: every coordinate is normalized `[0, 1]` over the image, so there is no lat/lng anywhere. Hand-writing one works, but `/admin` → **Mape** traces the polygons over the image and links neighbours by clicking pairs, which is far less painful. Its questions come from the ordinary kviz packs, so a map needs no questions of its own. (Folders and ids still read `bitka` / `osvajanje` — the game was renamed, but renaming an id would mean migrating saved timings and settings.)
 
 ```json
 {

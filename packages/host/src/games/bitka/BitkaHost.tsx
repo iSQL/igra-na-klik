@@ -196,7 +196,7 @@ export default function BitkaHost() {
             color: 'var(--text-primary)',
           }}
         >
-          {PHASE_TITLE[phase ?? ''] ?? 'Lokalni megdan'}
+          {PHASE_TITLE[phase ?? ''] ?? 'KvizAtar'}
         </h1>
         <span style={{ color: 'var(--dim)', fontSize: '1rem' }}>
           {host.round > 0

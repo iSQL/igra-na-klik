@@ -112,7 +112,7 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
   },
   {
     gameId: 'osvajanje',
-    gameName: 'Lokalni megdan',
+    gameName: 'KvizAtar',
     fields: [
       { key: 'UVOD_DURATION', label: 'Uvod (upoznavanje mape)', min: 3, max: 20, def: 7 },
       { key: 'PITANJE_NAJAVA_DURATION', label: 'Čitanje pitanja pre odgovaranja', min: 2, max: 12, def: 4 },
@@ -127,6 +127,15 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     fields: [
       { key: 'INTRO_DURATION', label: 'Najava dvoboja', min: 2, max: 15, def: 4 },
       { key: 'SHOT_DURATION', label: 'Snimak udarca', min: 4, max: 20, def: 7 },
+      { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 6 },
+    ],
+  },
+  {
+    gameId: 'splav',
+    gameName: 'Splav',
+    fields: [
+      { key: 'INTRO_DURATION', label: 'Najava runde', min: 2, max: 15, def: 4 },
+      { key: 'RUNDA_GOTOVA_DURATION', label: 'Prikaz kraja runde', min: 3, max: 20, def: 6 },
       { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 6 },
     ],
   },

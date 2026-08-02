@@ -356,12 +356,15 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Složilica',
     'game.slozilica.description':
       'Slova su podeljena, vreme teče — složi najdužu reč koju umeš. Duže reči nose mnogo više poena!',
-    'game.osvajanje.name': 'Lokalni megdan',
+    'game.osvajanje.name': 'KvizAtar',
     'game.osvajanje.description':
-      'Podigni zamak, širi se preko mape kroz pitanja i izađi susedu na megdan. Ko sruši tri zida — uzima ceo posed!',
+      'Podigni zamak, širi atar kroz pitanja i navali na suseda. Ko sruši tri zida — uzima ceo njegov posed!',
     'game.penali.name': 'Penali',
     'game.penali.description':
       'Šutiraj penal ili brani gol — nišani, odmeri snagu i pogodi ćošak. Golman bira stranu naslepo!',
+    'game.splav.name': 'Splav',
+    'game.splav.description':
+      'Sumo na splavu koji se smanjuje. Vozi džojstikom, čuvaj nalet za pravi trenutak i izguraj ostale u vodu — poslednji na splavu nosi rundu!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'Kako se igra →',
     'gameSelect.howToPlayLabel': 'Kako se igra',
@@ -461,7 +464,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.osvajanje.rule1':
       'Dva ili tri igrača. Zamkove postavljate redom — prvi bira onaj sa najboljim uvodnim rezultatom, i svi vide gde se ko utvrdio.',
     'game.osvajanje.rule2':
-      'Na megdanu oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
+      'U duelu oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
     'game.osvajanje.rule3':
       'Zamak ima tri zida — dok ih rušiš, ostaješ na potezu. Ko sruši i treći, uzima zamak i svu zemlju branioca. Domaćin bira da li se igra do poslednjeg zamka ili 6, 9 odnosno 12 rundi.',
     'game.penali.blurb': 'Šutiraj, brani, pogodi ćošak.',
@@ -471,6 +474,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Šuter nišani po golu i pušta prst kad je snaga prava; jače je opasnije, ali manje precizno.',
     'game.penali.rule3':
       'Golman naslepo bira jedan od šest uglova. Gol nosi 100 poena (ćošak 150), odbrana 150.',
+    'game.splav.blurb': 'Izguraj ostale sa splava.',
+    'game.splav.rule1':
+      'Svi ste na istom splavu, a on se stalno smanjuje i klizi — u sredini nema sigurnog mesta.',
+    'game.splav.rule2':
+      'Telefon je džojstik: levo voziš, desno je nalet. Samo nalet nekoga stvarno izbacuje, a puni se oko 2 sekunde.',
+    'game.splav.rule3':
+      'Poeni idu i za plasman i za guranje — svako koga izguraš vredi 120. Poslednji na splavu nosi rundu.',
   },
 
   en: {
@@ -816,12 +826,15 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.slozilica.name': 'Word Builder',
     'game.slozilica.description':
       'Letters are dealt and the clock runs — build the longest word you can. Longer words score far more!',
-    'game.osvajanje.name': 'Local Showdown',
+    'game.osvajanje.name': 'KvizAtar',
     'game.osvajanje.description':
-      'Raise a castle, spread across the map through questions and call your neighbour out. Break three walls and the whole estate is yours!',
+      'Raise a castle, grow your land through questions and go at your neighbour. Break three walls and the whole estate is yours!',
     'game.penali.name': 'Penalties',
     'game.penali.description':
       'Take the penalty or keep the goal — aim, judge the power and find the corner. The keeper picks a side blind!',
+    'game.splav.name': 'The Raft',
+    'game.splav.description':
+      'Sumo on a shrinking raft. Steer with the stick, save your dash for the right moment and shove everyone else into the water — last one aboard takes the round!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'How to play →',
     'gameSelect.howToPlayLabel': 'How to play',
@@ -925,7 +938,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.osvajanje.rule1':
       'Two or three players. Castles are placed in turn — best intro answer picks first, and every castle is visible as it goes down.',
     'game.osvajanje.rule2':
-      'In a showdown both of you get the same question. The only one who is right wins it; if you match, a number question decides.',
+      'In a duel both of you get the same question. The only one who is right wins it; if you match, a number question decides.',
     'game.osvajanje.rule3':
       'A castle has three walls — you keep the turn while you are breaking them. Break the third and you take the castle and all of its land. The host picks a run to the last castle, or 6, 9 or 12 rounds.',
     'game.penali.blurb': 'Shoot, dive, find the corner.',
@@ -935,6 +948,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'The shooter aims across the goal and releases at the right power; harder is scarier but less accurate.',
     'game.penali.rule3':
       'The keeper blindly picks one of six corners. A goal is 100 points (150 in the corner), a save 150.',
+    'game.splav.blurb': 'Shove everyone off the raft.',
+    'game.splav.rule1':
+      'Everyone shares one raft, and it keeps shrinking and drifting — the middle is no safe spot.',
+    'game.splav.rule2':
+      'The phone is a joystick: steer on the left, dash on the right. Only a dash really ejects someone, and it recharges in about 2 seconds.',
+    'game.splav.rule3':
+      'Points come from placing and from shoving — every player you push in is worth 120. Last one aboard takes the round.',
   },
 };
 

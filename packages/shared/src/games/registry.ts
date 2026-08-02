@@ -240,18 +240,35 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // stiže i do telefona, pa se ceo tok vidi i bez TV-a.
     supportsHostless: true,
   },
+  splav: {
+    id: 'splav',
+    name: 'Splav',
+    // Two is a straight duel and plays fine — the raft shrinks either way.
+    // Above eight it's a scrum where nobody can tell whose capsule is whose.
+    minPlayers: 2,
+    maxPlayers: 8,
+    description:
+      'Sumo na splavu koji se smanjuje. Vozi džojstikom, čuvaj nalet za pravi trenutak i izguraj ostale u vodu — poslednji na splavu nosi rundu!',
+    icon: '🛶',
+    accent: 'cyan',
+    category: 'action',
+    estimatedMinutes: 6,
+    // NOT hostless: the arena IS the game and it lives on the TV. A phone-only
+    // version would be a joystick pointed at nothing.
+    supportsHostless: false,
+  },
   osvajanje: {
     id: 'osvajanje',
-    // Ime igre je „Lokalni megdan"; id ostaje `osvajanje` jer po njemu idu
+    // Ime igre je „KvizAtar"; id ostaje `osvajanje` jer po njemu idu
     // sačuvani timinzi, podešavanja i putanje modula — preimenovanje ida bi
     // bila migracija, ne kozmetika.
-    name: 'Lokalni megdan',
+    name: 'KvizAtar',
     // Jedan zamak po igraču. Platforma proverava samo minimum, pa modul
     // dodatno odbija start ako ih je više od tri.
     minPlayers: 2,
     maxPlayers: 3,
     description:
-      'Podigni zamak, širi se preko mape kroz pitanja i izađi susedu na megdan. Ko sruši tri zida — uzima ceo posed!',
+      'Podigni zamak, širi atar kroz pitanja i navali na suseda. Ko sruši tri zida — uzima ceo njegov posed!',
     icon: '🏰',
     accent: 'gold',
     category: 'quiz',

@@ -174,6 +174,21 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'shame',
     subtitle: 'Golman koji se nije ni pomerio',
   },
+  // Splav
+  bager: {
+    id: 'bager',
+    title: 'Bager',
+    emoji: '🚜',
+    tone: 'positive',
+    subtitle: 'Najviše izguranih u vodu',
+  },
+  'kapetan-splava': {
+    id: 'kapetan-splava',
+    title: 'Kapetan splava',
+    emoji: '🛶',
+    tone: 'positive',
+    subtitle: 'Najviše dobijenih rundi',
+  },
   // Neutral fillers — guarantee everyone gets a diploma
   'dusa-drustva': {
     id: 'dusa-drustva',

@@ -29,6 +29,9 @@ export const GAME_ROUND_CONFIG: Record<string, GameRoundConfig> = {
   // Složilica: a "round" is one set of seven letters — each takes a full
   // minute plus the reveal, so three is already a decent sitting.
   slozilica: { options: [1, 2, 3], default: 3, min: 1, max: 3 },
+  // Splav: a "round" is one raft — 20–40s of fighting — so the table only
+  // settles after a handful of them.
+  splav: { options: [4, 6, 8], default: 6, min: 2, max: 12 },
   // Asocijacije is intentionally NOT here — a game is always a single board.
   // Osvajanje isn't here either — the war runs until one castle is left
   // standing, so a round count would only cut the game short (see

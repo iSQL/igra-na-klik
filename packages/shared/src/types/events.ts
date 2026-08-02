@@ -55,6 +55,12 @@ export interface ServerToClientEvents {
   // the operations array in data.host; full snapshots (undo/clear/phase
   // changes/reconnect) remain the authority and replace it wholesale.
   'game:ops-append': (data: { gameId: string; ops: DrawOp[] }) => void;
+  // Compact positional snapshot from a fast-tick game (Splav), broadcast
+  // ~15×/s in place of a full game:state-update — which would re-send the
+  // roster, scores and per-player slices on every simulation frame. Carries
+  // nothing private, so it goes to the whole room unfiltered; the shape is
+  // per-game (SplavFrame), so consumers cast after checking `gameId`.
+  'game:frame': (data: { gameId: string; frame: unknown }) => void;
   'game:ended': (data: {
     finalScores: { playerId: string; score: number }[];
     // Funny consolation diplomas — one per player (see games/awards.ts). May be

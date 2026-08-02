@@ -26,7 +26,7 @@ Postojećih 17 igara po kategorijama:
 | brzina | Pronađi par, Vruć krompir |
 | timska | Gluvo doba, Tajni agenti |
 | kartaška | Zavet |
-| akcija | Penali |
+| akcija | Penali, Splav |
 | reč igra | Složilica |
 
 Ponuda je **zasićena u blefu, crtanju i kvizu**. Od tri žanra kojih nije bilo,
@@ -47,6 +47,10 @@ postoje. Druga grupa ispod cilja tačno te praznine.
 **Minimalno proširenje** za igre iz Tier 3: opcioni `tickIntervalMs` na
 [IGameModule](../../packages/server/src/game/IGameModule.ts), da akcioni modul
 uđe u brzu petlju bez diranja ostalih 16 igara. `onTick` već prima `deltaMs`.
+
+> ✅ **Ovo je urađeno** uz Splav: `tickIntervalMs` postoji, brzi modul dobija
+> *stvarno* proteklo vreme kao `deltaMs` (sekundna petlja i dalje dobija tačno
+> `1000`), a delta broadcast ide kroz `getPendingFrame` → `game:frame`.
 
 ## Dva ograničenja koja diktiraju dizajn
 
@@ -78,7 +82,10 @@ Tu platforma stvarno dobija novu sposobnost.
 
 - [kotrljanje.md](kotrljanje.md) — Trka kuglica niz stazu ⭐
 - [lavirint.md](lavirint.md) — Kooperativni lavirint, svi naginju istu ploču ⭐
-- [splav.md](splav.md) — Sumo arena koja se smanjuje
+- ~~[splav.md](splav.md)~~ (✅ implementirano kao **Splav**) — sumo arena koja se
+  smanjuje. Time je i uvedena infrastruktura za ceo Tier 3: `tickIntervalMs` na
+  [IGameModule](../../packages/server/src/game/IGameModule.ts) i delta broadcast
+  preko `getPendingFrame` → `game:frame`. Sledeća kontinualna igra ih zatiče gotove.
 - [trka-do-vrha.md](trka-do-vrha.md) — Endless runner sa trakama
 
 ## Druga grupa — popunjavanje praznina

@@ -39,6 +39,12 @@ interface ActiveGame {
   lastSignature: string;
   gameId: string;
   startedAt: number;
+  /** This module's tick interval (1s for everything but fast-tick games). */
+  tickMs: number;
+  /** Sub-second remainder, so a fast tick still emits one game:timer per second. */
+  timerAccumMs: number;
+  /** Wall clock of the previous tick — only consulted by fast-tick modules. */
+  lastTickAt: number;
 }
 
 export class GameManager {
@@ -116,9 +122,12 @@ export class GameManager {
       .emit('game:started', { gameId, gameState: stripPlayerData(gameState) });
     this.io.to(hosts).emit('game:started', { gameId, gameState });
 
+    // Turn-based games keep the 1s platform tick; a continuous-input game
+    // asks for its own (see IGameModule.tickIntervalMs).
+    const tickMs = module.tickIntervalMs ?? 1000;
     const intervalId = setInterval(() => {
       this.tick(roomCode);
-    }, 1000);
+    }, tickMs);
 
     this.activeGames.set(roomCode, {
       module,
@@ -127,6 +136,9 @@ export class GameManager {
       lastSignature: '',
       gameId,
       startedAt: Date.now(),
+      tickMs,
+      timerAccumMs: 0,
+      lastTickAt: Date.now(),
     });
     this.emitGameState(roomCode, gameState);
 
@@ -245,16 +257,43 @@ export class GameManager {
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
 
-    const newState = active.module.onTick(room, active.gameState, 1000);
+    // A ~33ms setInterval never fires at exactly 33ms, and a simulation that
+    // integrates the nominal step while the clock runs faster plays in slow
+    // motion. Fast-tick modules therefore get the REAL elapsed time, capped so
+    // a stalled event loop can't teleport bodies through each other. The 1s
+    // path keeps its exact 1000 — eighteen existing games assume it.
+    const now = Date.now();
+    const deltaMs = active.module.tickIntervalMs
+      ? Math.min(100, Math.max(1, now - active.lastTickAt))
+      : active.tickMs;
+    active.lastTickAt = now;
+
+    const newState = active.module.onTick(room, active.gameState, deltaMs);
+
+    // Delta path for fast-tick games: a compact positional frame instead of a
+    // full state broadcast. Emitted before the state below so a frame and the
+    // phase change it caused arrive in simulation order.
+    const frame = active.module.getPendingFrame?.();
+    if (frame) {
+      this.io
+        .to(roomCode)
+        .emit('game:frame', { gameId: active.gameId, frame });
+    }
 
     if (!newState) {
       // Module says nothing (or nothing but its internal clock) changed.
       // Keep the cached countdown in step and send a lightweight timer
-      // tick instead of a full state broadcast.
-      this.emitTimerTick(roomCode, active);
+      // tick instead of a full state broadcast — once per whole second, no
+      // matter how fast this module's tick runs.
+      active.timerAccumMs += deltaMs;
+      if (active.timerAccumMs >= 1000) {
+        active.timerAccumMs -= 1000;
+        this.emitTimerTick(roomCode, active);
+      }
       return;
     }
 
+    active.timerAccumMs = 0;
     active.gameState = newState;
 
     if (newState.phase === 'ended') {

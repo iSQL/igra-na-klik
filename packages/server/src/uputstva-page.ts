@@ -227,18 +227,32 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>
 <p class="tip">Broj rundi se bira pre početka — jedna runda znači da svako šutira i brani po jednom.</p>`,
   },
+  splav: {
+    emoji: '🛶',
+    requiresTv: true,
+    body: `<p>Sumo na splavu: svi ste na istoj platformi, ona se stalno smanjuje i klizi, a poslednji koji ostane na njoj nosi rundu.</p>
+<ul>
+<li><strong>Telefon je džojstik:</strong> levom polovinom voziš (palac se osloni gde ti je zgodno), a desno je veliko dugme <strong>NALET</strong>.</li>
+<li><strong>Nalet je jedini način da nekoga izguraš.</strong> Obično sudaranje samo odbija — pravi udarac ide samo iz naleta, koji se troši čim nekoga zakači i puni se oko <strong>2 sekunde</strong>. Prsten oko dugmeta pokazuje koliko je ostalo.</li>
+<li>Dok si u naletu <strong>ne možeš da skreneš</strong> — zato je odluka <em>kada</em> ga potrošiti cela taktika.</li>
+<li><strong>Splav se smanjuje i pomera</strong>, pa čekanje u sredini ne pomaže — sredina se seli, a ivica te stiže.</li>
+<li><strong>Poeni:</strong> svako koga izguraš vredi <strong>120</strong>, plus poeni po plasmanu u rundi (svako preživljeno mesto <strong>40</strong>, a poslednji na splavu dobija još <strong>120</strong>).</li>
+<li>Runda traje dok ne ostane jedan igrač — najviše oko 45 sekundi, jer se splav na kraju smanji do trunke.</li>
+</ul>
+<p class="tip">Broj rundi se bira pre početka. Igra traži TV — arena je na velikom ekranu, telefon je samo kontroler.</p>`,
+  },
   osvajanje: {
     emoji: '🏰',
-    body: `<p>Dva ili tri igrača, jedna mapa. Kroz pitanja se osvaja zemlja, a onda se izlazi susedu na megdan — dok ne ostane samo jedan zamak.</p>
+    body: `<p>Dva ili tri igrača, jedna mapa. Kroz pitanja se širi atar, a onda se navaljuje na susedne zamkove — dok ne ostane samo jedan.</p>
 <ul>
 <li><strong>Redosled:</strong> prvo ide pitanje sa brojem. Ko je najbliži, prvi bira mesto za svoj zamak.</li>
 <li><strong>Zamak:</strong> bira se <strong>redom</strong> — prvi bira onaj sa najboljim uvodnim rezultatom. Svaki podignut zamak odmah vide svi, pa ko bira kasnije bira taktički: uz protivnika ili što dalje od njega.</li>
 <li><strong>Osvajanje zemlje:</strong> svima stiže isto pitanje. Ko je tačan, uzima jednu slobodnu teritoriju — brži bira pre sporijeg. Ko promaši, u toj rundi ne dobija ništa.</li>
 <li>Bira se <strong>samo uz svoju zemlju</strong>, da država raste u komadu. Ako ti je sve susedno već zauzeto, otvara se cela mapa.</li>
-<li><strong>Megdan:</strong> na potezu biraš susednu tuđu ili ničiju teritoriju. Ti i branilac dobijate isto pitanje, naslepo. Ako si jedini tačan — teritorija je tvoja; ako je samo branilac tačan — odbranio je i dobija <strong>100</strong> poena.</li>
+<li><strong>Duel:</strong> na potezu biraš susednu tuđu ili ničiju teritoriju. Ti i branilac dobijate isto pitanje, naslepo. Ako si jedini tačan — teritorija je tvoja; ako je samo branilac tačan — odbranio je i dobija <strong>100</strong> poena.</li>
 <li><strong>Nerešeno</strong> (oba tačna ili oba netačna) rešava pitanje sa brojem: bliži pobeđuje, a na istom odstupanju odlučuje brzina. Ko ne odgovori, ne može dobiti.</li>
 <li>Posle svakog pitanja se na istom ekranu vidi <strong>šta je ko odabrao</strong> i koji je odgovor bio tačan; tek onda se bira teritorija.</li>
-<li><strong>Opsada:</strong> zamak ima <strong>tri zida</strong>. Svaki dobijen megdan ruši jedan (+200 poena). Kad padne treći, napadač uzima zamak <em>i svu zemlju</em> branioca — a branilac ispada iz igre.</li>
+<li><strong>Opsada:</strong> zamak ima <strong>tri zida</strong>. Svaki dobijen duel ruši jedan (+200 poena). Kad padne treći, napadač uzima zamak <em>i svu zemlju</em> branioca — a branilac ispada iz igre.</li>
 <li><strong>Potez:</strong> napadi se smenjuju redom — svako napada jednom po rundi. Jedini izuzetak je <strong>opsada zamka</strong>: dok rušiš zidove, ostaješ na potezu i dobijaš novo pitanje na isti zamak, sve dok ne promašiš ili dok zamak ne padne.</li>
 <li><strong>Trajanje:</strong> domaćin bira <em>do poslednjeg zamka</em> (rat ide dok jedan ne ostane sam) ili <em>6, 9 odnosno 12 rundi</em> — tada na kraju pobeđuje najveći zbir poena.</li>
 <li><strong>Kraj:</strong> u modu „do poslednjeg zamka" igra traje dok ne ostane samo jedan zamak; ako se partija sasvim zaglavi, posle 25 rundi presuđuje zbir poena.</li>

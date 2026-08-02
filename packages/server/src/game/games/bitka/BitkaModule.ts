@@ -111,7 +111,7 @@ export class BitkaModule extends BaseGameModule {
     // svaki igrač mora da dobije svoj zamak.
     const connected = room.players.filter((p) => p.isConnected).length;
     if (connected > BITKA_MAX_IGRACA) {
-      return `Lokalni megdan se igra u ${BITKA_MIN_IGRACA} ili ${BITKA_MAX_IGRACA} igrača — trenutno vas je ${connected}.`;
+      return `KvizAtar se igra u ${BITKA_MIN_IGRACA} ili ${BITKA_MAX_IGRACA} igrača — trenutno vas je ${connected}.`;
     }
     if (!this.pickMap(customContent)) {
       return 'Nema nijedne ispravne mape — napravi je u /admin → Mape.';
