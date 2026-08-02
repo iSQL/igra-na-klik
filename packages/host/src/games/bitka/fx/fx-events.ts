@@ -21,12 +21,17 @@ export type BitkaFxKind =
   | 'zamak-pao'    // zamak srušen, igrač ispao
   | 'pobeda';      // kraj bitke
 
+/** Koliko projektil leti — udar se kasni tačno toliko. */
+export const FX_SHOT_SECONDS = 0.55;
+
 export interface BitkaFxEvent {
   /** Raste monotono — scena po njemu zna šta je već odigrala. */
   id: number;
   kind: BitkaFxKind;
   /** Meta efekta u normalizovanim koordinatama [0,1] nad slikom mape. */
   at: BitkaPoint;
+  /** Teritorija na koju se efekat odnosi — 3D scena po njoj ruši zamak i zid. */
+  territoryId?: string;
   /** Polazište napada; null kad se ne zna (napadač bez teritorije na mapi). */
   from?: BitkaPoint | null;
   /** Boja izvođača — napadača, odnosno novog vlasnika. */
@@ -72,13 +77,21 @@ export function deriveFxEvents(
     if (at) {
       const from = attackOrigin(next.host, duel.attackerId, at);
       const attacker = colorOf(duel.attackerId);
-      out.push({ id: nextId(), kind: 'napad', at, from, color: attacker });
+      const on = duel.territoryId;
+      out.push({ id: nextId(), kind: 'napad', at, territoryId: on, from, color: attacker });
       if (duel.outcome === 'branilac') {
-        out.push({ id: nextId(), kind: 'odbranjeno', at, from, color: colorOf(duel.defenderId) });
+        out.push({
+          id: nextId(),
+          kind: 'odbranjeno',
+          at,
+          territoryId: on,
+          from,
+          color: colorOf(duel.defenderId),
+        });
       } else if (duel.outcome === 'zid') {
-        out.push({ id: nextId(), kind: 'zid', at, from, color: attacker });
+        out.push({ id: nextId(), kind: 'zid', at, territoryId: on, from, color: attacker });
       } else if (duel.outcome === 'zamak-pao') {
-        out.push({ id: nextId(), kind: 'zamak-pao', at, from, color: attacker });
+        out.push({ id: nextId(), kind: 'zamak-pao', at, territoryId: on, from, color: attacker });
       }
       // Ishod 'napadac' nema svoj efekat — pokriva ga promena vlasnika ispod,
       // koja se dešava u istom trenutku.
@@ -94,7 +107,7 @@ export function deriveFxEvents(
     const now = st.ownerId ?? null;
     if (!now || had === now) continue;
     const at = labelOf(st.id);
-    if (at) out.push({ id: nextId(), kind: 'osvojeno', at, color: colorOf(now) });
+    if (at) out.push({ id: nextId(), kind: 'osvojeno', at, territoryId: st.id, color: colorOf(now) });
   }
 
   // 3) Kraj bitke.

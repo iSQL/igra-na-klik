@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
@@ -6,9 +6,20 @@ import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
 import { deriveFxEvents, type BitkaFxEvent, type BitkaFxSnapshot } from './fx/fx-events';
 
-// three.js ulazi tek ovde i to u zasebnom chunk-u: mapa se vidi odmah, efekti
-// se priključe kad se učita. Telefon ovaj modul nikad ne dohvata.
+// three.js ulazi tek ovde i to u zasebnom chunk-u: mapa se vidi odmah, teren i
+// efekti se priključe kad se učita. Telefon ove module nikad ne dohvata.
 const BitkaFx = lazy(() => import('./fx/BitkaFx'));
+const BitkaBoard3D = lazy(() => import('./fx/BitkaBoard3D'));
+
+/**
+ * TV podrazumevano crta 3D teren. `?board=2d` u adresi hosta vraća ravnu mapu
+ * sa providnim FX slojem — ista igra, jeftiniji prikaz, i način da se dva
+ * izgleda uporede na istom televizoru.
+ */
+function prefers2DBoard(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('board') === '2d';
+}
 
 const PANEL_IN = { opacity: 0, y: 26 };
 const PANEL_AT = { opacity: 1, y: 0 };
@@ -73,6 +84,8 @@ export default function BitkaHost() {
   const [fxEvents, setFxEvents] = useState<BitkaFxEvent[]>([]);
   const prevSnapRef = useRef<BitkaFxSnapshot | null>(null);
   const fxIdRef = useRef(0);
+  const [use3D, setUse3D] = useState(() => !prefers2DBoard());
+  const drop3D = useCallback(() => setUse3D(false), []);
   useEffect(() => {
     if (!host || !phase) return;
     const snapshot: BitkaFxSnapshot = { phase, host };
@@ -99,7 +112,7 @@ export default function BitkaHost() {
 
   if (!gameState || !host) return null;
   if (phase === 'rezultat' || phase === 'ended') {
-    return <FinalBoard host={host} fxEvents={fxEvents} />;
+    return <FinalBoard host={host} fxEvents={fxEvents} use3D={use3D} onFail={drop3D} />;
   }
 
   const seconds = Math.ceil(gameState.timeRemaining);
@@ -119,8 +132,10 @@ export default function BitkaHost() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.8rem',
-        padding: '1rem 1.4rem 1.2rem',
+        // Hrom je stisnut da bi tabla dobila visinu — na TV-u se gleda mapa,
+        // a naslov i tabela poena su pratnja.
+        gap: '0.55rem',
+        padding: '0.6rem 1rem 0.7rem',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
@@ -130,7 +145,7 @@ export default function BitkaHost() {
           style={{
             margin: 0,
             fontFamily: 'var(--font-display)',
-            fontSize: '1.9rem',
+            fontSize: '1.6rem',
             color: 'var(--text-primary)',
           }}
         >
@@ -168,23 +183,22 @@ export default function BitkaHost() {
           flex: 1,
           minHeight: 0,
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 300px',
-          gap: '1.2rem',
+          gridTemplateColumns: 'minmax(0, 1fr) 250px',
+          gap: '0.9rem',
           alignItems: 'center',
         }}
       >
-        <BitkaMapView
-          map={host.map}
-          board={host.board}
-          players={host.players}
+        <BoardSurface
+          host={host}
+          fxEvents={fxEvents}
+          use3D={use3D}
+          onFail={drop3D}
           highlightIds={host.selectableIds}
           focusId={host.duel?.territoryId ?? null}
-          maxHeightCss="54vh"
-        >
-          <Suspense fallback={null}>
-            <BitkaFx events={fxEvents} />
-          </Suspense>
-        </BitkaMapView>
+          // Visina je ono što ograničava tablu (mapa je pejzažna), pa je ovo
+          // praktično sav prostor između zaglavlja i donje trake.
+          maxHeightCss="72vh"
+        />
         <Standings players={host.players} activeId={host.activePlayerId ?? null} />
       </div>
 
@@ -199,8 +213,8 @@ export default function BitkaHost() {
             background: 'var(--bg-card)',
             border: '1px solid var(--line)',
             borderRadius: '16px',
-            padding: '0.9rem 1.2rem',
-            minHeight: '5.4rem',
+            padding: '0.7rem 1.1rem',
+            minHeight: '4.4rem',
             display: 'flex',
             alignItems: 'center',
           }}
@@ -549,7 +563,75 @@ function Standings({ players, activeId }: { players: BitkaPlayerView[]; activeId
   );
 }
 
-function FinalBoard({ host, fxEvents }: { host: BitkaHostData; fxEvents: BitkaFxEvent[] }) {
+/**
+ * Površina table — 3D teren ili ravna mapa sa FX slojem.
+ *
+ * Dok se three chunk učitava, `Suspense` pokazuje istu tu 2D mapu, pa se tabla
+ * vidi odmah i nikad nema praznog mesta na ekranu. Ako WebGL ne postoji,
+ * `onFail` trajno vraća prikaz na 2D.
+ */
+function BoardSurface({
+  host,
+  fxEvents,
+  use3D,
+  onFail,
+  focusId,
+  highlightIds,
+  maxHeightCss,
+}: {
+  host: BitkaHostData;
+  fxEvents: BitkaFxEvent[];
+  use3D: boolean;
+  onFail: () => void;
+  focusId?: string | null;
+  highlightIds?: string[];
+  maxHeightCss: string;
+}) {
+  const flat = (withFx: boolean) => (
+    <BitkaMapView
+      map={host.map}
+      board={host.board}
+      players={host.players}
+      highlightIds={highlightIds}
+      focusId={focusId ?? null}
+      maxHeightCss={maxHeightCss}
+    >
+      {withFx && (
+        <Suspense fallback={null}>
+          <BitkaFx events={fxEvents} />
+        </Suspense>
+      )}
+    </BitkaMapView>
+  );
+
+  if (!use3D) return flat(true);
+  return (
+    <Suspense fallback={flat(false)}>
+      <BitkaBoard3D
+        map={host.map}
+        board={host.board}
+        players={host.players}
+        focusId={focusId ?? null}
+        highlightIds={highlightIds}
+        events={fxEvents}
+        maxHeightCss={maxHeightCss}
+        onFail={onFail}
+      />
+    </Suspense>
+  );
+}
+
+function FinalBoard({
+  host,
+  fxEvents,
+  use3D,
+  onFail,
+}: {
+  host: BitkaHostData;
+  fxEvents: BitkaFxEvent[];
+  use3D: boolean;
+  onFail: () => void;
+}) {
   const board = host.leaderboard ?? [];
   return (
     <div
@@ -560,26 +642,23 @@ function FinalBoard({ host, fxEvents }: { host: BitkaHostData; fxEvents: BitkaFx
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '1.4rem',
-        padding: '2rem',
+        gap: '1rem',
+        padding: '1.1rem 1.4rem',
         boxSizing: 'border-box',
       }}
     >
-      <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '2.6rem', color: 'var(--accent)' }}>
+      <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '2.2rem', color: 'var(--accent)' }}>
         Bitka je gotova
       </h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 420px', gap: '2rem', alignItems: 'center', width: '100%', maxWidth: '1400px' }}>
-        <BitkaMapView
-          map={host.map}
-          board={host.board}
-          players={host.players}
-          maxHeightCss="52vh"
-        >
-          {/* Slavlje nad pobednikovim zamkom — 'pobeda' stiže baš na ovaj ekran. */}
-          <Suspense fallback={null}>
-            <BitkaFx events={fxEvents} />
-          </Suspense>
-        </BitkaMapView>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: '1.6rem', alignItems: 'center', width: '100%', maxWidth: '1500px' }}>
+        {/* Slavlje nad pobednikovim zamkom — 'pobeda' stiže baš na ovaj ekran. */}
+        <BoardSurface
+          host={host}
+          fxEvents={fxEvents}
+          use3D={use3D}
+          onFail={onFail}
+          maxHeightCss="62vh"
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {board.map((entry) => (
             <motion.div

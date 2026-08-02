@@ -33,6 +33,11 @@ export default defineConfig(() => ({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      // Slike mapa za Osvajanje — bez ovoga direktan :5173 crta praznu tablu.
+      '/bitka-files': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 }));
