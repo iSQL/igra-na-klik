@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { BitkaFxScene, FX_SHOT_SECONDS } from './BitkaFxScene';
-import type { BitkaFxEvent } from './fx-events';
+import { BitkaFxScene } from './BitkaFxScene';
+import { planFxTiming, type BitkaFxEvent } from '@igra/shared';
 
 /**
  * React omotač oko FX scene. Sav three.js je iza ovog modula, koji se učitava
@@ -39,17 +39,10 @@ export default function BitkaFx({ events }: { events: BitkaFxEvent[] }) {
     if (!scene) return;
     // Udar se kasni tačno onoliko koliko projektil leti — ako je u istoj
     // grupi bilo napada.
-    let delay = 0;
-    for (const ev of events) {
-      if (ev.id <= playedRef.current) continue;
-      playedRef.current = ev.id;
-      if (ev.kind === 'napad') {
-        scene.play(ev);
-        delay = FX_SHOT_SECONDS;
-      } else {
-        scene.play(ev, delay);
-      }
-    }
+    const fresh = events.filter((ev) => ev.id > playedRef.current);
+    if (!fresh.length) return;
+    playedRef.current = fresh[fresh.length - 1].id;
+    for (const { event, delay } of planFxTiming(fresh)) scene.play(event, delay);
   }, [events]);
 
   return (

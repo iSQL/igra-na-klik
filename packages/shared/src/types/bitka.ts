@@ -145,6 +145,20 @@ export interface BitkaAnswerResult {
   seconds: number | null;
 }
 
+/**
+ * Koliko partija traje.
+ *
+ * `zamkovi` — rat ide dok ne ostane samo jedan zamak. Prirodan kraj igre, ali
+ * ume da potraje.
+ *
+ * `runde` — igra se unapred dogovoren broj ratnih rundi (`BITKA_RUNDE_IZBOR`),
+ * pa pobeđuje najveći zbir poena. Za kad se zna koliko vremena ima.
+ *
+ * Smena poteza NE zavisi od moda: potez se uvek rotira, osim kad se opseda
+ * zamak — tada napadač nastavlja dok god ruši zidove (vidi `duel-rezultat`).
+ */
+export type BitkaMode = 'zamkovi' | 'runde';
+
 export type BitkaDuelOutcome =
   | 'napadac'        // napadač uzima teritoriju
   | 'branilac'       // odbrana uspela
@@ -212,6 +226,9 @@ export interface BitkaHostData {
   baseCommittedIds?: string[];
 
   duel?: BitkaDuelView;
+
+  /** Po kom pravilu se smenjuju napadi — TV to ispisuje uz rundu. */
+  mode?: BitkaMode;
 
   /** Kratak srpski banner o poslednjem ishodu ("Pera je uzeo Porodin"). */
   lastEvent?: string;

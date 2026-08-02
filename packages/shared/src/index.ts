@@ -53,3 +53,4 @@ export * from './games/slozilica-rules.js';
 export * from './types/bitka.js';
 export * from './games/bitka-rules.js';
 export * from './games/bitka-map-import.js';
+export * from './games/bitka-fx.js';

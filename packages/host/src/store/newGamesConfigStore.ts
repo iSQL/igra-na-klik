@@ -1,8 +1,9 @@
-import { SLOZILICA_LETTER_DEFAULT } from '@igra/shared';
+import { BITKA_RUNDE_DEF, SLOZILICA_LETTER_DEFAULT } from '@igra/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   AsocijacijeMode,
+  BitkaMode,
   GluvoDobaDeathReveal,
   HotPotatoMode,
   TajniAgentiMode,
@@ -45,6 +46,8 @@ interface NewGamesConfigStore {
   asocijacijePackId: string;
   // Osvajanje: which drawn map to play ('' = auto-pick the first valid one).
   bitkaMapId: string;
+  bitkaMode: BitkaMode;
+  bitkaRounds: number;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -69,6 +72,8 @@ interface NewGamesConfigStore {
   setAsocijacijeMode: (m: AsocijacijeMode) => void;
   setAsocijacijePackId: (id: string) => void;
   setBitkaMapId: (id: string) => void;
+  setBitkaMode: (m: BitkaMode) => void;
+  setBitkaRounds: (n: number) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -98,6 +103,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       asocijacijePackId: '',
       // '' = auto-pick the first map that passes the strict check.
       bitkaMapId: '',
+      bitkaMode: 'zamkovi',
+      bitkaRounds: BITKA_RUNDE_DEF,
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -122,6 +129,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setAsocijacijeMode: (m) => set({ asocijacijeMode: m }),
       setAsocijacijePackId: (id) => set({ asocijacijePackId: id }),
       setBitkaMapId: (id) => set({ bitkaMapId: id }),
+      setBitkaMode: (m) => set({ bitkaMode: m }),
+      setBitkaRounds: (n) => set({ bitkaRounds: n }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

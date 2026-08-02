@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import {
+  BITKA_RUNDE_IZBOR,
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
@@ -14,6 +15,7 @@ import type {
   GameDefinition,
   AsocijacijePackSummary,
   BitkaMapSummary,
+  BitkaMode,
 } from '@igra/shared';
 
 interface GluvoDobaPackSummary extends GluvoDobaPack {
@@ -431,6 +433,11 @@ export function GameSelectScreen() {
           : undefined,
       bitkaMapId:
         gameId === 'osvajanje' ? (bitkaMapId || undefined) : undefined,
+      bitkaMode: gameId === 'osvajanje' ? newGamesConfig.bitkaMode : undefined,
+      bitkaRounds:
+        gameId === 'osvajanje' && newGamesConfig.bitkaMode === 'runde'
+          ? newGamesConfig.bitkaRounds
+          : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -473,6 +480,26 @@ export function GameSelectScreen() {
               onSelect={newGamesConfig.setBitkaMapId}
             />
           )}
+          <TextPillRow
+            label="Trajanje"
+            value={
+              newGamesConfig.bitkaMode === 'zamkovi'
+                ? 'zamkovi'
+                : String(newGamesConfig.bitkaRounds)
+            }
+            options={[
+              { value: 'zamkovi', label: 'Do poslednjeg zamka' },
+              ...BITKA_RUNDE_IZBOR.map((n) => ({ value: String(n), label: `${n} rundi` })),
+            ]}
+            onSelect={(v) => {
+              if (v === 'zamkovi') {
+                newGamesConfig.setBitkaMode('zamkovi');
+                return;
+              }
+              newGamesConfig.setBitkaMode('runde');
+              newGamesConfig.setBitkaRounds(Number(v));
+            }}
+          />
           <QuizImportButton />
         </>
       )}

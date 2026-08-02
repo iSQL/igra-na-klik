@@ -169,3 +169,7 @@ export function neighborsConnected(territories: BitkaTerritory[]): boolean {
 export function roundCoord(v: number): number {
   return Math.round(v * 10000) / 10000;
 }
+
+/** Ponuđeni brojevi ratnih rundi kad se igra na runde. */
+export const BITKA_RUNDE_IZBOR = [6, 9, 12] as const;
+export const BITKA_RUNDE_DEF = 9;

@@ -232,13 +232,15 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
     body: `<p>Dva ili tri igrača, jedna mapa. Kroz pitanja se osvaja zemlja, a onda se ide na tuđe zamkove — dok ne ostane samo jedan.</p>
 <ul>
 <li><strong>Redosled:</strong> prvo ide pitanje sa brojem. Ko je najbliži, ima prednost ako se kasnije dvoje otimaju o istu teritoriju.</li>
-<li><strong>Zamak:</strong> svi istovremeno tapnu teritoriju na telefonu. Ako izaberete istu, dobija je onaj sa boljim uvodnim rezultatom, a ostali biraju ponovo.</li>
+<li><strong>Zamak:</strong> bira se <strong>redom</strong> — prvi bira onaj sa najboljim uvodnim rezultatom. Svaki podignut zamak odmah vide svi, pa ko bira kasnije bira taktički: uz protivnika ili što dalje od njega.</li>
 <li><strong>Osvajanje:</strong> svima stiže isto pitanje. Ko je tačan, uzima jednu slobodnu teritoriju — brži bira pre sporijeg. Ko promaši, u toj rundi ne dobija ništa.</li>
 <li>Bira se <strong>samo uz svoju zemlju</strong>, da država raste u komadu. Ako ti je sve susedno već zauzeto, otvara se cela mapa.</li>
 <li><strong>Rat:</strong> na potezu biraš susednu tuđu ili ničiju teritoriju. Ti i branilac dobijate isto pitanje, naslepo. Ako si jedini tačan — teritorija je tvoja; ako je samo branilac tačan — odbranio je i dobija <strong>100</strong> poena.</li>
 <li><strong>Nerešeno</strong> (oba tačna ili oba netačna) rešava pitanje sa brojem: bliži pobeđuje, a na istom odstupanju odlučuje brzina. Ko ne odgovori, ne može dobiti.</li>
 <li><strong>Opsada:</strong> zamak ima <strong>tri zida</strong>. Svaki dobijen duel ruši jedan (+200 poena). Kad padne treći, napadač uzima zamak <em>i svu zemlju</em> branioca — a branilac ispada iz igre.</li>
-<li><strong>Kraj:</strong> igra traje dok ne ostane samo jedan zamak — nema unapred zadatog broja rundi. (Ako se partija sasvim zaglavi, posle 25 rundi presuđuje zbir poena.)</li>
+<li><strong>Potez:</strong> napadi se smenjuju redom — svako napada jednom po rundi. Jedini izuzetak je <strong>opsada zamka</strong>: dok rušiš zidove, ostaješ na potezu i dobijaš novo pitanje na isti zamak, sve dok ne promašiš ili dok zamak ne padne.</li>
+<li><strong>Trajanje:</strong> domaćin bira <em>do poslednjeg zamka</em> (rat ide dok jedan ne ostane sam) ili <em>6, 9 odnosno 12 rundi</em> — tada na kraju pobeđuje najveći zbir poena.</li>
+<li><strong>Kraj:</strong> u modu „do poslednjeg zamka" igra traje dok ne ostane samo jedan zamak; ako se partija sasvim zaglavi, posle 25 rundi presuđuje zbir poena.</li>
 <li><strong>Bodovi:</strong> zamak 1000, obična teritorija 200 (mapa nekoj može dati i više), uspešna odbrana 100, srušen zid 200.</li>
 </ul>
 <p class="tip">Mape se crtaju u administraciji, pa se pre početka bira koja se igra. Pitanja dolaze iz izabranih kviz paketa.</p>`,

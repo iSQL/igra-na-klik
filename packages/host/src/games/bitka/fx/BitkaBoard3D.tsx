@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BitkaMapView as BitkaMapData, BitkaPlayerView, BitkaTerritoryState } from '@igra/shared';
 import { BitkaBoardScene } from './BitkaBoardScene';
-import { FX_SHOT_SECONDS, type BitkaFxEvent } from './fx-events';
+import { planFxTiming, type BitkaFxEvent } from '@igra/shared';
 
 interface BitkaBoard3DProps {
   map: BitkaMapData;
@@ -9,8 +9,10 @@ interface BitkaBoard3DProps {
   players: BitkaPlayerView[];
   focusId?: string | null;
   highlightIds?: string[];
+  activePlayerId?: string | null;
   events: BitkaFxEvent[];
-  maxHeightCss?: string;
+  /** Visina platna; '100%' kad raspored sam daje visinu. */
+  heightCss?: string;
   /** WebGL nije dostupan — pozivalac se vraća na 2D mapu. */
   onFail?: () => void;
 }
@@ -25,14 +27,14 @@ export default function BitkaBoard3D({
   players,
   focusId,
   highlightIds,
+  activePlayerId,
   events,
-  maxHeightCss = '62vh',
+  heightCss = '62vh',
   onFail,
 }: BitkaBoard3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<BitkaBoardScene | null>(null);
   const playedRef = useRef(0);
-  const [ratio, setRatio] = useState(3 / 2);
   const [ready, setReady] = useState(false);
   // `host.map` je nov objekat na svaki tick servera, pa se scena NE sme vezati
   // za njegov identitet — teren bi se rušio i gradio jednom u sekundi. Vezuje
@@ -67,10 +69,8 @@ export default function BitkaBoard3D({
     image.crossOrigin = 'anonymous';
     image.onload = () => {
       if (sceneRef.current !== scene) return;
+      // Odnos stranica slike scena čita sama iz nje — platnu više ne treba.
       scene.setMapImage(image);
-      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-        setRatio(image.naturalWidth / image.naturalHeight);
-      }
     };
     // Slika koja ne stigne nije razlog za pad — teren ostaje bez crteža,
     // vlasništvo se i dalje čita po bojama.
@@ -91,34 +91,23 @@ export default function BitkaBoard3D({
 
   useEffect(() => {
     if (!ready) return;
-    sceneRef.current?.update({ board, players, focusId, highlightIds });
-  }, [ready, board, players, focusId, highlightIds]);
+    sceneRef.current?.update({ board, players, focusId, highlightIds, activePlayerId });
+  }, [ready, board, players, focusId, highlightIds, activePlayerId]);
 
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
-    let delay = 0;
-    for (const ev of events) {
-      if (ev.id <= playedRef.current) continue;
-      playedRef.current = ev.id;
-      if (ev.kind === 'napad') {
-        scene.playFx(ev);
-        delay = FX_SHOT_SECONDS;
-      } else {
-        scene.playFx(ev, delay);
-      }
-    }
+    const fresh = events.filter((ev) => ev.id > playedRef.current);
+    if (!fresh.length) return;
+    playedRef.current = fresh[fresh.length - 1].id;
+    for (const { event, delay } of planFxTiming(fresh)) scene.playFx(event, delay);
   }, [events]);
 
+  // Platno NIJE zaključano na odnos stranica slike kao ravna mapa: kamera sama
+  // uklapa tablu u bilo kakav kadar, pa zaključavanje samo ostavlja prazne
+  // pojaseve sa strane. Zauzima ceo prostor koji mu raspored da.
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: `min(100%, calc(${maxHeightCss} * ${ratio}))`,
-        aspectRatio: `${ratio}`,
-        margin: '0 auto',
-      }}
-    >
+    <div style={{ position: 'relative', width: '100%', height: heightCss, minHeight: 0 }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );

@@ -84,6 +84,8 @@ export function registerGameHandlers(
       asocijacijePackIds: data.asocijacijePackIds,
       customAsocijacijePuzzles: data.customAsocijacijePuzzles,
       bitkaMapId: data.bitkaMapId,
+      bitkaMode: data.bitkaMode,
+      bitkaRounds: data.bitkaRounds,
       language: data.language,
     });
     if (result.error) {

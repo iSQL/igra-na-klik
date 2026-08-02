@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
+  BITKA_RUNDE_DEF,
+  BITKA_RUNDE_IZBOR,
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
@@ -27,6 +29,7 @@ import type {
   SpijunLocation,
   AsocijacijePackSummary,
   BitkaMapSummary,
+  BitkaMode,
 } from '@igra/shared';
 import {
   getRecentPackIds,
@@ -288,6 +291,8 @@ export function GameSelectScreen() {
   const [bitkaMaps, setBitkaMaps] = useState<BitkaMapSummary[]>([]);
   // '' = auto-pick the first map that passes the strict check (derived below).
   const [bitkaMapChoice, setBitkaMapChoice] = useState('');
+  const [bitkaMode, setBitkaMode] = useState<BitkaMode>('zamkovi');
+  const [bitkaRounds, setBitkaRounds] = useState<number>(BITKA_RUNDE_DEF);
   const [asocijacijeMode, setAsocijacijeMode] = useState<'klasik' | 'kviz'>(
     'klasik'
   );
@@ -461,6 +466,8 @@ export function GameSelectScreen() {
     if (game.id === 'osvajanje') {
       // Osvajanje draws its questions from the same kviz pack multi-select.
       if (bitkaMapId) payload.bitkaMapId = bitkaMapId;
+      payload.bitkaMode = bitkaMode;
+      if (bitkaMode === 'runde') payload.bitkaRounds = bitkaRounds;
       const ids = effectiveQuizPackIds(quizPacks, quizPackIds);
       if (ids.length > 0) payload.quizPackIds = ids;
     }
@@ -1245,6 +1252,29 @@ export function GameSelectScreen() {
                           ))}
                         </div>
                       )}
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Trajanje
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                        <Pill
+                          active={bitkaMode === 'zamkovi'}
+                          onClick={() => setBitkaMode('zamkovi')}
+                        >
+                          Do poslednjeg zamka
+                        </Pill>
+                        {BITKA_RUNDE_IZBOR.map((n) => (
+                          <Pill
+                            key={n}
+                            active={bitkaMode === 'runde' && bitkaRounds === n}
+                            onClick={() => {
+                              setBitkaMode('runde');
+                              setBitkaRounds(n);
+                            }}
+                          >
+                            {n} rundi
+                          </Pill>
+                        ))}
+                      </div>
                       {/* Pitanja dolaze iz istih kviz paketa; tip pitanja bira
                           igra sama (obično/uljez + broj za tiebreak). */}
                       <QuizConfig

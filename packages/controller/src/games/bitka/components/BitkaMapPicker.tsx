@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { BitkaMapView, BitkaPlayerView, BitkaTerritoryState } from '@igra/shared';
-import { pointInPolygon } from '@igra/shared';
+import type {
+  BitkaFxEvent,
+  BitkaMapView,
+  BitkaPlayerView,
+  BitkaTerritoryState,
+} from '@igra/shared';
+import { planFxTiming, pointInPolygon } from '@igra/shared';
 
 const NEUTRAL = '#8a91a2';
 const MIN_ZOOM = 1;
@@ -39,7 +44,21 @@ interface BitkaMapPickerProps {
    */
   fill?: boolean;
   maxHeightCss?: string;
+  /**
+   * Događaji sa mape — teritorija koja je promenila vlasnika ili primila udar
+   * kratko blesne. Telefon nema 3D teren kao TV, ali ni tiha promena boje nije
+   * dovoljna: bez odjeka se ne primeti da se nešto uopšte desilo.
+   */
+  fxEvents?: BitkaFxEvent[];
 }
+
+/** Koliko blesak traje — mora da se poklopi sa CSS animacijama. */
+const FLASH_MS: Record<string, number> = {
+  osvojeno: 1600,
+  zid: 2100,
+  'zamak-pao': 2100,
+  default: 900,
+};
 
 /**
  * Mapa na telefonu — tap bira teritoriju, dva prsta zumiraju, prevlačenje
@@ -60,6 +79,7 @@ export function BitkaMapPicker({
   onSelect,
   fill,
   maxHeightCss = '46dvh',
+  fxEvents,
 }: BitkaMapPickerProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -80,6 +100,46 @@ export function BitkaMapPicker({
     observer.observe(el);
     return () => observer.disconnect();
   }, [fill]);
+
+  // Bleskovi: teritorija → boja. Ključ `nonce` tera SVG da ponovo pokrene
+  // animaciju i kad ista teritorija blesne dvaput za redom.
+  const [flashes, setFlashes] = useState<
+    { id: string; color: string; kind: string; nonce: number }[]
+  >([]);
+  const playedFxRef = useRef(0);
+  useEffect(() => {
+    if (!fxEvents?.length) return;
+    const fresh = fxEvents.filter((ev) => ev.id > playedFxRef.current && ev.territoryId);
+    if (!fresh.length) return;
+    playedFxRef.current = fresh[fresh.length - 1].id;
+
+    // Isti raspored u vremenu koji koristi TV: posle pada zamka teritorije se
+    // pale jedna za drugom, umesto da cela zemlja tiho promeni boju odjednom.
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const { event, delay } of planFxTiming(fresh)) {
+      const flash = {
+        id: event.territoryId!,
+        color: event.kind === 'zid' || event.kind === 'zamak-pao' ? '#FF9F3D' : event.color,
+        kind: event.kind,
+        nonce: event.id,
+      };
+      const life = FLASH_MS[event.kind] ?? FLASH_MS.default;
+      timers.push(
+        setTimeout(() => {
+          setFlashes((prev) => [...prev, flash]);
+          timers.push(
+            setTimeout(
+              () => setFlashes((prev) => prev.filter((f) => f.nonce !== flash.nonce)),
+              life
+            )
+          );
+        }, delay * 1000)
+      );
+    }
+    return () => {
+      for (const t of timers) clearTimeout(t);
+    };
+  }, [fxEvents]);
 
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const singleStartRef = useRef<SinglePointerStart | null>(null);
@@ -321,7 +381,65 @@ export function BitkaMapPicker({
               />
             );
           })}
+
+          {/* Odjek događaja — preko postojećih poligona, pa se ugasi. */}
+          {flashes.map((f) => {
+            const t = map.territories.find((x) => x.id === f.id);
+            if (!t) return null;
+            return (
+              <polygon
+                key={`${f.id}:${f.nonce}`}
+                className={
+                  f.kind === 'osvojeno'
+                    ? 'bitka-flash bitka-flash-osvojeno'
+                    : f.kind === 'zid' || f.kind === 'zamak-pao'
+                      ? 'bitka-flash bitka-flash-vatra'
+                      : 'bitka-flash'
+                }
+                points={t.polygon.map((p) => `${p.x},${p.y}`).join(' ')}
+                fill={f.color}
+                stroke={f.color}
+                strokeWidth={5}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
         </svg>
+
+        {/* Vatra nad teritorijom kad padne zid ili zamak. TV to crta u three.js
+            sceni koju telefon namerno ne učitava, pa je ovde ista ideja kroz
+            CSS: nekoliko plamenova koji se dižu, trepere i gase se. Stoji u
+            istom sloju kao zamkovi, pa se zumira i pomera zajedno sa mapom. */}
+        {flashes
+          .filter((f) => f.kind === 'zid' || f.kind === 'zamak-pao')
+          .map((f) => {
+            const t = map.territories.find((x) => x.id === f.id);
+            if (!t) return null;
+            const big = f.kind === 'zamak-pao';
+            return (
+              <div
+                key={`vatra:${f.nonce}`}
+                className="bitka-fire"
+                style={{
+                  left: `${t.label.x * 100}%`,
+                  top: `${t.label.y * 100}%`,
+                  transform: `translate(-50%, -50%) scale(${big ? 1.6 : 1})`,
+                }}
+              >
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span
+                    key={i}
+                    className="bitka-fire-flame"
+                    style={{
+                      left: `${(i - 2) * 7}px`,
+                      animationDelay: `${i * 0.13}s`,
+                      animationDuration: `${0.85 + (i % 3) * 0.15}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            );
+          })}
 
         {map.territories.map((t) => {
           const st = stateById.get(t.id);

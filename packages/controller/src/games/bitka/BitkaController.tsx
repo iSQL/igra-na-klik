@@ -1,5 +1,13 @@
-import { useEffect, useState } from 'react';
-import type { BitkaControllerData, BitkaHostData } from '@igra/shared';
+import { useEffect, useRef, useState } from 'react';
+import {
+  deriveFxEvents,
+  planFxHolds,
+  type BitkaControllerData,
+  type BitkaFxEvent,
+  type BitkaFxSnapshot,
+  type BitkaHostData,
+  type BitkaTerritoryState,
+} from '@igra/shared';
 import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -7,6 +15,7 @@ import { useHaptics } from '../../hooks/useHaptics';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
 import { BrojSlider } from '../quiz/components/BrojSlider';
 import { BitkaMapPicker } from './components/BitkaMapPicker';
+import { BitkaHostlessPanel, BitkaMiniStandings } from './components/BitkaHostlessPanel';
 
 function act(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -29,12 +38,77 @@ export default function BitkaController() {
     setDraft(null);
   }, [phaseKey]);
 
+  // Odjek promena na mapi. Ista funkcija koju TV koristi za 3D efekte živi u
+  // `@igra/shared`, pa telefon i televizor govore istim rečnikom događaja —
+  // ovde se od njih pravi samo blesak teritorije i vibracija.
+  const hostMaybe = gameState?.data?.host as BitkaHostData | undefined;
+  const [fxEvents, setFxEvents] = useState<BitkaFxEvent[]>([]);
+  /**
+   * Tabla koju crta mapa. NAMERNO je zasebno stanje, a ne `host.board`:
+   * efekti se izvode u `useEffect`-u, koji radi tek posle iscrtavanja, pa bi
+   * nove boje bljesnule jedan kadar pre nego što ih zadržavanje vrati. Ovako
+   * mapa sirovu tablu nikad i ne vidi — kasni tačno onoliko koliko treba da
+   * bljesak stigne prvi.
+   */
+  const [shownBoard, setShownBoard] = useState<BitkaTerritoryState[]>([]);
+  const prevSnapRef = useRef<BitkaFxSnapshot | null>(null);
+  const liveBoardRef = useRef<BitkaTerritoryState[]>([]);
+  const fxIdRef = useRef(0);
+  const holdTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => holdTimersRef.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    if (!hostMaybe || !phaseKey) return;
+    liveBoardRef.current = hostMaybe.board;
+    const snapshot: BitkaFxSnapshot = { phase: phaseKey, host: hostMaybe };
+    const prevBoard = prevSnapRef.current?.host.board;
+    const events = deriveFxEvents(prevSnapRef.current, snapshot, () => ++fxIdRef.current);
+    prevSnapRef.current = snapshot;
+
+    // Prvo udar, pa promena boje: teritorija ostaje u starom izgledu tačno dok
+    // njena animacija ne krene.
+    const holds = events.length > 0 ? planFxHolds(prevBoard, events) : [];
+    const heldNow = new Map(holds.map((h) => [h.territoryId, h.state]));
+    setShownBoard(hostMaybe.board.map((st) => heldNow.get(st.id) ?? st));
+    if (!events.length) return;
+    setFxEvents(events);
+
+    for (const h of holds) {
+      holdTimersRef.current.push(
+        setTimeout(() => {
+          setShownBoard((prev) =>
+            prev.map((st) =>
+              st.id === h.territoryId
+                ? (liveBoardRef.current.find((b) => b.id === h.territoryId) ?? st)
+                : st
+            )
+          );
+        }, h.delay * 1000)
+      );
+    }
+    // Vibracija samo za ono što se tiče mene — inače telefon zuji ceo meč.
+    const mine = events.some((ev) => {
+      if (!playerId) return false;
+      const st = hostMaybe.board.find((s) => s.id === ev.territoryId);
+      const duel = hostMaybe.duel;
+      if (ev.kind === 'osvojeno') return st?.ownerId === playerId;
+      return duel?.attackerId === playerId || duel?.defenderId === playerId;
+    });
+    if (mine) {
+      const bad = events.some((ev) => ev.kind === 'zamak-pao' || ev.kind === 'zid');
+      if (bad) haptics.error();
+      else haptics.success();
+    }
+  }, [hostMaybe, phaseKey, playerId, haptics]);
+
   if (!gameState || !playerId) return null;
   const host = gameState.data.host as BitkaHostData | undefined;
   if (!host) return null;
   const me = gameState.playerData[playerId] as unknown as BitkaControllerData | undefined;
   const phase = gameState.phase;
   const seconds = gameState.timeRemaining;
+  // Mapa crta zadržano stanje; sve ostalo (poeni, tabla) ide odmah.
+  // Prvi render je pre nego što efekat išta upiše, pa tada ide živa tabla.
+  const displayBoard = shownBoard.length > 0 ? shownBoard : host.board;
 
   const named = (id: string | null | undefined) =>
     host.players.find((p) => p.playerId === id)?.name ?? 'Igrač';
@@ -76,9 +150,12 @@ export default function BitkaController() {
         <BitkaMapPicker
           fill
           map={host.map}
-          board={host.board}
+          board={displayBoard}
           players={host.players}
           focusId={host.duel?.territoryId ?? null}
+          // Baš ovaj igrač NAJVIŠE treba da vidi kako mu je zamak pao — bez
+          // ovoga je gledao samo trenutnu promenu boje na pola mape.
+          fxEvents={fxEvents}
         />
       </MapStage>
     );
@@ -205,15 +282,16 @@ export default function BitkaController() {
           </>
         }
         bottom={
-          <Muted>
-            {!chosen
-              ? 'Tapni teritoriju na mapi, ili je nađi u spisku (⚙ dole desno).'
-              : phase === 'baza-izbor'
-                ? // Jedino se baza bira „na čekanju" — ostala dva izbora server
-                  // razrešava istog trena, pa se tu ništa ne može menjati.
-                  'Izabrao si ' + territoryName(chosen) + '. Možeš da promeniš dok vreme teče.'
-                : 'Izabrao si ' + territoryName(chosen) + '.'}
-          </Muted>
+          <>
+            {hostless && <BitkaMiniStandings host={host} myPlayerId={playerId} />}
+            <Muted>
+              {chosen
+                ? 'Izabrao si ' + territoryName(chosen) + '.'
+                : phase === 'baza-izbor'
+                  ? 'Izbor je konačan — ostali posle tebe vide gde si se utvrdio.'
+                  : 'Tapni teritoriju na mapi, ili je nađi u spisku (⚙ dole desno).'}
+            </Muted>
+          </>
         }
       >
         {/* Mapa je glavni način da se cilja — dobija ceo ekran. Spisak meta
@@ -222,11 +300,12 @@ export default function BitkaController() {
         <BitkaMapPicker
           fill
           map={host.map}
-          board={host.board}
+          board={displayBoard}
           players={host.players}
           selectableIds={selectable}
           selectedId={chosen}
           onSelect={send}
+          fxEvents={fxEvents}
         />
       </MapStage>
     );
@@ -242,21 +321,39 @@ export default function BitkaController() {
           )}
           <Big>{waitTitle(phase, host, me, named)}</Big>
           {me?.lastOutcome && <Muted>{me.lastOutcome}</Muted>}
-          {host.lastEvent && !me?.lastOutcome && <Muted>{host.lastEvent}</Muted>}
+          {host.lastEvent && !me?.lastOutcome && !hostless && <Muted>{host.lastEvent}</Muted>}
 
-          {phase.endsWith('-rezultat') && question?.kind === 'izbor' && host.correctIndex != null && (
-            <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
-              Tačno: {question.options?.[host.correctIndex]?.text ?? ''}
-            </div>
-          )}
-          {phase.endsWith('-rezultat') && question?.kind === 'broj' && host.correctValue != null && (
-            <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
-              Tačno: {host.correctValue}
-              {question.unit ? ` ${question.unit}` : ''}
-              {me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''}
-            </div>
+          {/* Sa televizorom u sobi ovo bi bilo dupliranje — pitanje, ko je
+              odgovorio i red čekanja stoje na TV-u. Bez njega ne stoje nigde. */}
+          {hostless ? (
+            <BitkaHostlessPanel host={host} phase={phase} myPlayerId={playerId} />
+          ) : (
+            <>
+              {phase.endsWith('-rezultat') && question?.kind === 'izbor' && host.correctIndex != null && (
+                <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
+                  Tačno: {question.options?.[host.correctIndex]?.text ?? ''}
+                </div>
+              )}
+              {phase.endsWith('-rezultat') && question?.kind === 'broj' && host.correctValue != null && (
+                <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
+                  Tačno: {host.correctValue}
+                  {question.unit ? ` ${question.unit}` : ''}
+                  {me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''}
+                </div>
+              )}
+            </>
           )}
         </>
+      }
+      bottom={
+        hostless ? (
+          <>
+            {me?.myGuess != null && question?.kind === 'broj' && (
+              <Muted>Tvoja procena: {me.myGuess}</Muted>
+            )}
+            <BitkaMiniStandings host={host} myPlayerId={playerId} />
+          </>
+        ) : undefined
       }
     >
       {/* Mapu vide SVI, ne samo hostless sobe. Ostale igre svesno ne dupliraju
@@ -266,9 +363,10 @@ export default function BitkaController() {
       <BitkaMapPicker
         fill
         map={host.map}
-        board={host.board}
+        board={displayBoard}
         players={host.players}
         focusId={host.duel?.territoryId ?? null}
+        fxEvents={fxEvents}
       />
     </MapStage>
   );
@@ -288,7 +386,10 @@ function waitTitle(
     case 'redosled-rezultat':
       return 'Redosled je određen';
     case 'baza-izbor':
-      return me?.myBaseChoice ? 'Izbor poslat' : 'Biraj zamak na mapi';
+      // Zamkovi se dižu naizmenično, pa onaj ko čeka gleda tuđi potez.
+      return me?.myBaseChoice
+        ? 'Zamak je podignut ✓'
+        : `${named(host.activePlayerId)} bira mesto za zamak`;
     case 'osvajanje-pitanje':
       return 'Spremi se…';
     case 'osvajanje-odgovor':

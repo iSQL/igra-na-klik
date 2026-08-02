@@ -11,6 +11,8 @@ interface BitkaMapViewProps {
   highlightIds?: string[];
   /** Meta tekućeg napada — jaka zlatna kontura i pulsiranje. */
   focusId?: string | null;
+  /** Ko je na potezu — njegov zamak se uveća, da se vidi ko trenutno igra. */
+  activePlayerId?: string | null;
   maxHeightCss?: string;
   /** Ispisuj imena teritorija (na telefonu se guši, na TV-u ne). */
   showNames?: boolean;
@@ -33,6 +35,7 @@ export function BitkaMapView({
   players,
   highlightIds,
   focusId,
+  activePlayerId,
   maxHeightCss = '62vh',
   showNames = true,
   children,
@@ -114,6 +117,7 @@ export function BitkaMapView({
       {map.territories.map((t) => {
         const st = stateById.get(t.id);
         const castle = st?.castle && (st?.walls ?? 0) > 0;
+        const activeCastle = castle && !!activePlayerId && st?.ownerId === activePlayerId;
         return (
           <div
             key={t.id}
@@ -131,7 +135,16 @@ export function BitkaMapView({
             }}
           >
             {castle && (
-              <div style={{ fontSize: '1.6rem', lineHeight: 1, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}>
+              <div
+                style={{
+                  fontSize: activeCastle ? '2.4rem' : '1.6rem',
+                  lineHeight: 1,
+                  transition: 'font-size 0.25s',
+                  filter: activeCastle
+                    ? 'drop-shadow(0 0 10px rgba(242,206,116,0.95)) drop-shadow(0 2px 4px rgba(0,0,0,0.8))'
+                    : 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
+                }}
+              >
                 🏰
               </div>
             )}

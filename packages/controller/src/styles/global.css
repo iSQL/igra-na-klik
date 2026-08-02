@@ -263,6 +263,128 @@ textarea {
   }
 }
 
+/* Osvajanje: teritorija blesne kad promeni vlasnika ili primi udar. Telefon
+   nema 3D teren kao TV, pa je ovo jedini znak da se nešto desilo. */
+@keyframes igra-bitka-flash {
+  0% {
+    opacity: 0.95;
+  }
+  55% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bitka-flash {
+  animation: igra-bitka-flash 0.9s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Osvajanje traje duže i pulsira — najvažniji trenutak poteza. */
+@keyframes igra-bitka-osvojeno {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  38% {
+    opacity: 0.35;
+  }
+  58% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bitka-flash-osvojeno {
+  animation: igra-bitka-osvojeno 1.6s ease-out forwards;
+}
+
+/* Zid i pad zamka: teritorija gori — brzo treperenje koje se polako gasi. */
+@keyframes igra-bitka-vatra {
+  0% {
+    opacity: 0.85;
+  }
+  15% {
+    opacity: 0.45;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  45% {
+    opacity: 0.4;
+  }
+  60% {
+    opacity: 0.7;
+  }
+  75% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bitka-flash-vatra {
+  animation: igra-bitka-vatra 2.1s ease-out forwards;
+}
+
+/* Plamenovi nad teritorijom — telefonski parnjak vatre iz 3D scene na TV-u.
+   Kontejner se gasi kao celina, a plamenovi u njemu trepere u petlji. */
+.bitka-fire {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  animation: igra-bitka-vatra-kraj 2.1s ease-out forwards;
+}
+
+.bitka-fire-flame {
+  position: absolute;
+  bottom: 0;
+  width: 13px;
+  height: 19px;
+  margin-left: -6px;
+  border-radius: 50% 50% 50% 50% / 68% 68% 34% 34%;
+  background: radial-gradient(
+    ellipse at 50% 82%,
+    #ffe9a8 0%,
+    #ff9f3d 42%,
+    #e0362b 72%,
+    rgba(224, 54, 43, 0) 100%
+  );
+  animation: igra-bitka-plamen 0.95s ease-out infinite;
+}
+
+@keyframes igra-bitka-plamen {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scaleY(0.55) scaleX(0.8);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scaleY(1.25) scaleX(0.5);
+  }
+}
+
+@keyframes igra-bitka-vatra-kraj {
+  0%,
+  62% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes igra-floaty {
   0%,
   100% {

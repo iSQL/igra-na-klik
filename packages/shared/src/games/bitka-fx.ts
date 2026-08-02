@@ -1,12 +1,13 @@
-import type { BitkaHostData, BitkaPoint } from '@igra/shared';
+import type { BitkaHostData, BitkaPoint, BitkaTerritoryState } from '../types/bitka.js';
 
 /**
  * Prevođenje stanja igre u spisak vizuelnih događaja.
  *
- * Ovo je namerno **čista funkcija bez three.js-a** i bez ijednog novog socket
- * eventa: sve što TV animira već stoji u `BitkaHostData` (ishod duela, vlasnik
- * teritorije, pobednik). Sloj postoji da bi se ispod njega kasnije mogao
- * podmetnuti pravi 3D teren — scena se menja, ovaj ulaz ostaje isti.
+ * Ovo je namerno **čista funkcija bez ijedne veze sa prikazom** i bez ijednog
+ * novog socket eventa: sve što se animira već stoji u `BitkaHostData` (ishod
+ * duela, vlasnik teritorije, pobednik). Zato živi u `shared` — TV je koristi
+ * za 3D teren i efekte, telefon za bleskanje teritorije i vibraciju, i oba
+ * govore istim rečnikom događaja.
  *
  * Okidanje ide isključivo na **razliku dva uzastopna stanja**, pa se svaki
  * događaj odigra tačno jednom. Ponovljeno stanje (reconnect, replay faze) ne
@@ -23,6 +24,10 @@ export type BitkaFxKind =
 
 /** Koliko projektil leti — udar se kasni tačno toliko. */
 export const FX_SHOT_SECONDS = 0.55;
+/** Razmak između teritorija u talasu posle pada zamka. */
+const FX_KASKADA_KORAK = 0.22;
+/** Koliko se čeka od eksplozije zamka do prve teritorije u talasu. */
+const FX_KASKADA_POCETAK = 0.5;
 
 export interface BitkaFxEvent {
   /** Raste monotono — scena po njemu zna šta je već odigrala. */
@@ -116,6 +121,60 @@ export function deriveFxEvents(
     if (at) out.push({ id: nextId(), kind: 'pobeda', at, color: colorOf(next.host.winnerId) });
   }
 
+  return out;
+}
+
+/**
+ * Kad se svaki događaj iz grupe pušta.
+ *
+ * Vremenski raspored je isti za TV i za telefon, pa stoji ovde a ne u sceni:
+ *
+ * - udar čeka da projektil stigne;
+ * - **pad zamka pokreće talas** — sve teritorije koje su tog trena promenile
+ *   vlasnika pale se jedna za drugom, jer padom zamka cela zemlja menja
+ *   gospodara i to mora da se vidi kao jedan događaj, a ne kao tihi prelom
+ *   boje na pola mape.
+ */
+export function planFxTiming(
+  events: BitkaFxEvent[]
+): { event: BitkaFxEvent; delay: number }[] {
+  const shot = events.some((e) => e.kind === 'napad') ? FX_SHOT_SECONDS : 0;
+  const fall = events.find((e) => e.kind === 'zamak-pao');
+  let step = 0;
+  return events.map((event) => {
+    if (event.kind === 'napad') return { event, delay: 0 };
+    if (event.kind !== 'osvojeno') return { event, delay: shot };
+    if (!fall) return { event, delay: shot };
+    const delay = shot + FX_KASKADA_POCETAK + step * FX_KASKADA_KORAK;
+    step += 1;
+    return { event, delay };
+  });
+}
+
+/**
+ * Šta se na mapi **zadržava na starom izgledu** dok animacija ne stigne.
+ *
+ * Stanje sa servera nosi već promenjenog vlasnika, a efekti kasne (projektil
+ * leti, talas se širi) — pa bi bez ovoga teritorija prvo tiho promenila boju, a
+ * bljesak stigao sekundu kasnije, na već osvojeno. Redosled mora biti obrnut:
+ * prvo udar, pa promena.
+ *
+ * Vraća prethodno stanje teritorije i koliko dugo ga treba prikazivati. Isto
+ * važi i za zid — brojač zidova pada tačno kad plane vatra, ne pre.
+ */
+export function planFxHolds(
+  prevBoard: BitkaTerritoryState[] | null | undefined,
+  events: BitkaFxEvent[]
+): { territoryId: string; state: BitkaTerritoryState; delay: number }[] {
+  if (!prevBoard?.length) return [];
+  const before = new Map(prevBoard.map((st) => [st.id, st]));
+  const out: { territoryId: string; state: BitkaTerritoryState; delay: number }[] = [];
+  for (const { event, delay } of planFxTiming(events)) {
+    if (event.kind !== 'osvojeno' && event.kind !== 'zid') continue;
+    if (!event.territoryId || delay <= 0) continue;
+    const state = before.get(event.territoryId);
+    if (state) out.push({ territoryId: event.territoryId, state, delay });
+  }
   return out;
 }
 

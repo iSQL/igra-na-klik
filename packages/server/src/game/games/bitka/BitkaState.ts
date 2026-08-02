@@ -1,5 +1,6 @@
 import type {
   BitkaDuelOutcome,
+  BitkaMode,
   BitkaMapView,
   BitkaPhase,
   BitkaTerritoryState,
@@ -10,17 +11,21 @@ import type {
 // Faze čekanja (podesive kroz /admin → Timinzi).
 export const UVOD_DURATION = 7;
 export const PITANJE_NAJAVA_DURATION = 4;
-export const REZULTAT_DURATION = 6;
+// Kratko namerno: tačan odgovor se posle ove pauze i dalje vidi, jer ostaje na
+// ekranu kroz fazu biranja teritorije. Pauza služi samo da se rezultat primeti,
+// ne da se u njega gleda.
+export const REZULTAT_DURATION = 3;
 export const DUEL_REZULTAT_DURATION = 6;
 export const LEADERBOARD_DURATION = 14;
 
 // Aktivan unos — balans igre, ostaje u kodu.
 export const ODGOVOR_DURATION = 20;
-/** Prvi krug biranja baze; ponovljeni krugovi su kraći. */
-export const BAZA_IZBOR_DURATION = 18;
-export const BAZA_PONOVO_DURATION = 9;
-/** Koliko puta se sudar oko iste baze rešava ponovnim biranjem. */
-export const BAZA_MAX_PONAVLJANJA = 2;
+/**
+ * Vreme JEDNOM igraču da postavi zamak. Zamkovi se biraju naizmenično, po
+ * redosledu iz uvodnog pitanja, i svaki se odmah vidi na mapi — ko bira
+ * kasnije zna gde su prethodni, pa je pozni izbor taktički, a ne kockanje.
+ */
+export const BAZA_IZBOR_DURATION = 14;
 /** Vreme jednom igraču da izabere slobodnu teritoriju. */
 export const IZBOR_DURATION = 12;
 export const NAPAD_IZBOR_DURATION = 15;
@@ -59,6 +64,8 @@ export interface BitkaDuelState {
 export interface BitkaInternalState {
   phase: BitkaPhase;
   phaseTimeRemaining: number;
+  /** Rotacija ili niz — bira se pri pokretanju igre. */
+  mode: BitkaMode;
 
   map: BitkaMapView;
   /** Gde smeju zamkovi; null = bilo gde. */
@@ -78,10 +85,12 @@ export interface BitkaInternalState {
   answers: Map<string, BitkaAnswer>;
   expected: Set<string>;
 
-  /** Redosled po rezultatu uvodnog broj-pitanja; rešava sudare oko baze. */
+  /** Redosled po rezultatu uvodnog broj-pitanja; određuje ko prvi bira zamak. */
   priority: string[];
+  /** Gde je ko podigao zamak — popunjava se kako igrači redom biraju. */
   baseChoice: Map<string, string>;
-  basePasses: number;
+  /** Ko još čeka na red za zamak, prvi u nizu je na potezu. */
+  baseQueue: string[];
 
   osvajanjeRound: number;
   /** Ko još bira slobodnu teritoriju, redom po brzini tačnog odgovora. */

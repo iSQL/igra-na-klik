@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import type { BitkaFxEvent } from './fx-events';
-import type { BitkaPoint } from '@igra/shared';
+import { FX_SHOT_SECONDS, type BitkaFxEvent, type BitkaPoint } from '@igra/shared';
 
 /**
  * Providan three.js sloj iznad mape na TV-u.
@@ -18,9 +17,6 @@ import type { BitkaPoint } from '@igra/shared';
  * Efekti su kratki namerno: serverski sat ne čeka TV. Najduži (pad zamka) je
  * ~1,8 s, a najkraća podesiva pauza za ishod napada je 3 s.
  */
-
-/** Koliko projektil leti — impuls udara se kasni za toliko. */
-export const FX_SHOT_SECONDS = 0.55;
 
 interface Effect {
   update(dt: number): boolean;
@@ -135,10 +131,12 @@ export class BitkaFxScene {
       case 'napad':
         return this.shot(ev);
       case 'osvojeno':
+        // Sporije i krupnije nego ostali efekti — osvajanje je poenta poteza.
         return composite([
-          this.ring(at, ev.color, { r0: 0.02, r1: 0.15, dur: 0.85, width: 0.3 }),
-          this.ring(at, '#ffffff', { r0: 0.01, r1: 0.07, dur: 0.45, width: 1, opacity: 0.55 }),
-          this.shards(at, ev.color, 10, { speed: 0.16, dur: 0.8, size: 0.014, gravity: 0.12 }),
+          this.ring(at, ev.color, { r0: 0.02, r1: 0.26, dur: 1.6, width: 0.3 }),
+          this.ring(at, ev.color, { r0: 0.02, r1: 0.16, dur: 1.1, width: 0.5 }),
+          this.ring(at, '#ffffff', { r0: 0.01, r1: 0.09, dur: 0.6, width: 1, opacity: 0.65 }),
+          this.shards(at, ev.color, 20, { speed: 0.2, dur: 1.5, size: 0.016, gravity: 0.1 }),
         ]);
       case 'odbranjeno':
         return composite([
@@ -146,9 +144,14 @@ export class BitkaFxScene {
           this.ring(at, '#ffffff', { r0: 0.05, r1: 0.09, dur: 0.35, width: 0.5, opacity: 0.7 }),
         ]);
       case 'zid':
+        // Vatra i na ravnoj mapi — krhotine koje lete NAVIŠE i gase se, u tri
+        // boje plamena. Nema dubine kao 3D verzija, ali čita se isto.
         return composite([
-          this.ring(at, GOLD, { r0: 0.02, r1: 0.11, dur: 0.5, width: 0.4 }),
+          this.ring(at, '#FF8A3D', { r0: 0.02, r1: 0.12, dur: 0.6, width: 0.4 }),
           this.shards(at, GOLD, 14, { speed: 0.22, dur: 1.0, size: 0.016, gravity: 0.45 }),
+          this.shards(at, '#FFE08A', 10, { speed: 0.07, dur: 1.8, size: 0.02, gravity: -0.06 }),
+          this.shards(at, '#FF9F3D', 10, { speed: 0.05, dur: 2.0, size: 0.026, gravity: -0.05 }),
+          this.shards(at, '#E0362B', 8, { speed: 0.04, dur: 2.1, size: 0.03, gravity: -0.04 }),
         ]);
       case 'zamak-pao':
         return composite([

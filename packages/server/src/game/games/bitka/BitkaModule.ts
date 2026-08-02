@@ -20,6 +20,8 @@ import {
   BITKA_MAX_OSVAJANJE_RUNDI,
   BITKA_MAX_RATNIH_RUNDI,
   BITKA_MIN_IGRACA,
+  BITKA_RUNDE_DEF,
+  BITKA_RUNDE_IZBOR,
   BITKA_ODBRANA_BONUS,
   BITKA_ZAMAK_BODOVI,
   BITKA_ZID_BONUS,
@@ -41,8 +43,6 @@ import { duelOutcome, resolveBrojDuel, resolveChoiceDuel, type DuelSide } from '
 import type { BitkaAnswer, BitkaInternalState, BitkaStats } from './BitkaState.js';
 import {
   BAZA_IZBOR_DURATION,
-  BAZA_MAX_PONAVLJANJA,
-  BAZA_PONOVO_DURATION,
   DUEL_REZULTAT_DURATION,
   IZBOR_DURATION,
   LEADERBOARD_DURATION,
@@ -56,6 +56,8 @@ import {
 
 interface BitkaStartOptions {
   bitkaMapId?: unknown;
+  bitkaMode?: unknown;
+  bitkaRounds?: unknown;
   quizPackIds?: unknown;
 }
 
@@ -131,6 +133,7 @@ export class BitkaModule extends BaseGameModule {
 
     this.state = {
       phase: 'uvod',
+      mode: cc.bitkaMode === 'runde' ? 'runde' : 'zamkovi',
       phaseTimeRemaining: this.timings.UVOD_DURATION ?? UVOD_DURATION,
       map,
       castleSites: map.castleSites?.length ? map.castleSites : null,
@@ -146,13 +149,18 @@ export class BitkaModule extends BaseGameModule {
       expected: new Set(),
       priority: [],
       baseChoice: new Map(),
-      basePasses: 0,
+      baseQueue: [],
       osvajanjeRound: 0,
       pickQueue: [],
       round: 0,
-      // Nije podesivo: rat traje dok ne padne pretposlednji zamak, a ovo je
-      // samo osigurač od zaglavljene partije.
-      totalRounds: BITKA_MAX_RATNIH_RUNDI,
+      // Na runde: dogovoren broj i to je kraj partije. Do poslednjeg zamka:
+      // ovo je samo osigurač od zaglavljene partije, ne pravilo igre.
+      totalRounds:
+        cc.bitkaMode === 'runde'
+          ? (BITKA_RUNDE_IZBOR as readonly number[]).includes(Number(cc.bitkaRounds))
+            ? Number(cc.bitkaRounds)
+            : BITKA_RUNDE_DEF
+          : BITKA_MAX_RATNIH_RUNDI,
       turnOrder: [],
       turnPointer: 0,
       activePlayerId: null,
@@ -261,10 +269,12 @@ export class BitkaModule extends BaseGameModule {
     if (!this.territoryById.has(territoryId)) return null;
 
     if (this.state.phase === 'baza-izbor') {
+      // Bira samo onaj ko je na potezu, i izbor je konačan — sledeći igrač ga
+      // vidi na mapi i bira u odnosu na njega.
+      if (playerId !== this.state.activePlayerId) return null;
       if (!this.baseEligibleIds().includes(territoryId)) return null;
-      this.state.baseChoice.set(playerId, territoryId);
-      // Kad su svi izabrali različite teritorije nema se šta čekati.
-      if (this.baseSettled(room)) this.advancePhase(room);
+      this.commitBase(room, playerId, territoryId);
+      this.advanceBaseTurn(room);
       return this.buildGameState(room);
     }
 
@@ -308,6 +318,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.answers.delete(playerId);
     this.state.baseChoice.delete(playerId);
     this.state.pickQueue = this.state.pickQueue.filter((id) => id !== playerId);
+    this.state.baseQueue = this.state.baseQueue.filter((id) => id !== playerId);
 
     // Zemlja odlazi u neutralno, a ne protivniku — nagrada za tuđi pad
     // pokvarila bi trku.
@@ -328,6 +339,8 @@ export class BitkaModule extends BaseGameModule {
     } else if (this.state.activePlayerId === playerId) {
       if (this.state.phase === 'napad-izbor') this.nextAttack(room);
       else if (this.state.phase === 'osvajanje-izbor') this.nextPicker(room);
+      // Otišao je dok je bio na potezu za zamak — red ide dalje bez njega.
+      else if (this.state.phase === 'baza-izbor') this.startBaseTurn(room);
     } else if (ANSWER_PHASES.has(this.state.phase) && this.allAnswered(room)) {
       this.advancePhase(room);
     }
@@ -356,11 +369,11 @@ export class BitkaModule extends BaseGameModule {
         this.finishRedosled(room);
         break;
       case 'redosled-rezultat':
-        this.beginBaza();
+        this.beginBaza(room);
         break;
 
       case 'baza-izbor':
-        this.resolveBaza(room);
+        this.autoPlaceBase(room);
         break;
 
       case 'osvajanje-pitanje':
@@ -391,9 +404,25 @@ export class BitkaModule extends BaseGameModule {
       case 'duel-broj':
         this.finishDuelBroj(room);
         break;
-      case 'duel-rezultat':
+      case 'duel-rezultat': {
+        // Opsada traje dok napadač pogađa: srušen zid → odmah novo pitanje na
+        // ISTOM zamku, bez prepuštanja poteza. Nema opasnosti od beskonačnog
+        // niza — svaki pogodak skida po jedan zid, pa posle najviše tri udarca
+        // zamak padne i potez svakako ide dalje. Nema ni dosade za ostale:
+        // u opsadi su oba igrača za telefonom.
+        const duel = this.state.duel;
+        if (
+          duel?.outcome === 'zid' &&
+          !this.state.eliminated.has(duel.attackerId) &&
+          room.players.some((p) => p.id === duel.attackerId)
+        ) {
+          this.state.lastEvent = `${this.nameOf(room, duel.attackerId)} nastavlja opsadu.`;
+          this.beginDuel(room, duel.attackerId, duel.territoryId);
+          break;
+        }
         this.nextAttack(room);
         break;
+      }
 
       case 'rezultat':
         this.state.phase = 'ended';
@@ -411,7 +440,7 @@ export class BitkaModule extends BaseGameModule {
       // Bez broj-pitanja nema uvodnog merenja — redosled je nasumičan.
       this.state.priority = shuffled(alive);
       this.state.lastEvent = 'Nema broj-pitanja u paketima — redosled je izvučen nasumično.';
-      this.beginBaza();
+      this.beginBaza(room);
       return;
     }
     this.state.brojQuestion = question;
@@ -442,13 +471,48 @@ export class BitkaModule extends BaseGameModule {
 
   // --- Izbor baze ----------------------------------------------------------
 
-  private beginBaza(): void {
+  /**
+   * Zamkovi se postavljaju **naizmenično**, po redosledu iz uvodnog pitanja.
+   *
+   * Ranije su svi birali istovremeno naslepo, pa su se sudari oko istog mesta
+   * rešavali prioritetom i ponovnim krugovima — što je bilo i sporo i pomalo
+   * nasumično. Sad prvi bira onaj ko je najbolje pogodio uvodno pitanje, svaki
+   * postavljen zamak se odmah vidi na mapi, a ko bira kasnije bira taktički.
+   * Sudara više nema, pa je i cela mašinerija ponavljanja otišla.
+   */
+  private beginBaza(room: Room): void {
     this.state.phase = 'baza-izbor';
     this.state.baseChoice = new Map();
-    this.state.basePasses = 0;
     this.state.answers = new Map();
     this.state.expected = new Set();
+    this.state.baseQueue = this.state.priority.filter((id) =>
+      this.alivePlayerIds(room).includes(id)
+    );
+    // Ko nije stigao u `priority` (nije odgovorio) ide na kraj reda.
+    for (const id of this.alivePlayerIds(room)) {
+      if (!this.state.baseQueue.includes(id)) this.state.baseQueue.push(id);
+    }
+    this.startBaseTurn(room);
+  }
+
+  /** Pusti sledećeg na red; kad se red isprazni, kreće osvajanje. */
+  private startBaseTurn(room: Room): void {
+    this.state.baseQueue = this.state.baseQueue.filter(
+      (id) => !this.state.eliminated.has(id) && room.players.some((p) => p.id === id)
+    );
+    const next = this.state.baseQueue[0];
+    if (!next || this.baseEligibleIds().length === 0) {
+      this.finishBaza(room);
+      return;
+    }
+    this.state.activePlayerId = next;
     this.state.phaseTimeRemaining = BAZA_IZBOR_DURATION;
+  }
+
+  /** Zamak je postavljen (ili dodeljen) — sledeći igrač. */
+  private advanceBaseTurn(room: Room): void {
+    this.state.baseQueue.shift();
+    this.startBaseTurn(room);
   }
 
   /** Teritorije na koje sme zamak i koje još nisu zauzete. */
@@ -460,64 +524,37 @@ export class BitkaModule extends BaseGameModule {
       .filter((id) => !sites || sites.includes(id));
   }
 
-  /** Svi bez zamka su izabrali, i to različite teritorije. */
-  private baseSettled(room: Room): boolean {
-    const waiting = this.alivePlayerIds(room).filter(
-      (id) => ![...this.state.board.values()].some((st) => st.castle && st.ownerId === id)
-    );
-    if (waiting.some((id) => !this.state.baseChoice.has(id))) return false;
-    const picks = waiting.map((id) => this.state.baseChoice.get(id)!);
-    return new Set(picks).size === picks.length;
+  /** Postavi zamak i objavi ga — svi ga odmah vide na mapi. */
+  private commitBase(room: Room, playerId: string, territoryId: string): void {
+    this.placeCastle(playerId, territoryId);
+    this.state.baseChoice.set(playerId, territoryId);
+    this.state.lastEvent = `${this.nameOf(room, playerId)} diže zamak u ${this.territoryName(
+      territoryId
+    )}.`;
+    this.recomputeScores(room);
   }
 
-  private resolveBaza(room: Room): void {
-    const pending = this.alivePlayerIds(room).filter(
+  /** Vreme je isteklo — mesto se dodeljuje nasumično, potez se ne preskače. */
+  private autoPlaceBase(room: Room): void {
+    const playerId = this.state.activePlayerId;
+    const free = shuffled(this.baseEligibleIds());
+    if (playerId && free.length > 0) this.commitBase(room, playerId, free[0]);
+    this.advanceBaseTurn(room);
+  }
+
+  private finishBaza(room: Room): void {
+    this.state.activePlayerId = null;
+
+    // Ko je ostao bez mesta (odustao usred faze, mapa se popunila) dobija ono
+    // što je preostalo — partija ne sme da krene sa igračem bez zamka.
+    const withoutCastle = this.alivePlayerIds(room).filter(
       (id) => ![...this.state.board.values()].some((st) => st.castle && st.ownerId === id)
     );
-
-    // Sudar oko iste teritorije rešava prioritet iz uvodnog pitanja.
-    const byTerritory = new Map<string, string[]>();
-    for (const id of pending) {
-      const choice = this.state.baseChoice.get(id);
-      if (!choice) continue;
-      const list = byTerritory.get(choice) ?? [];
-      list.push(id);
-      byTerritory.set(choice, list);
-    }
-
-    const losers: string[] = [];
-    for (const [territoryId, claimants] of byTerritory) {
-      const st = this.state.board.get(territoryId);
-      if (!st || st.ownerId !== null) {
-        losers.push(...claimants);
-        continue;
-      }
-      const winner = [...claimants].sort(
-        (a, b) => this.priorityOf(a) - this.priorityOf(b)
-      )[0];
-      this.placeCastle(winner, territoryId);
-      losers.push(...claimants.filter((id) => id !== winner));
-    }
-
-    const stillPending = pending.filter(
-      (id) => ![...this.state.board.values()].some((st) => st.castle && st.ownerId === id)
-    );
-
-    // Ko je izgubio sudar dobija još jedan krug da bira — ali samo dok se ne
-    // potroši budžet ponavljanja, da faza ne bi mogla da se otegne.
-    if (losers.length > 0 && this.state.basePasses < BAZA_MAX_PONAVLJANJA) {
-      this.state.basePasses += 1;
-      for (const id of stillPending) this.state.baseChoice.delete(id);
-      this.state.lastEvent = 'Sudar oko iste teritorije — biraj ponovo.';
-      this.state.phaseTimeRemaining = BAZA_PONOVO_DURATION;
-      return;
-    }
-
-    // Ostatak (nije izabrao ili je potrošio pokušaje) dobija nasumično mesto.
-    for (const id of stillPending) {
+    for (const id of withoutCastle) {
       const free = shuffled(this.baseEligibleIds());
       if (free.length === 0) break;
       this.placeCastle(id, free[0]);
+      this.state.baseChoice.set(id, free[0]);
     }
 
     this.recomputeScores(room);
@@ -583,6 +620,14 @@ export class BitkaModule extends BaseGameModule {
           (this.state.answers.get(b)?.remaining ?? 0) -
           (this.state.answers.get(a)?.remaining ?? 0)
       );
+    // Poruka o ishodu mora da se napiše i kad ishoda NEMA: inače na ekranu
+    // ostane rečenica iz prethodne runde („Pera uzima Porodin"), pa izgleda
+    // kao da se upravo desilo nešto što se nije.
+    this.state.lastEvent =
+      this.state.pickQueue.length === 0
+        ? 'Niko nije odgovorio tačno — niko ne uzima zemlju.'
+        : `Tačno: ${this.state.pickQueue.map((id) => this.nameOf(room, id)).join(', ')}.`;
+
     this.state.phase = 'osvajanje-rezultat';
     this.state.phaseTimeRemaining = this.timings.REZULTAT_DURATION ?? REZULTAT_DURATION;
   }
@@ -877,6 +922,13 @@ export class BitkaModule extends BaseGameModule {
       this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION;
   }
 
+  /**
+   * Sledeći napad — potez se UVEK rotira.
+   *
+   * Jedini izuzetak je opsada zamka i on se rešava u `duel-rezultat`: dok
+   * napadač ruši zidove, ostaje na potezu i puca u isti zamak. Van toga niko
+   * ne igra dva puta zaredom, da ostali ne bi gledali tuđu partiju.
+   */
   private nextAttack(room: Room): void {
     this.state.duel = null;
     this.state.activePlayerId = null;
@@ -913,7 +965,9 @@ export class BitkaModule extends BaseGameModule {
     this.state.lastEvent =
       standing.length <= 1
         ? `${this.nameOf(room, this.state.winnerId)} je ostao jedini sa zamkom!`
-        : `Bitka se otegla — pobeđuje najveći zbir poena.`;
+        : this.state.mode === 'runde'
+          ? `Odigrano je ${this.state.totalRounds} rundi — pobeđuje najveći zbir poena.`
+          : `Bitka se otegla — pobeđuje najveći zbir poena.`;
     this.state.activePlayerId = null;
     this.state.duel = null;
     this.state.phase = 'rezultat';
@@ -1178,6 +1232,10 @@ export class BitkaModule extends BaseGameModule {
       phase === 'osvajanje-pitanje' ||
       phase === 'osvajanje-odgovor' ||
       phase === 'osvajanje-rezultat' ||
+      // Pitanje se vidi i DOK se bira teritorija: nekad se čekalo da otkrivanje
+      // istekne pa da izbor počne, što je bilo mrtvo vreme. Sada izbor kreće
+      // odmah, a tačan odgovor i dalje stoji na ekranu pored njega.
+      phase === 'osvajanje-izbor' ||
       phase === 'duel-pitanje' ||
       phase === 'duel-odgovor' ||
       phase === 'duel-broj' ||
@@ -1185,10 +1243,14 @@ export class BitkaModule extends BaseGameModule {
     const revealing =
       phase === 'redosled-rezultat' ||
       phase === 'osvajanje-rezultat' ||
+      // Isto: pitanje je gotovo i odgovori su zaključani, pa otkrivanje tačnog
+      // ovde ništa ne odaje. Novo pitanje ionako počinje tek u `beginOsvajanje`.
+      phase === 'osvajanje-izbor' ||
       phase === 'duel-rezultat';
 
     const hostData: BitkaHostData = {
       phase,
+      mode: this.state.mode,
       map: this.state.map,
       board: [...this.state.board.values()],
       players: this.playerViews(room),
@@ -1219,9 +1281,12 @@ export class BitkaModule extends BaseGameModule {
     }
 
     if (phase === 'baza-izbor') {
+      hostData.activePlayerId = this.state.activePlayerId;
       hostData.selectableIds = this.baseEligibleIds();
-      // Ko je potvrdio — nikad i koju teritoriju je izabrao.
+      // Podignut zamak se ionako vidi na tabli, pa ovo više nije tajna nego
+      // prosto spisak onih koji su svoje odradili.
       hostData.baseCommittedIds = [...this.state.baseChoice.keys()];
+      hostData.pickQueue = [...this.state.baseQueue];
     }
     if (phase === 'osvajanje-izbor') {
       hostData.activePlayerId = this.state.activePlayerId;
@@ -1338,8 +1403,10 @@ export class BitkaModule extends BaseGameModule {
     }
 
     if (phase === 'baza-izbor') {
-      data.isActive = !this.state.eliminated.has(playerId);
-      data.selectableIds = this.baseEligibleIds();
+      // Bira samo onaj ko je na potezu; ostali gledaju mapu i vide gde su
+      // zamkovi već podignuti.
+      data.isActive = this.state.activePlayerId === playerId;
+      if (data.isActive) data.selectableIds = this.baseEligibleIds();
       data.myBaseChoice = this.state.baseChoice.get(playerId) ?? null;
     } else if (phase === 'osvajanje-izbor' && this.state.activePlayerId === playerId) {
       data.selectableIds = this.freePickTargets(playerId);

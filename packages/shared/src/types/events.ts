@@ -12,6 +12,7 @@ import type { KvizQuestionType } from './quiz.js';
 import type { KoSamJaImportQuestion } from '../games/ko-sam-ja-import.js';
 import type { KoSamJaCategory } from './ko-sam-ja.js';
 import type { TajniAgentiMode } from './tajni-agenti.js';
+import type { BitkaMode } from './bitka.js';
 import type { TajniAgentiImportPack } from '../games/tajni-agenti-import.js';
 import type { Language } from '../i18n/types.js';
 import type { GluvoDobaDeathReveal } from './gluvo-doba.js';
@@ -157,6 +158,9 @@ export interface ClientToServerEvents {
     // `quizPackIds` field — the game only ever uses obicno/uljez + broj, so
     // `quizTypes` doesn't apply to it.
     bitkaMapId?: string;
+    // Osvajanje: koliko partija traje — do poslednjeg zamka ili N rundi.
+    bitkaMode?: BitkaMode;
+    bitkaRounds?: number;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

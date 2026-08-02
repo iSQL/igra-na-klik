@@ -4,7 +4,13 @@ import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
-import { deriveFxEvents, type BitkaFxEvent, type BitkaFxSnapshot } from './fx/fx-events';
+import {
+  deriveFxEvents,
+  planFxHolds,
+  type BitkaFxEvent,
+  type BitkaFxSnapshot,
+  type BitkaTerritoryState,
+} from '@igra/shared';
 
 // three.js ulazi tek ovde i to u zasebnom chunk-u: mapa se vidi odmah, teren i
 // efekti se priključe kad se učita. Telefon ove module nikad ne dohvata.
@@ -82,16 +88,46 @@ export default function BitkaHost() {
   // Vizuelni događaji se izvode iz RAZLIKE dva uzastopna stanja, pa se svaki
   // odigra tačno jednom — isti princip kao zvuk iznad, samo generalizovan.
   const [fxEvents, setFxEvents] = useState<BitkaFxEvent[]>([]);
+  /**
+   * Tabla koju crta mapa — zasebno stanje, ne `host.board`. Bez ovoga bi boja
+   * pretekla bljesak: stanje sa servera stiže odmah, efekat kasni koliko
+   * projektil leti, a `useEffect` radi tek posle iscrtavanja.
+   */
+  const [shownBoard, setShownBoard] = useState<BitkaTerritoryState[]>([]);
   const prevSnapRef = useRef<BitkaFxSnapshot | null>(null);
+  const liveBoardRef = useRef<BitkaTerritoryState[]>([]);
   const fxIdRef = useRef(0);
+  const holdTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [use3D, setUse3D] = useState(() => !prefers2DBoard());
   const drop3D = useCallback(() => setUse3D(false), []);
+  useEffect(() => () => holdTimersRef.current.forEach(clearTimeout), []);
   useEffect(() => {
     if (!host || !phase) return;
+    liveBoardRef.current = host.board;
     const snapshot: BitkaFxSnapshot = { phase, host };
+    const prevBoard = prevSnapRef.current?.host.board;
     const events = deriveFxEvents(prevSnapRef.current, snapshot, () => ++fxIdRef.current);
     prevSnapRef.current = snapshot;
-    if (events.length) setFxEvents(events);
+
+    const holds = events.length > 0 ? planFxHolds(prevBoard, events) : [];
+    const heldNow = new Map(holds.map((h) => [h.territoryId, h.state]));
+    setShownBoard(host.board.map((st) => heldNow.get(st.id) ?? st));
+    if (!events.length) return;
+    setFxEvents(events);
+
+    for (const h of holds) {
+      holdTimersRef.current.push(
+        setTimeout(() => {
+          setShownBoard((prev) =>
+            prev.map((st) =>
+              st.id === h.territoryId
+                ? (liveBoardRef.current.find((b) => b.id === h.territoryId) ?? st)
+                : st
+            )
+          );
+        }, h.delay * 1000)
+      );
+    }
   }, [host, phase]);
 
   // Odbrojavanje u poslednjih 5 sekundi aktivnih faza.
@@ -111,8 +147,19 @@ export default function BitkaHost() {
   }, [gameState, phase, play]);
 
   if (!gameState || !host) return null;
+  // Naslovi i tabela poena idu po pravom stanju; kasni samo mapa.
+  const displayBoard = shownBoard.length > 0 ? shownBoard : host.board;
+
   if (phase === 'rezultat' || phase === 'ended') {
-    return <FinalBoard host={host} fxEvents={fxEvents} use3D={use3D} onFail={drop3D} />;
+    return (
+      <FinalBoard
+        host={host}
+        board={displayBoard}
+        fxEvents={fxEvents}
+        use3D={use3D}
+        onFail={drop3D}
+      />
+    );
   }
 
   const seconds = Math.ceil(gameState.timeRemaining);
@@ -153,7 +200,9 @@ export default function BitkaHost() {
         </h1>
         <span style={{ color: 'var(--dim)', fontSize: '1rem' }}>
           {host.round > 0
-            ? `Rat · runda ${host.round} · zamkova još ${host.players.filter((p) => p.walls > 0).length}`
+            ? `Rat · runda ${host.round}${
+                host.mode === 'runde' ? `/${host.totalRounds}` : ''
+              } · zamkova još ${host.players.filter((p) => p.walls > 0).length}`
             : host.osvajanjeRound
               ? `Osvajanje · ${host.osvajanjeRound}. pitanje`
               : host.map.name}
@@ -185,21 +234,28 @@ export default function BitkaHost() {
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) 250px',
           gap: '0.9rem',
-          alignItems: 'center',
+          // `stretch`, ne `center`: tabla tako dobija tačno visinu svog reda i
+          // ne može da se prelije preko donje trake sa pitanjem.
+          alignItems: 'stretch',
         }}
       >
         <BoardSurface
           host={host}
+          board={displayBoard}
           fxEvents={fxEvents}
           use3D={use3D}
           onFail={drop3D}
           highlightIds={host.selectableIds}
           focusId={host.duel?.territoryId ?? null}
-          // Visina je ono što ograničava tablu (mapa je pejzažna), pa je ovo
-          // praktično sav prostor između zaglavlja i donje trake.
-          maxHeightCss="72vh"
+          activePlayerId={host.activePlayerId ?? null}
+          // 3D teren uzima ceo red; ravna mapa ostaje ograničena po visini,
+          // jer joj je odnos stranica zaključan pa ne sme da preraste red.
+          fillHeight
+          maxHeightCss="76vh"
         />
-        <Standings players={host.players} activeId={host.activePlayerId ?? null} />
+        <div style={{ alignSelf: 'center' }}>
+          <Standings players={host.players} activeId={host.activePlayerId ?? null} />
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -217,6 +273,10 @@ export default function BitkaHost() {
             minHeight: '4.4rem',
             display: 'flex',
             alignItems: 'center',
+            // Pitanje se čita — ništa sa table ne sme da mu se popne preko.
+            position: 'relative',
+            zIndex: 2,
+            flexShrink: 0,
           }}
         >
           <Panel host={host} phase={phase ?? ''} />
@@ -266,12 +326,31 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
 
   if (phase === 'baza-izbor') {
     const done = new Set(host.baseCommittedIds ?? []);
+    const queue = (host.pickQueue ?? []).slice(1);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', width: '100%' }}>
-        <Line title="Tapnite teritoriju na telefonu" text="Ako dvoje izaberu isto, prednost ima bolji rezultat sa uvodnog pitanja." />
+        <Line
+          title={`${named(host.activePlayerId)} bira mesto za zamak`}
+          text={
+            queue.length > 0
+              ? `Na redu posle: ${queue.map(named).join(', ')} — vide gde su zamkovi već podignuti.`
+              : 'Poslednji zamak.'
+          }
+        />
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {host.players.map((p) => (
-            <Chip key={p.playerId} player={p} dim={!done.has(p.playerId)} label={done.has(p.playerId) ? 'spreman' : 'bira…'} />
+            <Chip
+              key={p.playerId}
+              player={p}
+              dim={!done.has(p.playerId) && p.playerId !== host.activePlayerId}
+              label={
+                done.has(p.playerId)
+                  ? 'utvrđen'
+                  : p.playerId === host.activePlayerId
+                    ? 'bira…'
+                    : 'čeka'
+              }
+            />
           ))}
         </div>
       </div>
@@ -572,29 +651,41 @@ function Standings({ players, activeId }: { players: BitkaPlayerView[]; activeId
  */
 function BoardSurface({
   host,
+  board,
   fxEvents,
   use3D,
   onFail,
   focusId,
   highlightIds,
+  activePlayerId,
   maxHeightCss,
+  fillHeight,
 }: {
   host: BitkaHostData;
+  /** Zadržana tabla — nije uvek `host.board`, vidi `planFxHolds`. */
+  board: BitkaTerritoryState[];
   fxEvents: BitkaFxEvent[];
   use3D: boolean;
   onFail: () => void;
   focusId?: string | null;
   highlightIds?: string[];
+  activePlayerId?: string | null;
   maxHeightCss: string;
+  /** 3D teren uzima punu visinu roditelja umesto `maxHeightCss`. */
+  fillHeight?: boolean;
 }) {
   const flat = (withFx: boolean) => (
     <BitkaMapView
       map={host.map}
-      board={host.board}
+      board={board}
       players={host.players}
       highlightIds={highlightIds}
       focusId={focusId ?? null}
+      activePlayerId={activePlayerId ?? null}
       maxHeightCss={maxHeightCss}
+      // Imena atara se ne ispisuju na TV-u: mapa je slika, a ko šta napada
+      // ionako piše u donjoj traci punim imenom.
+      showNames={false}
     >
       {withFx && (
         <Suspense fallback={null}>
@@ -609,12 +700,13 @@ function BoardSurface({
     <Suspense fallback={flat(false)}>
       <BitkaBoard3D
         map={host.map}
-        board={host.board}
+        board={board}
         players={host.players}
         focusId={focusId ?? null}
         highlightIds={highlightIds}
+        activePlayerId={activePlayerId ?? null}
         events={fxEvents}
-        maxHeightCss={maxHeightCss}
+        heightCss={fillHeight ? '100%' : maxHeightCss}
         onFail={onFail}
       />
     </Suspense>
@@ -623,11 +715,13 @@ function BoardSurface({
 
 function FinalBoard({
   host,
+  board: displayBoard,
   fxEvents,
   use3D,
   onFail,
 }: {
   host: BitkaHostData;
+  board: BitkaTerritoryState[];
   fxEvents: BitkaFxEvent[];
   use3D: boolean;
   onFail: () => void;
@@ -654,10 +748,11 @@ function FinalBoard({
         {/* Slavlje nad pobednikovim zamkom — 'pobeda' stiže baš na ovaj ekran. */}
         <BoardSurface
           host={host}
+          board={displayBoard}
           fxEvents={fxEvents}
           use3D={use3D}
           onFail={onFail}
-          maxHeightCss="62vh"
+          maxHeightCss="68vh"
         />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {board.map((entry) => (

@@ -5,7 +5,7 @@ import type {
   BitkaPoint,
   BitkaTerritoryState,
 } from '@igra/shared';
-import { FX_SHOT_SECONDS, type BitkaFxEvent } from './fx-events';
+import { FX_SHOT_SECONDS, type BitkaFxEvent } from '@igra/shared';
 
 /**
  * Bojno polje u 3D-u — TV verzija mape.
@@ -21,7 +21,7 @@ import { FX_SHOT_SECONDS, type BitkaFxEvent } from './fx-events';
  * Ista pravila kao Penali: vanilla three, bez assets-a, sve primitivi, i sve
  * iza lenjog chunk-a. Telefon ovo nikad ne učitava.
  *
- * Efekti su isti oni iz `fx-events.ts` — sloj događaja se nije menjao, samo se
+ * Efekti su isti oni iz `bitka-fx.ts` u shared paketu — sloj događaja se nije menjao, samo se
  * ispod njega umesto providnog 2D platna sad nalazi teren.
  */
 
@@ -49,7 +49,7 @@ interface Territory {
   cap: THREE.MeshStandardMaterial;
   side: THREE.MeshStandardMaterial;
   label: BitkaPoint;
-  /** Vrh ploče u svetskim koordinatama — sidro za zamak, ime i efekte. */
+  /** Vrh ploče u svetskim koordinatama — sidro za zamak i efekte. */
   anchor: THREE.Vector3;
   targetCap: THREE.Color;
   targetSide: THREE.Color;
@@ -60,7 +60,8 @@ interface Territory {
   walls: THREE.Mesh[];
   /** Rušenje zamka je animacija, pa je stanje ne sme vratiti nazad. */
   toppling: boolean;
-  nameSprite: THREE.Sprite;
+  /** Zamak igrača koji je na potezu — veći i sa zlatnim sjajem. */
+  activeCastle: boolean;
 }
 
 export interface BitkaBoardInput {
@@ -68,6 +69,8 @@ export interface BitkaBoardInput {
   players: BitkaPlayerView[];
   focusId?: string | null;
   highlightIds?: string[];
+  /** Ko je na potezu — njegov zamak se uveća i zasvetli. */
+  activePlayerId?: string | null;
 }
 
 export class BitkaBoardScene {
@@ -109,7 +112,9 @@ export class BitkaBoardScene {
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    this.camera = new THREE.PerspectiveCamera(38, this.aspect, 0.01, 60);
+    // Uže sočivo (32° umesto 38°) smanjuje perspektivno izobličenje, pa tabla
+    // manje liči na trapez i bolje popunjava platno pri istoj margini.
+    this.camera = new THREE.PerspectiveCamera(32, this.aspect, 0.01, 60);
     this.scene.add(this.root);
 
     // Nebo/zemlja + jedno usmereno svetlo: dovoljno da se reljef čita, a
@@ -163,7 +168,6 @@ export class BitkaBoardScene {
       t.mesh.position.z = this.depth;
       t.anchor.set(t.label.x, t.mesh.position.y + SLAB, t.label.y * this.depth);
       t.castle.position.copy(t.anchor);
-      t.nameSprite.position.set(t.anchor.x, t.anchor.y + 0.012, t.anchor.z);
     }
     this.camSettled = false;
     this.frame();
@@ -198,10 +202,17 @@ export class BitkaBoardScene {
         const hasCastle = !!st.castle && st.walls > 0;
         t.castle.visible = hasCastle;
         t.tower.visible = hasCastle;
-        (t.tower.material as THREE.MeshStandardMaterial).color.set(owner ?? NEUTRAL_SIDE);
+        const towerMat = t.tower.material as THREE.MeshStandardMaterial;
+        towerMat.color.set(owner ?? NEUTRAL_SIDE);
         t.walls.forEach((w, i) => {
           w.visible = hasCastle && i < st.walls;
         });
+        // Ko je na potezu, njegov zamak se vidi iz aviona — bez toga se sa
+        // fotelje ne zna ko trenutno igra, a to je jedina informacija koja
+        // objašnjava šta se na mapi upravo dešava.
+        t.activeCastle =
+          hasCastle && !!input.activePlayerId && st.ownerId === input.activePlayerId;
+        towerMat.emissive.set(GOLD);
       }
     }
 
@@ -307,9 +318,6 @@ export class BitkaBoardScene {
       );
 
       const { group, tower, walls } = this.buildCastle(anchor);
-      const nameSprite = this.buildName(territory.name);
-      nameSprite.position.set(anchor.x, anchor.y + 0.012, anchor.z);
-      this.root.add(nameSprite);
 
       this.territories.set(territory.id, {
         id: territory.id,
@@ -326,7 +334,7 @@ export class BitkaBoardScene {
         tower,
         walls,
         toppling: false,
-        nameSprite,
+        activeCastle: false,
       });
 
       this.disposables.push(geometry, cap, side);
@@ -369,57 +377,72 @@ export class BitkaBoardScene {
     return { group, tower, walls };
   }
 
-  /**
-   * Ime teritorije kao sprite sa iscrtanog platna — jedini način da tekst
-   * ostane oštar i čitljiv bez učitavanja fonta u scenu.
-   */
-  private buildName(text: string): THREE.Sprite {
-    const font = '700 42px Manrope, system-ui, sans-serif';
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return new THREE.Sprite();
-    ctx.font = font;
-    canvas.width = Math.ceil(ctx.measureText(text).width) + 28;
-    canvas.height = 68;
-    // Promena dimenzija resetuje kontekst, pa se stil postavlja ponovo.
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth = 9;
-    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-    ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    const material = new THREE.SpriteMaterial({
-      map: texture,
-      transparent: true,
-      depthTest: false,
-    });
-    const sprite = new THREE.Sprite(material);
-    const h = 0.042;
-    sprite.scale.set((h * canvas.width) / canvas.height, h, 1);
-    sprite.center.set(0.5, 0);
-    sprite.renderOrder = 20;
-    this.disposables.push(texture, material);
-    return sprite;
-  }
-
   // --- kamera ---------------------------------------------------------------
+
+  /**
+   * Kamera stoji na ovim odnosima prema udaljenosti — nagib je konstantan.
+   * Strmije od prvobitnog (~63° umesto ~53°): što je pogled niži, to je tabla
+   * više trapez, a trapez u pravougaonom kadru uvek ostavlja prazan pojas gore.
+   * Ovako se popuni osetno više platna, a perspektiva se i dalje jasno vidi.
+   */
+  private static readonly CAM_UP = 0.9;
+  private static readonly CAM_BACK = 0.46;
+
+  /**
+   * Da li cela tabla staje u kadar sa kamere na udaljenosti `dist`.
+   *
+   * Proverava se **svih osam uglova** (četiri u ravni i četiri na vrhu ploče),
+   * jer kamera nije iznad table nego nagnuta: bliža ivica je znatno bliža od
+   * središta, pa u kadar ulazi uže. Ravan proračun „koliko treba da dubina
+   * stane po visini" to promaši — po njemu izgleda da ima mesta, a u stvari se
+   * bliži uglovi odsecaju, dok gore ostaje prazan pojas.
+   */
+  private boardFits(dist: number): boolean {
+    const tanV = Math.tan((this.camera.fov * Math.PI) / 360);
+    const tanH = tanV * this.aspect;
+    const c = new THREE.Vector3(
+      0.5,
+      dist * BitkaBoardScene.CAM_UP,
+      this.depth / 2 + dist * BitkaBoardScene.CAM_BACK
+    );
+    const forward = new THREE.Vector3(0.5, 0, this.depth / 2).sub(c).normalize();
+    const right = new THREE.Vector3(1, 0, 0);
+    const up = right.clone().cross(forward);
+
+    const top = SLAB + LIFT;
+    for (const x of [0, 1]) {
+      for (const z of [0, this.depth]) {
+        for (const y of [0, top]) {
+          const w = new THREE.Vector3(x, y, z).sub(c);
+          const depthAlongView = w.dot(forward);
+          if (depthAlongView <= 0) return false;
+          if (Math.abs(w.dot(right)) > depthAlongView * tanH) return false;
+          if (Math.abs(w.dot(up)) > depthAlongView * tanV) return false;
+        }
+      }
+    }
+    return true;
+  }
 
   /** Ceo teren u kadru — polazni i povratni pogled. */
   private frame() {
-    const center = new THREE.Vector3(0.5, 0, this.depth / 2);
-    const half = Math.tan((this.camera.fov * Math.PI) / 360);
-    const forDepth = this.depth / 2 / half;
-    const forWidth = 0.5 / (half * this.aspect);
-    // Margina je tanka namerno — teren treba da ispuni platno. Ispod ~1.05 bi
-    // bliža ivica table počela da izlazi iz kadra, jer je kamera nagnuta.
-    const dist = Math.max(forDepth, forWidth) * 1.15;
-    this.wantAim.copy(center);
-    this.wantPos.set(center.x, dist * 0.82, center.z + dist * 0.62);
+    // Najmanja udaljenost na kojoj tabla još staje, nađena polovljenjem.
+    // Staje-li je monotono po udaljenosti, pa je ovo dovoljno.
+    let lo = 0.2;
+    let hi = 30;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (this.boardFits(mid)) hi = mid;
+      else lo = mid;
+    }
+    // Tanak zazor da ivica ne dodiruje okvir.
+    const dist = hi * 1.04;
+    this.wantAim.set(0.5, 0, this.depth / 2);
+    this.wantPos.set(
+      0.5,
+      dist * BitkaBoardScene.CAM_UP,
+      this.depth / 2 + dist * BitkaBoardScene.CAM_BACK
+    );
   }
 
   /** Primicanje jednoj teritoriji — duel se gleda izbliza. */
@@ -460,7 +483,13 @@ export class BitkaBoardScene {
       t.anchor.y = y + SLAB;
       if (!t.toppling) {
         t.castle.position.y = t.anchor.y;
-        t.nameSprite.position.y = t.anchor.y + 0.012;
+        // Aktivan zamak diše: veći je i zlatno pulsira, ostali miruju.
+        const wanted = t.activeCastle ? 1.45 + 0.12 * Math.sin(this.clock * 3.2) : 1;
+        const scale = damp(t.castle.scale.x, wanted, 8, dt);
+        t.castle.scale.setScalar(scale);
+        (t.tower.material as THREE.MeshStandardMaterial).emissiveIntensity = t.activeCastle
+          ? 0.35 + 0.25 * Math.sin(this.clock * 3.2)
+          : 0;
       }
     }
 
@@ -508,9 +537,15 @@ export class BitkaBoardScene {
       case 'napad':
         return this.shot(ev, at);
       case 'osvojeno':
+        // Osvajanje je najvažniji trenutak poteza, pa je i najglasnije: stub
+        // svetlosti, dva prstena različitih brzina i kiša krhotina — sporije i
+        // krupnije nego ranije, da se stigne videti sa fotelje.
         return composite([
-          this.ring(at, ev.color, { r0: 0.02, r1: 0.14, dur: 0.85 }),
-          this.shards(at, ev.color, 12, { speed: 0.2, dur: 0.9, size: 0.012, gravity: 0.5 }),
+          this.pillar(at, ev.color, 1.6),
+          this.ring(at, ev.color, { r0: 0.02, r1: 0.26, dur: 1.6 }),
+          this.ring(at, '#ffffff', { r0: 0.02, r1: 0.13, dur: 0.9, opacity: 0.75 }),
+          this.shards(at, ev.color, 22, { speed: 0.26, dur: 1.6, size: 0.016, gravity: 0.55, up: 0.6 }),
+          territory ? this.bounce(territory) : null,
         ]);
       case 'odbranjeno':
         return composite([
@@ -518,16 +553,21 @@ export class BitkaBoardScene {
           this.ring(at, '#ffffff', { r0: 0.04, r1: 0.09, dur: 0.4, opacity: 0.7 }),
         ]);
       case 'zid':
+        // Srušen zid gori — vatra ostaje nad teritorijom i posle udara, pa se
+        // zna gde je opsada u toku i bez čitanja teksta.
         return composite([
-          this.ring(at, GOLD, { r0: 0.02, r1: 0.11, dur: 0.5 }),
-          this.shards(at, GOLD, 16, { speed: 0.26, dur: 1.0, size: 0.013, gravity: 0.9 }),
+          this.ring(at, '#FF8A3D', { r0: 0.02, r1: 0.12, dur: 0.6 }),
+          this.shards(at, GOLD, 16, { speed: 0.26, dur: 1.1, size: 0.013, gravity: 0.9 }),
+          this.fire(at, 2.1),
           territory ? this.breakWall(territory) : null,
         ]);
       case 'zamak-pao':
         return composite([
-          this.ring(at, GOLD, { r0: 0.03, r1: 0.3, dur: 1.1 }),
-          this.ring(at, '#E06A5E', { r0: 0.02, r1: 0.2, dur: 0.8 }),
-          this.shards(at, GOLD, 24, { speed: 0.34, dur: 1.5, size: 0.015, gravity: 1.1 }),
+          this.ring(at, GOLD, { r0: 0.03, r1: 0.34, dur: 1.3 }),
+          this.ring(at, '#E06A5E', { r0: 0.02, r1: 0.22, dur: 0.9 }),
+          this.shards(at, GOLD, 26, { speed: 0.34, dur: 1.6, size: 0.015, gravity: 1.1 }),
+          // Zamak gori duže nego pojedinačan zid — to je kraj jednog igrača.
+          this.fire(at, 3.2, 1.5),
           territory ? this.topple(territory) : null,
         ]);
       case 'pobeda':
@@ -688,6 +728,125 @@ export class BitkaBoardScene {
       dispose: () => {
         for (const mesh of meshes) this.root.remove(mesh);
         mat.dispose();
+        geo.dispose();
+      },
+    };
+  }
+
+  /**
+   * Stub svetlosti u boji novog vlasnika — vertikala se sa fotelje vidi i kad
+   * je teritorija mala, što prsten sam po sebi ne postiže.
+   */
+  private pillar(center: THREE.Vector3, colorHex: string, dur: number): Effect {
+    const geo = new THREE.CylinderGeometry(0.05, 0.075, 1, 24, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(colorHex),
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(center);
+    this.root.add(mesh);
+
+    let t = 0;
+    return {
+      update: (dt) => {
+        t += dt / dur;
+        const u = Math.min(1, t);
+        const h = 0.05 + 0.45 * easeOut(u);
+        mesh.scale.set(1 + u * 0.5, h, 1 + u * 0.5);
+        mesh.position.y = center.y + h / 2;
+        // Brzo plane, pa polako iščezne.
+        mat.opacity = u < 0.15 ? (u / 0.15) * 0.85 : 0.85 * (1 - (u - 0.15) / 0.85);
+        return t < 1;
+      },
+      dispose: () => {
+        this.root.remove(mesh);
+        mat.dispose();
+        geo.dispose();
+      },
+    };
+  }
+
+  /** Ploča poskoči kad promeni gospodara — zemlja se fizički trgne. */
+  private bounce(t: Territory): Effect {
+    const DUR = 1.1;
+    let time = 0;
+    const base = t.mesh.position.y;
+    return {
+      update: (dt) => {
+        time += dt / DUR;
+        const u = Math.min(1, time);
+        // Prigušeni odskok — dva zamaha pa mir.
+        const lift = Math.sin(Math.PI * u * 2) * 0.05 * (1 - u);
+        t.mesh.position.y = base + Math.max(0, lift);
+        return time < 1;
+      },
+      // Petlja ionako vraća ploču na `targetY`, pa nema šta da se čisti.
+      dispose: () => {},
+    };
+  }
+
+  /**
+   * Vatra nad teritorijom — srušen zid gori.
+   *
+   * Bez ijednog asseta: plamenovi su uspravne ravni sa aditivnim mešanjem koje
+   * se dižu, sužavaju i trepere, u tri boje od žute ka tamnocrvenoj. Sprite bi
+   * bio jeftiniji, ali bi tražio teksturu.
+   */
+  private fire(center: THREE.Vector3, dur: number, scale = 1): Effect {
+    const COLORS = ['#FFE08A', '#FF9F3D', '#E0362B'];
+    const COUNT = 16;
+    const geo = new THREE.PlaneGeometry(0.05 * scale, 0.09 * scale);
+    const mats = COLORS.map(
+      (c) =>
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color(c),
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+    );
+    const flames: { mesh: THREE.Mesh; phase: number; speed: number; radius: number }[] = [];
+    for (let i = 0; i < COUNT; i++) {
+      const mesh = new THREE.Mesh(geo, mats[i % mats.length]);
+      const angle = (i / COUNT) * Math.PI * 2;
+      const radius = (0.01 + Math.random() * 0.05) * scale;
+      mesh.position.set(
+        center.x + Math.cos(angle) * radius,
+        center.y,
+        center.z + Math.sin(angle) * radius
+      );
+      this.root.add(mesh);
+      flames.push({ mesh, phase: Math.random() * Math.PI * 2, speed: 0.7 + Math.random() * 0.8, radius });
+    }
+
+    let t = 0;
+    return {
+      update: (dt) => {
+        t += dt / dur;
+        const u = Math.min(1, t);
+        // Bukne, drži se, pa se ugasi.
+        const envelope = u < 0.12 ? u / 0.12 : u > 0.65 ? (1 - u) / 0.35 : 1;
+        for (const f of flames) {
+          f.phase += dt * 7 * f.speed;
+          const flicker = 0.75 + 0.25 * Math.sin(f.phase);
+          f.mesh.scale.set(flicker, flicker * (0.8 + 0.4 * Math.sin(f.phase * 0.7)), 1);
+          f.mesh.position.y = center.y + 0.045 * scale * flicker;
+          // Plamen uvek gleda u kameru, inače se iz profila izgubi.
+          f.mesh.quaternion.copy(this.camera.quaternion);
+        }
+        for (const m of mats) m.opacity = 0.9 * Math.max(0, envelope);
+        return t < 1;
+      },
+      dispose: () => {
+        for (const f of flames) this.root.remove(f.mesh);
+        for (const m of mats) m.dispose();
         geo.dispose();
       },
     };

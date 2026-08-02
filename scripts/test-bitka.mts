@@ -39,6 +39,9 @@ function arg(name: string): string | undefined {
 const MAP_ID = arg('map');
 /** Koliko igrača sedne za sto (2 ili 3). */
 const PLAYERS = Math.max(2, Math.min(3, Number(arg('players') ?? 3)));
+/** Trajanje: bez `--rounds` ide do poslednjeg zamka, inače toliko rundi. */
+const ROUNDS = Number(arg('rounds') ?? 0);
+const MODE = ROUNDS > 0 ? 'runde' : 'zamkovi';
 
 // --- anti-leak ---------------------------------------------------------------
 
@@ -49,6 +52,11 @@ const NEVER = ['answer', 'options.correct', 'selectedIndex', 'myGuess', 'baseCho
 const REVEAL_PHASES = new Set([
   'redosled-rezultat',
   'osvajanje-rezultat',
+  // Otkriveni odgovor NAMERNO preživi u fazu biranja teritorije: pitanje je
+  // završeno i odgovori su zaključani, a izbor kreće odmah umesto da se čeka
+  // da otkrivanje istekne. Novo pitanje počinje tek u `beginOsvajanje`, pa se
+  // ovim ništa ne odaje unapred.
+  'osvajanje-izbor',
   'duel-rezultat',
   'rezultat',
   'ended',
@@ -74,6 +82,51 @@ function scanBroadcast(phase: string, payload: unknown): void {
 // --- pravila duela (čista funkcija, bez servera) ------------------------------
 
 const ruleFailures: string[] = [];
+/** Ko je zamak stvarno izabrao (a ne dobio istekom vremena) i gde. */
+const basePicked = new Map<number, string>();
+/** Tabla čim se zamkovi postave — pre nego što rat počne da menja vlasnike. */
+let baseBoard: { id: string; ownerId: string | null; castle: boolean }[] | null = null;
+/** Koliko puta je srušen zid, i koliko je puta posle toga opsada nastavljena. */
+let wallHits = 0;
+let siegeContinued = 0;
+
+/**
+ * Opsada mora da zadrži potez: posle srušenog zida isti napadač odmah dobija
+ * novo pitanje na istom zamku. Prati se par (napadač, meta) kroz `duel-rezultat`
+ * pa sledeći `duel-*` — ako se poklapa, opsada je nastavljena.
+ */
+let pendingSiege: { attackerId: string; territoryId: string } | null = null;
+let lastDuelKey = '';
+
+function trackSiege(state: GameStateLite): void {
+  const host = state.data.host as Record<string, unknown>;
+  const duel = host.duel as
+    | { attackerId: string; territoryId: string; outcome?: string }
+    | undefined;
+  if (!duel) return;
+  const key = `${state.phase}:${duel.attackerId}:${duel.territoryId}:${duel.outcome ?? ''}`;
+  if (key === lastDuelKey) return;
+  lastDuelKey = key;
+
+  if (state.phase === 'duel-rezultat' && duel.outcome === 'zid') {
+    wallHits += 1;
+    pendingSiege = { attackerId: duel.attackerId, territoryId: duel.territoryId };
+    return;
+  }
+  if (state.phase === 'duel-pitanje' && pendingSiege) {
+    if (
+      duel.attackerId === pendingSiege.attackerId &&
+      duel.territoryId === pendingSiege.territoryId
+    ) {
+      siegeContinued += 1;
+    } else {
+      ruleFailures.push(
+        'opsada: posle srušenog zida potez je otišao dalje umesto da napadač nastavi'
+      );
+    }
+    pendingSiege = null;
+  }
+}
 
 function expect(label: string, actual: unknown, wanted: unknown): void {
   if (actual !== wanted) ruleFailures.push(`${label}: dobijeno ${actual}, očekivano ${wanted}`);
@@ -215,7 +268,10 @@ async function main(): Promise<void> {
   players.forEach((sock, i) => {
     sock.on('game:state-update' as never, ((data: { gameState: GameStateLite }) => {
       latest[i] = data.gameState;
-      if (i === 0) scanBroadcast(data.gameState.phase, data.gameState);
+      if (i === 0) {
+        scanBroadcast(data.gameState.phase, data.gameState);
+        trackSiege(data.gameState);
+      }
       act(i);
     }) as never);
     sock.on('game:player-state' as never, ((data: {
@@ -308,15 +364,50 @@ async function main(): Promise<void> {
       return;
     }
 
-    if (state.phase === 'baza-izbor' && !mine.myBaseChoice && selectable.length > 0) {
-      acted.add(i);
-      // Namerno svi ciljaju istu teritoriju u prvom krugu — tako se proverava
-      // razrešenje sudara po prioritetu.
-      players[i].emit('game:player-action' as never, {
-        action: 'bitka:pick',
-        data: { territoryId: selectable[0] },
-      } as never);
+    if (state.phase === 'baza-izbor') {
+      // Zamkovi se dižu naizmenično. Ko je na potezu bira; ko nije, namerno
+      // pokušava da bira ipak — server to mora da odbije, inače bi pozniji
+      // igrač mogao da preotme mesto pre nego što na njega dođe red.
+      //
+      // Ko je na potezu čita se iz BROADCAST-a, ne iz privatnog dela: privatni
+      // deo stiže zasebnom porukom, pa ume da kasni jedan potez — a slati
+      // „pokušaj van reda" na osnovu zastarelog podatka znači slati sasvim
+      // ispravan potez i onda se čuditi što je prošao.
+      const activeId = host.activePlayerId as string | undefined;
+      if (activeId === ids[i]) {
+        if (selectable.length > 0 && !mine.myBaseChoice) {
+          acted.add(i);
+          basePicked.set(i, selectable[0]);
+          players[i].emit('game:player-action' as never, {
+            action: 'bitka:pick',
+            data: { territoryId: selectable[0] },
+          } as never);
+        }
+        // Privatni deo još nije stigao — sačekaj sledeće stanje.
+        return;
+      }
+      // Meta pokušaja je VEĆ ZAUZETA teritorija, a ne slobodna. Slobodna bi
+      // ušla u trku sa promenom poteza — dok poruka stigne, red je već možda
+      // došao na nas, pa bi potez legitimno prošao i test bi lažno pao. Zauzeto
+      // mesto ne sme da prođe ni u jednom trenutku, pa je provera čista.
+      const taken =
+        (host.board as { id: string; ownerId: string | null }[] | undefined)
+          ?.filter((c) => c.ownerId !== null)
+          .map((c) => c.id) ?? [];
+      if (!mine.myBaseChoice && taken.length > 0) {
+        acted.add(i);
+        players[i].emit('game:player-action' as never, {
+          action: 'bitka:pick',
+          data: { territoryId: taken[0] },
+        } as never);
+      }
       return;
+    }
+
+    if (state.phase === 'osvajanje-pitanje' && !baseBoard) {
+      baseBoard =
+        (host.board as { id: string; ownerId: string | null; castle: boolean }[] | undefined) ??
+        null;
     }
 
     if (
@@ -344,6 +435,8 @@ async function main(): Promise<void> {
   host.emit('host:start-game' as never, {
     gameId: 'osvajanje',
     bitkaMapId: MAP_ID,
+    bitkaMode: MODE,
+    bitkaRounds: ROUNDS > 0 ? ROUNDS : undefined,
   } as never);
 
   const startError = new Promise<never>((_, reject) => {
@@ -402,6 +495,28 @@ async function main(): Promise<void> {
   ];
   const missing = required.filter((p) => !seenPhases.has(p));
 
+  // Svaki igrač mora da stigne na red i sam izabere zamak; ako su neki dobili
+  // mesto istekom vremena, red se negde prekinuo.
+  if (basePicked.size < PLAYERS) {
+    ruleFailures.push(
+      `baza-izbor: samo ${basePicked.size}/${PLAYERS} igrača je stiglo na red za zamak`
+    );
+  }
+  // Zamak svakog igrača mora da stoji tamo gde ga je on izabrao NA SVOM potezu.
+  // Da je server prihvatio pokušaj van reda, zamak bi završio negde drugde.
+  for (const [i, wanted] of basePicked) {
+    const castle = (baseBoard ?? []).find((c) => c.castle && c.ownerId === ids[i]);
+    if (!castle) {
+      ruleFailures.push(`baza-izbor: igrač ${i + 1} nije dobio zamak`);
+    } else if (castle.id !== wanted) {
+      ruleFailures.push(
+        `baza-izbor: igrač ${i + 1} je izabrao ${wanted}, a zamak je završio u ${castle.id} (izbor van reda je prošao?)`
+      );
+    }
+  }
+
+  console.log(`srušenih zidova: ${wallHits}, nastavljenih opsada: ${siegeContinued}`);
+
   let failed = false;
   if (ruleFailures.length > 0) {
     console.error('\nFAIL — pravila duela:');
@@ -417,10 +532,18 @@ async function main(): Promise<void> {
     for (const leak of [...new Set(leaks)]) console.error(`  ${leak}`);
     failed = true;
   }
-  // Partija sme da se završi samo tako što ostane jedan zamak — ili tako što
-  // udari osigurač od zaglavljene partije. Sve između znači da je rat prekinut
-  // prerano (upravo bug koji je uveo podesiv broj rundi).
-  if (standing.length > 1 && lastRound < 25) {
+  // Do poslednjeg zamka: partija sme da se završi samo tako što ostane jedan
+  // zamak — ili tako što udari osigurač od zaglavljene partije. Sve između
+  // znači da je rat prekinut prerano. Na runde je prekid upravo pravilo, pa se
+  // umesto toga proverava da je server prihvatio dogovoren broj rundi.
+  if (MODE === 'runde') {
+    const total = typeof finalHost.totalRounds === 'number' ? finalHost.totalRounds : 0;
+    if (total !== ROUNDS) {
+      console.error(`
+FAIL — traženo ${ROUNDS} rundi, server igra ${total}.`);
+      failed = true;
+    }
+  } else if (standing.length > 1 && lastRound < 25) {
     console.error(
       `\nFAIL — igra je stala u ${lastRound}. rundi a ${standing.length} zamka još stoje.`
     );
