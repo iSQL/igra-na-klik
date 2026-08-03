@@ -44,6 +44,7 @@ import type { BitkaAnswer, BitkaInternalState, BitkaStats } from './BitkaState.j
 import {
   BAZA_IZBOR_DURATION,
   DUEL_REZULTAT_DURATION,
+  DUEL_TIEBREAK_EXTRA,
   IZBOR_DURATION,
   LEADERBOARD_DURATION,
   NAPAD_IZBOR_DURATION,
@@ -147,6 +148,7 @@ export class BitkaModule extends BaseGameModule {
       brojQuestion: null,
       answers: new Map(),
       expected: new Set(),
+      choiceResults: null,
       priority: [],
       baseChoice: new Map(),
       baseQueue: [],
@@ -446,6 +448,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.brojQuestion = question;
     this.state.choiceQuestion = null;
     this.state.answers = new Map();
+    this.state.choiceResults = null;
     this.state.expected = new Set(alive);
     this.state.phase = 'redosled-pitanje';
     this.state.phaseTimeRemaining =
@@ -597,6 +600,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.choiceQuestion = question;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
+    this.state.choiceResults = null;
     this.state.expected = new Set(this.alivePlayerIds(room));
     this.state.pickQueue = [];
     this.state.activePlayerId = null;
@@ -741,6 +745,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.choiceQuestion = null;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
+    this.state.choiceResults = null;
     this.state.expected = new Set();
     this.state.phase = 'napad-izbor';
     this.state.phaseTimeRemaining = NAPAD_IZBOR_DURATION;
@@ -777,6 +782,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.choiceQuestion = question;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
+    this.state.choiceResults = null;
     this.state.expected = new Set(
       [attackerId, st.ownerId].filter((id): id is string => !!id)
     );
@@ -816,6 +822,10 @@ export class BitkaModule extends BaseGameModule {
       this.applyDuel(room, ar > dr);
       return;
     }
+    // Šta je ko izabrao na izbornom pitanju mora da preživi tiebreak: u
+    // `duel-rezultat` se otkrivaju OBA pitanja, a `answers` od sada nosi
+    // procene brojeva.
+    this.state.choiceResults = this.answerResults();
     this.state.brojQuestion = question;
     this.state.answers = new Map();
     this.state.phase = 'duel-broj';
@@ -922,7 +932,9 @@ export class BitkaModule extends BaseGameModule {
     this.recomputeScores(room);
     this.state.phase = 'duel-rezultat';
     this.state.phaseTimeRemaining =
-      this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION;
+      (this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION) +
+      // Nerešen duel otkriva dva pitanja odjednom — treba mu koja sekunda više.
+      (this.state.choiceResults ? DUEL_TIEBREAK_EXTRA : 0);
   }
 
   /**
@@ -1189,19 +1201,33 @@ export class BitkaModule extends BaseGameModule {
 
   // --- Slanje stanja -------------------------------------------------------
 
+  /** Broj-pitanje bez tačne vrednosti — ta ide zasebno, tek u otkrivanju. */
+  private brojView(q: KvizBrojQuestionFull): BitkaQuestionView {
+    return {
+      kind: 'broj',
+      text: q.text,
+      imageUrl: q.imageUrl,
+      min: q.min,
+      max: q.max,
+      step: q.step,
+      unit: q.unit,
+    };
+  }
+
   private questionView(): BitkaQuestionView | undefined {
-    if (this.state.phase === 'redosled-pitanje' || this.state.phase === 'redosled-odgovor' || this.state.phase === 'duel-broj') {
+    const phase = this.state.phase;
+    // `redosled-rezultat` je otkrivanje uvodnog broj-pitanja i mora da ostane
+    // NA njemu — inače se tačan broj nigde ne vidi, a po njemu se određuje ko
+    // prvi bira zamak.
+    if (
+      phase === 'redosled-pitanje' ||
+      phase === 'redosled-odgovor' ||
+      phase === 'redosled-rezultat' ||
+      phase === 'duel-broj'
+    ) {
       const q = this.state.brojQuestion;
       if (!q) return undefined;
-      return {
-        kind: 'broj',
-        text: q.text,
-        imageUrl: q.imageUrl,
-        min: q.min,
-        max: q.max,
-        step: q.step,
-        unit: q.unit,
-      };
+      return this.brojView(q);
     }
     const q = this.state.choiceQuestion;
     if (!q) return undefined;
@@ -1270,10 +1296,23 @@ export class BitkaModule extends BaseGameModule {
       if (this.state.choiceQuestion && phase !== 'redosled-rezultat') {
         hostData.correctIndex = this.state.choiceQuestion.correctIndex;
       }
-      if (this.state.brojQuestion && (phase === 'redosled-rezultat' || phase === 'duel-rezultat')) {
+      // `correctValue` prati ono pitanje koje je na ekranu (`questionView`);
+      // broj iz tiebreak-a ide zasebno, jer tada na ekranu stoji izborno.
+      if (this.state.brojQuestion && phase === 'redosled-rezultat') {
         hostData.correctValue = this.state.brojQuestion.answer;
       }
-      hostData.results = this.answerResults();
+      // Nerešen duel: na ekranu ostaje izborno pitanje sa avatarima na
+      // opcijama (zato snimljeni `choiceResults`), a broj koji je presudio ide
+      // uz njega — sa tačnom vrednošću i procenama obojice.
+      const tiebroken = phase === 'duel-rezultat' && this.state.choiceResults;
+      hostData.results = tiebroken ? this.state.choiceResults! : this.answerResults();
+      if (tiebroken && this.state.brojQuestion) {
+        hostData.tiebreak = {
+          question: this.brojView(this.state.brojQuestion),
+          correctValue: this.state.brojQuestion.answer,
+          results: this.answerResults(),
+        };
+      }
     }
 
     if (phase === 'baza-izbor') {
@@ -1309,7 +1348,7 @@ export class BitkaModule extends BaseGameModule {
       };
       if (phase === 'duel-rezultat') {
         duel.outcome = this.state.duel.outcome;
-        duel.results = this.answerResults();
+        duel.results = this.state.choiceResults ?? this.answerResults();
         if (this.state.choiceQuestion) duel.correctIndex = this.state.choiceQuestion.correctIndex;
         if (this.state.brojQuestion) duel.correctValue = this.state.brojQuestion.answer;
       }

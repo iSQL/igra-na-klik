@@ -1,4 +1,5 @@
 import type {
+  BitkaAnswerResult,
   BitkaDuelOutcome,
   BitkaMode,
   BitkaMapView,
@@ -15,6 +16,13 @@ export const PITANJE_NAJAVA_DURATION = 4;
 // tačno — pa mora da traje bar koliko treba da se to pročita.
 export const REZULTAT_DURATION = 4;
 export const DUEL_REZULTAT_DURATION = 6;
+/**
+ * Dodatak na ishod duela koji je rešen brojem. Tada se na jednom ekranu
+ * otkrivaju dva pitanja — izborno sa avatarima i broj sa procenama — pa isto
+ * vreme ne stigne da se pročita. Ide **povrh** podesivog `DUEL_REZULTAT_DURATION`,
+ * pa se i dalje sve pomera kad se u /admin → Timinzi promeni osnova.
+ */
+export const DUEL_TIEBREAK_EXTRA = 3;
 export const LEADERBOARD_DURATION = 14;
 
 // Aktivan unos — balans igre, ostaje u kodu.
@@ -83,6 +91,12 @@ export interface BitkaInternalState {
   brojQuestion: KvizBrojQuestionFull | null;
   answers: Map<string, BitkaAnswer>;
   expected: Set<string>;
+  /**
+   * Odgovori na izborno pitanje duela, snimljeni pre nego što tiebreak
+   * prepiše `answers` procenama. Bez ovoga otkrivanje posle nerešenog duela
+   * ostane bez podatka ko je šta izabrao.
+   */
+  choiceResults: BitkaAnswerResult[] | null;
 
   /** Redosled po rezultatu uvodnog broj-pitanja; određuje ko prvi bira zamak. */
   priority: string[];

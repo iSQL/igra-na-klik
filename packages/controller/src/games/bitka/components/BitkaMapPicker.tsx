@@ -109,7 +109,15 @@ export function BitkaMapPicker({
   const [flashes, setFlashes] = useState<
     { id: string; color: string; kind: string; nonce: number }[]
   >([]);
-  const playedFxRef = useRef(0);
+  /**
+   * Šta je već odigrano. Kreće od poslednjeg događaja koji je zatečen **pri
+   * montiranju**, a ne od nule: mapa se kroz partiju skida i vraća (pitanje,
+   * klizač), pa bi inače na svakom povratku ponovo bljesnuo prošli udar — na
+   * teritoriji koja sa tekućim potezom nema veze. Novi događaji imaju veći id
+   * i prolaze normalno, uključujući i one koji stignu u istom kadru u kome se
+   * mapa vratila (roditelj ih upisuje u svom efektu, posle ovog).
+   */
+  const playedFxRef = useRef(fxEvents?.[fxEvents.length - 1]?.id ?? 0);
   useEffect(() => {
     if (!fxEvents?.length) return;
     const fresh = fxEvents.filter((ev) => ev.id > playedFxRef.current && ev.territoryId);

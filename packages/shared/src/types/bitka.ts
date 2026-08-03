@@ -146,6 +146,22 @@ export interface BitkaAnswerResult {
 }
 
 /**
+ * Broj-pitanje kojim je razrešen nerešen duel, spremno za otkrivanje.
+ *
+ * Ide **uz** otkrivanje izbornog pitanja, ne umesto njega: izborno je obojica
+ * dobila isto (oba tačna ili oba netačna), pa se i ono mora videti, a broj je
+ * taj koji je presudio. Bez ovoga se posle tiebreak-a nije videlo ni koliko je
+ * tačno ni ko je bio bliži — teritorija je samo promenila boju.
+ */
+export interface BitkaTiebreakView {
+  /** Uvek `kind: 'broj'`. */
+  question: BitkaQuestionView;
+  correctValue: number;
+  /** Procene duelanata; `value` je null ako igrač nije stigao. */
+  results: BitkaAnswerResult[];
+}
+
+/**
  * Koliko partija traje.
  *
  * `zamkovi` — rat ide dok ne ostane samo jedan zamak. Prirodan kraj igre, ali
@@ -215,6 +231,11 @@ export interface BitkaHostData {
   correctIndex?: number;
   correctValue?: number;
   results?: BitkaAnswerResult[];
+  /**
+   * Samo u `duel-rezultat` i samo kad je duel bio nerešen: pitanje sa brojem
+   * koje ga je razrešilo, sa tačnom vrednošću i procenama duelanata.
+   */
+  tiebreak?: BitkaTiebreakView;
 
   /** Ko trenutno bira (osvajanje-izbor, napad-izbor). */
   activePlayerId?: string | null;

@@ -1,4 +1,5 @@
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
+import { BitkaTiebreak } from './BitkaTiebreak';
 
 /**
  * Ono što je u TV sobi nosio televizor, a u hostless sobi nije nosio niko.
@@ -146,6 +147,9 @@ function Body({
       <Card>
         <strong style={{ fontSize: '0.9rem', color: 'var(--accent)' }}>{text}</strong>
         {host.question && <Question host={host} revealing />}
+        {/* Nerešen duel razrešava broj — bez njega posmatrač vidi da je zemlja
+            promenila boju, a ne i zbog čega. */}
+        <BitkaTiebreak host={host} myPlayerId={myPlayerId} compact />
       </Card>
     );
   }
@@ -160,6 +164,11 @@ function Body({
           label={(p) => {
             if (phase.endsWith('-rezultat')) {
               const r = host.results?.find((x) => x.playerId === p.playerId);
+              // Kod broja nema „tačno" — svaka procena je nešto vredna, pa
+              // stoji sam broj i svako vidi koliko je promašio.
+              if (host.question?.kind === 'broj') {
+                return r?.value == null ? 'nije stigao' : String(r.value);
+              }
               return r?.correct ? 'tačno' : 'netačno';
             }
             return (host.answeredIds ?? []).includes(p.playerId) ? 'odgovorio' : '…';
@@ -168,11 +177,14 @@ function Body({
             !phase.endsWith('-rezultat') && !(host.answeredIds ?? []).includes(p.playerId)
           }
           good={(p) =>
-            phase.endsWith('-rezultat')
+            phase.endsWith('-rezultat') && host.question?.kind !== 'broj'
               ? host.results?.find((x) => x.playerId === p.playerId)?.correct
               : undefined
           }
         />
+        {/* Uvodni broj određuje ko prvi bira zamak — to piše samo u lastEvent,
+            a ostala otkrivanja se čitaju iz samih pločica. */}
+        {phase === 'redosled-rezultat' && host.lastEvent && <Small>{host.lastEvent}</Small>}
       </Card>
     );
   }

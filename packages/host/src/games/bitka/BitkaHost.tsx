@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
+import type { BitkaAnswerResult, BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
@@ -306,11 +306,12 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
         <DuelHeader host={host} />
-        {phase === 'duel-rezultat' ? (
-          <DuelOutcome host={host} />
-        ) : (
-          <QuestionPanel host={host} phase={phase} />
-        )}
+        {/* I u ishodu ostaje pitanje na ekranu: tu se vidi ko je šta izabrao i
+            šta je bilo tačno. Bez toga se sa TV-a zna samo ko je uzeo zemlju,
+            a nikad zašto — najviše kod nerešenog duela, gde je presudio broj. */}
+        {host.question && <QuestionPanel host={host} phase={phase} />}
+        {phase === 'duel-rezultat' && host.tiebreak && <TiebreakStrip host={host} />}
+        {phase === 'duel-rezultat' && <DuelOutcome host={host} />}
       </div>
     );
   }
@@ -377,6 +378,17 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
         title={`${named(host.activePlayerId)} bira metu`}
         text="Napada se susedna tuđa ili ničija teritorija."
       />
+    );
+  }
+
+  // Uvodni broj se otkriva kao i svako drugo pitanje, ali ovde otkrivanje nosi
+  // i posledicu — ko prvi bira zamak — pa ta rečenica ostaje ispod njega.
+  if (phase === 'redosled-rezultat' && host.question) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%' }}>
+        <QuestionPanel host={host} phase={phase} />
+        {host.lastEvent && <Line title={host.lastEvent} text="" />}
+      </div>
     );
   }
 
@@ -462,6 +474,16 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
             )}
           </div>
         )}
+        {/* Kod broja nema opcija na koje bi avatari seli, pa procene idu u
+            zaseban red — inače se sa TV-a ne vidi ko je bio bliži. */}
+        {q.kind === 'broj' && revealing && host.correctValue != null && (
+          <Guesses
+            players={host.players}
+            results={host.results ?? []}
+            correct={host.correctValue}
+            unit={q.unit}
+          />
+        )}
       </div>
       {/* Dok se odgovara — ko je već potvrdio. U otkrivanju ovo nestaje, jer
           avatari tada stoje na samim opcijama i ovo bi bilo isto dvaput. */}
@@ -481,6 +503,97 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Procene na broj-pitanju, poređane od najbliže. Bez ovoga se posle broja vidi
+ * samo ishod, a ne i zašto je takav.
+ */
+function Guesses({
+  players,
+  results,
+  correct,
+  unit,
+}: {
+  players: BitkaPlayerView[];
+  results: BitkaAnswerResult[];
+  correct: number;
+  unit?: string;
+}) {
+  const rows = results
+    .map((r) => ({ r, p: players.find((x) => x.playerId === r.playerId) }))
+    .filter((row): row is { r: BitkaAnswerResult; p: BitkaPlayerView } => !!row.p)
+    .sort((a, b) => {
+      const da = a.r.value == null ? Infinity : Math.abs(a.r.value - correct);
+      const db = b.r.value == null ? Infinity : Math.abs(b.r.value - correct);
+      return da - db;
+    });
+  if (rows.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.35rem' }}>
+      {rows.map(({ r, p }, i) => {
+        const best = i === 0 && r.value != null;
+        return (
+          <span
+            key={p.playerId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.2rem 0.6rem',
+              borderRadius: '999px',
+              background: 'var(--bg-secondary)',
+              border: `1px solid ${best ? 'var(--success)' : 'var(--line2)'}`,
+              opacity: r.value == null ? 0.45 : 1,
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+            }}
+          >
+            <span style={{ fontSize: '1rem' }}>{p.avatarEmoji}</span>
+            <span>{p.name}</span>
+            <span style={{ color: best ? 'var(--success)' : 'var(--text-secondary)' }}>
+              {r.value == null ? 'nije stigao' : `${r.value}${unit ? ` ${unit}` : ''}`}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Broj koji je razrešio nerešen duel. Stoji ispod izbornog pitanja, jer su ga
+ * obojica odigrala isto — tek ovaj broj kaže ko je uzeo zemlju.
+ */
+function TiebreakStrip({ host }: { host: BitkaHostData }) {
+  const tb = host.tiebreak!;
+  return (
+    <div
+      style={{
+        borderTop: '1px solid var(--line)',
+        paddingTop: '0.4rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.1rem',
+      }}
+    >
+      <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+        <strong style={{ color: 'var(--accent)' }}>Nerešeno — odlučio je broj:</strong>{' '}
+        {tb.question.text}{' '}
+        <strong style={{ color: 'var(--accent)' }}>
+          · tačno: {tb.correctValue}
+          {tb.question.unit ? ` ${tb.question.unit}` : ''}
+        </strong>
+      </div>
+      <Guesses
+        players={host.players}
+        results={tb.results}
+        correct={tb.correctValue}
+        unit={tb.question.unit}
+      />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
 import { BrojSlider } from '../quiz/components/BrojSlider';
 import { BitkaMapPicker } from './components/BitkaMapPicker';
 import { BitkaHostlessPanel, BitkaMiniStandings } from './components/BitkaHostlessPanel';
+import { BitkaTiebreak } from './components/BitkaTiebreak';
 
 function act(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -174,7 +175,23 @@ export default function BitkaController() {
   // tačno. Tek posle toga ide čist ekran za izbor teritorije.
   const revealing = phase === 'osvajanje-rezultat' || phase === 'duel-rezultat';
 
-  if ((answering || revealing) && question?.kind === 'izbor' && iAnswer) {
+  /**
+   * Ishod duela je izuzetak: pitanje se NE zadržava preko celog ekrana.
+   *
+   * Poenta duela se dešava na mapi — gori zid, zemlja menja gospodara, zamak
+   * pada — a to se odigra tačno u trenutku ulaska u `duel-rezultat`. Pitanje
+   * preko celog ekrana mapu skine sa ekrana, pa duelant propusti baš ono što
+   * je maločas izborio (efekat se kasnije, kad se mapa vrati, odigra u prazno
+   * ili nikako, ako je tim udarcem partija završena). Kod nerešenog duela je
+   * uz to i izgledalo kao da posle klizača stiže novo izborno pitanje.
+   *
+   * Šta je bilo tačno i ko je šta izabrao čita se preko mape (`Reveal`,
+   * odnosno hostless traka), a puno otkrivanje nosi TV — kao i u ostalim
+   * igrama, sa televizorom u sobi telefon ne duplira ekran.
+   */
+  const duelReveal = phase === 'duel-rezultat';
+
+  if ((answering || (revealing && !duelReveal)) && question?.kind === 'izbor' && iAnswer) {
     const results = host.results ?? [];
     const pickedBy = (index: number) =>
       results
@@ -255,6 +272,7 @@ export default function BitkaController() {
             );
           })}
         </div>
+        {/* Ovde stiže samo osvajanje — ishod duela se gleda na mapi. */}
         {revealing && (
           <Muted>
             {results.some((r) => r.playerId === playerId && r.correct)
@@ -385,7 +403,7 @@ export default function BitkaController() {
           {hostless ? (
             <BitkaHostlessPanel host={host} phase={phase} myPlayerId={playerId} />
           ) : (
-            <Reveal host={host} me={me} />
+            <Reveal host={host} me={me} myPlayerId={playerId} />
           )}
         </>
       }
@@ -662,7 +680,15 @@ function Big({ children }: { children: React.ReactNode }) {
  * (biranje kreće odmah), vezivanje za `*-rezultat` bi ga sakrilo baš onom
  * igraču koji je pogodio i sad bira.
  */
-function Reveal({ host, me }: { host: BitkaHostData; me: BitkaControllerData | undefined }) {
+function Reveal({
+  host,
+  me,
+  myPlayerId,
+}: {
+  host: BitkaHostData;
+  me: BitkaControllerData | undefined;
+  myPlayerId: string;
+}) {
   const q = host.question;
   if (!q) return null;
   const line =
@@ -673,9 +699,14 @@ function Reveal({ host, me }: { host: BitkaHostData; me: BitkaControllerData | u
             me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''
           }`
         : null;
-  if (!line) return null;
+  if (!line && !host.tiebreak) return null;
   return (
-    <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>{line}</div>
+    <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>
+      {line}
+      {/* Nerešen duel: ovo je jedini ekran na kome ga duelant vidi, jer mu se
+          izborno pitanje namerno ne vraća preko mape. */}
+      <BitkaTiebreak host={host} myPlayerId={myPlayerId} compact centered />
+    </div>
   );
 }
 

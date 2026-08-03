@@ -46,7 +46,7 @@ const MODE = ROUNDS > 0 ? 'runde' : 'zamkovi';
 // --- anti-leak ---------------------------------------------------------------
 
 /** Polja koja u broadcastu smeju da postoje samo u fazama otkrivanja. */
-const REVEAL_ONLY = ['correctIndex', 'correctValue'];
+const REVEAL_ONLY = ['correctIndex', 'correctValue', 'tiebreak'];
 /** Polja koja u broadcastu ne smeju da postoje NIKAD. */
 const NEVER = ['answer', 'options.correct', 'selectedIndex', 'myGuess', 'baseChoice'];
 const REVEAL_PHASES = new Set([
@@ -92,6 +92,49 @@ let siegeContinued = 0;
  */
 let pendingSiege: { attackerId: string; territoryId: string } | null = null;
 let lastDuelKey = '';
+
+/**
+ * Nerešen duel se rešava brojem, i taj broj MORA da se otkrije: posle
+ * `duel-broj` sledeći `duel-rezultat` nosi `tiebreak` sa tačnom vrednošću i
+ * procenom svakog duelanta. Bez toga se teritorija menjala bez objašnjenja.
+ */
+let sawDuelBroj = 0;
+let sawTiebreakReveal = 0;
+let brojPending = false;
+
+function trackTiebreak(state: GameStateLite): void {
+  const host = state.data.host as Record<string, unknown>;
+  if (state.phase === 'duel-broj') {
+    if (!brojPending) {
+      brojPending = true;
+      sawDuelBroj += 1;
+    }
+    return;
+  }
+  if (state.phase !== 'duel-rezultat' || !brojPending) return;
+  brojPending = false;
+
+  const tb = host.tiebreak as
+    | { question?: { text?: string }; correctValue?: number; results?: { value?: number | null }[] }
+    | undefined;
+  if (!tb || typeof tb.correctValue !== 'number' || !tb.question?.text) {
+    ruleFailures.push('tiebreak: posle broj-pitanja ishod nije otkrio tačnu vrednost');
+    return;
+  }
+  const duelists = ((host.expectedIds as string[] | undefined) ?? []).length;
+  if ((tb.results?.length ?? 0) < duelists) {
+    ruleFailures.push('tiebreak: otkrivanje ne nosi procene svih duelanata');
+    return;
+  }
+  // Izborno pitanje ostaje na ekranu sa SVOJIM odgovorima: ako su tu procene
+  // brojeva, snimak izbornog kruga je izgubljen i avatari nemaju šta da sednu.
+  const results = (host.results as { value?: number | null }[] | undefined) ?? [];
+  if (results.some((r) => r.value != null)) {
+    ruleFailures.push('tiebreak: izgubljeni odgovori sa izbornog pitanja');
+    return;
+  }
+  sawTiebreakReveal += 1;
+}
 
 function trackSiege(state: GameStateLite): void {
   const host = state.data.host as Record<string, unknown>;
@@ -266,6 +309,7 @@ async function main(): Promise<void> {
       if (i === 0) {
         scanBroadcast(data.gameState.phase, data.gameState);
         trackSiege(data.gameState);
+        trackTiebreak(data.gameState);
       }
       act(i);
     }) as never);
@@ -511,6 +555,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`srušenih zidova: ${wallHits}, nastavljenih opsada: ${siegeContinued}`);
+  console.log(`nerešenih duela: ${sawDuelBroj}, otkrivenih brojeva: ${sawTiebreakReveal}`);
 
   let failed = false;
   if (ruleFailures.length > 0) {
