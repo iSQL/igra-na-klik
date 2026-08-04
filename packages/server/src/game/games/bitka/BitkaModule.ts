@@ -28,6 +28,7 @@ import {
   BITKA_ZIDOVI,
   KVIZ_BANK_PACK_ID,
   QUIZ_QUESTION_BANK,
+  bitkaMinTeritorija,
   shuffled,
   territoryValue,
 } from '@igra/shared';
@@ -83,9 +84,10 @@ const ANSWER_PHASES = new Set([
 ]);
 
 /**
- * Osvajanje — Triviador/Konquiztador na mapi koja se crta u adminu. Tačno tri
- * igrača: prvo se bira zamak, pa se kroz pitanja grabi slobodna zemlja, pa se
- * ide u rat gde svaki napad razrešava duel.
+ * Osvajanje — Triviador/Konquiztador na mapi koja se crta u adminu. Od dvoje
+ * do četvoro igrača, svako sa svojim zamkom: prvo se bira zamak, pa se kroz
+ * pitanja grabi slobodna zemlja, pa se ide u rat gde svaki napad razrešava
+ * duel. Koliko igrača mapa nosi zavisi od njene veličine — vidi `validateStart`.
  *
  * **Anti-leak** — `game:state-update` je broadcast, pa u `hostData` nikad ne
  * smeju: `correctIndex` i tačan broj pre faze rezultata, izbor baze dok traje
@@ -112,10 +114,21 @@ export class BitkaModule extends BaseGameModule {
     // svaki igrač mora da dobije svoj zamak.
     const connected = room.players.filter((p) => p.isConnected).length;
     if (connected > BITKA_MAX_IGRACA) {
-      return `KvizAtar se igra u ${BITKA_MIN_IGRACA} ili ${BITKA_MAX_IGRACA} igrača — trenutno vas je ${connected}.`;
+      return `KvizAtar se igra u ${BITKA_MIN_IGRACA}–${BITKA_MAX_IGRACA} igrača — trenutno vas je ${connected}.`;
     }
-    if (!this.pickMap(customContent)) {
+    const map = this.pickMap(customContent, connected);
+    if (!map) {
       return 'Nema nijedne ispravne mape — napravi je u /admin → Mape.';
+    }
+    // Koliko igrača mapa nosi zavisi od njene veličine, pa se to zna tek ovde.
+    // Bez ove provere bi na tesnoj mapi poslednji na redu ostao bez mesta za
+    // zamak, a osvajanje bi se ugasilo pre prve runde.
+    const potrebno = bitkaMinTeritorija(connected);
+    if (map.territories.length < potrebno) {
+      return `Mapa „${map.name}" je premala za ${connected} igrača — treba joj bar ${potrebno} teritorija (ima ${map.territories.length}).`;
+    }
+    if (map.castleSites?.length && map.castleSites.length < connected) {
+      return `Mapa „${map.name}" ima označena mesta za samo ${map.castleSites.length} zamka — a vas je ${connected}.`;
     }
     return null;
   }
@@ -124,7 +137,11 @@ export class BitkaModule extends BaseGameModule {
     this.timings = getGameTimings(this.gameId);
     const cc = (customContent ?? {}) as BitkaStartOptions;
 
-    const map = this.pickMap(customContent)!;
+    // Isti broj igrača kao u `validateStart`, da rezervna mapa bude ista.
+    const map = this.pickMap(
+      customContent,
+      room.players.filter((p) => p.isConnected).length
+    )!;
     this.territoryById = new Map(map.territories.map((t) => [t.id, t]));
 
     const board = new Map<string, BitkaTerritoryState>();
@@ -1096,7 +1113,7 @@ export class BitkaModule extends BaseGameModule {
 
   // --- Sitni pomoćnici -----------------------------------------------------
 
-  private pickMap(customContent?: unknown): BitkaMapView | null {
+  private pickMap(customContent?: unknown, players = 0): BitkaMapView | null {
     const cc = (customContent ?? {}) as BitkaStartOptions;
     const requested = typeof cc.bitkaMapId === 'string' ? cc.bitkaMapId : '';
     if (requested) {
@@ -1104,8 +1121,12 @@ export class BitkaModule extends BaseGameModule {
       if (map) return map;
     }
     // Bez izbora (ili sa pokvarenim izborom) uzmi prvu ispravnu mapu, da igra
-    // ne bude nepokretna zbog propuštenog polja u payloadu.
-    const fallbackId = firstValidBitkaMapIdSync(this.mapsDir);
+    // ne bude nepokretna zbog propuštenog polja u payloadu — ali onu koja nosi
+    // celo društvo, ako takva postoji.
+    const fallbackId = firstValidBitkaMapIdSync(
+      this.mapsDir,
+      players > 0 ? bitkaMinTeritorija(players) : 0
+    );
     return fallbackId ? resolveBitkaMapSync(this.mapsDir, fallbackId) : null;
   }
 

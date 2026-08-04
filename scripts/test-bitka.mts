@@ -1,9 +1,9 @@
 /**
  * Headless prolaz kroz partiju igre Osvajanje.
  *
- *   npx tsx scripts/test-bitka.ts [--map <id>] [--rounds <n>]
+ *   npx tsx scripts/test-bitka.ts [--map <id>] [--rounds <n>] [--players <2-4>]
  *
- * Diže server u procesu (bez Vite-a i bez UI-ja), spaja jednog domaćina i tri
+ * Diže server u procesu (bez Vite-a i bez UI-ja), spaja jednog domaćina i 2–4
  * igrača preko `socket.io-client` i igra celu partiju: uvodno merenje →
  * zamkovi → osvajanje → rat → kraj. Isti recept je na Penalima bio najbrži
  * način da se nova igra proveri, jer hvata stvari koje klikanje po UI-ju
@@ -27,6 +27,7 @@ import {
   resolveBrojDuel,
   resolveChoiceDuel,
 } from '../packages/server/src/game/games/bitka/duel.js';
+import { BITKA_MAX_IGRACA, BITKA_MIN_IGRACA } from '../packages/shared/src/games/bitka-rules.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -37,8 +38,11 @@ function arg(name: string): string | undefined {
 }
 
 const MAP_ID = arg('map');
-/** Koliko igrača sedne za sto (2 ili 3). */
-const PLAYERS = Math.max(2, Math.min(3, Number(arg('players') ?? 3)));
+/** Koliko igrača sedne za sto (2–4; četvoro traži mapu sa bar 12 teritorija). */
+const PLAYERS = Math.max(
+  BITKA_MIN_IGRACA,
+  Math.min(BITKA_MAX_IGRACA, Number(arg('players') ?? 3))
+);
 /** Trajanje: bez `--rounds` ide do poslednjeg zamka, inače toliko rundi. */
 const ROUNDS = Number(arg('rounds') ?? 0);
 const MODE = ROUNDS > 0 ? 'runde' : 'zamkovi';
@@ -284,7 +288,7 @@ async function main(): Promise<void> {
   const roomCode = created.roomCode;
   console.log(`soba ${roomCode}`);
 
-  const names = ['Pera', 'Mika', 'Zika'].slice(0, PLAYERS);
+  const names = ['Pera', 'Mika', 'Zika', 'Laza'].slice(0, PLAYERS);
   const players: AnySocket[] = [];
   const ids: string[] = [];
   for (const name of names) {

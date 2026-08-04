@@ -11,11 +11,12 @@ import type { BitkaPoint, BitkaTerritory } from '../types/bitka.js';
 
 /**
  * Svaki igrač drži tačno jedan zamak, pa je broj igrača i broj zamkova.
- * Dvoje je čist duel; troje je Triviador-verno i gornja granica — sa četvrtim
- * bi mapa od devet teritorija bila pretesna, a boje se počinju mešati.
+ * Dvoje je čist duel, troje je Triviador-verno, četvoro traži veću mapu —
+ * odatle `bitkaMinTeritorija`, koji se proverava na startu partije, a ne pri
+ * uvozu mape (ista mapa sme da bude tesna za četvoro i taman za dvoje).
  */
 export const BITKA_MIN_IGRACA = 2;
-export const BITKA_MAX_IGRACA = 3;
+export const BITKA_MAX_IGRACA = 4;
 
 /** Zamak nosi najviše poena — zato se i napada. */
 export const BITKA_ZAMAK_BODOVI = 1000;
@@ -30,10 +31,21 @@ export const BITKA_ZID_BONUS = 200;
 export const BITKA_ZIDOVI = 3;
 
 /**
- * Ispod ovoga mapa nema smisla: 3 baze + bar po dve teritorije za osvajanje.
- * Strogi validator odbija manje.
+ * Ispod ovoga mapa nema smisla ni u najmanjoj postavi: po tri teritorije na
+ * igrača u punoj Triviador postavi (3 zamka + po dve za osvajanje). Strogi
+ * validator odbija manje — ali maks. broj igrača na koji mapa staje zavisi od
+ * njene veličine, pa se to proverava na startu (`bitkaMinTeritorija`).
  */
 export const BITKA_MIN_TERITORIJA = 9;
+
+/**
+ * Koliko teritorija traži partija sa `players` igrača: po jedna za zamak i bar
+ * dve za osvajanje. Bez ovoga bi četvoro na maloj mapi ostalo bez slobodne
+ * zemlje već u prvoj rundi, a poslednji na redu i bez mesta za zamak.
+ */
+export function bitkaMinTeritorija(players: number): number {
+  return players * 3;
+}
 
 /** Koliko rundi osvajanja najviše, ako se mapa ne popuni ranije. */
 export const BITKA_MAX_OSVAJANJE_RUNDI = 6;

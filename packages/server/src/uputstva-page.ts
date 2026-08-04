@@ -243,7 +243,7 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
   },
   osvajanje: {
     emoji: '🏰',
-    body: `<p>Dva ili tri igrača, jedna mapa. Kroz pitanja se širi atar, a onda se navaljuje na susedne zamkove — dok ne ostane samo jedan.</p>
+    body: `<p>Od dvoje do četvoro igrača, jedna mapa (za četvoro treba veća — bar dvanaest teritorija). Kroz pitanja se širi atar, a onda se navaljuje na susedne zamkove — dok ne ostane samo jedan.</p>
 <ul>
 <li><strong>Redosled:</strong> prvo ide pitanje sa brojem. Ko je najbliži, prvi bira mesto za svoj zamak.</li>
 <li><strong>Zamak:</strong> bira se <strong>redom</strong> — prvi bira onaj sa najboljim uvodnim rezultatom. Svaki podignut zamak odmah vide svi, pa ko bira kasnije bira taktički: uz protivnika ili što dalje od njega.</li>

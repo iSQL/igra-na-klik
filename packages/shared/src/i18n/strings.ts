@@ -462,7 +462,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Računa se tvoja najduža reč: 3 slova 30 poena, 7 slova 300, a 9 slova čak 650. Kad završiš, tapni „Gotov“ da runda ne čeka džabe.',
     'game.osvajanje.blurb': 'Osvoji mapu kroz pitanja.',
     'game.osvajanje.rule1':
-      'Dva ili tri igrača. Zamkove postavljate redom — prvi bira onaj sa najboljim uvodnim rezultatom, i svi vide gde se ko utvrdio.',
+      'Od dvoje do četvoro igrača. Zamkove postavljate redom — prvi bira onaj sa najboljim uvodnim rezultatom, i svi vide gde se ko utvrdio.',
     'game.osvajanje.rule2':
       'U duelu oboje dobijate isto pitanje. Ko je jedini tačan, taj je dobio; ako ste isti, odlučuje pitanje sa brojem.',
     'game.osvajanje.rule3':

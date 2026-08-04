@@ -264,9 +264,9 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // bila migracija, ne kozmetika.
     name: 'KvizAtar',
     // Jedan zamak po igraču. Platforma proverava samo minimum, pa modul
-    // dodatno odbija start ako ih je više od tri.
+    // dodatno odbija start ako ih je više nego što mapa nosi.
     minPlayers: 2,
-    maxPlayers: 3,
+    maxPlayers: 4,
     description:
       'Podigni zamak, širi atar kroz pitanja i navali na suseda. Ko sruši tri zida — uzima ceo njegov posed!',
     icon: '🏰',
@@ -274,8 +274,9 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     category: 'quiz',
     // Procena za mod „do poslednjeg zamka"; na runde je kraće i predvidivije.
     // Sa igračima koji dobro odgovaraju dueli češće idu na tiebreak, pa opsada
-    // traje; ovo je realna, ne najbolja procena.
-    estimatedMinutes: 25,
+    // traje; ovo je realna, ne najbolja procena. U četvoro treba srušiti tri
+    // zamka umesto jednog, pa ide na gornju granicu.
+    estimatedMinutes: 30,
     // Tabla (vlasništvo, zidovi, geometrija mape) ide u broadcast, pa telefon
     // može da prikaže sve što bi TV pokazao.
     supportsHostless: true,

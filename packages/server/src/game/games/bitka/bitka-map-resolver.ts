@@ -118,19 +118,31 @@ export function resolveBitkaMapSync(
  * Prva mapa koja prolazi strogu proveru, abecedno. Rezerva za slučaj da start
  * payload ne nosi izbor mape — bolje nego da igra bude nepokretna zbog
  * propuštenog polja.
+ *
+ * `minTerritories` daje prednost mapi koja nosi celo društvo: sa četvoro
+ * igrača abecedno prva mapa ume da bude ona najmanja, pa bi rezerva sama
+ * oborila start. Ako takve nema, vraća se prva ispravna — poruka o premaloj
+ * mapi je korisnija od „nema nijedne mape".
  */
-export function firstValidBitkaMapIdSync(mapsDir: string): string | null {
+export function firstValidBitkaMapIdSync(
+  mapsDir: string,
+  minTerritories = 0
+): string | null {
   let names: string[];
   try {
     names = readdirSync(mapsDir);
   } catch {
     return null;
   }
+  let anyValid: string | null = null;
   for (const name of names.sort()) {
     if (!name.toLowerCase().endsWith('.json')) continue;
     const id = name.replace(/\.json$/i, '');
     if (!MAP_ID_RE.test(id)) continue;
-    if (resolveBitkaMapSync(mapsDir, id)) return id;
+    const map = resolveBitkaMapSync(mapsDir, id);
+    if (!map) continue;
+    if (map.territories.length >= minTerritories) return id;
+    anyValid ??= id;
   }
-  return null;
+  return anyValid;
 }
