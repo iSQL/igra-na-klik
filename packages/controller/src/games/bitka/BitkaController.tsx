@@ -18,6 +18,7 @@ import { BrojSlider } from '../quiz/components/BrojSlider';
 import { BitkaMapPicker } from './components/BitkaMapPicker';
 import { BitkaHostlessPanel, BitkaMiniStandings } from './components/BitkaHostlessPanel';
 import { BitkaTiebreak } from './components/BitkaTiebreak';
+import { BitkaQuestionImage } from './components/BitkaQuestionImage';
 
 function act(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -209,6 +210,7 @@ export default function BitkaController() {
         <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {question.text}
         </p>
+        <BitkaQuestionImage url={question.imageUrl} maxHeight="28vh" />
         <div style={{ display: 'grid', gap: '0.6rem', flex: 1, alignContent: 'center' }}>
           {(question.options ?? []).map((o) => {
             const picked = me?.selectedIndex === o.index;

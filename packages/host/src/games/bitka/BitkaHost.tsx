@@ -406,6 +406,7 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', width: '100%' }}>
+      <QuestionImage url={q.imageUrl} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{q.text}</div>
         {q.kind === 'izbor' && q.options && (
@@ -508,6 +509,35 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
 }
 
 /**
+ * Slika uz pitanje. Kviz pakovi je nose i na `obicno` i na `broj` pitanjima, a
+ * telefon je oduvek prikazivao — bez ovoga je pitanje tipa „koji je ovo grb"
+ * na TV-u bilo samo tekst. Panel je uska traka ispod table, pa slika ide kao
+ * sličica fiksne visine: `contain` da se ne iseca, a ako link pukne, element
+ * se skloni umesto da ostavi razbijenu ikonicu na ekranu.
+ */
+function QuestionImage({ url, height = '4.6rem' }: { url?: string; height?: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  if (!url || failed) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      onError={() => setFailed(true)}
+      style={{
+        height,
+        maxWidth: '22%',
+        objectFit: 'contain',
+        borderRadius: '10px',
+        border: '1px solid var(--line)',
+        background: 'rgba(0,0,0,0.2)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+/**
  * Procene na broj-pitanju, poređane od najbliže. Bez ovoga se posle broja vidi
  * samo ishod, a ne i zašto je takav.
  */
@@ -576,24 +606,29 @@ function TiebreakStrip({ host }: { host: BitkaHostData }) {
         borderTop: '1px solid var(--line)',
         paddingTop: '0.4rem',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '0.1rem',
+        gap: '0.7rem',
+        alignItems: 'center',
       }}
     >
-      <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-        <strong style={{ color: 'var(--accent)' }}>Nerešeno — odlučio je broj:</strong>{' '}
-        {tb.question.text}{' '}
-        <strong style={{ color: 'var(--accent)' }}>
-          · tačno: {tb.correctValue}
-          {tb.question.unit ? ` ${tb.question.unit}` : ''}
-        </strong>
+      {/* Manja sličica nego gore: ovo je druga slika na istom ekranu, uz izborno
+          pitanje koje već ima svoju. */}
+      <QuestionImage url={tb.question.imageUrl} height="3.2rem" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+          <strong style={{ color: 'var(--accent)' }}>Nerešeno — odlučio je broj:</strong>{' '}
+          {tb.question.text}{' '}
+          <strong style={{ color: 'var(--accent)' }}>
+            · tačno: {tb.correctValue}
+            {tb.question.unit ? ` ${tb.question.unit}` : ''}
+          </strong>
+        </div>
+        <Guesses
+          players={host.players}
+          results={tb.results}
+          correct={tb.correctValue}
+          unit={tb.question.unit}
+        />
       </div>
-      <Guesses
-        players={host.players}
-        results={tb.results}
-        correct={tb.correctValue}
-        unit={tb.question.unit}
-      />
     </div>
   );
 }

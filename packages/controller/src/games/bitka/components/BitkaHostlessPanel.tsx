@@ -1,5 +1,6 @@
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { BitkaTiebreak } from './BitkaTiebreak';
+import { BitkaQuestionImage } from './BitkaQuestionImage';
 
 /**
  * Ono što je u TV sobi nosio televizor, a u hostless sobi nije nosio niko.
@@ -207,6 +208,9 @@ function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
       <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.25 }}>{q.text}</div>
+      {/* Traka je uska i stoji uz mapu, pa slika ide niža nego na ekranu
+          pitanja — dovoljno da se vidi šta se pita, a mapa ostaje glavna. */}
+      <BitkaQuestionImage url={q.imageUrl} maxHeight="16vh" />
       {q.kind === 'izbor' && q.options && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
           {q.options.map((o) => {
