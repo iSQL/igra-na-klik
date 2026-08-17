@@ -385,6 +385,88 @@
       ],
       "correctIndex": 0,
       "timeLimit": 15
+    },
+    {
+      "type": "geo",
+      "text": "Gde se nalazi opština Žabari?",
+      "lat": 44.315037699090915,
+      "lng": 21.19348518883344,
+      "timeLimit": 30
+    },
+    {
+      "type": "broj",
+      "text": "Koliko naselja ima opština Žabari?",
+      "answer": 15,
+      "min": 1,
+      "max": 30,
+      "timeLimit": 25
+    },
+    {
+      "type": "emoji",
+      "emojis": "🚶‍♀️‍➡️📻🎵🎶",
+      "answer": "Jela",
+      "timeLimit": 20
+    },
+    {
+      "type": "uljez",
+      "text": "Koje naselje ne pripada opštini Žabari?",
+      "options": [
+        "Tićevac",
+        "Svinjarevo",
+        "Bošnjak",
+        "Vlaški Do"
+      ],
+      "correctIndex": 2,
+      "timeLimit": 15
+    },
+    {
+      "type": "piksel",
+      "imageFile": "3abdc1c9-d0fd-49c8-a0d7-0db2c0c4bd16.jpg",
+      "answer": "Opština Žabari",
+      "accept": [
+        "opština",
+        "žabari",
+        "zgrada opstine zabari"
+      ],
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Koja planina se nalazi istočno od opštine Žabari",
+      "answer": "Homoljske planine",
+      "accept": [
+        "homolje",
+        "homoljske"
+      ],
+      "timeLimit": 25
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj naselja prema udaljenosti od Žabara",
+      "items": [
+        "Četereže",
+        "Simićevo",
+        "Porodin",
+        "Oreovica",
+        "Aleksandrovac",
+        "Vlaški Do"
+      ],
+      "timeLimit": 35
+    },
+    {
+      "type": "video",
+      "text": "Kako se zove osoba koja govori na prikazanom snimku?",
+      "options": [
+        "Raša",
+        "Jova",
+        "Đole",
+        "Mice"
+      ],
+      "correctIndex": 0,
+      "videoId": "jMNS-8AyFxY",
+      "startSeconds": 628,
+      "endSeconds": 638,
+      "timeLimit": 15
     }
   ]
 }
