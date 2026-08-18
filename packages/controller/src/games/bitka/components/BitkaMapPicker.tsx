@@ -54,6 +54,9 @@ interface BitkaMapPickerProps {
   fxEvents?: BitkaFxEvent[];
 }
 
+/** Koliko oružje stoji na mapi — mora da se poklopi sa CSS animacijom. */
+const SLAM_MS = 1000;
+
 /** Koliko blesak traje — mora da se poklopi sa CSS animacijama. */
 const FLASH_MS: Record<string, number> = {
   osvojeno: 1600,
@@ -110,6 +113,14 @@ export function BitkaMapPicker({
     { id: string; color: string; kind: string; nonce: number }[]
   >([]);
   /**
+   * Mač odnosno štit koji uleti u teritoriju kad se duel razreši — telefonski
+   * parnjak istog oružja koje TV crta u three.js sceni. Vodi se odvojeno od
+   * bleskova jer ne boji teritoriju nego stoji nad njom.
+   */
+  const [slams, setSlams] = useState<{ id: string; kind: string; color: string; nonce: number }[]>(
+    []
+  );
+  /**
    * Šta je već odigrano. Kreće od poslednjeg događaja koji je zatečen **pri
    * montiranju**, a ne od nule: mapa se kroz partiju skida i vraća (pitanje,
    * klizač), pa bi inače na svakom povratku ponovo bljesnuo prošli udar — na
@@ -128,6 +139,26 @@ export function BitkaMapPicker({
     // pale jedna za drugom, umesto da cela zemlja tiho promeni boju odjednom.
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (const { event, delay } of planFxTiming(fresh)) {
+      if (event.kind === 'mac' || event.kind === 'stit') {
+        const slam = {
+          id: event.territoryId!,
+          kind: event.kind,
+          color: event.kind === 'stit' ? event.color : '#F2CE74',
+          nonce: event.id,
+        };
+        timers.push(
+          setTimeout(() => {
+            setSlams((prev) => [...prev, slam]);
+            timers.push(
+              setTimeout(
+                () => setSlams((prev) => prev.filter((x) => x.nonce !== slam.nonce)),
+                SLAM_MS
+              )
+            );
+          }, delay * 1000)
+        );
+        continue;
+      }
       const flash = {
         id: event.territoryId!,
         color: event.kind === 'zid' || event.kind === 'zamak-pao' ? '#FF9F3D' : event.color,
@@ -458,6 +489,38 @@ export function BitkaMapPicker({
               </div>
             );
           })}
+
+        {/* Oružje ishoda — uleti krupno, stisne se u teritoriju i nestane.
+            Stoji u sloju koji se zumira sa mapom, pa pogađa tačno svoj atar. */}
+        {slams.map((f) => {
+          const t = map.territories.find((x) => x.id === f.id);
+          if (!t) return null;
+          return (
+            <div
+              key={`udar:${f.nonce}`}
+              style={{
+                position: 'absolute',
+                left: `${t.label.x * 100}%`,
+                top: `${t.label.y * 100}%`,
+                width: 0,
+                height: 0,
+                pointerEvents: 'none',
+              }}
+            >
+              <span
+                className="bitka-slam-flash"
+                style={{ background: `radial-gradient(circle, ${f.color}cc, transparent 70%)` }}
+              />
+              <span className="bitka-slam-ring" style={{ borderColor: f.color }} />
+              <span
+                className="bitka-slam"
+                style={{ filter: `drop-shadow(0 0 14px ${f.color})` }}
+              >
+                {f.kind === 'stit' ? '🛡️' : '⚔️'}
+              </span>
+            </div>
+          );
+        })}
 
         {map.territories.map((t) => {
           const st = stateById.get(t.id);

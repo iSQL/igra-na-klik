@@ -5,7 +5,7 @@ import type {
   BitkaPoint,
   BitkaTerritoryState,
 } from '@igra/shared';
-import { FX_SHOT_SECONDS, type BitkaFxEvent } from '@igra/shared';
+import { FX_SHOT_SECONDS, FX_SLAM_SECONDS, type BitkaFxEvent } from '@igra/shared';
 
 /**
  * Bojno polje u 3D-u — TV verzija mape.
@@ -539,6 +539,9 @@ export class BitkaBoardScene {
     switch (ev.kind) {
       case 'napad':
         return this.shot(ev, at);
+      case 'mac':
+      case 'stit':
+        return this.weapon(at, ev.kind, ev.color);
       case 'osvojeno':
         // Osvajanje je najvažniji trenutak poteza, pa je i najglasnije: stub
         // svetlosti, dva prstena različitih brzina i kiša krhotina — sporije i
@@ -856,6 +859,104 @@ export class BitkaBoardScene {
   }
 
   /** Kupola — odbrana koja je izdržala. */
+  /**
+   * Ishod duela kao jedan potez oružjem: mač se zabija u osvojenu teritoriju,
+   * štit pokrije odbranjenu.
+   *
+   * Ulazi ogroman i van kadra pa se stisne na metu — tek kad udari, pada zid i
+   * menja se boja (`planFxHolds` dotle zadržava stari izgled). Bez toga se sa
+   * fotelje video samo prelom boje i niko nije znao ko je šta upravo dobio.
+   *
+   * Sve je primitiv, po pravilu scene: sečivo, nakrsnica, drška i jabuka —
+   * odnosno disk, obruč i grba.
+   */
+  private weapon(center: THREE.Vector3, kind: 'mac' | 'stit', colorHex: string): Effect {
+    const color = new THREE.Color(colorHex);
+    const group = new THREE.Group();
+    const geos: THREE.BufferGeometry[] = [];
+    const mats: THREE.Material[] = [];
+
+    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0) => {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      group.add(mesh);
+      geos.push(geo);
+      mats.push(mat);
+      return mesh;
+    };
+
+    const metal = (hex: THREE.ColorRepresentation, emissive = 0.35) =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(hex),
+        emissive: new THREE.Color(hex),
+        emissiveIntensity: emissive,
+        metalness: 0.7,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 1,
+      });
+
+    if (kind === 'mac') {
+      // Vrh sečiva je u koordinatnom početku grupe, pa se mač zabada tačno u
+      // teritoriju bez računanja pomeraja pri smanjivanju.
+      add(new THREE.BoxGeometry(0.022, 0.17, 0.012), metal('#dfe7f2', 0.5), 0, 0.085, 0);
+      add(new THREE.ConeGeometry(0.016, 0.035, 4), metal('#dfe7f2', 0.5), 0, -0.012, 0).rotation.z =
+        Math.PI;
+      add(new THREE.BoxGeometry(0.085, 0.018, 0.018), metal(colorHex, 0.5), 0, 0.178, 0);
+      add(new THREE.BoxGeometry(0.018, 0.055, 0.018), metal('#6b4a2a', 0.15), 0, 0.213, 0);
+      add(new THREE.SphereGeometry(0.016, 12, 10), metal(GOLD, 0.6), 0, 0.246, 0);
+    } else {
+      const disc = add(
+        new THREE.CylinderGeometry(0.085, 0.085, 0.016, 28),
+        metal(colorHex, 0.45),
+        0,
+        0.012,
+        0
+      );
+      disc.rotation.x = 0;
+      add(new THREE.TorusGeometry(0.085, 0.008, 8, 28), metal(GOLD, 0.55), 0, 0.012, 0).rotation.x =
+        Math.PI / 2;
+      add(new THREE.SphereGeometry(0.022, 14, 10), metal(GOLD, 0.5), 0, 0.024, 0);
+    }
+
+    group.position.copy(center);
+    this.root.add(group);
+
+    // Ulazak: visoko, krupno i nakrivljeno; izlazak: kratko zadržavanje pa
+    // nestajanje — ceo potez traje manje od sekunde, jer serverski sat ne čeka.
+    const DROP = 0.55;
+    const HOLD = 0.5;
+    const tilt = kind === 'mac' ? 0.42 : 0.22;
+    let t = 0;
+    return {
+      update: (dt) => {
+        t += dt;
+        if (t <= FX_SLAM_SECONDS) {
+          const u = easeOut(t / FX_SLAM_SECONDS);
+          const scale = 3.4 - 2.4 * u;
+          group.scale.setScalar(scale);
+          group.position.set(
+            center.x + (1 - u) * 0.12,
+            center.y + (1 - u) * DROP,
+            center.z - (1 - u) * 0.1
+          );
+          group.rotation.z = tilt * (1 - u);
+          for (const mat of mats) (mat as THREE.MeshStandardMaterial).opacity = Math.min(1, u * 3);
+          return true;
+        }
+        const u = (t - FX_SLAM_SECONDS) / HOLD;
+        group.scale.setScalar(1 - 0.25 * easeOut(u));
+        for (const mat of mats) (mat as THREE.MeshStandardMaterial).opacity = 1 - easeOut(u);
+        return u < 1;
+      },
+      dispose: () => {
+        this.root.remove(group);
+        for (const mat of mats) mat.dispose();
+        for (const geo of geos) geo.dispose();
+      },
+    };
+  }
+
   private dome(center: THREE.Vector3, colorHex: string): Effect {
     const geo = new THREE.SphereGeometry(0.06, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({

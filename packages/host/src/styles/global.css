@@ -203,6 +203,65 @@ button {
   }
 }
 
+/* KvizAtar duel: najava napada, otkucavanje sata i pulsiranje opsade. Sve
+   troje su ukrasi jednog trenutka — server ne čeka ni jednu od ovih animacija. */
+@keyframes igra-bitka-sjaj {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+/* Odsjaj koji jednom u dve sekunde prelete preko kartice najave. */
+.bitka-sheen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  animation: igra-bitka-sjaj 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes igra-bitka-otkucaj {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+.bitka-tick {
+  animation: igra-bitka-otkucaj 1s ease-in-out infinite;
+}
+
+@keyframes igra-bitka-opsada {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 106, 94, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(224, 106, 94, 0);
+  }
+}
+
+.bitka-siege {
+  animation: igra-bitka-opsada 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bitka-sheen,
+  .bitka-tick,
+  .bitka-siege {
+    animation: none;
+  }
+}
+
 /* Osvajanje: teritorija koju igrač na potezu sme da uzme — diše, da se ne
    izgubi u crtežu mape. */
 @keyframes igra-bitka-ponuda {

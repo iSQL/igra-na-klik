@@ -16,6 +16,8 @@ import type { BitkaHostData, BitkaPoint, BitkaTerritoryState } from '../types/bi
 
 export type BitkaFxKind =
   | 'napad'        // projektil od napadača ka meti
+  | 'mac'          // napad je prošao — mač ulazi u kadar i zabija se u metu
+  | 'stit'         // napad je odbijen — štit ulazi isto tako
   | 'osvojeno'     // teritorija promenila vlasnika
   | 'odbranjeno'   // napad odbijen
   | 'zid'          // zamak izgubio zid
@@ -24,6 +26,14 @@ export type BitkaFxKind =
 
 /** Koliko projektil leti — udar se kasni tačno toliko. */
 export const FX_SHOT_SECONDS = 0.55;
+/**
+ * Koliko mač odnosno štit pada dok ne udari u teritoriju.
+ *
+ * Sve posledice udara (zid nestaje, teritorija menja boju) čekaju tačno
+ * toliko: prvo se vidi ČIME je odlučeno, pa tek onda ŠTA se promenilo. Bez
+ * ovoga zid nestane dok oružje još leti, pa udarac pada u prazno.
+ */
+export const FX_SLAM_SECONDS = 0.45;
 /** Razmak između teritorija u talasu posle pada zamka. */
 const FX_KASKADA_KORAK = 0.22;
 /** Koliko se čeka od eksplozije zamka do prve teritorije u talasu. */
@@ -84,6 +94,21 @@ export function deriveFxEvents(
       const attacker = colorOf(duel.attackerId);
       const on = duel.territoryId;
       out.push({ id: nextId(), kind: 'napad', at, territoryId: on, from, color: attacker });
+      // Krupno oružje ide uz svaki ishod duela — ono je taj ishod izgovoren
+      // slikom: mač kad je napad prošao, štit kad je odbijen. Zato stoji ovde
+      // a ne uz promenu vlasnika: miran izbor slobodne teritorije nije udarac.
+      if (duel.outcome === 'branilac') {
+        out.push({
+          id: nextId(),
+          kind: 'stit',
+          at,
+          territoryId: on,
+          from,
+          color: colorOf(duel.defenderId),
+        });
+      } else {
+        out.push({ id: nextId(), kind: 'mac', at, territoryId: on, from, color: attacker });
+      }
       if (duel.outcome === 'branilac') {
         out.push({
           id: nextId(),
@@ -139,13 +164,17 @@ export function planFxTiming(
   events: BitkaFxEvent[]
 ): { event: BitkaFxEvent; delay: number }[] {
   const shot = events.some((e) => e.kind === 'napad') ? FX_SHOT_SECONDS : 0;
+  // Oružje kreće kad projektil stigne, a posledice čekaju da ono udari.
+  const slam = events.some((e) => e.kind === 'mac' || e.kind === 'stit') ? FX_SLAM_SECONDS : 0;
+  const impact = shot + slam;
   const fall = events.find((e) => e.kind === 'zamak-pao');
   let step = 0;
   return events.map((event) => {
     if (event.kind === 'napad') return { event, delay: 0 };
-    if (event.kind !== 'osvojeno') return { event, delay: shot };
-    if (!fall) return { event, delay: shot };
-    const delay = shot + FX_KASKADA_POCETAK + step * FX_KASKADA_KORAK;
+    if (event.kind === 'mac' || event.kind === 'stit') return { event, delay: shot };
+    if (event.kind !== 'osvojeno') return { event, delay: impact };
+    if (!fall) return { event, delay: impact };
+    const delay = impact + FX_KASKADA_POCETAK + step * FX_KASKADA_KORAK;
     step += 1;
     return { event, delay };
   });

@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { FX_SHOT_SECONDS, type BitkaFxEvent, type BitkaPoint } from '@igra/shared';
+import {
+  FX_SHOT_SECONDS,
+  FX_SLAM_SECONDS,
+  type BitkaFxEvent,
+  type BitkaPoint,
+} from '@igra/shared';
 
 /**
  * Providan three.js sloj iznad mape na TV-u.
@@ -130,6 +135,9 @@ export class BitkaFxScene {
     switch (ev.kind) {
       case 'napad':
         return this.shot(ev);
+      case 'mac':
+      case 'stit':
+        return this.weapon(at, ev.kind, ev.color);
       case 'osvojeno':
         // Sporije i krupnije nego ostali efekti — osvajanje je poenta poteza.
         return composite([
@@ -222,6 +230,78 @@ export class BitkaFxScene {
         for (const mesh of meshes) this.scene.remove(mesh);
         for (const mat of mats) mat.dispose();
         geo.dispose();
+      },
+    };
+  }
+
+  /**
+   * Ishod duela kao potez oružjem — ravni parnjak istog efekta iz 3D scene.
+   *
+   * Mač ulazi krupan i nakrivljen pa se stisne u metu; štit isto tako, samo
+   * mirnije. Posledice (zid, boja) čekaju da udari — to kašnjenje planira
+   * `planFxTiming` u shared paketu, pa TV i telefon udaraju istovremeno.
+   */
+  private weapon(center: THREE.Vector3, kind: 'mac' | 'stit', colorHex: string): Effect {
+    const group = new THREE.Group();
+    const geos: THREE.BufferGeometry[] = [];
+    const mats: THREE.MeshBasicMaterial[] = [];
+
+    const add = (geo: THREE.BufferGeometry, hex: string, x = 0, y = 0) => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(hex),
+        transparent: true,
+        opacity: 1,
+        depthTest: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, 0);
+      mesh.renderOrder = 12;
+      group.add(mesh);
+      geos.push(geo);
+      mats.push(mat);
+      return mesh;
+    };
+
+    if (kind === 'mac') {
+      // Vrh je u koordinatnom početku grupe — mač se zabada tačno u metu.
+      add(new THREE.PlaneGeometry(0.022, 0.17), '#dfe7f2', 0, 0.085);
+      add(new THREE.CircleGeometry(0.016, 3), '#dfe7f2', 0, 0.008).rotation.z = Math.PI;
+      add(new THREE.PlaneGeometry(0.085, 0.018), colorHex, 0, 0.178);
+      add(new THREE.PlaneGeometry(0.018, 0.055), '#6b4a2a', 0, 0.213);
+      add(new THREE.CircleGeometry(0.016, 16), GOLD, 0, 0.246);
+    } else {
+      add(new THREE.CircleGeometry(0.085, 32), colorHex, 0, 0);
+      add(new THREE.RingGeometry(0.079, 0.09, 32), GOLD, 0, 0);
+      add(new THREE.CircleGeometry(0.022, 16), GOLD, 0, 0);
+    }
+
+    group.position.copy(center);
+    this.scene.add(group);
+
+    const HOLD = 0.5;
+    const tilt = kind === 'mac' ? 0.42 : 0.22;
+    let t = 0;
+    return {
+      update: (dt) => {
+        t += dt;
+        if (t <= FX_SLAM_SECONDS) {
+          const u = easeOut(t / FX_SLAM_SECONDS);
+          group.scale.setScalar(3.4 - 2.4 * u);
+          group.position.set(center.x + (1 - u) * 0.1, center.y + (1 - u) * 0.16, 0);
+          group.rotation.z = tilt * (1 - u);
+          for (const mat of mats) mat.opacity = Math.min(1, u * 3);
+          return true;
+        }
+        const u = (t - FX_SLAM_SECONDS) / HOLD;
+        group.scale.setScalar(1 - 0.25 * easeOut(u));
+        for (const mat of mats) mat.opacity = 1 - easeOut(u);
+        return u < 1;
+      },
+      dispose: () => {
+        this.scene.remove(group);
+        for (const mat of mats) mat.dispose();
+        for (const geo of geos) geo.dispose();
       },
     };
   }

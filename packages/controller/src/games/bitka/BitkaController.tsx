@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  BITKA_NAJAVA_MS,
+  BITKA_ZAMAK_BODOVI,
   deriveFxEvents,
   planFxHolds,
+  territoryValue,
   type BitkaControllerData,
   type BitkaFxEvent,
   type BitkaFxSnapshot,
@@ -102,6 +105,24 @@ export default function BitkaController() {
       else haptics.success();
     }
   }, [hostMaybe, phaseKey, playerId, haptics]);
+
+  // Najava napada — ista kartica i isto trajanje kao na TV-u (BITKA_NAJAVA_MS
+  // je zato u shared paketu): dva odvojena tajmera bi se razišla, pa bi telefon
+  // držao karticu preko mape na kojoj TV već igra.
+  const duelKey =
+    phaseKey === 'duel-pitanje' && hostMaybe?.duel
+      ? `${hostMaybe.duel.attackerId}:${hostMaybe.duel.territoryId}`
+      : '';
+  const [najava, setNajava] = useState(false);
+  useEffect(() => {
+    if (!duelKey) {
+      setNajava(false);
+      return;
+    }
+    setNajava(true);
+    const timer = setTimeout(() => setNajava(false), BITKA_NAJAVA_MS);
+    return () => clearTimeout(timer);
+  }, [duelKey]);
 
   if (!gameState || !playerId) return null;
   const host = gameState.data.host as BitkaHostData | undefined;
@@ -324,6 +345,26 @@ export default function BitkaController() {
     );
   }
 
+  /**
+   * Posmatrač duela dobija isto pitanje preko celog ekrana — bez dugmadi.
+   *
+   * Dotad je onaj ko nije u duelu gledao mapu i jedan red teksta, pa nije znao
+   * ni šta se pita ni koliko je ostalo; u sobi od četvoro to je pola stola koji
+   * čeka. Pitanje i ponuđeni odgovori ionako stižu u broadcast polovini stanja
+   * (tačan odgovor ne), pa se ovde ne otkriva ništa novo. Ishod se i dalje
+   * gleda na mapi — ovaj ekran nestaje čim duel bude rešen.
+   */
+  if ((phase === 'duel-odgovor' || phase === 'duel-broj') && host.duel && !iAnswer) {
+    return (
+      <DuelSpectator
+        host={host}
+        seconds={seconds}
+        hostless={hostless}
+        myPlayerId={playerId}
+      />
+    );
+  }
+
   // --- biranje teritorije --------------------------------------------------
   const picking =
     (phase === 'baza-izbor' || phase === 'osvajanje-izbor' || phase === 'napad-izbor') &&
@@ -391,6 +432,7 @@ export default function BitkaController() {
   // --- čekanje / gledanje --------------------------------------------------
   return (
     <MapStage
+      overlay={najava && host.duel ? <DuelNajavaCard host={host} me={me} /> : undefined}
       top={
         <>
           {phase.startsWith('duel') && host.duel && (
@@ -564,10 +606,13 @@ function DuelBanner({
 function MapStage({
   top,
   bottom,
+  overlay,
   children,
 }: {
   top?: React.ReactNode;
   bottom?: React.ReactNode;
+  /** Sloj preko svega — zasad samo najava napada. */
+  overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -622,6 +667,369 @@ function MapStage({
           {bottom}
         </div>
       )}
+      {overlay && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            placeItems: 'center',
+            padding: '1.1rem 10%',
+            background: 'rgba(9,20,36,0.72)',
+            backdropFilter: 'blur(3px) saturate(0.7)',
+            WebkitBackdropFilter: 'blur(3px) saturate(0.7)',
+            pointerEvents: 'none',
+            zIndex: 3,
+          }}
+        >
+          {overlay}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Najava napada na telefonu — ista kartica koju TV baci preko table, samo
+ * uspravna.
+ *
+ * Duelantima poslednji red piše iz njihovog ugla („Napadaš Miku" / „Mika te
+ * napada"), posmatraču da pitanje stiže i njemu — inače bi kartica izgledala
+ * kao poruka koja se njega ne tiče.
+ */
+function DuelNajavaCard({
+  host,
+  me,
+}: {
+  host: BitkaHostData;
+  me: BitkaControllerData | undefined;
+}) {
+  const duel = host.duel!;
+  const attacker = host.players.find((p) => p.playerId === duel.attackerId);
+  const defender = host.players.find((p) => p.playerId === duel.defenderId);
+  const territory = host.map.territories.find((t) => t.id === duel.territoryId);
+  const st = host.board.find((x) => x.id === duel.territoryId);
+  const walls = st?.walls ?? 0;
+  const value = st?.castle ? BITKA_ZAMAK_BODOVI : territoryValue(territory ?? {});
+  const foot =
+    me?.duelRole === 'napadac'
+      ? defender
+        ? `Napadaš ${defender.name}.`
+        : 'Napadaš ničiju zemlju.'
+      : me?.duelRole === 'branilac'
+        ? `${attacker?.name ?? 'Protivnik'} te napada.`
+        : 'Gledaš — pitanje stiže i tebi.';
+
+  return (
+    <div
+      className="bitka-najava"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.9rem',
+        padding: '1.3rem 1rem',
+        borderRadius: '20px',
+        background: 'var(--bg-card)',
+        border: '1px solid rgba(242,206,116,0.55)',
+        boxShadow: '0 18px 48px rgba(0,0,0,0.55)',
+        textShadow: 'none',
+      }}
+    >
+      <span className="bitka-sheen" />
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+          fontSize: '0.78rem',
+          color: '#F2CE74',
+        }}
+      >
+        {duel.onCastle ? 'Opsada zamka' : defender ? 'Napad' : 'Ničija zemlja'}
+      </span>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', width: '100%' }}>
+        <NajavaRow player={attacker} role="napada" glyph="⚔️" />
+        {defender && (
+          <NajavaRow player={defender} role={duel.onCastle ? 'brani zamak' : 'brani'} />
+        )}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.55rem',
+          padding: '0.45rem 0.9rem',
+          borderRadius: '999px',
+          background: 'rgba(242,206,116,0.14)',
+          border: '1px solid rgba(242,206,116,0.4)',
+        }}
+      >
+        <span style={{ fontSize: '1.1rem' }}>{st?.castle ? '🏰' : '🚩'}</span>
+        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#F2CE74' }}>
+          {territory?.name ?? ''}
+        </span>
+        {duel.onCastle && <Walls walls={walls} />}
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>· {value}</span>
+      </div>
+
+      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+        {foot}
+      </span>
+    </div>
+  );
+}
+
+function NajavaRow({
+  player,
+  role,
+  glyph,
+}: {
+  player?: BitkaPlayerView;
+  role: string;
+  glyph?: string;
+}) {
+  if (!player) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%' }}>
+      <span
+        style={{
+          width: '2.6rem',
+          height: '2.6rem',
+          borderRadius: '50%',
+          background: player.avatarColor,
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '1.35rem',
+          flexShrink: 0,
+        }}
+      >
+        {player.avatarEmoji}
+      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <span style={{ fontWeight: 800, fontSize: '1.25rem' }}>{player.name}</span>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{role}</span>
+      </div>
+      {glyph && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontSize: '1.6rem',
+            filter: 'drop-shadow(0 0 14px rgba(242,206,116,0.7))',
+          }}
+        >
+          {glyph}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Duel iz ugla onoga ko ga ne igra: isto pitanje, iste ponuđene opcije, samo
+ * bez dugmadi.
+ *
+ * Opcije su namerno obična polja a ne onemogućena dugmad — da nijednom prstu
+ * ne padne na pamet da su „zaglavila". Ko je zaključao odgovor vidi se iz dve
+ * zastavice koje server ionako emituje; ŠTA je ko izabrao ne stiže dovde.
+ */
+function DuelSpectator({
+  host,
+  seconds,
+  hostless,
+  myPlayerId,
+}: {
+  host: BitkaHostData;
+  seconds: number;
+  hostless: boolean;
+  myPlayerId: string;
+}) {
+  const duel = host.duel!;
+  const q = host.question;
+  const attacker = host.players.find((p) => p.playerId === duel.attackerId);
+  const defender = host.players.find((p) => p.playerId === duel.defenderId);
+  const territory = host.map.territories.find((t) => t.id === duel.territoryId);
+  const st = host.board.find((x) => x.id === duel.territoryId);
+  const walls = st?.walls ?? 0;
+  const value = st?.castle ? BITKA_ZAMAK_BODOVI : territoryValue(territory ?? {});
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        padding: '0.9rem',
+        gap: '0.7rem',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 0.7rem',
+          borderRadius: '10px',
+          background: 'var(--bg-card)',
+          borderLeft: `4px solid ${attacker?.avatarColor ?? 'var(--accent)'}`,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.72rem',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: '#F2CE74',
+            fontWeight: 800,
+          }}
+        >
+          Gledaš
+        </span>
+        <strong style={{ fontSize: '0.95rem' }}>
+          {attacker?.name ?? '?'} ⚔ {defender?.name ?? 'ničija zemlja'}
+        </strong>
+        <span
+          className={seconds <= 10 ? 'bitka-tick' : undefined}
+          style={{
+            marginLeft: 'auto',
+            fontWeight: 800,
+            fontSize: '1.4rem',
+            color: seconds <= 5 ? 'var(--danger)' : 'var(--text-secondary)',
+          }}
+        >
+          {seconds}s
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span>za {territory?.name ?? ''}</span>
+        {duel.onCastle && (
+          <>
+            <span>· 🏰</span>
+            <Walls walls={walls} />
+          </>
+        )}
+        <span style={{ marginLeft: 'auto' }}>{value} poena</span>
+      </div>
+
+      {q && (
+        <p style={{ margin: '0.2rem 0 0', fontSize: '1.3rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
+          {q.text}
+        </p>
+      )}
+      <BitkaQuestionImage url={q?.imageUrl} maxHeight="22vh" />
+
+      {q?.kind === 'izbor' && q.options ? (
+        <div style={{ display: 'grid', gap: '0.7rem', flex: 1, gridAutoRows: '1fr' }}>
+          {q.options.map((o) => (
+            <span
+              key={o.index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.9rem 1rem',
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                color: '#fff',
+                background: o.color,
+                borderRadius: '14px',
+                opacity: 0.78,
+              }}
+            >
+              {o.text}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem',
+          }}
+        >
+          <Big>Nerešeno — broj odlučuje</Big>
+          {q?.kind === 'broj' && (
+            <Muted>
+              Opseg {q.min}–{q.max}
+              {q.unit ? ` ${q.unit}` : ''} · bliži uzima zemlju
+            </Muted>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <CommitChip player={attacker} committed={duel.attackerCommitted} />
+        {defender && <CommitChip player={defender} committed={duel.defenderCommitted} />}
+      </div>
+      {hostless && <BitkaMiniStandings host={host} myPlayerId={myPlayerId} />}
+      {/* Profilno dugme sedi u donjem desnom uglu — poslednji red mu se sklanja
+          sa puta, inače mu poruka prolazi ispod. */}
+      <div style={{ padding: '0 3.4rem' }}>
+        <Muted>Ne igraš ovaj duel — ishod se vraća na mapu.</Muted>
+      </div>
+    </div>
+  );
+}
+
+/** „Zaključao ✓" bez otkrivanja šta je izabrao. */
+function CommitChip({ player, committed }: { player?: BitkaPlayerView; committed: boolean }) {
+  if (!player) return null;
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        padding: '0.45rem 0.6rem',
+        borderRadius: '999px',
+        background: committed ? 'rgba(87,179,128,0.16)' : 'rgba(245,235,224,0.06)',
+        border: committed ? '1px solid var(--success)' : '1px dashed var(--line2)',
+      }}
+    >
+      <span
+        style={{
+          width: '1.5rem',
+          height: '1.5rem',
+          borderRadius: '50%',
+          background: player.avatarColor,
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '0.8rem',
+          flexShrink: 0,
+        }}
+      >
+        {player.avatarEmoji}
+      </span>
+      <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{player.name}</span>
+      <span
+        style={{
+          marginLeft: 'auto',
+          fontSize: '0.75rem',
+          fontWeight: 800,
+          color: committed ? 'var(--success)' : 'var(--text-secondary)',
+        }}
+      >
+        {committed ? '✓' : '…'}
+      </span>
     </div>
   );
 }
