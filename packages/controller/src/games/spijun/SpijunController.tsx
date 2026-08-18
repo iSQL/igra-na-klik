@@ -4,6 +4,7 @@ import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import {
   SPIJUN_QUESTION_TEMPLATES,
+  SPIJUN_SHARP_QUESTION_TEMPLATES,
   spijunTutorialControllerHint,
 } from '@igra/shared';
 import type {
@@ -63,12 +64,15 @@ export default function SpijunController() {
   // Question-generator suggestion (local only).
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [accusePickerOpen, setAccusePickerOpen] = useState(false);
+  // "Znam lokaciju!" is irreversible and public — it asks twice.
+  const [declareArmed, setDeclareArmed] = useState(false);
 
   const round = gameState?.round ?? 0;
   useEffect(() => {
     setCrossed(new Set());
     setSuggestion(null);
     setAccusePickerOpen(false);
+    setDeclareArmed(false);
   }, [round]);
 
   if (!gameState || !playerId) return null;
@@ -126,15 +130,35 @@ export default function SpijunController() {
     });
   };
 
-  const newSuggestion = () => {
+  // Crossed-out names sink to the bottom (stable within each group), so the
+  // shortlist the spy actually still considers stays at the top of the phone.
+  // Plain consts, not useMemo — we are past an early return, so a hook here
+  // would be conditional.
+  const sortedLocations = [
+    ...host.locationNames.filter((n) => !crossed.has(n)),
+    ...host.locationNames.filter((n) => crossed.has(n)),
+  ];
+  const locationsLeft = host.locationNames.length - crossed.size;
+  const earlyBonus = host.spyEarlyBonus ?? 0;
+
+  const newSuggestion = (sharp: boolean) => {
     const others = host.players.filter((p) => p.playerId !== playerId);
     if (others.length === 0) return;
-    const who = others[Math.floor(Math.random() * others.length)];
-    const template =
-      SPIJUN_QUESTION_TEMPLATES[
-        Math.floor(Math.random() * SPIJUN_QUESTION_TEMPLATES.length)
-      ];
-    setSuggestion(template.replace('{ime}', who.name));
+    const deck = sharp
+      ? SPIJUN_SHARP_QUESTION_TEMPLATES
+      : SPIJUN_QUESTION_TEMPLATES;
+    setSuggestion((prev) => {
+      // Reroll rather than repeat the line that is already on screen.
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const who = others[Math.floor(Math.random() * others.length)];
+        const line = deck[Math.floor(Math.random() * deck.length)].replace(
+          '{ime}',
+          who.name
+        );
+        if (line !== prev) return line;
+      }
+      return prev;
+    });
   };
 
   // My secret line, shown on every active-phase screen (private playerData).
@@ -241,10 +265,10 @@ export default function SpijunController() {
         {secretLine}
         {hintBanner}
 
-        {/* Question generator */}
+        {/* Question generator — two decks, both purely local */}
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           <button
-            onClick={newSuggestion}
+            onClick={() => newSuggestion(false)}
             style={{
               flex: 1,
               padding: '0.55rem 0.6rem',
@@ -256,8 +280,25 @@ export default function SpijunController() {
               fontSize: '0.85rem',
             }}
           >
-            💡 Predlog pitanja
+            💡 Pitanje
           </button>
+          <button
+            onClick={() => newSuggestion(true)}
+            style={{
+              flex: 1,
+              padding: '0.55rem 0.6rem',
+              borderRadius: '10px',
+              border: '1px solid var(--accent)',
+              background: 'var(--bg-card)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+            }}
+          >
+            🔪 Oštro pitanje
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
           <button
             onClick={() => setAccusePickerOpen((v) => !v)}
             disabled={my?.canAccuse === false}
@@ -331,26 +372,78 @@ export default function SpijunController() {
           </p>
         )}
 
-        {/* Location checklist — same for everyone (anti-tell). Taps are local. */}
+        {/* "Znam lokaciju!" — spy only, from playerData, so the button's mere
+            existence never shows on another phone. Two taps: it is public and
+            irreversible. */}
+        {my?.canDeclare && (
+          <button
+            onClick={() => {
+              if (declareArmed) emit('spijun:declare');
+              else setDeclareArmed(true);
+            }}
+            style={{
+              padding: '0.7rem 0.75rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: declareArmed ? 'var(--danger)' : 'var(--bg-card)',
+              color: declareArmed ? '#fff' : 'var(--danger)',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+            }}
+          >
+            {declareArmed
+              ? 'Sigurno? Tapni ponovo — otkrivaš se!'
+              : '🎯 Znam lokaciju! (prekini razgovor)'}
+          </button>
+        )}
+        {my?.canDeclare && (
+          <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+            Što ranije prekineš, to više vredi tačan pogodak — ali promašaj
+            nagrađuje ceo sto.
+          </p>
+        )}
+
+        {/* Location checklist — same for everyone (anti-tell). Taps are local:
+            nothing is emitted, so scoring can never depend on them. Crossed
+            names sink to the bottom so the live shortlist stays on top. */}
         <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          Lokacije (tapni da precrtaš — vidi samo tvoj telefon):
+          Lokacije — tapni da precrtaš (vidi samo tvoj telefon) ·{' '}
+          <strong>preostalo {locationsLeft}</strong>
+          {crossed.size > 0 ? (
+            <>
+              {' · '}
+              <span
+                onClick={() => setCrossed(new Set())}
+                style={{ textDecoration: 'underline', cursor: 'pointer' }}
+              >
+                poništi
+              </span>
+            </>
+          ) : null}
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {host.locationNames.map((n) => {
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.25rem',
+          }}
+        >
+          {sortedLocations.map((n) => {
             const off = crossed.has(n);
             return (
               <button
                 key={n}
                 onClick={() => toggleCross(n)}
                 style={{
-                  padding: '0.5rem 0.75rem',
+                  padding: '0.5rem 0.55rem',
                   borderRadius: '8px',
                   border: 'none',
                   background: 'var(--bg-card)',
                   color: off ? 'var(--text-secondary)' : 'var(--text-primary)',
                   textDecoration: off ? 'line-through' : 'none',
-                  opacity: off ? 0.5 : 1,
-                  fontSize: '0.85rem',
+                  opacity: off ? 0.4 : 1,
+                  fontSize: '0.78rem',
+                  lineHeight: 1.2,
                   fontWeight: 600,
                   textAlign: 'left',
                 }}
@@ -507,10 +600,11 @@ export default function SpijunController() {
             🕵️ Sad ili nikad — koja je lokacija?
           </p>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
-            {timeRemaining}s · tačan pogodak +300
+            {timeRemaining}s · tačan pogodak +{300 + earlyBonus}
+            {earlyBonus > 0 ? ` (300 + ${earlyBonus} za rano prekidanje)` : ''}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-            {host.locationNames.map((n) => {
+            {sortedLocations.map((n) => {
               const off = crossed.has(n);
               return (
                 <button

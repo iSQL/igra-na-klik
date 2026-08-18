@@ -37,7 +37,7 @@ export function spijunTutorialControllerHint(
         : 'Zapamti lokaciju i svoju ulogu. Odgovaraj kao ta osoba — ali ne previše precizno, da špijun ne pogodi lokaciju.';
     case 'discussion':
       return spy
-        ? 'Koristi listu lokacija ispod — precrtavaj one koje si eliminisao. Gledanje u telefon je normalno, svi to rade!'
+        ? 'Precrtavaj lokacije koje si eliminisao — svi gledaju u telefon, pa te to ne odaje. Kad ostane samo jedna, „Znam lokaciju!" nosi više što ranije prekineš.'
         : 'Postavljaj pitanja i prati ko odgovara čudno. Ako sumnjaš, pritisni „Sumnjiv mi je…". Zaglavio si? Dugme za predlog pitanja je tu.';
     case 'defense':
       return 'Slušaj odbranu uživo — glasanje počinje odmah posle.';

@@ -178,8 +178,19 @@ export default function SpijunHost() {
           animate={{ scale: 1, opacity: 1 }}
           style={{ fontSize: '2.2rem', fontWeight: 800, textAlign: 'center' }}
         >
-          🕵️ Špijun je bio {emojiFor(host.spyId ?? '')} {host.spyName}!
+          🕵️ {host.spyDeclared ? 'Špijun se otkrio —' : 'Špijun je bio'}{' '}
+          {emojiFor(host.spyId ?? '')} {host.spyName}!
         </motion.p>
+        {host.spyDeclared && (
+          <motion.p
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--danger)', textAlign: 'center' }}
+          >
+            „Znam lokaciju!" — prekinuo je razgovor
+            {host.spyEarlyBonus ? ` (tačan pogodak vredi +${300 + host.spyEarlyBonus})` : ''}
+          </motion.p>
+        )}
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
           Sada pogađa lokaciju… {timeRemaining}s
         </p>
@@ -191,13 +202,14 @@ export default function SpijunHost() {
 
   // --- results ----------------------------------------------------------
   if (phase === 'results') {
+    const declaredNote = host.spyDeclared ? ' Sam je prekinuo razgovor!' : '';
     const outcomeText =
       host.outcome === 'spy-guessed'
-        ? `Špijun je pogodio lokaciju (${host.spyGuess}) — špijun pobeđuje!`
+        ? `Špijun je pogodio lokaciju (${host.spyGuess}) — špijun pobeđuje!${declaredNote}`
         : host.outcome === 'spy-missed'
           ? host.spyGuess
-            ? `Špijun je promašio (rekao je: ${host.spyGuess}) — ostali pobeđuju!`
-            : 'Špijun nije pogodio lokaciju — ostali pobeđuju!'
+            ? `Špijun je promašio (rekao je: ${host.spyGuess}) — ostali pobeđuju!${declaredNote}`
+            : `Špijun nije pogodio lokaciju — ostali pobeđuju!${declaredNote}`
           : host.outcome === 'spy-caught'
             ? 'Špijun je razotkriven glasanjem — ostali pobeđuju!'
             : 'Pogrešna optužba — nevin igrač je izbačen, špijun dobija poene!';

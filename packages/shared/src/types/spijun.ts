@@ -96,6 +96,18 @@ export interface SpijunHostData {
   // spy-guess (spy publicly revealed here — tabletop rule)
   spyId?: string;
   spyName?: string;
+  /**
+   * The spy stopped the clock themselves instead of being caught by it.
+   * Only ever set once the spy is already public (spy-guess / results), so
+   * it leaks nothing during the discussion.
+   */
+  spyDeclared?: boolean;
+  /**
+   * Points the early declaration is worth ON TOP of a correct guess (0 when
+   * the clock simply ran out). Computed server-side so the formula lives in
+   * exactly one place.
+   */
+  spyEarlyBonus?: number;
 
   // results (location revealed here only)
   location?: string;
@@ -127,6 +139,9 @@ export interface SpijunControllerData {
   canVote?: boolean;
   hasVoted?: boolean;
   isAccused?: boolean;
+
+  // discussion (spy only) — may stop the clock and guess right now
+  canDeclare?: boolean;
 
   // spy-guess (spy only)
   canGuess?: boolean;

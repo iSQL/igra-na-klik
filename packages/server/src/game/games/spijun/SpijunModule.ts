@@ -30,6 +30,9 @@ import {
   PLAYER_CATCH_POINTS,
   RESULTS_DURATION,
   REVEAL_ROLE_DURATION,
+  SPY_DECLARED_GUESS_DURATION,
+  SPY_EARLY_GUESS_MAX_BONUS,
+  SPY_FAILED_DECLARATION_BONUS,
   SPY_GUESS_DURATION,
   SPY_GUESS_POINTS,
   SPY_WRONG_ACCUSATION_POINTS,
@@ -108,6 +111,8 @@ export class SpijunModule extends BaseGameModule {
       votes: new Map(),
       expectedVoterIds: new Set(),
       spyGuess: null,
+      spyDeclared: false,
+      spyDeclaredRemaining: 0,
       outcome: null,
       voteYes: 0,
       voteNo: 0,
@@ -132,6 +137,8 @@ export class SpijunModule extends BaseGameModule {
         return this.handleAccuse(room, playerId, data);
       case 'spijun:vote':
         return this.handleVote(room, playerId, data);
+      case 'spijun:declare':
+        return this.handleDeclare(room, playerId);
       case 'spijun:spy-guess':
         return this.handleSpyGuess(room, playerId, data);
       default:
@@ -269,6 +276,26 @@ export class SpijunModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  /**
+   * "Znam lokaciju!" — the spy stops the discussion themselves (tabletop
+   * rule). Only from `discussion`, so a spy can't dodge an active trial by
+   * declaring mid-vote; the remaining clock is banked for the score bonus.
+   */
+  private handleDeclare(room: Room, playerId: string): GameState | null {
+    if (this.state.phase !== 'discussion') return null;
+    if (playerId !== this.state.spyId) return null;
+    if (!this.isConnected(room, playerId)) return null;
+    if (this.state.spyDeclared) return null;
+
+    this.state.spyDeclared = true;
+    this.state.spyDeclaredRemaining = Math.max(
+      0,
+      Math.ceil(this.state.phaseTimeRemaining)
+    );
+    this.enterSpyGuess(room);
+    return this.buildGameState(room);
+  }
+
   private handleSpyGuess(
     room: Room,
     playerId: string,
@@ -326,6 +353,8 @@ export class SpijunModule extends BaseGameModule {
     this.state.votes = new Map();
     this.state.expectedVoterIds = new Set();
     this.state.spyGuess = null;
+    this.state.spyDeclared = false;
+    this.state.spyDeclaredRemaining = 0;
     this.state.outcome = null;
     this.state.voteYes = 0;
     this.state.voteNo = 0;
@@ -442,7 +471,9 @@ export class SpijunModule extends BaseGameModule {
       return;
     }
     this.state.phase = 'spy-guess';
-    this.state.phaseTimeRemaining = SPY_GUESS_DURATION;
+    this.state.phaseTimeRemaining = this.state.spyDeclared
+      ? SPY_DECLARED_GUESS_DURATION
+      : SPY_GUESS_DURATION;
   }
 
   private resolveResults(room: Room, outcome: SpijunRoundOutcome): void {
@@ -452,12 +483,19 @@ export class SpijunModule extends BaseGameModule {
       if (!this.state.participantIds.includes(player.id)) continue;
       let pts = 0;
       if (player.id === this.state.spyId) {
-        if (outcome === 'spy-guessed') pts = SPY_GUESS_POINTS;
-        else if (outcome === 'wrong-accusation') pts = SPY_WRONG_ACCUSATION_POINTS;
+        if (outcome === 'spy-guessed') {
+          pts = SPY_GUESS_POINTS + this.earlyGuessBonus();
+        } else if (outcome === 'wrong-accusation') {
+          pts = SPY_WRONG_ACCUSATION_POINTS;
+        }
       } else if (outcome === 'spy-caught' || outcome === 'spy-missed') {
         pts = PLAYER_CATCH_POINTS;
         if (outcome === 'spy-caught' && player.id === this.state.initiatorId) {
           pts += INITIATOR_BONUS;
+        }
+        // A spy who called it and blew it pays the whole village.
+        if (outcome === 'spy-missed' && this.state.spyDeclared) {
+          pts += SPY_FAILED_DECLARATION_BONUS;
         }
       }
       scores.set(player.id, pts);
@@ -480,6 +518,19 @@ export class SpijunModule extends BaseGameModule {
   }
 
   // --- Helpers -----------------------------------------------------------
+
+  /**
+   * Bonus for a correct guess after a self-declaration, linear in the share
+   * of the discussion clock the spy left on the table. Zero when the clock
+   * simply ran out (no declaration).
+   */
+  private earlyGuessBonus(): number {
+    if (!this.state.spyDeclared) return 0;
+    const total = this.state.discussionSeconds;
+    if (total <= 0) return 0;
+    const share = Math.min(1, Math.max(0, this.state.spyDeclaredRemaining / total));
+    return Math.round(SPY_EARLY_GUESS_MAX_BONUS * share);
+  }
 
   private isConnected(room: Room, playerId: string): boolean {
     return room.players.find((p) => p.id === playerId)?.isConnected === true;
@@ -620,6 +671,8 @@ export class SpijunModule extends BaseGameModule {
       const info = this.playerInfo(room, this.state.spyId);
       hostData.spyId = info.playerId;
       hostData.spyName = info.name;
+      hostData.spyDeclared = this.state.spyDeclared;
+      if (this.state.spyDeclared) hostData.spyEarlyBonus = this.earlyGuessBonus();
     }
 
     if (this.state.phase === 'results' || this.state.phase === 'ended') {
@@ -663,6 +716,9 @@ export class SpijunModule extends BaseGameModule {
     if (this.state.phase === 'discussion') {
       pd.canAccuse = role !== 'spectator';
       pd.accusedTargetId = this.state.accusations.get(playerId) ?? null;
+      // Spy only — and only in playerData, so no one else can see the option
+      // exists, let alone that it is offered to exactly one phone.
+      if (role === 'spy') pd.canDeclare = true;
     }
 
     if (this.state.phase === 'voting') {

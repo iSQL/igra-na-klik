@@ -253,6 +253,16 @@ export const SPIJUN_LOCATIONS: SpijunLocation[] = [
  * co-player's name replaces `{ime}`. Deliberately answerable at ANY location
  * so they never leak the secret.
  */
+/**
+ * Question generator — two decks, both purely local on the phone (nothing is
+ * sent over the wire, so tapping either never singles out the spy).
+ *
+ * `SPIJUN_QUESTION_TEMPLATES` are SAFE: answerable from atmosphere alone, so
+ * a lost spy can ask one without exposing themselves. `SPIJUN_SHARP_QUESTION_TEMPLATES`
+ * are SHARP: they demand a concrete detail of the place or of the answerer's
+ * role, which is exactly what a spy cannot invent — but they also give away a
+ * lot to a listening spy, so asking one is a trade.
+ */
 export const SPIJUN_QUESTION_TEMPLATES: string[] = [
   'Pitaj {ime}: Kako si se obukao/la za ovo mesto?',
   'Pitaj {ime}: Kakav je ovde miris?',
@@ -269,4 +279,55 @@ export const SPIJUN_QUESTION_TEMPLATES: string[] = [
   'Pitaj {ime}: Kako si došao/la dovde?',
   'Pitaj {ime}: Da li bi radio/la ovde?',
   'Pitaj {ime}: U koje doba dana je ovde najgore?',
+  'Pitaj {ime}: Da li ti je ovde toplo ili hladno?',
+  'Pitaj {ime}: Koliko dugo planiraš da ostaneš?',
+  'Pitaj {ime}: Da li si ovde svojom voljom?',
+  'Pitaj {ime}: Da li bi ovde poveo/la svekrvu?',
+  'Pitaj {ime}: Ima li ovde nešto što te nervira?',
+  'Pitaj {ime}: Da li se ovde može sesti?',
+  'Pitaj {ime}: Da li bi se ovde slikao/la za Instagram?',
+  'Pitaj {ime}: Koliko je ovde čisto, od 1 do 10?',
+  'Pitaj {ime}: Da li ti ovde treba jakna?',
+  'Pitaj {ime}: Da li si ovde nekad nekog izgubio/la?',
+  'Pitaj {ime}: Ima li ovde muzike?',
+  'Pitaj {ime}: Da li bi ovde prespavao/la ako moraš?',
+  'Pitaj {ime}: Šta bi prvo uradio/la kad izađeš odavde?',
+  'Pitaj {ime}: Da li se ovde čeka u redu?',
+  'Pitaj {ime}: Koliko je ovde svetlo?',
+  'Pitaj {ime}: Da li bi ovde došao/la i zimi?',
+  'Pitaj {ime}: Da li si ovde ikad bio/la ljut/a?',
+  'Pitaj {ime}: Da li bi ovde poveo/la psa?',
+  'Pitaj {ime}: Ima li ovde nekog ko te gleda popreko?',
+  'Pitaj {ime}: Da li bi platio/la duplo da ne moraš ovde?',
+  'Pitaj {ime}: Koliko ljudi je oko tebe u ovom trenutku?',
+  'Pitaj {ime}: Da li ti je ovde neprijatno?',
+  'Pitaj {ime}: Da li se ovde puši?',
+  'Pitaj {ime}: Kakav je ovde pod pod nogama?',
+  'Pitaj {ime}: Da li bi ovo mesto preporučio/la nekome?',
+];
+
+/**
+ * The sharp deck — a spy who asks one of these risks being asked back.
+ */
+export const SPIJUN_SHARP_QUESTION_TEMPLATES: string[] = [
+  'Pitaj {ime}: Šta TAČNO ti ovde radiš?',
+  'Pitaj {ime}: Ko je ovde glavni i zašto baš on/ona?',
+  'Pitaj {ime}: Opiši mi šta ti je trenutno u rukama.',
+  'Pitaj {ime}: Šta vidiš kad se okreneš levo?',
+  'Pitaj {ime}: Koliko je moja uloga ovde važnija od tvoje?',
+  'Pitaj {ime}: Šta je ovde strogo zabranjeno?',
+  'Pitaj {ime}: Kome bi se ovde požalio/la ako nešto krene loše?',
+  'Pitaj {ime}: Šta bi ukrao/la odavde da niko ne gleda?',
+  'Pitaj {ime}: Koji je najgori mogući scenario na ovom mestu?',
+  'Pitaj {ime}: Da li si ti ovde plaćen/a ili plaćaš?',
+  'Pitaj {ime}: Šta ti treba da bi obavio/la svoj posao ovde?',
+  'Pitaj {ime}: Ko bi ovde primetio da si nestao/la?',
+  'Pitaj {ime}: Šta bi ti nedostajalo da ovog mesta nema?',
+  'Pitaj {ime}: Kako se ulazi ovde — plaća se, čeka se, zove se?',
+  'Pitaj {ime}: Šta je prva stvar koju čuješ kad stigneš ovde?',
+  'Pitaj {ime}: Da li bi mogao/la da radiš moj posao ovde?',
+  'Pitaj {ime}: Koga bi od nas prvog izbacili odavde?',
+  'Pitaj {ime}: Šta je ovde najskuplje?',
+  'Pitaj {ime}: Da li se ovde nosi nešto posebno na sebi?',
+  'Pitaj {ime}: Koliko ti treba da odavde stigneš do izlaza?',
 ];

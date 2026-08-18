@@ -184,7 +184,8 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>Pričate uživo — postavljate jedni drugima pitanja o lokaciji. Špijun blefira, ostali paze da ne odaju previše.</li>
 <li>Na telefonu pritisni „Sumnjiv mi je…" — kad se skupi dovoljno glasova, kreće odbrana pa tajno glasanje.</li>
 <li>Istekne li vreme, špijun se otkriva i pogađa lokaciju sa javne liste.</li>
-<li>Poeni: špijun pogodi lokaciju +300 · ostali ga razotkriju +100 svima (pokretač optužbe +200) · pogrešna optužba: špijun +200.</li>
+<li>Špijun sme i sam da prekine razgovor sa „Znam lokaciju!" — otkriva se svima i odmah pogađa.</li>
+<li>Poeni: špijun pogodi lokaciju +300 (do +300 više ako je sam prekinuo razgovor, srazmerno preostalom vremenu) · ostali ga razotkriju +100 svima (pokretač optužbe +200) · promašen pogodak posle „Znam lokaciju!" nosi ostalima još +100 · pogrešna optužba: špijun +200.</li>
 </ul>`,
   },
   'hot-potato': {

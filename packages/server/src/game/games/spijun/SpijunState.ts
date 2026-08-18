@@ -23,6 +23,22 @@ export const PLAYER_CATCH_POINTS = 100;
 export const INITIATOR_BONUS = 200;
 /** Spy's reward when an innocent gets voted out (punishes haste). */
 export const SPY_WRONG_ACCUSATION_POINTS = 200;
+/**
+ * Extra for a spy who STOPPED THE CLOCK themselves and then guessed right,
+ * scaled by how much discussion time was still left. Guessing at 0:00 is
+ * worth the plain SPY_GUESS_POINTS; calling it with the whole clock still to
+ * run is worth double. This is what makes the crossed-out location list on
+ * the phone matter — it turns a passive notepad into a decision about WHEN.
+ */
+export const SPY_EARLY_GUESS_MAX_BONUS = 300;
+/**
+ * Consolation for every non-spy when a declared spy misses. Declaring is a
+ * public, irreversible bet; the village that stonewalled them gets paid for
+ * it, which is the risk side of the bonus above.
+ */
+export const SPY_FAILED_DECLARATION_BONUS = 100;
+/** A spy who declared knows the answer — no need for the full stall window. */
+export const SPY_DECLARED_GUESS_DURATION = 30;
 
 export interface SpijunInternalState {
   phase: SpijunPhase;
@@ -64,6 +80,10 @@ export interface SpijunInternalState {
 
   // spy-guess
   spyGuess: string | null;
+  /** The spy ended the discussion themselves rather than running it out. */
+  spyDeclared: boolean;
+  /** Discussion seconds left at the moment of declaration (0 if none). */
+  spyDeclaredRemaining: number;
 
   // results
   outcome: SpijunRoundOutcome | null;
