@@ -506,10 +506,27 @@ textarea {
   animation: igra-bitka-odbrojavanje 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Pločica „Opsada zamka" pulsira kroz sve faze duela — jedini napad koji
+   izbacuje igrača iz partije zaslužuje stalni crveni otkucaj. */
+@keyframes igra-bitka-opsada-puls {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 106, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(224, 106, 94, 0);
+  }
+}
+
+.bitka-opsada-puls {
+  animation: igra-bitka-opsada-puls 1.8s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bitka-sheen,
   .bitka-tick,
-  .bitka-odbrojavanje {
+  .bitka-odbrojavanje,
+  .bitka-opsada-puls {
     animation: none;
   }
 }
