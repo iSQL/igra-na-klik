@@ -306,12 +306,20 @@ export class RoomManager {
 
   /** Safe per-room summaries for the public landing-page list. */
   listRoomSummaries(): RoomSummary[] {
-    return [...this.rooms.values()].map((room) => ({
-      code: room.code,
-      playerCount: room.players.filter((p) => p.isConnected).length,
-      maxPlayers: room.settings.maxPlayers,
-      status: room.status,
-    }));
+    return [...this.rooms.values()].map((room) => {
+      const connected = room.players.filter((p) => p.isConnected);
+      return {
+        code: room.code,
+        playerCount: connected.length,
+        maxPlayers: room.settings.maxPlayers,
+        status: room.status,
+        // Faces only — never names or ids; the list is public.
+        avatars: connected.map((p) => ({
+          color: p.avatarColor,
+          emoji: p.avatarEmoji,
+        })),
+      };
+    });
   }
 
   addChatMessage(

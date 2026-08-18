@@ -1,0 +1,610 @@
+{
+  "name": "Anagrami 2",
+  "description": "Još 100 izmešanih reči — presloži slova pre nego što se reč sama otkrije!",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "anagram",
+      "text": "Životinja sa rogom na njušci",
+      "answer": "Nosorog",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najviša životinja na svetu",
+      "answer": "Žirafa",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Crno-beli medved iz Kine",
+      "answer": "Panda",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Ptica koja ne leti, a odlično pliva",
+      "answer": "Pingvin",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Gmizavac koji menja boju",
+      "answer": "Kameleon",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Ptica koja jaja podmeće drugima",
+      "answer": "Kukavica",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Insekt koji pravi med",
+      "answer": "Pčela",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Australijska životinja sa torbom",
+      "answer": "Kengur",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Insekt koji svira krilima u letnjoj noći",
+      "answer": "Cvrčak",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Divlja mačka sa pegama koja se penje na drveće",
+      "answer": "Leopard",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Ptica grabljivica oštrog vida",
+      "answer": "Jastreb",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sivi glodar iz kanalizacije",
+      "answer": "Pacov",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Krznašica koja gradi brane na potocima",
+      "answer": "Dabar",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Riba koja se vraća uzvodno da se mresti",
+      "answer": "Pastrmka",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Ptica selica koja gnezdo pravi pod strehom",
+      "answer": "Lastavica",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Crno-žuti vodozemac iz vlažnih šuma",
+      "answer": "Daždevnjak",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Šumska životinja koja skuplja lešnike",
+      "answer": "Veverica",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Šumska životinja sa rogovima",
+      "answer": "Jelen",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Domaća životinja poznata po tvrdoglavosti",
+      "answer": "Magarac",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Insekt sa crvenim krilima i tačkama",
+      "answer": "Bubamara",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Glavni grad Francuske",
+      "answer": "Pariz",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Glavni grad Španije",
+      "answer": "Madrid",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Glavni grad Vojvodine",
+      "answer": "Novi Sad",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najveća reka Južne Amerike",
+      "answer": "Amazon",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najviši vrh sveta",
+      "answer": "Everest",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najveća pustinja na svetu",
+      "answer": "Sahara",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Kontinent na kome živimo",
+      "answer": "Evropa",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Ostrvo poznato po vulkanima i gejzirima",
+      "answer": "Island",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Srpska planina poznata po ski-stazama i Pančićevom vrhu",
+      "answer": "Kopaonik",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Prva prestonica moderne Srbije",
+      "answer": "Kragujevac",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Reka koja protiče kroz Beograd",
+      "answer": "Dunav",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Država sa najviše stanovnika u svetu",
+      "answer": "Indija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zemlja izlazećeg sunca",
+      "answer": "Japan",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Italijanski grad sagrađen na kanalima",
+      "answer": "Venecija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najveći okean na Zemlji",
+      "answer": "Pacifik",
+      "timeLimit": 25,
+      "accept": [
+        "Tihi okean"
+      ]
+    },
+    {
+      "type": "anagram",
+      "text": "Država u kojoj se nalazi Ajfelova kula",
+      "answer": "Francuska",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najhladniji kontinent",
+      "answer": "Antarktik",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Grad u kome se nalazi Kremlj",
+      "answer": "Moskva",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Srpska planina poznata po zlatnom boru",
+      "answer": "Zlatibor",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Jezero na severu Srbije, kraj Subotice",
+      "answer": "Palić",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Srpsko jelo od paprike i plavog patlidžana",
+      "answer": "Ajvar",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Jelo od kupusa i mlevenog mesa",
+      "answer": "Sarma",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Italijansko jelo sa testom i sirom",
+      "answer": "Pica",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Napitak od pečenih zrna, pije se iz fildžana",
+      "answer": "Kafa",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Belo i slatko, stavlja se u kafu",
+      "answer": "Šećer",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Belo piće koje daje krava",
+      "answer": "Mleko",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Voće od koga se pravi vino",
+      "answer": "Grožđe",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Crveno povrće za salatu",
+      "answer": "Paradajz",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Povrće od koga se plače dok se seče",
+      "answer": "Crni luk",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Namaz koji se maže na hleb, od kikirikija",
+      "answer": "Puter",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Slatkiš od kakaoa",
+      "answer": "Čokolada",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Testenina u obliku cevčica",
+      "answer": "Makarone",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Voće sa mnogo semenki, crveno iznutra",
+      "answer": "Lubenica",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zeleno povrće, glavica lista",
+      "answer": "Salata",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Narandžasto povrće koje voli zeka",
+      "answer": "Šargarepa",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zvezda oko koje kruži Zemlja",
+      "answer": "Sunce",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Prirodni satelit Zemlje",
+      "answer": "Mesec",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Planeta poznata po prstenovima",
+      "answer": "Saturn",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Crvena planeta",
+      "answer": "Mars",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Organ koji pumpa krv",
+      "answer": "Srce",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Organ kojim dišemo",
+      "answer": "Pluća",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Organ kojim mislimo",
+      "answer": "Mozak",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Krvni sud koji vodi krv od srca",
+      "answer": "Arterija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Kosti koje čine ljudsko telo",
+      "answer": "Skelet",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Jednoćelijski organizam vidljiv samo pod mikroskopom",
+      "answer": "Bakterija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Gas koji udišemo da bismo živeli",
+      "answer": "Kiseonik",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava za merenje temperature",
+      "answer": "Termometar",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava za gledanje zvezda",
+      "answer": "Teleskop",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava za gledanje sitnih stvari",
+      "answer": "Mikroskop",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sila koja nas drži na Zemlji",
+      "answer": "Gravitacija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naučnik iz Smiljana, izumitelj naizmenične struje",
+      "answer": "Tesla",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Pojava na nebu posle kiše, u bojama",
+      "answer": "Duga",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Snažno pražnjenje u oblacima",
+      "answer": "Munja",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zemljotres na dnu mora pravi ovaj talas",
+      "answer": "Cunami",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zimska belina koja pada s neba, jedna po jedna",
+      "answer": "Pahulja",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport sa obručem i loptom",
+      "answer": "Košarka",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport u kome se igra sa 11 igrača",
+      "answer": "Fudbal",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport sa mrežom u bazenu",
+      "answer": "Vaterpolo",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Trka duga 42 kilometra",
+      "answer": "Maraton",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Najveće sportsko takmičenje na svetu",
+      "answer": "Olimpijada",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Srpski teniser, rekorder po grend slemovima",
+      "answer": "Đoković",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sportista koji brani gol",
+      "answer": "Golman",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Osoba koja sudi na utakmici",
+      "answer": "Sudija",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport na ledu sa palicom i pakom",
+      "answer": "Hokej",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sport u kome se čamac pokreće veslima",
+      "answer": "Veslanje",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Mesto gde se gledaju filmovi",
+      "answer": "Bioskop",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Mesto gde se pozajmljuju knjige",
+      "answer": "Biblioteka",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Mesto gde se čuvaju slike i skulpture",
+      "answer": "Muzej",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Zgrada u kojoj deca uče",
+      "answer": "Škola",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Šinsko vozilo koje vozi kroz grad",
+      "answer": "Tramvaj",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Prevozno sredstvo koje leti",
+      "answer": "Avion",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Vozilo sa dva točka i pedalama",
+      "answer": "Bicikl",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava za razgovor na daljinu",
+      "answer": "Telefon",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava koja prikazuje slike i program",
+      "answer": "Televizor",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Svetska mreža računara",
+      "answer": "Internet",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Sprava za slikanje uspomena",
+      "answer": "Fotoaparat",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Naprava koja uvek pokazuje sever",
+      "answer": "Kompas",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Priča sa vilama i zmajevima",
+      "answer": "Bajka",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Delo koje se peva uz muziku",
+      "answer": "Pesma",
+      "timeLimit": 25
+    },
+    {
+      "type": "anagram",
+      "text": "Predstava koja se gleda na daskama",
+      "answer": "Pozorište",
+      "timeLimit": 25
+    }
+  ]
+}

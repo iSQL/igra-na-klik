@@ -1,0 +1,1107 @@
+{
+  "name": "Pronađi uljeza 2",
+  "description": "Još 100 pojmova: tri idu zajedno, jedan ne pripada — tapni uljeza!",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "uljez",
+      "text": "Tri su glavni gradovi — ko je uljez?",
+      "options": [
+        "Barselona",
+        "Berlin",
+        "Pariz",
+        "Rim"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su države — ko je uljez?",
+      "options": [
+        "Grčka",
+        "Nemačka",
+        "Milano",
+        "Portugal"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su kontinenta — ko je uljez?",
+      "options": [
+        "Azija",
+        "Grenland",
+        "Afrika",
+        "Evropa"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su okeana — ko je uljez?",
+      "options": [
+        "Tihi okean",
+        "Atlantski okean",
+        "Indijski okean",
+        "Jadransko more"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su planine u Srbiji — ko je uljez?",
+      "options": [
+        "Palić",
+        "Zlatibor",
+        "Kopaonik",
+        "Tara"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su reke — ko je uljez?",
+      "options": [
+        "Ibar",
+        "Drina",
+        "Šar-planina",
+        "Sava"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su srpski pisci — ko je uljez?",
+      "options": [
+        "Ivo Andrić",
+        "Fjodor Dostojevski",
+        "Miloš Crnjanski",
+        "Branko Ćopić"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su kompozitori — ko je uljez?",
+      "options": [
+        "Mocart",
+        "Betoven",
+        "Bah",
+        "Pablo Pikaso"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su slikari — ko je uljez?",
+      "options": [
+        "Vilijam Šekspir",
+        "Salvador Dali",
+        "Leonardo da Vinči",
+        "Van Gog"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su morska stvorenja — ko je uljez?",
+      "options": [
+        "Morski konjic",
+        "Hobotnica",
+        "Kamila",
+        "Meduza"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su ptice — ko je uljez?",
+      "options": [
+        "Sova",
+        "Slepi miš",
+        "Orao",
+        "Vrabac"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su insekti — ko je uljez?",
+      "options": [
+        "Bubamara",
+        "Mrav",
+        "Pčela",
+        "Pauk"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su gmizavci — ko je uljez?",
+      "options": [
+        "Žaba",
+        "Zmija",
+        "Gušter",
+        "Krokodil"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su povrće — ko je uljez?",
+      "options": [
+        "Kupus",
+        "Krompir",
+        "Kruška",
+        "Paprika"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su začini — ko je uljez?",
+      "options": [
+        "Biber",
+        "Brašno",
+        "Origano",
+        "Cimet"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su mlečni proizvodi — ko je uljez?",
+      "options": [
+        "Sir",
+        "Jogurt",
+        "Kajmak",
+        "Med"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su srpska jela — ko je uljez?",
+      "options": [
+        "Suši",
+        "Ajvar",
+        "Sarma",
+        "Pljeskavica"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su bezalkoholna pića — ko je uljez?",
+      "options": [
+        "Limunada",
+        "Sok od jabuke",
+        "Rakija",
+        "Voda"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su sportovi sa loptom — ko je uljez?",
+      "options": [
+        "Košarka",
+        "Skijanje",
+        "Odbojka",
+        "Fudbal"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su borilačke veštine — ko je uljez?",
+      "options": [
+        "Tekvondo",
+        "Džudo",
+        "Karate",
+        "Vaterpolo"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su grend slem turniri — ko je uljez?",
+      "options": [
+        "Liga šampiona",
+        "US Open",
+        "Vimbldon",
+        "Rolan Garos"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su fudbalski klubovi iz Srbije — ko je uljez?",
+      "options": [
+        "Crvena zvezda",
+        "Partizan",
+        "Real Madrid",
+        "Vojvodina"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su košarkaši — ko je uljez?",
+      "options": [
+        "Vlade Divac",
+        "Novak Đoković",
+        "Bogdan Bogdanović",
+        "Nikola Jokić"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su zimski sportovi — ko je uljez?",
+      "options": [
+        "Skijanje",
+        "Klizanje",
+        "Hokej na ledu",
+        "Plivanje"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su olimpijski sportovi — ko je uljez?",
+      "options": [
+        "Pikado",
+        "Plivanje",
+        "Atletika",
+        "Gimnastika"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su planete — ko je uljez?",
+      "options": [
+        "Mars",
+        "Saturn",
+        "Mesec",
+        "Neptun"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su hemijski elementi — ko je uljez?",
+      "options": [
+        "Vodonik",
+        "Voda",
+        "Azot",
+        "Kiseonik"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su metali — ko je uljez?",
+      "options": [
+        "Aluminijum",
+        "Gvožđe",
+        "Bakar",
+        "Staklo"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su agregatna stanja — ko je uljez?",
+      "options": [
+        "Vidljivo",
+        "Čvrsto",
+        "Tečno",
+        "Gasovito"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su ljudski organi — ko je uljez?",
+      "options": [
+        "Bubreg",
+        "Srce",
+        "Skelet",
+        "Jetra"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su čula — ko je uljez?",
+      "options": [
+        "Sluh",
+        "Govor",
+        "Ukus",
+        "Vid"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su računske operacije — ko je uljez?",
+      "options": [
+        "Sabiranje",
+        "Množenje",
+        "Deljenje",
+        "Merenje"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su geometrijska tela — ko je uljez?",
+      "options": [
+        "Kvadrat",
+        "Kocka",
+        "Lopta",
+        "Valjak"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su parni brojevi — ko je uljez?",
+      "options": [
+        "20",
+        "4",
+        "7",
+        "12"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su prosti brojevi — ko je uljez?",
+      "options": [
+        "3",
+        "9",
+        "11",
+        "2"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su padeži — ko je uljez?",
+      "options": [
+        "Dativ",
+        "Nominativ",
+        "Genitiv",
+        "Infinitiv"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su vrste reči — ko je uljez?",
+      "options": [
+        "Rečenica",
+        "Imenica",
+        "Glagol",
+        "Pridev"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su slovenski jezici — ko je uljez?",
+      "options": [
+        "Poljski",
+        "Ruski",
+        "Mađarski",
+        "Srpski"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su članice Evropske unije — ko je uljez?",
+      "options": [
+        "Francuska",
+        "Srbija",
+        "Italija",
+        "Nemačka"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su valute — ko je uljez?",
+      "options": [
+        "Dolar",
+        "Evro",
+        "Dinar",
+        "Viza"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su društvene mreže — ko je uljez?",
+      "options": [
+        "Vindouz",
+        "Fejsbuk",
+        "TikTok",
+        "Instagram"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su internet pregledači — ko je uljez?",
+      "options": [
+        "Fajerfoks",
+        "Safari",
+        "Eksel",
+        "Krom"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su operativni sistemi — ko je uljez?",
+      "options": [
+        "Linuks",
+        "Fotošop",
+        "Android",
+        "Vindouz"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su programski jezici — ko je uljez?",
+      "options": [
+        "Džava",
+        "C++",
+        "Pajton",
+        "Latinski"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su delovi računara — ko je uljez?",
+      "options": [
+        "Daljinski upravljač",
+        "Tastatura",
+        "Miš",
+        "Monitor"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su marke automobila — ko je uljez?",
+      "options": [
+        "Fijat",
+        "Reno",
+        "Nokija",
+        "Škoda"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su šinska prevozna sredstva — ko je uljez?",
+      "options": [
+        "Metro",
+        "Autobus",
+        "Voz",
+        "Tramvaj"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri lete — ko je uljez?",
+      "options": [
+        "Avion",
+        "Helikopter",
+        "Balon",
+        "Podmornica"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri rade u bolnici — ko je uljez?",
+      "options": [
+        "Vodoinstalater",
+        "Hirurg",
+        "Lekar",
+        "Medicinska sestra"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su žičani instrumenti — ko je uljez?",
+      "options": [
+        "Violina",
+        "Harfa",
+        "Truba",
+        "Gitara"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su duvački instrumenti — ko je uljez?",
+      "options": [
+        "Klarinet",
+        "Bubanj",
+        "Truba",
+        "Flauta"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su srpski pevači — ko je uljez?",
+      "options": [
+        "Bora Đorđević",
+        "Đorđe Balašević",
+        "Zdravko Čolić",
+        "Frenk Sinatra"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su bendovi — ko je uljez?",
+      "options": [
+        "Ceca",
+        "Riblja čorba",
+        "Bajaga i Instruktori",
+        "YU grupa"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su filmski reditelji — ko je uljez?",
+      "options": [
+        "Emir Kusturica",
+        "Stiven Spilberg",
+        "Nikola Tesla",
+        "Kventin Tarantino"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su superheroji — ko je uljez?",
+      "options": [
+        "Betmen",
+        "Šrek",
+        "Spajdermen",
+        "Supermen"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su Diznijevi crtani filmovi — ko je uljez?",
+      "options": [
+        "Kralj lavova",
+        "Ledeno kraljevstvo",
+        "Aladin",
+        "Štrumfovi"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su iz Ratova zvezda — ko je uljez?",
+      "options": [
+        "Gandalf",
+        "Dart Vejder",
+        "Joda",
+        "Čubaka"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su iz Gospodara prstenova — ko je uljez?",
+      "options": [
+        "Gandalf",
+        "Legolas",
+        "Hari Poter",
+        "Frodo"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su serije — ko je uljez?",
+      "options": [
+        "Igra prestola",
+        "Titanik",
+        "Prijatelji",
+        "Kancelarija"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su srpski filmovi — ko je uljez?",
+      "options": [
+        "Ko to tamo peva",
+        "Maratonci trče počasni krug",
+        "Balkanski špijun",
+        "Kum"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su bajke — ko je uljez?",
+      "options": [
+        "Mali princ",
+        "Crvenkapa",
+        "Ivica i Marica",
+        "Snežana"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su grčki bogovi — ko je uljez?",
+      "options": [
+        "Posejdon",
+        "Had",
+        "Odin",
+        "Zevs"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su rimski carevi — ko je uljez?",
+      "options": [
+        "Avgust",
+        "Aleksandar Veliki",
+        "Konstantin",
+        "Neron"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su srpski vladari — ko je uljez?",
+      "options": [
+        "Stefan Nemanja",
+        "Car Dušan",
+        "Karađorđe",
+        "Napoleon Bonaparta"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su u Parizu — ko je uljez?",
+      "options": [
+        "Koloseum",
+        "Ajfelova kula",
+        "Luvr",
+        "Trijumfalna kapija"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su muzeji — ko je uljez?",
+      "options": [
+        "Prado",
+        "Ermitaž",
+        "Vimbldon",
+        "Luvr"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su gradovi u Italiji — ko je uljez?",
+      "options": [
+        "Napulj",
+        "Lisabon",
+        "Rim",
+        "Milano"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su gradovi u Nemačkoj — ko je uljez?",
+      "options": [
+        "Berlin",
+        "Minhen",
+        "Hamburg",
+        "Beč"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su ostrva — ko je uljez?",
+      "options": [
+        "Belgija",
+        "Sicilija",
+        "Krit",
+        "Island"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su pustinje — ko je uljez?",
+      "options": [
+        "Gobi",
+        "Kalahari",
+        "Amazon",
+        "Sahara"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su vulkani — ko je uljez?",
+      "options": [
+        "Fudži",
+        "Mont Everest",
+        "Vezuv",
+        "Etna"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su vremenske pojave — ko je uljez?",
+      "options": [
+        "Grad",
+        "Kiša",
+        "Sneg",
+        "Vetrokaz"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri meseca imaju 31 dan — ko je uljez?",
+      "options": [
+        "April",
+        "Maj",
+        "Januar",
+        "Mart"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su letnji meseci — ko je uljez?",
+      "options": [
+        "Jul",
+        "Avgust",
+        "Septembar",
+        "Jun"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su radni dani — ko je uljez?",
+      "options": [
+        "Sreda",
+        "Nedelja",
+        "Četvrtak",
+        "Utorak"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su godišnja doba — ko je uljez?",
+      "options": [
+        "Zima",
+        "Proleće",
+        "Leto",
+        "Praznik"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su praznici — ko je uljez?",
+      "options": [
+        "Ponedeljak",
+        "Božić",
+        "Uskrs",
+        "Nova godina"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su drveće — ko je uljez?",
+      "options": [
+        "Bukva",
+        "Bor",
+        "Ruža",
+        "Hrast"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su cveće — ko je uljez?",
+      "options": [
+        "Ljiljan",
+        "Paprat",
+        "Ruža",
+        "Lala"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri voćke imaju košticu — ko je uljez?",
+      "options": [
+        "Breskva",
+        "Šljiva",
+        "Trešnja",
+        "Jagoda"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su citrusi — ko je uljez?",
+      "options": [
+        "Ananas",
+        "Limun",
+        "Pomorandža",
+        "Grejpfrut"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su peciva — ko je uljez?",
+      "options": [
+        "Krofna",
+        "Đevrek",
+        "Čorba",
+        "Kifla"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su alati — ko je uljez?",
+      "options": [
+        "Klešta",
+        "Tanjir",
+        "Čekić",
+        "Odvijač"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su prostorije u kući — ko je uljez?",
+      "options": [
+        "Hodnik",
+        "Kuhinja",
+        "Kupatilo",
+        "Trotoar"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su nameštaj — ko je uljez?",
+      "options": [
+        "Sijalica",
+        "Sto",
+        "Stolica",
+        "Orman"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su delovi automobila — ko je uljez?",
+      "options": [
+        "Menjač",
+        "Guma",
+        "Jedro",
+        "Volan"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su boje na zastavi Srbije — ko je uljez?",
+      "options": [
+        "Bela",
+        "Zelena",
+        "Crvena",
+        "Plava"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su boje duge — ko je uljez?",
+      "options": [
+        "Crvena",
+        "Žuta",
+        "Ljubičasta",
+        "Braon"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su religije — ko je uljez?",
+      "options": [
+        "Astrologija",
+        "Hrišćanstvo",
+        "Islam",
+        "Budizam"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su znaci zodijaka — ko je uljez?",
+      "options": [
+        "Lav",
+        "Ribe",
+        "Zmaj",
+        "Ovan"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su šahovske figure — ko je uljez?",
+      "options": [
+        "Lovac",
+        "Džoker",
+        "Kralj",
+        "Kraljica"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su karte iz špila — ko je uljez?",
+      "options": [
+        "Kec",
+        "Kralj",
+        "Dama",
+        "Domina"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su društvene igre — ko je uljez?",
+      "options": [
+        "Trka na 100 metara",
+        "Monopol",
+        "Šah",
+        "Čoveče ne ljuti se"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su video-igre — ko je uljez?",
+      "options": [
+        "Fortnajt",
+        "GTA",
+        "Netfliks",
+        "Majnkraft"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su marke sportske opreme — ko je uljez?",
+      "options": [
+        "Puma",
+        "Nestle",
+        "Najki",
+        "Adidas"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su brza hrana — ko je uljez?",
+      "options": [
+        "Pica",
+        "Pljeskavica u lepinji",
+        "Hot-dog",
+        "Čorba od povrća"
+      ],
+      "correctIndex": 3
+    },
+    {
+      "type": "uljez",
+      "text": "Tri države imaju izlaz na more — ko je uljez?",
+      "options": [
+        "Austrija",
+        "Grčka",
+        "Hrvatska",
+        "Italija"
+      ],
+      "correctIndex": 0
+    },
+    {
+      "type": "uljez",
+      "text": "Tri glavna grada leže na Dunavu — ko je uljez?",
+      "options": [
+        "Budimpešta",
+        "Beč",
+        "Prag",
+        "Beograd"
+      ],
+      "correctIndex": 2
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su nauke — ko je uljez?",
+      "options": [
+        "Fizika",
+        "Numerologija",
+        "Biologija",
+        "Hemija"
+      ],
+      "correctIndex": 1
+    },
+    {
+      "type": "uljez",
+      "text": "Tri su izumitelji — ko je uljez?",
+      "options": [
+        "Nikola Tesla",
+        "Tomas Edison",
+        "Aleksandar Bel",
+        "Vinsent van Gog"
+      ],
+      "correctIndex": 3
+    }
+  ]
+}

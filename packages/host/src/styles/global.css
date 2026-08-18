@@ -77,6 +77,28 @@ button {
   }
 }
 
+/* Lobby mark: a slow hop, the one bit of life on a screen that otherwise sits
+   still until players join. */
+@keyframes ink-tumble {
+  0%,
+  100% {
+    transform: rotate(-5deg) translateY(0);
+  }
+  50% {
+    transform: rotate(5deg) translateY(-6px);
+  }
+}
+
+.ink-mark-tumble {
+  animation: ink-tumble 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-mark-tumble {
+    animation: none;
+  }
+}
+
 /* Game-select overlays: backdrop fade + config popup / rules pop-in. */
 @keyframes igra-fade {
   from {

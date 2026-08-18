@@ -17,6 +17,11 @@ const LAST_NAME_KEY = 'igra-player-name';
 // survives JoinScreen unmount/remount within the same page load.
 let hadFirstMount = false;
 
+// Faces shown per room row before the rest collapse into a +N chip — more
+// than three and the row's code, count and join pill start fighting for
+// width on a narrow phone.
+const MAX_ROOM_FACES = 3;
+
 // Server join errors are fixed English strings — map the known ones to
 // localized, friendlier messages (the raw text still shows for unknowns).
 const SERVER_ERROR_KEYS: Record<string, string> = {
@@ -179,6 +184,19 @@ export function JoinScreen() {
     letterSpacing: '0.1em',
   };
 
+  const roomFaceStyle: React.CSSProperties = {
+    width: 24,
+    height: 24,
+    flexShrink: 0,
+    borderRadius: '50%',
+    // Cut out of the row background so overlapping faces stay separable.
+    border: '2px solid var(--bg-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.75rem',
+  };
+
   const roomBadgeStyle: React.CSSProperties = {
     fontSize: '0.65rem',
     fontWeight: 800,
@@ -210,9 +228,25 @@ export function JoinScreen() {
       >
         <span
           className="display"
-          style={{ fontWeight: 700, fontSize: '1.4rem' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.55rem',
+            fontWeight: 700,
+            fontSize: '1.4rem',
+          }}
         >
-          igra na <span className="text-grad">KLIK</span>
+          {/* Reverse cut — the join screen canvas is navy. */}
+          <img
+            src={`${import.meta.env.BASE_URL}ink-mark-reverse.svg`}
+            alt=""
+            width={34}
+            height={34}
+          />
+          {/* One flex item, or the row gap would open up inside the wordmark. */}
+          <span>
+            igra na <span className="text-grad">KLIK</span>
+          </span>
         </span>
         <LanguageSwitch />
       </div>
@@ -372,10 +406,17 @@ export function JoinScreen() {
                         alignItems: 'center',
                         gap: '0.7rem',
                         width: '100%',
-                        padding: '0.6rem 0.8rem',
+                        padding: '0.65rem 0.7rem 0.65rem 0.8rem',
                         borderRadius: '14px',
                         background: 'var(--bg-secondary)',
-                        border: '1px solid var(--line2)',
+                        // A joinable room is the one thing on this screen you
+                        // can act on without typing — give it the gold edge.
+                        border: joinable
+                          ? '1.5px solid var(--accent)'
+                          : '1px solid var(--line2)',
+                        boxShadow: joinable
+                          ? '0 6px 18px rgba(194,155,71,.18)'
+                          : 'none',
                         opacity: joinable ? 1 : 0.55,
                         textAlign: 'left',
                       }}
@@ -395,17 +436,64 @@ export function JoinScreen() {
                       <span
                         style={{
                           flex: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          color: 'var(--text-secondary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          minWidth: 0,
                         }}
                       >
-                        👤 {r.playerCount}/{r.maxPlayers}
+                        {r.avatars.slice(0, MAX_ROOM_FACES).map((a, i) => (
+                          <span
+                            key={i}
+                            aria-hidden
+                            style={{ ...roomFaceStyle, background: a.color, marginLeft: i === 0 ? 0 : '-7px' }}
+                          >
+                            {a.emoji}
+                          </span>
+                        ))}
+                        {r.playerCount > MAX_ROOM_FACES && (
+                          <span
+                            aria-hidden
+                            style={{
+                              ...roomFaceStyle,
+                              marginLeft: '-7px',
+                              background: 'var(--bg-card)',
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            +{r.playerCount - MAX_ROOM_FACES}
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            marginLeft: r.avatars.length ? '0.5rem' : 0,
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {r.playerCount}/{r.maxPlayers}
+                        </span>
                       </span>
                       {r.status !== 'lobby' ? (
                         <span style={roomBadgeStyle}>{t('join.inGame')}</span>
+                      ) : joinable ? (
+                        <span
+                          style={{
+                            padding: '0.35rem 0.7rem',
+                            borderRadius: '999px',
+                            background: 'var(--accent)',
+                            color: 'var(--bg-primary)',
+                            fontSize: '0.8rem',
+                            fontWeight: 800,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {t('join.enterShort')}
+                        </span>
                       ) : (
-                        !joinable && <span style={roomBadgeStyle}>{t('join.full')}</span>
+                        <span style={roomBadgeStyle}>{t('join.full')}</span>
                       )}
                     </button>
                   );

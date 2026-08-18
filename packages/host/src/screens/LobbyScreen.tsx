@@ -60,7 +60,21 @@ export function LobbyScreen() {
           margin: 'auto',
         }}
       >
-      <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{t('common.appName')}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.1rem' }}>
+        {/* Reverse cut of the mark — the lobby canvas is navy. The tumble is
+            pure CSS (see global.css) so it costs no re-renders while the lobby
+            sits open for minutes at a time. */}
+        <img
+          className="ink-mark-tumble"
+          src={`${import.meta.env.BASE_URL}ink-mark-reverse.svg`}
+          alt=""
+          width={76}
+          height={76}
+        />
+        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>
+          {t('common.appName')}
+        </h1>
+      </div>
 
       <div
         style={{

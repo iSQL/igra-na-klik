@@ -10,14 +10,25 @@ A frog perched on a hill crest with the sun rising behind it — the chosen iden
 
 | File | Use |
 |------|-----|
-| `assets/zabari-mark-color.svg` | Primary mark, full color, on cream |
-| `assets/zabari-mark-mono-navy.svg` | Single-ink navy version, transparent background |
-| `assets/zabari-mark-reverse.svg` | Reverse version, cream mark on navy, for dark surfaces |
-| `assets/zabari-mark-512.png` | High-res PNG of the primary mark |
-| `assets/favicon.svg` | Favicon, scalable |
+| `assets/ink-mark-color.svg` | Primary mark, full color, on cream |
+| `assets/ink-mark-mono-navy.svg` | Single-ink navy version, transparent background |
+| `assets/ink-mark-mono-cream.svg` | Single-ink cream version, for dark surfaces |
+| `assets/ink-mark-reverse.svg` | Reverse version, cream frame on navy, for dark surfaces |
+| `assets/ink-mark-512.png` | High-res PNG of the primary mark, transparent background |
+| `assets/favicon.svg` | Favicon, scalable (copy of the primary mark) |
 | `assets/favicon.ico` | Favicon, 16/32/48px, for browsers that need .ico |
-| `assets/favicon-16.png`, `favicon-32.png`, `favicon-48.png` | Favicon PNG fallbacks |
+| `assets/favicon-16.png`, `favicon-32.png`, `favicon-48.png` | Favicon PNG fallbacks; 16px is the mono cut |
 | `assets/apple-touch-icon.png` | 180×180 iOS home-screen icon, cream background |
+| `packages/controller/public/icons/icon-192.png`, `icon-512.png` | Maskable PWA icons, mark at 74% on cream |
+
+Everything except the four source SVGs is generated — run
+`node scripts/build-brand-icons.mjs` after changing the mark. It rasterizes
+through headless Chrome (no image library in the dependency tree), packs the
+`.ico`, and copies the results into the three directories the apps serve from:
+`packages/server/assets/brand/`, `packages/host/public/`,
+`packages/controller/public/`. The landing page in
+`packages/server/src/index.ts` inlines the same mark by hand and must be
+updated with it.
 
 Suggested `<head>` tags:
 ```html
@@ -30,17 +41,20 @@ Suggested `<head>` tags:
 
 ## 1. The Mark
 
-A circular emblem. Inside: a rising **sun** glows behind a navy **hill crest**, and a small front-facing **frog silhouette** sits at the top of the crest. A thin **river** line runs across the base. A clean ring frames the whole.
+A circular emblem. Inside: a rising **sun** glows behind a navy **hill crest**, and a small front-facing **frog** sits at the top of the crest. A thin **river** line runs across the base. A clean ring frames the whole.
+
+The frog is drawn **in pixels** — an 8-bit raster on a 3.2-unit grid, gold pixels for the eyes and mouth. Circle, sun, crest and river are unchanged from the zabari.net Sunrise Hill mark, so the app reads as part of the parent brand while the pixel cut is the one thing that says *game*.
 
 **Construction notes**
 - Built on a 100×100 circle, ring stroke 2.5.
 - The sun sits low and centered; the crest is a single sweeping curve; the frog is centered on the crest.
+- Frog pixels are 3.2 units square and snap to that grid — no half-pixels, no curves, no rotation.
 - Keep all elements inside the ring — nothing should touch or break the frame.
 
 **Variants**
-- **Primary** — full color on cream (gold sun, navy hill, cream river).
-- **Reverse** — for navy / dark backgrounds; frog and frame go cream.
-- **Mono** — single-ink version (navy or cream); sun drops to a soft 16% tint, river and inner detail are omitted.
+- **Primary** — full color on cream (gold sun, navy hill and frog, gold eye and mouth pixels, cream river).
+- **Reverse** — for navy / dark backgrounds; frame and river go cream, the frog's inner pixels go cream.
+- **Mono** — single-ink version (navy or cream); sun drops to a soft 16% tint, river and inner pixels are omitted.
 
 ---
 

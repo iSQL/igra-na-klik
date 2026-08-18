@@ -54,12 +54,21 @@ export type PublicRoom = Omit<Room, 'players' | 'chatMessages'> & {
   players: PublicPlayer[];
 };
 
+// A face in the public room list: colour + emoji only. Deliberately carries
+// no name and no id, so /api/rooms stays anonymous while a passer-by can
+// still see that someone is actually waiting in the room.
+export interface RoomSummaryAvatar {
+  color: string;
+  emoji: string;
+}
+
 // Safe summary exposed on the public landing page via GET /api/rooms.
 export interface RoomSummary {
   code: string;
   playerCount: number;
   maxPlayers: number;
   status: RoomStatus;
+  avatars: RoomSummaryAvatar[];
 }
 
 // Room cap must fit the biggest game (Gluvo doba plays up to 15) — the

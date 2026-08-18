@@ -1,0 +1,1110 @@
+{
+  "name": "Poređaj po redu 2",
+  "description": "Još 100 nizova za ređanje — hronologija, veličine, koraci i azbučni red.",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "redosled",
+      "text": "Poređaj planete od najmanje ka najvećoj",
+      "items": [
+        "Merkur",
+        "Mars",
+        "Venera",
+        "Zemlja",
+        "Neptun",
+        "Uran",
+        "Saturn",
+        "Jupiter"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj planete od Sunca ka spolja, počev od Zemlje",
+      "items": [
+        "Zemlja",
+        "Mars",
+        "Jupiter",
+        "Saturn",
+        "Uran",
+        "Neptun"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj nebeska tela od najmanjeg ka najvećem",
+      "items": [
+        "Mesec",
+        "Zemlja",
+        "Jupiter",
+        "Sunce"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj faze Meseca počev od mladog meseca",
+      "items": [
+        "Mlad mesec",
+        "Prva četvrt",
+        "Pun mesec",
+        "Poslednja četvrt"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj faze života zvezde",
+      "items": [
+        "Oblak gasa i prašine",
+        "Mlada zvezda",
+        "Crveni džin",
+        "Beli patuljak"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj geološke ere od najstarije",
+      "items": [
+        "Paleozoik",
+        "Mezozoik",
+        "Kenozoik"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake kruženja vode u prirodi",
+      "items": [
+        "Isparavanje",
+        "Kondenzacija",
+        "Padavine",
+        "Oticanje u reke"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj životni ciklus leptira",
+      "items": [
+        "Jaje",
+        "Gusenica",
+        "Lutka",
+        "Leptir"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj životni ciklus žabe",
+      "items": [
+        "Jaje",
+        "Punoglavac",
+        "Mlada žaba",
+        "Odrasla žaba"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj boje po talasnoj dužini, od najkraće ka najdužoj",
+      "items": [
+        "Ljubičasta",
+        "Plava",
+        "Zelena",
+        "Žuta",
+        "Narandžasta",
+        "Crvena"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po temperaturi, od najhladnijeg ka najtoplijem",
+      "items": [
+        "Led",
+        "Sobna temperatura",
+        "Telesna temperatura",
+        "Ključala voda",
+        "Površina Sunca"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj vetrove po jačini",
+      "items": [
+        "Lahor",
+        "Povetarac",
+        "Jak vetar",
+        "Oluja",
+        "Orkan"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj zemljotrese po jačini",
+      "items": [
+        "2 stepena — jedva se oseti",
+        "4 stepena — trese prozore",
+        "6 stepeni — pravi štetu",
+        "8 stepeni — razoran"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po nadmorskoj visini, od najniže ka najvišoj",
+      "items": [
+        "Nivo mora",
+        "Beograd",
+        "Zlatibor",
+        "Kopaonik",
+        "Mon Blan"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj planine po visini, od najniže ka najvišoj",
+      "items": [
+        "Avala",
+        "Fruška gora",
+        "Zlatibor",
+        "Kopaonik",
+        "Mon Blan",
+        "Mont Everest"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj reke po dužini, od najkraće ka najdužoj",
+      "items": [
+        "Drina",
+        "Sava",
+        "Dunav",
+        "Volga",
+        "Nil"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj životinje po težini, od najlakše ka najtežoj",
+      "items": [
+        "Miš",
+        "Mačka",
+        "Pas",
+        "Čovek",
+        "Konj",
+        "Slon",
+        "Plavi kit"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po broju nogu, od najmanje ka najviše",
+      "items": [
+        "Zmija",
+        "Čovek",
+        "Pas",
+        "Mrav",
+        "Pauk"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po maksimalnoj brzini, od najsporijeg ka najbržem",
+      "items": [
+        "Bicikl",
+        "Automobil",
+        "Voz",
+        "Putnički avion",
+        "Raketa"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mere za masu od najmanje ka najvećoj",
+      "items": [
+        "Miligram",
+        "Gram",
+        "Dekagram",
+        "Kilogram",
+        "Tona"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mere za zapreminu od najmanje ka najvećoj",
+      "items": [
+        "Mililitar",
+        "Decilitar",
+        "Litar",
+        "Hektolitar"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj vremenske jedinice od najkraće ka najdužoj",
+      "items": [
+        "Sekunda",
+        "Minut",
+        "Sat",
+        "Dan",
+        "Nedelja",
+        "Mesec",
+        "Godina"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj brojeve od najmanjeg ka najvećem",
+      "items": [
+        "Deset",
+        "Sto",
+        "Hiljada",
+        "Milion",
+        "Milijarda"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj jedinice memorije od najmanje ka najvećoj",
+      "items": [
+        "Kilobajt",
+        "Megabajt",
+        "Gigabajt",
+        "Terabajt",
+        "Petabajt"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj rimske brojeve od najmanjeg ka najvećem",
+      "items": [
+        "I",
+        "V",
+        "X",
+        "L",
+        "C",
+        "D",
+        "M"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj novčanice po vrednosti, od najmanje ka najvećoj",
+      "items": [
+        "10 dinara",
+        "50 dinara",
+        "100 dinara",
+        "500 dinara",
+        "1000 dinara",
+        "2000 dinara"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj muzičke sastave po broju članova",
+      "items": [
+        "Duet",
+        "Trio",
+        "Kvartet",
+        "Kvintet",
+        "Sekstet"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mesece po broju dana, od najkraćeg",
+      "items": [
+        "Februar",
+        "April",
+        "Januar"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj godišnja doba počev od proleća",
+      "items": [
+        "Proleće",
+        "Leto",
+        "Jesen",
+        "Zima"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj mesece hronološki",
+      "items": [
+        "Februar",
+        "Maj",
+        "Avgust",
+        "Oktobar",
+        "Decembar"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj dane u nedelji počev od srede",
+      "items": [
+        "Sreda",
+        "Četvrtak",
+        "Petak",
+        "Subota",
+        "Nedelja"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj delove dana",
+      "items": [
+        "Zora",
+        "Podne",
+        "Sumrak",
+        "Ponoć"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj praznike hronološki kroz godinu",
+      "items": [
+        "Nova godina",
+        "Sretenje",
+        "Praznik rada",
+        "Dan primirja"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po redosledu u životu čoveka",
+      "items": [
+        "Rođenje",
+        "Prvi korak",
+        "Polazak u školu",
+        "Vozačka dozvola",
+        "Penzija"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj nivoe obrazovanja",
+      "items": [
+        "Vrtić",
+        "Osnovna škola",
+        "Srednja škola",
+        "Fakultet",
+        "Doktorat"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj naselja po veličini, od najmanjeg",
+      "items": [
+        "Zaselak",
+        "Selo",
+        "Varošica",
+        "Grad",
+        "Država"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj vojne činove od najnižeg ka najvišem",
+      "items": [
+        "Vojnik",
+        "Desetar",
+        "Vodnik",
+        "Poručnik",
+        "Kapetan",
+        "Major",
+        "Pukovnik",
+        "General"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj olimpijske medalje od najslabije ka najboljoj",
+      "items": [
+        "Bronza",
+        "Srebro",
+        "Zlato"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj istorijske periode",
+      "items": [
+        "Praistorija",
+        "Stari vek",
+        "Srednji vek",
+        "Novi vek",
+        "Savremeno doba"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj srpske vladare hronološki",
+      "items": [
+        "Stefan Nemanja",
+        "Stefan Prvovenčani",
+        "Car Dušan",
+        "Karađorđe",
+        "Miloš Obrenović"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj događaje iz srpske istorije hronološki",
+      "items": [
+        "Kosovska bitka",
+        "Prvi srpski ustanak",
+        "Sarajevski atentat",
+        "Osnivanje Jugoslavije",
+        "Raspad SFRJ"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj svetske događaje hronološki",
+      "items": [
+        "Francuska revolucija",
+        "Prvi svetski rat",
+        "Drugi svetski rat",
+        "Sletanje na Mesec",
+        "Pad Berlinskog zida"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj izume hronološki",
+      "items": [
+        "Točak",
+        "Štamparija",
+        "Parna mašina",
+        "Sijalica",
+        "Internet"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj tehnološke uređaje po vremenu nastanka",
+      "items": [
+        "Telegraf",
+        "Telefon",
+        "Radio",
+        "Televizija",
+        "Mobilni telefon",
+        "Pametni telefon"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj naučna otkrića hronološki",
+      "items": [
+        "Njutnov zakon gravitacije",
+        "Prva vakcina",
+        "Penicilin",
+        "Struktura DNK",
+        "Kloniranje ovce Doli"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj svemirske poduhvate hronološki",
+      "items": [
+        "Prvi automobil",
+        "Prvi let aviona",
+        "Prvi satelit u orbiti",
+        "Prvi čovek u svemiru",
+        "Prvi čovek na Mesecu"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj naučnike po godini rođenja",
+      "items": [
+        "Leonardo da Vinči",
+        "Isak Njutn",
+        "Nikola Tesla",
+        "Albert Ajnštajn",
+        "Stiven Hoking"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj umetničke epohe hronološki",
+      "items": [
+        "Antika",
+        "Srednji vek",
+        "Renesansa",
+        "Barok",
+        "Impresionizam",
+        "Moderna umetnost"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj filmove po godini izlaska",
+      "items": [
+        "Zvezdani ratovi",
+        "Titanik",
+        "Matriks",
+        "Avatar",
+        "Osvetnici: Kraj igre"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj serije po godini premijere",
+      "items": [
+        "Simpsonovi",
+        "Prijatelji",
+        "Kancelarija",
+        "Igra prestola",
+        "Stranger Things"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj knjige o Hariju Poteru po redosledu",
+      "items": [
+        "Kamen mudrosti",
+        "Dvorana tajni",
+        "Zatvorenik iz Askabana",
+        "Vatreni pehar",
+        "Red feniksa",
+        "Polukrvni princ",
+        "Relikvije Smrti"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj filmove o Gospodaru prstenova po redosledu",
+      "items": [
+        "Družina prstena",
+        "Dve kule",
+        "Povratak kralja"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj knjige po godini objavljivanja",
+      "items": [
+        "Don Kihot",
+        "Rat i mir",
+        "Na Drini ćuprija",
+        "Hari Poter i Kamen mudrosti"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj muzičke pravce po vremenu nastanka",
+      "items": [
+        "Klasična muzika",
+        "Džez",
+        "Rokenrol",
+        "Hip-hop",
+        "Elektronska muzika"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj note solmizacije",
+      "items": [
+        "Do",
+        "Re",
+        "Mi",
+        "Fa",
+        "Sol",
+        "La",
+        "Si"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj gudačke instrumente po veličini",
+      "items": [
+        "Violina",
+        "Viola",
+        "Violončelo",
+        "Kontrabas"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po jačini zvuka, od najtišeg",
+      "items": [
+        "Šapat",
+        "Normalan govor",
+        "Gradski saobraćaj",
+        "Koncert",
+        "Mlazni avion"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po trajanju, od najkraćeg",
+      "items": [
+        "Reklama",
+        "Pesma",
+        "Epizoda serije",
+        "Film",
+        "Fudbalska sezona"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj PlayStation konzole po godini izlaska",
+      "items": [
+        "PlayStation",
+        "PlayStation 2",
+        "PlayStation 3",
+        "PlayStation 4",
+        "PlayStation 5"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj video-igre po godini izlaska",
+      "items": [
+        "Tetris",
+        "Super Mario Bros",
+        "Majnkraft",
+        "Fortnajt",
+        "Among Us"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj sajtove i mreže po godini pokretanja",
+      "items": [
+        "Vikipedija",
+        "Fejsbuk",
+        "Jutjub",
+        "Instagram",
+        "TikTok"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj kompanije po godini osnivanja",
+      "items": [
+        "Koka-kola",
+        "Epl",
+        "Amazon",
+        "Gugl",
+        "Fejsbuk"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj svetska prvenstva u fudbalu hronološki",
+      "items": [
+        "Nemačka 2006",
+        "Južna Afrika 2010",
+        "Brazil 2014",
+        "Rusija 2018",
+        "Katar 2022"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj letnje olimpijske igre hronološki",
+      "items": [
+        "Peking 2008",
+        "London 2012",
+        "Rio de Žaneiro 2016",
+        "Tokio 2020",
+        "Pariz 2024"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj faze fudbalskog turnira",
+      "items": [
+        "Grupna faza",
+        "Osmina finala",
+        "Četvrtfinale",
+        "Polufinale",
+        "Finale"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj tok fudbalske utakmice",
+      "items": [
+        "Zvižduk za početak",
+        "Prvo poluvreme",
+        "Pauza",
+        "Drugo poluvreme",
+        "Kraj utakmice"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj tok trke",
+      "items": [
+        "Start",
+        "Prvi krug",
+        "Poslednji krug",
+        "Prolazak kroz cilj",
+        "Dodela medalja"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj karte po jačini, od najslabije",
+      "items": [
+        "Dvojka",
+        "Desetka",
+        "Žandar",
+        "Dama",
+        "Kralj",
+        "Kec"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj šahovske figure po vrednosti, od najmanje",
+      "items": [
+        "Pešak",
+        "Skakač",
+        "Lovac",
+        "Top",
+        "Kraljica"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj tok društvene igre",
+      "items": [
+        "Podeli karte",
+        "Odigraj potez",
+        "Prebroj poene",
+        "Proglasi pobednika"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj gradove u Srbiji po broju stanovnika, od najmanjeg",
+      "items": [
+        "Zrenjanin",
+        "Subotica",
+        "Kragujevac",
+        "Niš",
+        "Novi Sad",
+        "Beograd"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj države po površini, od najmanje",
+      "items": [
+        "Crna Gora",
+        "Severna Makedonija",
+        "Srbija",
+        "Grčka",
+        "Nemačka",
+        "Francuska"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj države po broju stanovnika, od najmanje",
+      "items": [
+        "Crna Gora",
+        "Severna Makedonija",
+        "Srbija",
+        "Grčka",
+        "Nemačka"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj gradove po udaljenosti od Beograda, od najbližeg",
+      "items": [
+        "Novi Sad",
+        "Niš",
+        "Budimpešta",
+        "Beč",
+        "Pariz"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj građevine po visini, od najniže",
+      "items": [
+        "Ajfelova kula",
+        "Empajer stejt bilding",
+        "Šangajska kula",
+        "Burdž Kalifa"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj po ceni, od najjeftinijeg ka najskupljem",
+      "items": [
+        "Žvaka",
+        "Kafa u kafiću",
+        "Bioskopska karta",
+        "Pametni telefon",
+        "Automobil"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj slova azbučnim redom",
+      "items": [
+        "A",
+        "D",
+        "K",
+        "M",
+        "Š"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj reči azbučnim redom",
+      "items": [
+        "Auto",
+        "Brod",
+        "Cvet",
+        "Drvo",
+        "Ekran"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj reči azbučnim redom",
+      "items": [
+        "Jabuka",
+        "Kruška",
+        "Limun",
+        "Malina",
+        "Narandža"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj imena azbučnim redom",
+      "items": [
+        "Ana",
+        "Bojan",
+        "Dragan",
+        "Jelena",
+        "Marko",
+        "Petar"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pravljenja sendviča",
+      "items": [
+        "Iseci hleb",
+        "Namaži puter",
+        "Stavi šunku i sir",
+        "Poklopi drugom kriškom",
+        "Zagrizi"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pravljenja čaja",
+      "items": [
+        "Zagrej vodu",
+        "Stavi kesicu u šolju",
+        "Prelij vrelom vodom",
+        "Sačekaj da odstoji",
+        "Izvadi kesicu"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pravljenja palačinki",
+      "items": [
+        "Umuti jaja i mleko",
+        "Dodaj brašno",
+        "Sipaj smesu u tiganj",
+        "Okreni palačinku",
+        "Namaži i savij"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj put hleba od njive do stola",
+      "items": [
+        "Poseješ žito",
+        "Požanješ pšenicu",
+        "Samelješ brašno",
+        "Umesiš testo",
+        "Ispečeš hleb"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj redosled jela na svečanom ručku",
+      "items": [
+        "Predjelo",
+        "Supa",
+        "Glavno jelo",
+        "Desert",
+        "Kafa"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pranja veša",
+      "items": [
+        "Sortiraj veš",
+        "Stavi veš u mašinu",
+        "Sipaj deterdžent",
+        "Uključi program",
+        "Prostri veš"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake sadnje biljke",
+      "items": [
+        "Iskopaj rupu",
+        "Stavi seme",
+        "Zatrpaj zemljom",
+        "Zalij vodom",
+        "Sačekaj da nikne"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake kupovine u prodavnici",
+      "items": [
+        "Uzmi korpu",
+        "Stavi namirnice u korpu",
+        "Stani u red za kasu",
+        "Plati",
+        "Ponesi kese"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake putovanja avionom",
+      "items": [
+        "Rezerviši kartu",
+        "Dođi na aerodrom",
+        "Prijavi prtljag",
+        "Prođi bezbednosnu kontrolu",
+        "Ukrcaj se u avion"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake odlaska kod lekara",
+      "items": [
+        "Zakaži pregled",
+        "Dođi u ambulantu",
+        "Sačekaj svoj red",
+        "Obavi pregled",
+        "Uzmi recept"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake polaganja vozačkog ispita",
+      "items": [
+        "Upiši auto-školu",
+        "Položi teorijski ispit",
+        "Odvozi časove vožnje",
+        "Položi praktični ispit",
+        "Preuzmi dozvolu"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake selidbe",
+      "items": [
+        "Spakuj kutije",
+        "Iznesi nameštaj",
+        "Utovari kombi",
+        "Prevezi stvari",
+        "Raspakuj u novom stanu"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake štampanja dokumenta",
+      "items": [
+        "Otvori dokument",
+        "Izaberi štampač",
+        "Podesi broj kopija",
+        "Klikni na štampaj",
+        "Uzmi papir iz štampača"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj jutarnju rutinu",
+      "items": [
+        "Buđenje",
+        "Doručak",
+        "Odlazak na posao",
+        "Povratak kući",
+        "Spavanje"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pripreme za spavanje",
+      "items": [
+        "Večera",
+        "Tuširanje",
+        "Pranje zuba",
+        "Odlazak u krevet",
+        "Gašenje svetla"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake slanja pisma",
+      "items": [
+        "Napiši pismo",
+        "Stavi ga u koverat",
+        "Zalepi marku",
+        "Ubaci u poštansko sanduče",
+        "Poštar isporučuje pismo"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake pravljenja fotografije",
+      "items": [
+        "Uključi aparat",
+        "Uokviri kadar",
+        "Izoštri sliku",
+        "Pritisni okidač",
+        "Pregledaj fotografiju"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake postavljanja slike na zid",
+      "items": [
+        "Izmeri mesto",
+        "Označi olovkom",
+        "Izbuši rupu",
+        "Stavi tiplu i šraf",
+        "Okači sliku"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake paljenja vatre u kaminu",
+      "items": [
+        "Skupi drva",
+        "Naloži potpalu",
+        "Zapali šibicu",
+        "Dodaj veća drva",
+        "Zatvori vrata kamina"
+      ]
+    },
+    {
+      "type": "redosled",
+      "text": "Poređaj korake priprema za odmor",
+      "items": [
+        "Izaberi destinaciju",
+        "Rezerviši smeštaj",
+        "Spakuj kofer",
+        "Otputuj",
+        "Vrati se kući"
+      ]
+    }
+  ]
+}

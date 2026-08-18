@@ -1,0 +1,939 @@
+{
+  "name": "Pogodi broj 2",
+  "description": "Još 100 brojeva za pogađanje — priroda, telo, sport, pop kultura, tehnologija i istorija.",
+  "category": "opste",
+  "questions": [
+    {
+      "type": "broj",
+      "text": "Visina Mont Everesta",
+      "answer": 8849,
+      "min": 5000,
+      "max": 12000,
+      "step": 10,
+      "unit": "m",
+      "emoji": "⛰️"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina Kineskog zida",
+      "answer": 21196,
+      "min": 1000,
+      "max": 30000,
+      "step": 100,
+      "unit": "km",
+      "emoji": "🧱"
+    },
+    {
+      "type": "broj",
+      "text": "Broj država članica Ujedinjenih nacija",
+      "answer": 193,
+      "min": 50,
+      "max": 300,
+      "unit": "država",
+      "emoji": "🌍"
+    },
+    {
+      "type": "broj",
+      "text": "Broj država u Evropi",
+      "answer": 44,
+      "min": 10,
+      "max": 80,
+      "unit": "država",
+      "emoji": "🇪🇺"
+    },
+    {
+      "type": "broj",
+      "text": "Površina Srbije",
+      "answer": 88499,
+      "min": 20000,
+      "max": 200000,
+      "step": 100,
+      "unit": "km²",
+      "emoji": "🇷🇸"
+    },
+    {
+      "type": "broj",
+      "text": "Broj stanovnika Srbije po popisu 2022.",
+      "answer": 6647003,
+      "min": 3000000,
+      "max": 12000000,
+      "step": 1000,
+      "unit": "ljudi",
+      "emoji": "👥"
+    },
+    {
+      "type": "broj",
+      "text": "Najveća dubina okeana (Marijanski rov)",
+      "answer": 10935,
+      "min": 3000,
+      "max": 15000,
+      "step": 5,
+      "unit": "m",
+      "emoji": "🌊"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina reke Amazon",
+      "answer": 6400,
+      "min": 2000,
+      "max": 9000,
+      "step": 50,
+      "unit": "km",
+      "emoji": "🏞️"
+    },
+    {
+      "type": "broj",
+      "text": "Najveća dubina Jadranskog mora",
+      "answer": 1233,
+      "min": 100,
+      "max": 2000,
+      "step": 10,
+      "unit": "m",
+      "emoji": "⚓"
+    },
+    {
+      "type": "broj",
+      "text": "Visina Nijagarinih vodopada",
+      "answer": 51,
+      "min": 10,
+      "max": 300,
+      "unit": "m",
+      "emoji": "💦"
+    },
+    {
+      "type": "broj",
+      "text": "Temperatura na površini Sunca",
+      "answer": 5500,
+      "min": 1000,
+      "max": 15000,
+      "step": 100,
+      "unit": "°C",
+      "emoji": "☀️"
+    },
+    {
+      "type": "broj",
+      "text": "Udaljenost Meseca od Zemlje",
+      "answer": 384400,
+      "min": 100000,
+      "max": 1000000,
+      "step": 1000,
+      "unit": "km",
+      "emoji": "🌕"
+    },
+    {
+      "type": "broj",
+      "text": "Prečnik Zemlje",
+      "answer": 12742,
+      "min": 5000,
+      "max": 30000,
+      "step": 10,
+      "unit": "km",
+      "emoji": "🌐"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko minuta svetlost putuje od Sunca do Zemlje",
+      "answer": 8,
+      "min": 1,
+      "max": 60,
+      "unit": "min",
+      "emoji": "💡"
+    },
+    {
+      "type": "broj",
+      "text": "Brzina svetlosti",
+      "answer": 300000,
+      "min": 1000,
+      "max": 500000,
+      "step": 1000,
+      "unit": "km/s",
+      "emoji": "⚡"
+    },
+    {
+      "type": "broj",
+      "text": "Broj dana u prestupnoj godini",
+      "answer": 366,
+      "min": 300,
+      "max": 400,
+      "unit": "dana",
+      "emoji": "📆"
+    },
+    {
+      "type": "broj",
+      "text": "Visina najvišeg vrha Srbije (Midžor)",
+      "answer": 2169,
+      "min": 500,
+      "max": 3000,
+      "step": 10,
+      "unit": "m",
+      "emoji": "🏔️"
+    },
+    {
+      "type": "broj",
+      "text": "Nadmorska visina Beograda",
+      "answer": 117,
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "unit": "m",
+      "emoji": "🏙️"
+    },
+    {
+      "type": "broj",
+      "text": "Najveća dubina Bajkalskog jezera",
+      "answer": 1642,
+      "min": 100,
+      "max": 3000,
+      "step": 10,
+      "unit": "m",
+      "emoji": "🏊"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko dana Zemlji treba da obiđe Sunce",
+      "answer": 365,
+      "min": 100,
+      "max": 700,
+      "unit": "dana",
+      "emoji": "🌍"
+    },
+    {
+      "type": "broj",
+      "text": "Najniža ikada izmerena temperatura na Zemlji",
+      "answer": -89,
+      "min": -120,
+      "max": 50,
+      "step": 1,
+      "unit": "°C",
+      "emoji": "🥶"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko procenata Zemljine površine pokriva voda",
+      "answer": 71,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "emoji": "💧"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko procenata vazduha čini azot",
+      "answer": 78,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "emoji": "🌬️"
+    },
+    {
+      "type": "broj",
+      "text": "Starost planete Zemlje",
+      "answer": 4540,
+      "min": 100,
+      "max": 10000,
+      "step": 10,
+      "unit": "mil. godina",
+      "emoji": "🌏"
+    },
+    {
+      "type": "broj",
+      "text": "Broj zuba kod odraslog čoveka",
+      "answer": 32,
+      "min": 10,
+      "max": 60,
+      "unit": "zuba",
+      "emoji": "🦷"
+    },
+    {
+      "type": "broj",
+      "text": "Prosečan broj otkucaja srca u minuti",
+      "answer": 70,
+      "min": 30,
+      "max": 150,
+      "unit": "otkucaja",
+      "emoji": "❤️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj hromozoma kod čoveka",
+      "answer": 46,
+      "min": 10,
+      "max": 100,
+      "unit": "hromozoma",
+      "emoji": "🧬"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko procenata ljudskog tela čini voda",
+      "answer": 60,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "emoji": "💧"
+    },
+    {
+      "type": "broj",
+      "text": "Prosečna telesna temperatura čoveka",
+      "answer": 36.6,
+      "min": 30,
+      "max": 45,
+      "step": 0.1,
+      "unit": "°C",
+      "emoji": "🌡️"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina tankog creva kod odraslog čoveka",
+      "answer": 6,
+      "min": 1,
+      "max": 20,
+      "unit": "m",
+      "emoji": "🩺"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko litara krvi ima odrastao čovek",
+      "answer": 5,
+      "min": 1,
+      "max": 20,
+      "unit": "l",
+      "emoji": "🩸"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko puta u minuti čovek trepne",
+      "answer": 20,
+      "min": 1,
+      "max": 100,
+      "unit": "puta",
+      "emoji": "👁️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj kostiju kod novorođenčeta",
+      "answer": 300,
+      "min": 100,
+      "max": 500,
+      "unit": "kostiju",
+      "emoji": "🦴"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko udisaja odrastao čovek napravi u minuti",
+      "answer": 15,
+      "min": 1,
+      "max": 60,
+      "unit": "udisaja",
+      "emoji": "🫁"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko dana traje ljudska trudnoća",
+      "answer": 280,
+      "min": 100,
+      "max": 400,
+      "unit": "dana",
+      "emoji": "🤰"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko sati sna se preporučuje odraslom čoveku",
+      "answer": 8,
+      "min": 1,
+      "max": 16,
+      "unit": "sati",
+      "emoji": "😴"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina fudbalskog terena",
+      "answer": 105,
+      "min": 50,
+      "max": 200,
+      "unit": "m",
+      "emoji": "⚽"
+    },
+    {
+      "type": "broj",
+      "text": "Visina koša u košarci",
+      "answer": 305,
+      "min": 200,
+      "max": 400,
+      "unit": "cm",
+      "emoji": "🏀"
+    },
+    {
+      "type": "broj",
+      "text": "Broj igrača jednog tima na terenu u košarci",
+      "answer": 5,
+      "min": 1,
+      "max": 15,
+      "unit": "igrača",
+      "emoji": "🏀"
+    },
+    {
+      "type": "broj",
+      "text": "Trajanje košarkaške utakmice (FIBA pravila)",
+      "answer": 40,
+      "min": 10,
+      "max": 90,
+      "unit": "min",
+      "emoji": "⏲️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj grend slem titula Novaka Đokovića (2024)",
+      "answer": 24,
+      "min": 1,
+      "max": 40,
+      "unit": "titula",
+      "emoji": "🎾"
+    },
+    {
+      "type": "broj",
+      "text": "Svetski rekord u trčanju na 100 metara",
+      "answer": 9.58,
+      "min": 8,
+      "max": 15,
+      "step": 0.01,
+      "unit": "s",
+      "emoji": "🏃"
+    },
+    {
+      "type": "broj",
+      "text": "Svetski rekord u skoku uvis",
+      "answer": 245,
+      "min": 150,
+      "max": 300,
+      "unit": "cm",
+      "emoji": "🤸"
+    },
+    {
+      "type": "broj",
+      "text": "Težina fudbalske lopte",
+      "answer": 430,
+      "min": 100,
+      "max": 1000,
+      "step": 10,
+      "unit": "g",
+      "emoji": "⚽"
+    },
+    {
+      "type": "broj",
+      "text": "Broj rupa na standardnom golf terenu",
+      "answer": 18,
+      "min": 1,
+      "max": 50,
+      "unit": "rupa",
+      "emoji": "⛳"
+    },
+    {
+      "type": "broj",
+      "text": "Broj igrača jednog tima na terenu u odbojci",
+      "answer": 6,
+      "min": 1,
+      "max": 15,
+      "unit": "igrača",
+      "emoji": "🏐"
+    },
+    {
+      "type": "broj",
+      "text": "Kapacitet stadiona Rajko Mitić",
+      "answer": 53000,
+      "min": 10000,
+      "max": 120000,
+      "step": 1000,
+      "unit": "gledalaca",
+      "emoji": "🏟️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj krugova na olimpijskoj zastavi",
+      "answer": 5,
+      "min": 1,
+      "max": 15,
+      "unit": "krugova",
+      "emoji": "🥇"
+    },
+    {
+      "type": "broj",
+      "text": "Dužina olimpijskog bazena",
+      "answer": 50,
+      "min": 10,
+      "max": 200,
+      "unit": "m",
+      "emoji": "🏊"
+    },
+    {
+      "type": "broj",
+      "text": "Broj igrača u ragbi timu na terenu",
+      "answer": 15,
+      "min": 1,
+      "max": 30,
+      "unit": "igrača",
+      "emoji": "🏉"
+    },
+    {
+      "type": "broj",
+      "text": "Broj epizoda serije Prijatelji",
+      "answer": 236,
+      "min": 50,
+      "max": 500,
+      "unit": "epizoda",
+      "emoji": "📺"
+    },
+    {
+      "type": "broj",
+      "text": "Broj sezona Simpsonovih",
+      "answer": 36,
+      "min": 5,
+      "max": 60,
+      "unit": "sezona",
+      "emoji": "🟡"
+    },
+    {
+      "type": "broj",
+      "text": "Trajanje filma Titanik",
+      "answer": 195,
+      "min": 60,
+      "max": 300,
+      "step": 5,
+      "unit": "min",
+      "emoji": "🎬"
+    },
+    {
+      "type": "broj",
+      "text": "Broj Oskara koje je osvojio film Titanik",
+      "answer": 11,
+      "min": 1,
+      "max": 20,
+      "unit": "Oskara",
+      "emoji": "🏆"
+    },
+    {
+      "type": "broj",
+      "text": "Zarada filma Avatar u bioskopima",
+      "answer": 2923,
+      "min": 500,
+      "max": 5000,
+      "step": 10,
+      "unit": "mil. $",
+      "emoji": "💰"
+    },
+    {
+      "type": "broj",
+      "text": "Broj knjiga o Hariju Poteru",
+      "answer": 7,
+      "min": 1,
+      "max": 20,
+      "unit": "knjiga",
+      "emoji": "📚"
+    },
+    {
+      "type": "broj",
+      "text": "Broj filmova o Hariju Poteru",
+      "answer": 8,
+      "min": 1,
+      "max": 20,
+      "unit": "filmova",
+      "emoji": "🎥"
+    },
+    {
+      "type": "broj",
+      "text": "Broj članova grupe Bitlsi",
+      "answer": 4,
+      "min": 1,
+      "max": 12,
+      "unit": "člana",
+      "emoji": "🎸"
+    },
+    {
+      "type": "broj",
+      "text": "Trajanje pesme Stairway to Heaven",
+      "answer": 482,
+      "min": 60,
+      "max": 720,
+      "step": 5,
+      "valueType": "duration",
+      "emoji": "🎵"
+    },
+    {
+      "type": "broj",
+      "text": "Broj žica na violini",
+      "answer": 4,
+      "min": 1,
+      "max": 12,
+      "unit": "žice",
+      "emoji": "🎻"
+    },
+    {
+      "type": "broj",
+      "text": "Godina prve Pesme Evrovizije",
+      "answer": 1956,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🎤"
+    },
+    {
+      "type": "broj",
+      "text": "Godina osnivanja Netfliksa",
+      "answer": 1997,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📽️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj slova u srpskoj azbuci",
+      "answer": 30,
+      "min": 10,
+      "max": 50,
+      "unit": "slova",
+      "emoji": "🔤"
+    },
+    {
+      "type": "broj",
+      "text": "Broj slova u engleskoj abecedi",
+      "answer": 26,
+      "min": 10,
+      "max": 50,
+      "unit": "slova",
+      "emoji": "🔡"
+    },
+    {
+      "type": "broj",
+      "text": "Broj karata u špilu bez džokera",
+      "answer": 52,
+      "min": 10,
+      "max": 120,
+      "unit": "karata",
+      "emoji": "🃏"
+    },
+    {
+      "type": "broj",
+      "text": "Broj polja na šahovskoj tabli",
+      "answer": 64,
+      "min": 10,
+      "max": 200,
+      "unit": "polja",
+      "emoji": "♟️"
+    },
+    {
+      "type": "broj",
+      "text": "Broj figura na početku šahovske partije",
+      "answer": 32,
+      "min": 4,
+      "max": 100,
+      "unit": "figura",
+      "emoji": "♞"
+    },
+    {
+      "type": "broj",
+      "text": "Broj domina u standardnom setu",
+      "answer": 28,
+      "min": 5,
+      "max": 100,
+      "unit": "domina",
+      "emoji": "🁢"
+    },
+    {
+      "type": "broj",
+      "text": "Zbir svih tačaka na kocki za igru",
+      "answer": 21,
+      "min": 5,
+      "max": 60,
+      "unit": "tačaka",
+      "emoji": "🎲"
+    },
+    {
+      "type": "broj",
+      "text": "Broj bajtova u jednom kilobajtu",
+      "answer": 1024,
+      "min": 100,
+      "max": 5000,
+      "unit": "B",
+      "emoji": "💾"
+    },
+    {
+      "type": "broj",
+      "text": "Godina pokretanja Tvitera",
+      "answer": 2006,
+      "min": 1990,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🐦"
+    },
+    {
+      "type": "broj",
+      "text": "Širina Full HD slike u pikselima",
+      "answer": 1920,
+      "min": 500,
+      "max": 5000,
+      "step": 10,
+      "unit": "px",
+      "emoji": "🖥️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina lansiranja prvog satelita Sputnjik",
+      "answer": 1957,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🛰️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina osnivanja Majkrosofta",
+      "answer": 1975,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "💻"
+    },
+    {
+      "type": "broj",
+      "text": "Kapacitet standardnog CD-a",
+      "answer": 700,
+      "min": 100,
+      "max": 3000,
+      "step": 10,
+      "unit": "MB",
+      "emoji": "💿"
+    },
+    {
+      "type": "broj",
+      "text": "Broj tastera na standardnoj tastaturi",
+      "answer": 105,
+      "min": 20,
+      "max": 200,
+      "unit": "tastera",
+      "emoji": "⌨️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina izlaska prvog telefona sa Androidom",
+      "answer": 2008,
+      "min": 1990,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📱"
+    },
+    {
+      "type": "broj",
+      "text": "Kalorije u 100 grama čokolade",
+      "answer": 546,
+      "min": 100,
+      "max": 900,
+      "step": 5,
+      "unit": "kcal",
+      "emoji": "🍫"
+    },
+    {
+      "type": "broj",
+      "text": "Kalorije u 100 grama banane",
+      "answer": 89,
+      "min": 20,
+      "max": 300,
+      "unit": "kcal",
+      "emoji": "🍌"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko litara vode potroši prosečno tuširanje",
+      "answer": 60,
+      "min": 10,
+      "max": 200,
+      "step": 5,
+      "unit": "l",
+      "emoji": "🚿"
+    },
+    {
+      "type": "broj",
+      "text": "Temperatura pečenja hleba u rerni",
+      "answer": 220,
+      "min": 100,
+      "max": 350,
+      "step": 5,
+      "unit": "°C",
+      "emoji": "🍞"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko minuta se kuva tvrdo kuvano jaje",
+      "answer": 10,
+      "min": 1,
+      "max": 30,
+      "unit": "min",
+      "emoji": "🥚"
+    },
+    {
+      "type": "broj",
+      "text": "Prosečna težina vekne hleba",
+      "answer": 500,
+      "min": 100,
+      "max": 2000,
+      "step": 10,
+      "unit": "g",
+      "emoji": "🥖"
+    },
+    {
+      "type": "broj",
+      "text": "Kalorije u litru koka-kole",
+      "answer": 420,
+      "min": 50,
+      "max": 1000,
+      "step": 10,
+      "unit": "kcal",
+      "emoji": "🥤"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko minuta traje standardni program pranja veša",
+      "answer": 120,
+      "min": 15,
+      "max": 300,
+      "step": 5,
+      "unit": "min",
+      "emoji": "🧺"
+    },
+    {
+      "type": "broj",
+      "text": "Godina Kosovske bitke",
+      "answer": 1389,
+      "min": 1000,
+      "max": 1900,
+      "unit": "god.",
+      "emoji": "⚔️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina Prvog srpskog ustanka",
+      "answer": 1804,
+      "min": 1500,
+      "max": 1950,
+      "unit": "god.",
+      "emoji": "🇷🇸"
+    },
+    {
+      "type": "broj",
+      "text": "Godina Francuske revolucije",
+      "answer": 1789,
+      "min": 1500,
+      "max": 1950,
+      "unit": "god.",
+      "emoji": "🗽"
+    },
+    {
+      "type": "broj",
+      "text": "Godina osnivanja NATO-a",
+      "answer": 1949,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🕊️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina kada je Novak Đoković osvojio 24. grend slem",
+      "answer": 2023,
+      "min": 2000,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "🏅"
+    },
+    {
+      "type": "broj",
+      "text": "Godina pada Zapadnog rimskog carstva",
+      "answer": 476,
+      "min": 100,
+      "max": 1000,
+      "unit": "god.",
+      "emoji": "🏛️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina krunisanja cara Dušana",
+      "answer": 1346,
+      "min": 1000,
+      "max": 1600,
+      "unit": "god.",
+      "emoji": "👑"
+    },
+    {
+      "type": "broj",
+      "text": "Godina osnivanja Kraljevine Srba, Hrvata i Slovenaca",
+      "answer": 1918,
+      "min": 1800,
+      "max": 2000,
+      "unit": "god.",
+      "emoji": "🏳️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina završetka izgradnje Ajfelove kule",
+      "answer": 1889,
+      "min": 1700,
+      "max": 2000,
+      "unit": "god.",
+      "emoji": "🗼"
+    },
+    {
+      "type": "broj",
+      "text": "Godina otvaranja Sueckog kanala",
+      "answer": 1869,
+      "min": 1700,
+      "max": 2000,
+      "unit": "god.",
+      "emoji": "🚢"
+    },
+    {
+      "type": "broj",
+      "text": "Starost piramida u Gizi",
+      "answer": 4500,
+      "min": 500,
+      "max": 10000,
+      "step": 50,
+      "unit": "godina",
+      "emoji": "🔺"
+    },
+    {
+      "type": "broj",
+      "text": "Koliko je godina trajao Stogodišnji rat",
+      "answer": 116,
+      "min": 50,
+      "max": 200,
+      "unit": "godina",
+      "emoji": "🛡️"
+    },
+    {
+      "type": "broj",
+      "text": "Godina potpisivanja Dejtonskog sporazuma",
+      "answer": 1995,
+      "min": 1900,
+      "max": 2025,
+      "unit": "god.",
+      "emoji": "📜"
+    },
+    {
+      "type": "broj",
+      "text": "Broj zvezdica na zastavi SAD",
+      "answer": 50,
+      "min": 10,
+      "max": 100,
+      "unit": "zvezdica",
+      "emoji": "🇺🇸"
+    },
+    {
+      "type": "broj",
+      "text": "Godina donošenja Sretenjskog ustava",
+      "answer": 1835,
+      "min": 1700,
+      "max": 1950,
+      "unit": "god.",
+      "emoji": "📃"
+    }
+  ]
+}

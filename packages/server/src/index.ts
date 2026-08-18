@@ -613,8 +613,9 @@ if (hasHostBuild) {
 // nothing on the server (no socket, no room) and still gives the TV
 // operator a discoverable path to /host without a hidden URL.
 // Visual identity per brand.md (zabari.net "Sunrise Hill"): cream canvas,
-// navy voice, gold as light. The mark SVG is inlined so the page stays a
-// single self-contained response.
+// navy voice, gold as light, with the app's pixel-frog cut of the mark. The
+// mark SVG is inlined (kept in sync with assets/ink-mark-color.svg) so the
+// page stays a single self-contained response.
 const LANDING_HTML = `<!DOCTYPE html>
 <html lang="sr">
 <head>
@@ -647,12 +648,21 @@ h1{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-weight:400;font-siz
 .rooms{text-align:left;display:none;flex-direction:column;gap:0.5rem;width:100%}
 .rooms.visible{display:flex}
 .rooms-title{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:#B89040}
-.room-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.7rem 1rem;background:#FAF6F0;border:1px solid rgba(29,53,87,.14);border-radius:0.8rem;text-decoration:none;color:#2B2B2B;transition:border-color 0.15s,background 0.15s}
-a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
-.room-row.busy{opacity:0.6}
+.room-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.6rem 0.6rem 1rem;background:#FAF6F0;border:1px solid #C29B47;border-radius:0.8rem;text-decoration:none;color:#2B2B2B;transition:border-color 0.15s,background 0.15s}
+a.room-row:hover{background:#FFFDF9}
+.room-row.busy{opacity:0.6;border-color:rgba(29,53,87,.14)}
 .room-code{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:1.15rem;letter-spacing:0.15em;color:#1D3557}
 .room-row.busy .room-code{color:#8B8578}
 .room-meta{font-size:0.9rem;font-weight:500;color:#6E6A5E}
+/* Who is in the room: overlapping faces, colour + emoji only (the API sends
+   no names), then the head count. */
+.room-people{flex:1;display:flex;align-items:center;min-width:0}
+.room-face{width:22px;height:22px;flex-shrink:0;border-radius:50%;border:2px solid #FAF6F0;display:flex;align-items:center;justify-content:center;font-size:0.7rem}
+.room-face+.room-face{margin-left:-6px}
+.room-face.more{background:#E6DCD2;font-size:0.62rem;font-weight:700;color:#4A4438}
+.room-count{margin-left:0.45rem;font-size:0.85rem;font-weight:500;color:#6E6A5E;white-space:nowrap}
+.room-join{padding:0.3rem 0.7rem;border-radius:999px;background:#1D3557;color:#F5EBE0;font-size:0.8rem;font-weight:600;white-space:nowrap;transition:background 0.15s,color 0.15s}
+a.room-row:hover .room-join{background:#C29B47;color:#1D3557}
 .room-badge{font-size:0.72rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:0.4rem;background:#E6DCD2;color:#4A4438;white-space:nowrap}
 .site{font-family:'Baloo 2','Manrope',system-ui,sans-serif;font-size:0.9rem;letter-spacing:0.06em;color:#1D3557;margin-top:0.4rem;text-decoration:none;transition:color 0.15s}
 .site:hover{color:#C29B47}
@@ -666,27 +676,33 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 <button class="lang-btn" type="button" data-lang="en">EN</button>
 </div>
 <div class="wrap">
-<svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="zabari.net">
-  <defs><clipPath id="leapClip"><circle cx="50" cy="50" r="46"></circle></clipPath></defs>
+<svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Igra Na Klik">
+  <defs><clipPath id="inkClip"><circle cx="50" cy="50" r="46"></circle></clipPath></defs>
   <circle cx="50" cy="50" r="46" fill="#F5EBE0"></circle>
-  <g clip-path="url(#leapClip)">
+  <g clip-path="url(#inkClip)">
     <circle cx="50" cy="58" r="26" fill="#C29B47"></circle>
     <path d="M-4 100 C12 78 30 70 50 70 C70 70 88 78 104 100 Z" fill="#1D3557"></path>
-    <g transform="translate(0,8) scale(0.46) translate(58,68)">
-      <path d="M22 70 C12 70 8 62 12 56 C16 61 22 62 27 60 Z" fill="#1D3557"></path>
-      <path d="M78 70 C88 70 92 62 88 56 C84 61 78 62 73 60 Z" fill="#1D3557"></path>
-      <path d="M27 64 C27 45 36 35 50 35 C64 35 73 45 73 64 C73 73 64 77 50 77 C36 77 27 73 27 64 Z" fill="#1D3557"></path>
-      <path d="M38 76 C35 82 31 83 29 81 C32 80 33 77 34 74 Z" fill="#1D3557"></path>
-      <path d="M62 76 C65 82 69 83 71 81 C68 80 67 77 66 74 Z" fill="#1D3557"></path>
-      <circle cx="38" cy="33" r="10.5" fill="#1D3557"></circle>
-      <circle cx="62" cy="33" r="10.5" fill="#1D3557"></circle>
-      <circle cx="38" cy="32" r="6.4" fill="#C29B47"></circle>
-      <circle cx="62" cy="32" r="6.4" fill="#C29B47"></circle>
-      <circle cx="38" cy="32.5" r="3" fill="#1D3557"></circle>
-      <circle cx="62" cy="32.5" r="3" fill="#1D3557"></circle>
-      <circle cx="39.6" cy="30.8" r="1.1" fill="#F5EBE0"></circle>
-      <circle cx="63.6" cy="30.8" r="1.1" fill="#F5EBE0"></circle>
-      <path d="M40 64 C45 68 55 68 60 64" fill="none" stroke="#C29B47" stroke-width="2" stroke-linecap="round"></path>
+    <g fill="#1D3557">
+      <rect x="38.8" y="44.4" width="6.4" height="3.2"></rect>
+      <rect x="54.8" y="44.4" width="6.4" height="3.2"></rect>
+      <rect x="38.8" y="47.6" width="6.4" height="3.2"></rect>
+      <rect x="54.8" y="47.6" width="6.4" height="3.2"></rect>
+      <rect x="35.6" y="50.8" width="28.8" height="3.2"></rect>
+      <rect x="32.4" y="54" width="35.2" height="3.2"></rect>
+      <rect x="32.4" y="57.2" width="35.2" height="3.2"></rect>
+      <rect x="35.6" y="60.4" width="28.8" height="3.2"></rect>
+      <rect x="32.4" y="63.6" width="6.4" height="3.2"></rect>
+      <rect x="42" y="63.6" width="16" height="3.2"></rect>
+      <rect x="61.2" y="63.6" width="6.4" height="3.2"></rect>
+      <rect x="32.4" y="66.8" width="6.4" height="3.2"></rect>
+      <rect x="61.2" y="66.8" width="6.4" height="3.2"></rect>
+    </g>
+    <g fill="#C29B47">
+      <rect x="42" y="47.6" width="3.2" height="3.2"></rect>
+      <rect x="54.8" y="47.6" width="3.2" height="3.2"></rect>
+      <rect x="42" y="60.4" width="3.2" height="3.2"></rect>
+      <rect x="54.8" y="60.4" width="3.2" height="3.2"></rect>
+      <rect x="45.2" y="63.6" width="9.6" height="3.2"></rect>
     </g>
     <path d="M14 90 C26 86 34 94 46 90 C58 86 66 94 86 90" fill="none" stroke="#F5EBE0" stroke-width="2.4" stroke-linecap="round"></path>
   </g>
@@ -708,11 +724,14 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
 (function(){
   var KEY='igra-language';
   var T={
-    sr:{cta:'📱 Igraj sa telefona',host:'🖥️ Napravi sobu na TV-u / velikom ekranu →',roomsTitle:'Aktivne sobe',roomsEmpty:'Nema aktivnih soba',inGame:'Igra u toku',players:'igrača'},
-    en:{cta:'📱 Play on your phone',host:'🖥️ Create a room on a TV / big screen →',roomsTitle:'Active rooms',roomsEmpty:'No active rooms',inGame:'Game in progress',players:'players'}
+    sr:{cta:'📱 Igraj sa telefona',host:'🖥️ Napravi sobu na TV-u / velikom ekranu →',roomsTitle:'Aktivne sobe',roomsEmpty:'Nema aktivnih soba',inGame:'Igra u toku',players:'igrača',join:'Uđi →'},
+    en:{cta:'📱 Play on your phone',host:'🖥️ Create a room on a TV / big screen →',roomsTitle:'Active rooms',roomsEmpty:'No active rooms',inGame:'Game in progress',players:'players',join:'Join →'}
   };
   var currentLang='sr';
   var lastRooms=null;
+  // Beyond three faces the row starts pushing the join pill around on a
+  // narrow phone; the rest collapse into a +N chip.
+  var MAX_FACES=3;
   // The apps persist language via Zustand: localStorage holds
   // {"state":{"language":"en"},"version":0}. Read/write that exact shape so
   // the landing toggle stays in sync with the host/controller apps.
@@ -750,15 +769,43 @@ a.room-row:hover{background:#FFFDF9;border-color:#C29B47}
       var row=document.createElement(open?'a':'div');
       row.className=open?'room-row':'room-row busy';
       if(open) row.href='/play/?code='+encodeURIComponent(r.code);
+      // Faces are decorative — the head count next to them is what a screen
+      // reader gets, via the row label.
+      row.setAttribute('aria-label',r.code+', '+r.playerCount+'/'+r.maxPlayers+' '+T[currentLang].players);
       var code=document.createElement('span');
       code.className='room-code';
       code.textContent=r.code;
       row.appendChild(code);
-      var meta=document.createElement('span');
-      meta.className='room-meta';
-      meta.textContent=r.playerCount+'/'+r.maxPlayers+' '+T[currentLang].players;
-      row.appendChild(meta);
-      if(!open){
+      var people=document.createElement('span');
+      people.className='room-people';
+      var faces=(r.avatars||[]).slice(0,MAX_FACES);
+      for(var f=0;f<faces.length;f++){
+        var face=document.createElement('span');
+        face.className='room-face';
+        face.style.background=faces[f].color;
+        face.textContent=faces[f].emoji;
+        face.setAttribute('aria-hidden','true');
+        people.appendChild(face);
+      }
+      var hidden=r.playerCount-faces.length;
+      if(hidden>0){
+        var more=document.createElement('span');
+        more.className='room-face more';
+        more.textContent='+'+hidden;
+        more.setAttribute('aria-hidden','true');
+        people.appendChild(more);
+      }
+      var count=document.createElement('span');
+      count.className='room-count';
+      count.textContent=r.playerCount+'/'+r.maxPlayers;
+      people.appendChild(count);
+      row.appendChild(people);
+      if(open){
+        var join=document.createElement('span');
+        join.className='room-join';
+        join.textContent=T[currentLang].join;
+        row.appendChild(join);
+      }else{
         var badge=document.createElement('span');
         badge.className='room-badge';
         badge.textContent=T[currentLang].inGame;
