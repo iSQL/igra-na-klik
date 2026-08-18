@@ -55,7 +55,7 @@ interface BitkaMapPickerProps {
 }
 
 /** Koliko oružje stoji na mapi — mora da se poklopi sa CSS animacijom. */
-const SLAM_MS = 1000;
+const SLAM_MS = 2000;
 
 /** Koliko blesak traje — mora da se poklopi sa CSS animacijama. */
 const FLASH_MS: Record<string, number> = {

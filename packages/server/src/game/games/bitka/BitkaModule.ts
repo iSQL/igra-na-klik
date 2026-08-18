@@ -24,6 +24,7 @@ import {
   BITKA_RUNDE_IZBOR,
   BITKA_ODBRANA_BONUS,
   BITKA_ZAMAK_BODOVI,
+  BITKA_NAJAVA_MS,
   BITKA_ZID_BONUS,
   BITKA_ZIDOVI,
   KVIZ_BANK_PACK_ID,
@@ -45,8 +46,8 @@ import type { BitkaAnswer, BitkaInternalState, BitkaStats } from './BitkaState.j
 import {
   BAZA_IZBOR_DURATION,
   DUEL_REZULTAT_DURATION,
+  DUEL_ISHOD_DURATION,
   DUEL_OTKRIVANJE_DURATION,
-  DUEL_TIEBREAK_EXTRA,
   IZBOR_DURATION,
   LEADERBOARD_DURATION,
   NAPAD_IZBOR_DURATION,
@@ -166,9 +167,10 @@ export class BitkaModule extends BaseGameModule {
       brojQuestion: null,
       answers: new Map(),
       expected: new Set(),
-      choiceResults: null,
       pendingAttackerWin: null,
       pendingBroj: null,
+      pendingOutcome: null,
+      pendingWalls: 0,
       priority: [],
       baseChoice: new Map(),
       baseQueue: [],
@@ -431,7 +433,7 @@ export class BitkaModule extends BaseGameModule {
           break;
         }
         if (this.state.pendingBroj) this.beginDuelBroj();
-        else this.applyDuel(room, !!this.state.pendingAttackerWin);
+        else this.applyDuel(room, !!this.state.pendingAttackerWin, false);
         break;
       case 'duel-broj':
         this.finishDuelBroj(room);
@@ -441,7 +443,16 @@ export class BitkaModule extends BaseGameModule {
           this.nextAttack(room);
           break;
         }
-        this.applyDuel(room, !!this.state.pendingAttackerWin);
+        this.applyDuel(room, !!this.state.pendingAttackerWin, false);
+        break;
+      // Poruka je odstajala — tek sad posledica ulazi u tablu, i tek sad
+      // krenu efekti, jer se oni izvode iz razlike dve table.
+      case 'duel-ishod':
+        if (!this.state.duel) {
+          this.nextAttack(room);
+          break;
+        }
+        this.applyDuel(room, !!this.state.pendingAttackerWin, true);
         break;
       case 'duel-rezultat': {
         // Opsada traje dok napadač pogađa: srušen zid → odmah novo pitanje na
@@ -456,7 +467,7 @@ export class BitkaModule extends BaseGameModule {
           room.players.some((p) => p.id === duel.attackerId)
         ) {
           this.state.lastEvent = `${this.nameOf(room, duel.attackerId)} nastavlja opsadu.`;
-          this.beginDuel(room, duel.attackerId, duel.territoryId);
+          this.beginDuel(room, duel.attackerId, duel.territoryId, true);
           break;
         }
         this.nextAttack(room);
@@ -485,7 +496,6 @@ export class BitkaModule extends BaseGameModule {
     this.state.brojQuestion = question;
     this.state.choiceQuestion = null;
     this.state.answers = new Map();
-    this.state.choiceResults = null;
     this.state.expected = new Set(alive);
     this.state.phase = 'redosled-pitanje';
     this.state.phaseTimeRemaining =
@@ -637,7 +647,6 @@ export class BitkaModule extends BaseGameModule {
     this.state.choiceQuestion = question;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
-    this.state.choiceResults = null;
     this.state.expected = new Set(this.alivePlayerIds(room));
     this.state.pickQueue = [];
     this.state.activePlayerId = null;
@@ -782,7 +791,6 @@ export class BitkaModule extends BaseGameModule {
     this.state.choiceQuestion = null;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
-    this.state.choiceResults = null;
     this.state.expected = new Set();
     this.state.phase = 'napad-izbor';
     this.state.phaseTimeRemaining = NAPAD_IZBOR_DURATION;
@@ -803,7 +811,17 @@ export class BitkaModule extends BaseGameModule {
       .map((st) => st.id);
   }
 
-  private beginDuel(room: Room, attackerId: string, territoryId: string): void {
+  /**
+   * @param continuation nastavak opsade istog zamka. Tada nema kartice sa
+   * najavom (ista poruka po treći put je šum) pa ni njenog vremena — ide se
+   * pravo na odbrojavanje.
+   */
+  private beginDuel(
+    room: Room,
+    attackerId: string,
+    territoryId: string,
+    continuation = false
+  ): void {
     const st = this.state.board.get(territoryId)!;
     const question = this.nextChoice();
     if (!question) {
@@ -815,20 +833,26 @@ export class BitkaModule extends BaseGameModule {
       defenderId: st.ownerId,
       territoryId,
       onCastle: st.castle,
+      continuation,
     };
     this.state.choiceQuestion = question;
     this.state.brojQuestion = null;
     this.state.answers = new Map();
-    this.state.choiceResults = null;
     this.state.pendingAttackerWin = null;
     this.state.pendingBroj = null;
+    this.state.pendingOutcome = null;
     this.state.expected = new Set(
       [attackerId, st.ownerId].filter((id): id is string => !!id)
     );
     this.state.lastEvent = `${this.nameOf(room, attackerId)} napada ${this.territoryName(territoryId)}.`;
     this.state.phase = 'duel-pitanje';
+    // Kartica sa najavom pokriva prvih `BITKA_NAJAVA_MS`, pa odbrojavanje
+    // dobija svoje vreme POVRH nje. Dok je delilo istu pauzu, brojač bi se
+    // pojavio na jedinici i istog trena nestao — izgledalo je kao kvar.
+    // U nastavku opsade kartice nema, pa nema ni tog dodatka.
     this.state.phaseTimeRemaining =
-      this.timings.PITANJE_NAJAVA_DURATION ?? PITANJE_NAJAVA_DURATION;
+      (continuation ? 0 : BITKA_NAJAVA_MS / 1000) +
+      (this.timings.PITANJE_NAJAVA_DURATION ?? PITANJE_NAJAVA_DURATION);
   }
 
   private finishDuelOdgovor(room: Room): void {
@@ -878,10 +902,8 @@ export class BitkaModule extends BaseGameModule {
 
   /** Drugi krug nerešenog duela — klizač, posle odgledanog izbornog pitanja. */
   private beginDuelBroj(): void {
-    // Šta je ko izabrao na izbornom pitanju mora da preživi tiebreak: u
-    // `duel-rezultat` se otkrivaju OBA pitanja, a `answers` od sada nosi
-    // procene brojeva.
-    this.state.choiceResults = this.answerResults();
+    // Izborno pitanje je već otkriveno na svom ekranu, pa `answers` sme da se
+    // prepiše procenama — ništa se ne gubi.
     this.state.brojQuestion = this.state.pendingBroj;
     this.state.pendingBroj = null;
     this.state.answers = new Map();
@@ -918,11 +940,24 @@ export class BitkaModule extends BaseGameModule {
       this.timings.DUEL_OTKRIVANJE_DURATION ?? DUEL_OTKRIVANJE_DURATION;
   }
 
-  private applyDuel(room: Room, attackerWon: boolean): void {
+  /**
+   * Ishod napada, u dva prolaza.
+   *
+   * `commit === false` samo izračuna šta se desilo i napiše poruke — tabla se
+   * NE dira. To je `duel-ishod`: prozor preko ekrana u kome piše da Porodin
+   * menja gospodara ili da je pao jedan zid, dok mapa još stoji netaknuta.
+   *
+   * `commit === true` upisuje posledicu i pušta `duel-rezultat`. Efekti se
+   * izvode iz razlike dve uzastopne table, pa se time i oni odvezuju od
+   * poruke: prvo se pročita ŠTA se desilo, pa se onda VIDI kako.
+   *
+   * Oba prolaza računaju isti `duelOutcome`, jer se između njih tabla ne menja.
+   */
+  private applyDuel(room: Room, attackerWon: boolean, commit: boolean): void {
     const duel = this.state.duel!;
     const st = this.state.board.get(duel.territoryId)!;
     const outcome = duelOutcome(attackerWon, duel.onCastle, st.walls);
-    duel.outcome = outcome;
+    if (commit) duel.outcome = outcome;
 
     const attackerName = this.nameOf(room, duel.attackerId);
     const place = this.territoryName(duel.territoryId);
@@ -934,7 +969,7 @@ export class BitkaModule extends BaseGameModule {
           // farmovao bonus za „odbranu" u kojoj nije učestvovao. Zemlju i
           // dalje zadržava; to je status quo, ne nagrada.
           const answered = this.state.answers.has(duel.defenderId);
-          if (answered) {
+          if (commit && answered) {
             this.addBonus(duel.defenderId, BITKA_ODBRANA_BONUS);
             this.statsFor(duel.defenderId).odbrana += 1;
           }
@@ -951,8 +986,10 @@ export class BitkaModule extends BaseGameModule {
         break;
 
       case 'napadac':
-        st.ownerId = duel.attackerId;
-        this.statsFor(duel.attackerId).osvojeno += 1;
+        if (commit) {
+          st.ownerId = duel.attackerId;
+          this.statsFor(duel.attackerId).osvojeno += 1;
+        }
         this.state.lastEvent = `${attackerName} osvaja ${place}.`;
         this.state.lastOutcome.set(duel.attackerId, `Osvojio si ${place}.`);
         if (duel.defenderId) {
@@ -960,30 +997,38 @@ export class BitkaModule extends BaseGameModule {
         }
         break;
 
-      case 'zid':
-        st.walls -= 1;
-        this.addBonus(duel.attackerId, BITKA_ZID_BONUS);
-        this.statsFor(duel.attackerId).zidova += 1;
-        this.state.lastEvent = `${attackerName} ruši zid zamka — ostalo ih je ${st.walls}.`;
+      case 'zid': {
+        // Poruka govori o stanju POSLE udarca, a u prvom prolazu zid još stoji
+        // — zato se broj računa, a ne čita sa table.
+        const left = Math.max(0, st.walls - 1);
+        if (commit) {
+          st.walls = left;
+          this.addBonus(duel.attackerId, BITKA_ZID_BONUS);
+          this.statsFor(duel.attackerId).zidova += 1;
+        }
+        this.state.lastEvent = `${attackerName} ruši zid zamka — ostalo ih je ${left}.`;
         this.state.lastOutcome.set(duel.attackerId, `Srušio si zid. +${BITKA_ZID_BONUS}`);
         if (duel.defenderId) {
-          this.state.lastOutcome.set(duel.defenderId, `Zamak je izgubio zid — ostalo ih je ${st.walls}.`);
+          this.state.lastOutcome.set(duel.defenderId, `Zamak je izgubio zid — ostalo ih je ${left}.`);
         }
         break;
+      }
 
       case 'zamak-pao': {
-        st.walls = 0;
         const fallen = duel.defenderId!;
-        for (const t of this.state.board.values()) {
-          if (t.ownerId !== fallen) continue;
-          t.ownerId = duel.attackerId;
-          t.castle = false;
-          t.walls = 0;
+        if (commit) {
+          st.walls = 0;
+          for (const t of this.state.board.values()) {
+            if (t.ownerId !== fallen) continue;
+            t.ownerId = duel.attackerId;
+            t.castle = false;
+            t.walls = 0;
+          }
+          this.state.eliminated.add(fallen);
+          this.addBonus(duel.attackerId, BITKA_ZID_BONUS);
+          this.statsFor(duel.attackerId).zidova += 1;
+          this.statsFor(duel.attackerId).osvojeno += 1;
         }
-        this.state.eliminated.add(fallen);
-        this.addBonus(duel.attackerId, BITKA_ZID_BONUS);
-        this.statsFor(duel.attackerId).zidova += 1;
-        this.statsFor(duel.attackerId).osvojeno += 1;
         this.state.lastEvent = `Zamak igrača ${this.nameOf(room, fallen)} je pao — sve preuzima ${attackerName}!`;
         this.state.lastOutcome.set(duel.attackerId, 'Osvojio si zamak i svu njegovu zemlju!');
         this.state.lastOutcome.set(fallen, 'Zamak ti je pao. Ispao si iz bitke.');
@@ -991,12 +1036,21 @@ export class BitkaModule extends BaseGameModule {
       }
     }
 
+    if (!commit) {
+      this.state.pendingAttackerWin = attackerWon;
+      this.state.pendingOutcome = outcome;
+      this.state.pendingWalls = outcome === 'zid' ? Math.max(0, st.walls - 1) : st.walls;
+      this.state.phase = 'duel-ishod';
+      this.state.phaseTimeRemaining =
+        this.timings.DUEL_ISHOD_DURATION ?? DUEL_ISHOD_DURATION;
+      return;
+    }
+
+    this.state.pendingOutcome = null;
     this.recomputeScores(room);
     this.state.phase = 'duel-rezultat';
     this.state.phaseTimeRemaining =
-      (this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION) +
-      // Nerešen duel otkriva dva pitanja odjednom — treba mu koja sekunda više.
-      (this.state.choiceResults ? DUEL_TIEBREAK_EXTRA : 0);
+      this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION;
   }
 
   /**
@@ -1335,14 +1389,17 @@ export class BitkaModule extends BaseGameModule {
       phase === 'duel-odgovor' ||
       phase === 'duel-odgovor-rezultat' ||
       phase === 'duel-broj' ||
-      phase === 'duel-broj-rezultat' ||
-      phase === 'duel-rezultat';
+      phase === 'duel-broj-rezultat';
+    /**
+     * `duel-rezultat` NIJE otkrivanje: pitanje je već odgledano na svom
+     * ekranu, a ovaj je mapa i animacija preuzimanja. Dok je pitanje stajalo i
+     * ovde, isti odgovor se čitao po treći put, preko onoga što treba gledati.
+     */
     const revealing =
       phase === 'redosled-rezultat' ||
       phase === 'osvajanje-rezultat' ||
       phase === 'duel-odgovor-rezultat' ||
-      phase === 'duel-broj-rezultat' ||
-      phase === 'duel-rezultat';
+      phase === 'duel-broj-rezultat';
 
     const hostData: BitkaHostData = {
       phase,
@@ -1377,18 +1434,7 @@ export class BitkaModule extends BaseGameModule {
       if (this.state.brojQuestion && brojNaEkranu) {
         hostData.correctValue = this.state.brojQuestion.answer;
       }
-      // Nerešen duel: na ekranu ostaje izborno pitanje sa avatarima na
-      // opcijama (zato snimljeni `choiceResults`), a broj koji je presudio ide
-      // uz njega — sa tačnom vrednošću i procenama obojice.
-      const tiebroken = phase === 'duel-rezultat' && this.state.choiceResults;
-      hostData.results = tiebroken ? this.state.choiceResults! : this.answerResults();
-      if (tiebroken && this.state.brojQuestion) {
-        hostData.tiebreak = {
-          question: this.brojView(this.state.brojQuestion),
-          correctValue: this.state.brojQuestion.answer,
-          results: this.answerResults(),
-        };
-      }
+      hostData.results = this.answerResults();
     }
 
     if (phase === 'baza-izbor') {
@@ -1425,12 +1471,12 @@ export class BitkaModule extends BaseGameModule {
       if (phase === 'duel-odgovor-rezultat' && this.state.pendingBroj) {
         duel.tiebreakPending = true;
       }
-      if (phase === 'duel-rezultat') {
-        duel.outcome = this.state.duel.outcome;
-        duel.results = this.state.choiceResults ?? this.answerResults();
-        if (this.state.choiceQuestion) duel.correctIndex = this.state.choiceQuestion.correctIndex;
-        if (this.state.brojQuestion) duel.correctValue = this.state.brojQuestion.answer;
+      if (this.state.duel.continuation) duel.opsadaNastavak = true;
+      if (phase === 'duel-ishod' && this.state.pendingOutcome) {
+        duel.pendingOutcome = this.state.pendingOutcome;
+        duel.wallsAfter = this.state.pendingWalls;
       }
+      if (phase === 'duel-rezultat') duel.outcome = this.state.duel.outcome;
       hostData.duel = duel;
     }
 

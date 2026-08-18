@@ -60,7 +60,8 @@ const REVEAL_PHASES = new Set([
   // pitanje, pa broj koji razrešava nerešeno.
   'duel-odgovor-rezultat',
   'duel-broj-rezultat',
-  'duel-rezultat',
+  // `duel-rezultat` NAMERNO nije otkrivanje: pitanje je odgledano na svom
+  // ekranu, a ovaj je mapa i animacija — tačan odgovor tu više ne sme.
   'rezultat',
   'ended',
 ]);
@@ -112,8 +113,8 @@ let lastDuelKey = '';
 
 /**
  * Nerešen duel se rešava brojem, i taj broj MORA da se otkrije: posle
- * `duel-broj` sledeći `duel-rezultat` nosi `tiebreak` sa tačnom vrednošću i
- * procenom svakog duelanta. Bez toga se teritorija menjala bez objašnjenja.
+ * `duel-broj` ide `duel-broj-rezultat` sa tačnom vrednošću i procenom svakog
+ * duelanta. Bez toga se teritorija menjala bez objašnjenja.
  */
 let sawDuelBroj = 0;
 let sawTiebreakReveal = 0;
@@ -128,29 +129,58 @@ function trackTiebreak(state: GameStateLite): void {
     }
     return;
   }
-  if (state.phase !== 'duel-rezultat' || !brojPending) return;
+  if (state.phase !== 'duel-broj-rezultat' || !brojPending) return;
   brojPending = false;
 
-  const tb = host.tiebreak as
-    | { question?: { text?: string }; correctValue?: number; results?: { value?: number | null }[] }
-    | undefined;
-  if (!tb || typeof tb.correctValue !== 'number' || !tb.question?.text) {
-    ruleFailures.push('tiebreak: posle broj-pitanja ishod nije otkrio tačnu vrednost');
+  const q = host.question as { kind?: string; text?: string } | undefined;
+  if (q?.kind !== 'broj' || !q.text) {
+    ruleFailures.push('tiebreak: otkrivanje nije ostalo na ekranu broj-pitanja');
+    return;
+  }
+  if (typeof host.correctValue !== 'number') {
+    ruleFailures.push('tiebreak: otkrivanje ne nosi tačnu vrednost');
     return;
   }
   const duelists = ((host.expectedIds as string[] | undefined) ?? []).length;
-  if ((tb.results?.length ?? 0) < duelists) {
+  const results = (host.results as { value?: number | null; optionIndex?: number | null }[] | undefined) ?? [];
+  if (results.length < duelists) {
     ruleFailures.push('tiebreak: otkrivanje ne nosi procene svih duelanata');
     return;
   }
-  // Izborno pitanje ostaje na ekranu sa SVOJIM odgovorima: ako su tu procene
-  // brojeva, snimak izbornog kruga je izgubljen i avatari nemaju šta da sednu.
-  const results = (host.results as { value?: number | null }[] | undefined) ?? [];
-  if (results.some((r) => r.value != null)) {
-    ruleFailures.push('tiebreak: izgubljeni odgovori sa izbornog pitanja');
+  // Na ekranu je broj — ako tu stoje izbori sa prethodnog pitanja, otkriva se
+  // pogrešan krug.
+  if (results.some((r) => r.optionIndex != null)) {
+    ruleFailures.push('tiebreak: otkrivanje broja prikazuje odgovore sa izbornog pitanja');
     return;
   }
   sawTiebreakReveal += 1;
+}
+
+/**
+ * Prozor sa ishodom mora da stigne PRE nego što se tabla promeni, i bez
+ * `outcome` u duelu — efekti se izvode iz njegove pojave, pa bi mač pao dok se
+ * poruka još čita. Prati se i da tabla u toj fazi zaista miruje.
+ */
+let ishodBoard: string | null = null;
+function trackIshod(state: GameStateLite): void {
+  const host = state.data.host as Record<string, unknown>;
+  const board = JSON.stringify(host.board);
+  if (state.phase === 'duel-ishod') {
+    const duel = host.duel as { outcome?: string; pendingOutcome?: string } | undefined;
+    if (duel?.outcome) {
+      ruleFailures.push('duel-ishod: ishod je vec objavljen kao outcome — efekti krecu prerano');
+    }
+    if (!duel?.pendingOutcome) {
+      ruleFailures.push('duel-ishod: prozor nema sta da prikaze (nema pendingOutcome)');
+    }
+    if (ishodBoard === null) ishodBoard = board;
+    else if (ishodBoard !== board) {
+      ruleFailures.push('duel-ishod: tabla se promenila dok je prozor sa ishodom jos stajao');
+      ishodBoard = board;
+    }
+    return;
+  }
+  ishodBoard = null;
 }
 
 function trackSiege(state: GameStateLite): void {
@@ -174,6 +204,11 @@ function trackSiege(state: GameStateLite): void {
       duel.territoryId === pendingSiege.territoryId
     ) {
       siegeContinued += 1;
+      // Kartica sa najavom ide samo na prvi udarac; bez ove zastavice bi se
+      // ista poruka ponovila na svaki srušeni zid.
+      if (!(duel as { opsadaNastavak?: boolean }).opsadaNastavak) {
+        ruleFailures.push('opsada: nastavak nije označen, pa se najava ponavlja');
+      }
     } else {
       ruleFailures.push(
         'opsada: posle srušenog zida potez je otišao dalje umesto da napadač nastavi'
@@ -325,6 +360,7 @@ async function main(): Promise<void> {
       latest[i] = data.gameState;
       if (i === 0) {
         scanBroadcast(data.gameState.phase, data.gameState);
+        trackIshod(data.gameState);
         trackSiege(data.gameState);
         trackTiebreak(data.gameState);
       }
@@ -547,6 +583,7 @@ async function main(): Promise<void> {
     'napad-izbor',
     'duel-odgovor',
     'duel-odgovor-rezultat',
+    'duel-ishod',
     'duel-rezultat',
     'rezultat',
   ];

@@ -32,8 +32,14 @@ export const FX_SHOT_SECONDS = 0.55;
  * Sve posledice udara (zid nestaje, teritorija menja boju) čekaju tačno
  * toliko: prvo se vidi ČIME je odlučeno, pa tek onda ŠTA se promenilo. Bez
  * ovoga zid nestane dok oružje još leti, pa udarac pada u prazno.
+ *
+ * Traje koliko traje namerno: oružje je jedini trenutak u kome se ishod vidi
+ * kao slika, a ne pročita kao rečenica, pa se pad ne žuri. Sa zadržavanjem
+ * posle udara ceo potez je oko dve sekunde — i dalje kraće od najkraćeg
+ * `DUEL_REZULTAT_DURATION` (3 s), ali bez mnogo mesta: ako se ovo još
+ * produžava, mora i taj minimum.
  */
-export const FX_SLAM_SECONDS = 0.45;
+export const FX_SLAM_SECONDS = 1.45;
 /** Razmak između teritorija u talasu posle pada zamka. */
 const FX_KASKADA_KORAK = 0.22;
 /** Koliko se čeka od eksplozije zamka do prve teritorije u talasu. */

@@ -96,6 +96,8 @@ export type BitkaPhase =
   // Otkrivanje broja koji je razrešio nerešen duel — tačna vrednost, obe
   // procene i ko je bio brži.
   | 'duel-broj-rezultat'
+  // Ishod napada u prozoru preko ekrana; tabla se još NIJE promenila.
+  | 'duel-ishod'
   | 'duel-rezultat'
   | 'rezultat'
   | 'ended';
@@ -152,22 +154,6 @@ export interface BitkaAnswerResult {
 }
 
 /**
- * Broj-pitanje kojim je razrešen nerešen duel, spremno za otkrivanje.
- *
- * Ide **uz** otkrivanje izbornog pitanja, ne umesto njega: izborno je obojica
- * dobila isto (oba tačna ili oba netačna), pa se i ono mora videti, a broj je
- * taj koji je presudio. Bez ovoga se posle tiebreak-a nije videlo ni koliko je
- * tačno ni ko je bio bliži — teritorija je samo promenila boju.
- */
-export interface BitkaTiebreakView {
-  /** Uvek `kind: 'broj'`. */
-  question: BitkaQuestionView;
-  correctValue: number;
-  /** Procene duelanata; `value` je null ako igrač nije stigao. */
-  results: BitkaAnswerResult[];
-}
-
-/**
  * Koliko partija traje.
  *
  * `zamkovi` — rat ide dok ne ostane samo jedan zamak. Prirodan kraj igre, ali
@@ -203,12 +189,21 @@ export interface BitkaDuelView {
    * — inače najavi ishod koji ne stiže.
    */
   tiebreakPending?: boolean;
+  /**
+   * Isti napadač nastavlja opsadu istog zamka posle srušenog zida. Kartica sa
+   * najavom se tada preskače — ista poruka tri puta zaredom je šum, a ne najava.
+   */
+  opsadaNastavak?: boolean;
+  /**
+   * Ishod u `duel-ishod` — dok stoji prozor sa porukom, a tabla je još stara.
+   * NAMERNO nije `outcome`: efekti se izvode iz pojave `outcome`, pa bi mač
+   * pao dok se poruka još čita, na mapu koja se nije ni promenila.
+   */
+  pendingOutcome?: BitkaDuelOutcome;
+  /** Zidova posle udarca — poruka mora da važi i pre nego što se tabla upiše. */
+  wallsAfter?: number;
   /** Popunjeno tek u `duel-rezultat`. */
   outcome?: BitkaDuelOutcome;
-  /** Tačan odgovor, tek u `duel-rezultat`. */
-  correctIndex?: number;
-  correctValue?: number;
-  results?: BitkaAnswerResult[];
 }
 
 export interface BitkaLeaderboardEntry {
@@ -247,7 +242,6 @@ export interface BitkaHostData {
    * Samo u `duel-rezultat` i samo kad je duel bio nerešen: pitanje sa brojem
    * koje ga je razrešilo, sa tačnom vrednošću i procenama duelanata.
    */
-  tiebreak?: BitkaTiebreakView;
 
   /** Ko trenutno bira (osvajanje-izbor, napad-izbor). */
   activePlayerId?: string | null;

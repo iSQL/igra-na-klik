@@ -51,6 +51,7 @@ const PHASE_TITLE: Record<string, string> = {
   'duel-odgovor-rezultat': 'Tačan odgovor',
   'duel-broj': 'Nerešeno — broj odlučuje',
   'duel-broj-rezultat': 'Ko je bio bliži?',
+  'duel-ishod': 'Ishod napada',
   'duel-rezultat': 'Ishod napada',
   rezultat: 'Kraj bitke',
   ended: 'Kraj bitke',
@@ -101,10 +102,12 @@ export default function BitkaHost() {
     }
   }, [phase, play]);
 
-  // Ishod napada ima svoj zvuk, ali samo jednom po duelu.
+  // Ishod napada ima svoj zvuk, ali samo jednom po duelu. Vezuje se za PROZOR
+  // sa ishodom (`duel-ishod`), jer se tu ishod i saznaje; do `duel-rezultat`
+  // ključ je isti, pa se ne ponavlja.
   useEffect(() => {
-    const outcome = host?.duel?.outcome;
-    if (phase !== 'duel-rezultat' || !outcome) return;
+    const outcome = host?.duel?.outcome ?? host?.duel?.pendingOutcome;
+    if ((phase !== 'duel-ishod' && phase !== 'duel-rezultat') || !outcome) return;
     const key = `${host?.duel?.territoryId}:${outcome}`;
     if (prevEventRef.current === key) return;
     prevEventRef.current = key;
@@ -179,8 +182,10 @@ export default function BitkaHost() {
   // Najava napada: kratka kartica preko table na ulasku u duel, da se pre
   // pitanja vidi ko koga napada i za šta. Vezuje se za DUEL a ne za render —
   // `gameState` je nov objekat svake sekunde, pa bi se inače vraćala u petlji.
+  // Nastavak opsade NE dobija karticu: napadač i meta su isti, a poruka bi se
+  // ponovila do tri puta u istom napadu.
   const duelKey =
-    phase === 'duel-pitanje' && host?.duel
+    phase === 'duel-pitanje' && host?.duel && !host.duel.opsadaNastavak
       ? `${host.duel.attackerId}:${host.duel.territoryId}`
       : '';
   const [najava, setNajava] = useState(false);
@@ -438,6 +443,12 @@ export default function BitkaHost() {
       <AnimatePresence>
         {najava && host.duel && <DuelNajava host={host} />}
       </AnimatePresence>
+
+      {/* Ishod napada: prozor stoji dok je tabla još stara, pa se prvo pročita
+          šta se desilo, a animacije krenu tek kad se on skloni. */}
+      <AnimatePresence>
+        {phase === 'duel-ishod' && host.duel?.pendingOutcome && <DuelIshod host={host} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -462,11 +473,10 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
         <DuelHeader host={host} />
-        {/* I u ishodu ostaje pitanje na ekranu: tu se vidi ko je šta izabrao i
-            šta je bilo tačno. Bez toga se sa TV-a zna samo ko je uzeo zemlju,
-            a nikad zašto — najviše kod nerešenog duela, gde je presudio broj. */}
+        {/* U `duel-rezultat` pitanja više nema — otkriveno je na svom ekranu
+            (`duel-odgovor-rezultat`, pa `duel-broj-rezultat`), a ovaj ekran je
+            mapa i preuzimanje zemlje. Server ga tamo i ne šalje. */}
         {host.question && <QuestionPanel host={host} phase={phase} />}
-        {phase === 'duel-rezultat' && host.tiebreak && <TiebreakStrip host={host} />}
         {phase === 'duel-rezultat' && <DuelOutcome host={host} />}
       </div>
     );
@@ -553,6 +563,100 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
   }
 
   return <Line title={host.lastEvent ?? '—'} text="" />;
+}
+
+/** Ikona i boja ishoda — isti rečnik na TV-u i na telefonu. */
+const ISHOD_GLYPH: Record<string, { glyph: string; color: string; label: string }> = {
+  napadac: { glyph: '⚔️', color: '#F2CE74', label: 'Teritorija je pala' },
+  branilac: { glyph: '🛡️', color: '#7fd1a3', label: 'Odbrana je izdržala' },
+  zid: { glyph: '🧱', color: '#F2CE74', label: 'Zid je srušen' },
+  'zamak-pao': { glyph: '🏰', color: '#e06a5e', label: 'Zamak je pao' },
+};
+
+/**
+ * Prozor sa ishodom napada.
+ *
+ * Stoji dok tabla još pokazuje staro stanje — server posledicu upisuje tek
+ * kad ovaj prozor istekne. Dotad je ishod bio red teksta u traci ispod mape
+ * na kojoj se sve već odigralo, pa se propuštalo i šta se desilo i zašto.
+ */
+function DuelIshod({ host }: { host: BitkaHostData }) {
+  const duel = host.duel!;
+  const outcome = duel.pendingOutcome!;
+  const look = ISHOD_GLYPH[outcome] ?? ISHOD_GLYPH.napadac;
+  const place = host.map.territories.find((t) => t.id === duel.territoryId)?.name ?? '';
+  const walls = duel.wallsAfter ?? host.board.find((x) => x.id === duel.territoryId)?.walls ?? 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 7,
+        display: 'grid',
+        placeItems: 'center',
+        // Obično zatamnjenje, ne `backdrop-filter` — ispod je WebGL platno.
+        background: 'rgba(9,20,36,0.62)',
+        pointerEvents: 'none',
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.04 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
+          padding: '2.2rem 3.4rem',
+          borderRadius: '24px',
+          background: 'var(--bg-card)',
+          border: `1px solid ${look.color}`,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+          textAlign: 'center',
+          maxWidth: '70vw',
+        }}
+      >
+        <span className="bitka-sheen" />
+        <span style={{ fontSize: '4.4rem', lineHeight: 1 }}>{look.glyph}</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.24em',
+            textTransform: 'uppercase',
+            fontSize: '0.95rem',
+            color: look.color,
+          }}
+        >
+          {look.label}
+        </span>
+        <span
+          style={{
+            fontSize: '2.4rem',
+            fontWeight: 800,
+            lineHeight: 1.2,
+            color: 'var(--text-primary)',
+          }}
+        >
+          {host.lastEvent ?? place}
+        </span>
+        {duel.onCastle && outcome !== 'zamak-pao' && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>zidovi</span>
+            <Walls walls={walls} size={16} />
+          </span>
+        )}
+      </motion.div>
+    </motion.div>
+  );
 }
 
 /**
@@ -1355,45 +1459,6 @@ function Guesses({
           </span>
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Broj koji je razrešio nerešen duel. Stoji ispod izbornog pitanja, jer su ga
- * obojica odigrala isto — tek ovaj broj kaže ko je uzeo zemlju.
- */
-function TiebreakStrip({ host }: { host: BitkaHostData }) {
-  const tb = host.tiebreak!;
-  return (
-    <div
-      style={{
-        borderTop: '1px solid var(--line)',
-        paddingTop: '0.4rem',
-        display: 'flex',
-        gap: '0.7rem',
-        alignItems: 'center',
-      }}
-    >
-      {/* Manja sličica nego gore: ovo je druga slika na istom ekranu, uz izborno
-          pitanje koje već ima svoju. */}
-      <QuestionImage url={tb.question.imageUrl} height="3.2rem" />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: 1, minWidth: 0 }}>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          <strong style={{ color: 'var(--accent)' }}>Nerešeno — odlučio je broj:</strong>{' '}
-          {tb.question.text}{' '}
-          <strong style={{ color: 'var(--accent)' }}>
-            · tačno: {tb.correctValue}
-            {tb.question.unit ? ` ${tb.question.unit}` : ''}
-          </strong>
-        </div>
-        <Guesses
-          players={host.players}
-          results={tb.results}
-          correct={tb.correctValue}
-          unit={tb.question.unit}
-        />
-      </div>
     </div>
   );
 }

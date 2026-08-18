@@ -1,5 +1,4 @@
 import type {
-  BitkaAnswerResult,
   BitkaDuelOutcome,
   BitkaMode,
   BitkaMapView,
@@ -29,14 +28,16 @@ export const REZULTAT_DURATION = 4;
  * mapi — ili, kod nerešenog, nikad, jer bi odmah stigao klizač.
  */
 export const DUEL_OTKRIVANJE_DURATION = 3;
-export const DUEL_REZULTAT_DURATION = 6;
 /**
- * Dodatak na ishod duela koji je rešen brojem. Tada se na jednom ekranu
- * otkrivaju dva pitanja — izborno sa avatarima i broj sa procenama — pa isto
- * vreme ne stigne da se pročita. Ide **povrh** podesivog `DUEL_REZULTAT_DURATION`,
- * pa se i dalje sve pomera kad se u /admin → Timinzi promeni osnova.
+ * Prozor sa ishodom napada — „Porodin menja gospodara", „jedan zid manje".
+ *
+ * Ide PRE nego što se posledica upiše na tablu, pa mapa ostaje netaknuta dok
+ * poruka stoji; animacije kreću tek posle njega. Ranije je ta rečenica bila
+ * samo red teksta pored mape na kojoj je već sve bilo odigrano, pa se propušta
+ * i šta se desilo i zašto.
  */
-export const DUEL_TIEBREAK_EXTRA = 3;
+export const DUEL_ISHOD_DURATION = 4;
+export const DUEL_REZULTAT_DURATION = 6;
 export const LEADERBOARD_DURATION = 14;
 
 // Aktivan unos — balans igre, ostaje u kodu.
@@ -79,6 +80,8 @@ export interface BitkaDuelState {
   defenderId: string | null;
   territoryId: string;
   onCastle: boolean;
+  /** Nastavak opsade istog zamka — bez ponovljene kartice sa najavom. */
+  continuation: boolean;
   outcome?: BitkaDuelOutcome;
 }
 
@@ -106,12 +109,6 @@ export interface BitkaInternalState {
   answers: Map<string, BitkaAnswer>;
   expected: Set<string>;
   /**
-   * Odgovori na izborno pitanje duela, snimljeni pre nego što tiebreak
-   * prepiše `answers` procenama. Bez ovoga otkrivanje posle nerešenog duela
-   * ostane bez podatka ko je šta izabrao.
-   */
-  choiceResults: BitkaAnswerResult[] | null;
-  /**
    * Ishod duela izračunat, ali još neprimenjen: između odgovora i posledice
    * stoji faza otkrivanja, a tabla sme da se promeni tek posle nje — inače bi
    * se zemlja obojila dok se još gleda tačan odgovor.
@@ -119,6 +116,10 @@ export interface BitkaInternalState {
   pendingAttackerWin: boolean | null;
   /** Broj-pitanje pripremljeno za nerešen duel, dok traje otkrivanje izbornog. */
   pendingBroj: KvizBrojQuestionFull | null;
+  /** Ishod koji se čita u `duel-ishod`, dok tabla još stoji nepromenjena. */
+  pendingOutcome: BitkaDuelOutcome | null;
+  /** Zidovi posle udarca — poruka mora da važi pre nego što se tabla upiše. */
+  pendingWalls: number;
 
   /** Redosled po rezultatu uvodnog broj-pitanja; određuje ko prvi bira zamak. */
   priority: string[];

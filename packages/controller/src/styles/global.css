@@ -338,23 +338,26 @@ textarea {
    zabije se u teritoriju. Isti trenutak koji TV crta u three.js sceni — ovde
    kroz CSS, jer kontroler namerno nema three. Posledice (zid, boja) čekaju da
    oružje udari; to kašnjenje planira `planFxTiming` u shared paketu. */
+/* Procenti prate `FX_SLAM_SECONDS` iz shared paketa: udar (scale 1) pada na
+   72% od 2s ≈ 1.45s, tačno kad i mač na televizoru. Ako se tamo promeni
+   trajanje, ovde se pomeraju procenti — inače telefon udari u drugom taktu. */
 @keyframes igra-bitka-udar {
   0% {
     transform: translate(-50%, -50%) scale(8) rotate(-18deg);
     opacity: 0;
   }
-  14% {
+  16% {
     opacity: 1;
   }
-  45% {
+  53% {
     transform: translate(-50%, -50%) scale(2.6) rotate(-4deg);
     opacity: 1;
   }
-  62% {
+  72% {
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
     opacity: 1;
   }
-  80% {
+  86% {
     transform: translate(-50%, -50%) scale(0.9) rotate(0deg);
     opacity: 0.9;
   }
@@ -371,7 +374,7 @@ textarea {
   font-size: 2.4rem;
   line-height: 1;
   transform: translate(-50%, -50%);
-  animation: igra-bitka-udar 1s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  animation: igra-bitka-udar 2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
   pointer-events: none;
 }
 
@@ -380,7 +383,7 @@ textarea {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.4);
   }
-  62% {
+  72% {
     opacity: 0.7;
     transform: translate(-50%, -50%) scale(1);
   }
@@ -398,17 +401,17 @@ textarea {
   height: 150px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  animation: igra-bitka-bljesak 1s ease-out forwards;
+  animation: igra-bitka-bljesak 2s ease-out forwards;
   pointer-events: none;
 }
 
 @keyframes igra-bitka-prsten {
   0%,
-  55% {
+  65% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.2);
   }
-  62% {
+  72% {
     opacity: 0.9;
   }
   100% {
@@ -426,7 +429,7 @@ textarea {
   border-radius: 50%;
   border: 3px solid currentColor;
   transform: translate(-50%, -50%);
-  animation: igra-bitka-prsten 1s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+  animation: igra-bitka-prsten 2s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
   pointer-events: none;
 }
 

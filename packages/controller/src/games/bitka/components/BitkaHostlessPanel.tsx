@@ -1,5 +1,4 @@
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
-import { BitkaTiebreak } from './BitkaTiebreak';
 import { BitkaQuestionImage } from './BitkaQuestionImage';
 
 /**
@@ -144,13 +143,12 @@ function Body({
             : duel.defenderId
               ? `${named(duel.defenderId)} je odbranio ${place}.`
               : `${place} ostaje ničiji.`;
+    // Samo rečenica o ishodu: pitanje i tačan odgovor su odgledani na svojim
+    // ekranima (`duel-odgovor-rezultat`, `duel-broj-rezultat`), a ovde se prati
+    // mapa. Server pitanje u ovoj fazi i ne šalje.
     return (
       <Card>
         <strong style={{ fontSize: '0.9rem', color: 'var(--accent)' }}>{text}</strong>
-        {host.question && <Question host={host} revealing />}
-        {/* Nerešen duel razrešava broj — bez njega posmatrač vidi da je zemlja
-            promenila boju, a ne i zbog čega. */}
-        <BitkaTiebreak host={host} myPlayerId={myPlayerId} compact />
       </Card>
     );
   }
