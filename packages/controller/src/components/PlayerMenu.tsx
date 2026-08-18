@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
+import { leaveRoom } from '../leaveRoom';
 import { useT } from '../i18n/useT';
 import { AvatarPickerModal } from './AvatarPickerModal';
 import { LanguageSwitch } from './LanguageSwitch';
@@ -53,7 +54,7 @@ export function PlayerMenu({ inGame = false }: { inGame?: boolean }) {
           : t('leave.confirmBodyRemoteHost')
         : t('leave.confirmBody'),
       cta: t('leave.exit'),
-      run: () => socket.emit('player:leave-room'),
+      run: () => leaveRoom(),
     };
   })();
 

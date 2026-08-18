@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { socket } from '../socket';
+import { leaveRoom } from '../leaveRoom';
 import { usePlayerStore } from '../store/playerStore';
 import { LeaveRoomDialog } from './LeaveRoomDialog';
 
@@ -52,7 +52,7 @@ export function BackButtonGuard() {
     <LeaveRoomDialog
       onCancel={() => setConfirming(false)}
       onConfirm={() => {
-        socket.emit('player:leave-room');
+        leaveRoom();
         setConfirming(false);
       }}
     />

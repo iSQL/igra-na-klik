@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { socket } from '../socket';
+import { leaveRoom } from '../leaveRoom';
 import { useT } from '../i18n/useT';
 import { LeaveRoomDialog } from './LeaveRoomDialog';
 
@@ -12,7 +12,7 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
   const t = useT();
 
   const handleConfirm = () => {
-    socket.emit('player:leave-room');
+    leaveRoom();
     setConfirming(false);
   };
 
