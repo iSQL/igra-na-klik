@@ -56,10 +56,20 @@ const NEVER = ['answer', 'options.correct', 'selectedIndex', 'myGuess', 'baseCho
 const REVEAL_PHASES = new Set([
   'redosled-rezultat',
   'osvajanje-rezultat',
+  // Duel otkriva u dva koraka pre nego što posledica sleti na mapu: izborno
+  // pitanje, pa broj koji razrešava nerešeno.
+  'duel-odgovor-rezultat',
+  'duel-broj-rezultat',
   'duel-rezultat',
   'rezultat',
   'ended',
 ]);
+/**
+ * Faze koje su čisto odbrojavanje: pitanje se u njima NE šalje nikom. Dok je
+ * stajalo iznad mape, isti tekst se čitao dvaput — jednom u traci, pa opet
+ * preko celog ekrana.
+ */
+const COUNTDOWN_PHASES = new Set(['redosled-pitanje', 'osvajanje-pitanje', 'duel-pitanje']);
 
 const leaks: string[] = [];
 
@@ -67,6 +77,9 @@ function scanBroadcast(phase: string, payload: unknown): void {
   const json = JSON.stringify(payload);
   for (const key of NEVER) {
     if (json.includes(`"${key}"`)) leaks.push(`[${phase}] broadcast sadrži "${key}"`);
+  }
+  if (COUNTDOWN_PHASES.has(phase) && json.includes('"question"')) {
+    leaks.push(`[${phase}] odbrojavanje već nosi pitanje`);
   }
   if (REVEAL_PHASES.has(phase)) return;
   for (const key of REVEAL_ONLY) {
@@ -533,6 +546,7 @@ async function main(): Promise<void> {
     'osvajanje-izbor',
     'napad-izbor',
     'duel-odgovor',
+    'duel-odgovor-rezultat',
     'duel-rezultat',
     'rezultat',
   ];

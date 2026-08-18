@@ -89,7 +89,13 @@ export type BitkaPhase =
   | 'napad-izbor'
   | 'duel-pitanje'
   | 'duel-odgovor'
+  // Otkrivanje izbornog pitanja duela — ostaje na ekranu pitanja, pre nego
+  // što se ode na broj (nerešeno) ili na mapu (ishod).
+  | 'duel-odgovor-rezultat'
   | 'duel-broj'
+  // Otkrivanje broja koji je razrešio nerešen duel — tačna vrednost, obe
+  // procene i ko je bio brži.
+  | 'duel-broj-rezultat'
   | 'duel-rezultat'
   | 'rezultat'
   | 'ended';
@@ -191,6 +197,12 @@ export interface BitkaDuelView {
   // Tokom `duel-odgovor` / `duel-broj` idu SAMO ove dve zastavice.
   attackerCommitted: boolean;
   defenderCommitted: boolean;
+  /**
+   * U `duel-odgovor-rezultat`: posle otkrivanja NE ide mapa nego broj-pitanje,
+   * jer su oba duelanta odgovorila isto. Ekran koji to kaže mora da zna unapred
+   * — inače najavi ishod koji ne stiže.
+   */
+  tiebreakPending?: boolean;
   /** Popunjeno tek u `duel-rezultat`. */
   outcome?: BitkaDuelOutcome;
   /** Tačan odgovor, tek u `duel-rezultat`. */

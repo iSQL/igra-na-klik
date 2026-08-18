@@ -11,10 +11,24 @@ import type {
 
 // Faze čekanja (podesive kroz /admin → Timinzi).
 export const UVOD_DURATION = 7;
+/**
+ * Odbrojavanje do pitanja. Pitanje se u ovoj fazi NE šalje — na ekranu stoji
+ * samo brojač, pa svi krenu da čitaju u istom trenutku, kad se pitanje otvori
+ * preko celog ekrana. Ranije je tekst stajao iznad mape pa se isto pitanje
+ * čitalo dvaput, na dva različita mesta.
+ */
 export const PITANJE_NAJAVA_DURATION = 4;
 // Otkrivanje se gleda na ekranu pitanja — vidi se ko je šta odabrao i šta je
 // tačno — pa mora da traje bar koliko treba da se to pročita.
 export const REZULTAT_DURATION = 4;
+/**
+ * Otkrivanje odgovora u duelu — koristi se za oba međukoraka: izborno pitanje
+ * (`duel-odgovor-rezultat`) i broj koji razrešava nerešeno
+ * (`duel-broj-rezultat`). Duel se dotad rešavao u tišini: ekran sa pitanjem bi
+ * nestao čim oba igrača zaključaju, pa se tačan odgovor video tek uz ishod na
+ * mapi — ili, kod nerešenog, nikad, jer bi odmah stigao klizač.
+ */
+export const DUEL_OTKRIVANJE_DURATION = 3;
 export const DUEL_REZULTAT_DURATION = 6;
 /**
  * Dodatak na ishod duela koji je rešen brojem. Tada se na jednom ekranu
@@ -97,6 +111,14 @@ export interface BitkaInternalState {
    * ostane bez podatka ko je šta izabrao.
    */
   choiceResults: BitkaAnswerResult[] | null;
+  /**
+   * Ishod duela izračunat, ali još neprimenjen: između odgovora i posledice
+   * stoji faza otkrivanja, a tabla sme da se promeni tek posle nje — inače bi
+   * se zemlja obojila dok se još gleda tačan odgovor.
+   */
+  pendingAttackerWin: boolean | null;
+  /** Broj-pitanje pripremljeno za nerešen duel, dok traje otkrivanje izbornog. */
+  pendingBroj: KvizBrojQuestionFull | null;
 
   /** Redosled po rezultatu uvodnog broj-pitanja; određuje ko prvi bira zamak. */
   priority: string[];

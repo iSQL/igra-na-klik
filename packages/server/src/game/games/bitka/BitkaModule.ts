@@ -45,6 +45,7 @@ import type { BitkaAnswer, BitkaInternalState, BitkaStats } from './BitkaState.j
 import {
   BAZA_IZBOR_DURATION,
   DUEL_REZULTAT_DURATION,
+  DUEL_OTKRIVANJE_DURATION,
   DUEL_TIEBREAK_EXTRA,
   IZBOR_DURATION,
   LEADERBOARD_DURATION,
@@ -166,6 +167,8 @@ export class BitkaModule extends BaseGameModule {
       answers: new Map(),
       expected: new Set(),
       choiceResults: null,
+      pendingAttackerWin: null,
+      pendingBroj: null,
       priority: [],
       baseChoice: new Map(),
       baseQueue: [],
@@ -420,8 +423,25 @@ export class BitkaModule extends BaseGameModule {
       case 'duel-odgovor':
         this.finishDuelOdgovor(room);
         break;
+      // Otkrivanje je odigrano — tek sad se posledica upisuje na tablu, ili se
+      // ide na broj koji razrešava nerešeno.
+      case 'duel-odgovor-rezultat':
+        if (!this.state.duel) {
+          this.nextAttack(room);
+          break;
+        }
+        if (this.state.pendingBroj) this.beginDuelBroj();
+        else this.applyDuel(room, !!this.state.pendingAttackerWin);
+        break;
       case 'duel-broj':
         this.finishDuelBroj(room);
+        break;
+      case 'duel-broj-rezultat':
+        if (!this.state.duel) {
+          this.nextAttack(room);
+          break;
+        }
+        this.applyDuel(room, !!this.state.pendingAttackerWin);
         break;
       case 'duel-rezultat': {
         // Opsada traje dok napadač pogađa: srušen zid → odmah novo pitanje na
@@ -800,6 +820,8 @@ export class BitkaModule extends BaseGameModule {
     this.state.brojQuestion = null;
     this.state.answers = new Map();
     this.state.choiceResults = null;
+    this.state.pendingAttackerWin = null;
+    this.state.pendingBroj = null;
     this.state.expected = new Set(
       [attackerId, st.ownerId].filter((id): id is string => !!id)
     );
@@ -825,25 +847,43 @@ export class BitkaModule extends BaseGameModule {
     const defender = duel.defenderId ? this.sideOf(duel.defenderId) : null;
     const verdict = resolveChoiceDuel(attacker, defender);
 
-    if (verdict !== 'tiebreak') {
-      this.applyDuel(room, verdict === 'napadac');
-      return;
+    if (verdict === 'tiebreak') {
+      const question = this.nextBroj();
+      if (question) {
+        // Broj se pripremi, ali se NE postavlja odmah: prvo se otkriva izborno
+        // pitanje, pa tek onda stiže klizač. Ranije je klizač banuo u istoj
+        // sekundi u kojoj je nestalo pitanje, pa niko nije video šta je bilo
+        // tačno ni zašto se uopšte igra i drugi krug.
+        this.state.pendingBroj = question;
+        this.state.pendingAttackerWin = null;
+        this.state.lastEvent = 'Nerešeno — odlučiće broj.';
+      } else {
+        // Nema broj-pitanja u paketima — izjednačenje rešava brzina.
+        const ar = attacker.remaining ?? -1;
+        const dr = defender?.remaining ?? -1;
+        this.state.lastEvent = 'Nerešeno — odlučuje brzina.';
+        this.state.pendingAttackerWin = ar > dr;
+      }
+    } else {
+      this.state.pendingAttackerWin = verdict === 'napadac';
     }
 
-    const question = this.nextBroj();
-    if (!question) {
-      // Nema broj-pitanja u paketima — izjednačenje rešava brzina.
-      const ar = attacker.remaining ?? -1;
-      const dr = defender?.remaining ?? -1;
-      this.state.lastEvent = 'Nerešeno — odlučuje brzina.';
-      this.applyDuel(room, ar > dr);
-      return;
-    }
+    // Ishod je izračunat, ali tabla se ne dira dok se ne odgleda tačan
+    // odgovor. Ovde `lastEvent` NAMERNO ostaje bez posledice — inače bi
+    // otkrivanje odalo ko je uzeo zemlju pre nego što se vidi zašto.
+    this.state.phase = 'duel-odgovor-rezultat';
+    this.state.phaseTimeRemaining =
+      this.timings.DUEL_OTKRIVANJE_DURATION ?? DUEL_OTKRIVANJE_DURATION;
+  }
+
+  /** Drugi krug nerešenog duela — klizač, posle odgledanog izbornog pitanja. */
+  private beginDuelBroj(): void {
     // Šta je ko izabrao na izbornom pitanju mora da preživi tiebreak: u
     // `duel-rezultat` se otkrivaju OBA pitanja, a `answers` od sada nosi
     // procene brojeva.
     this.state.choiceResults = this.answerResults();
-    this.state.brojQuestion = question;
+    this.state.brojQuestion = this.state.pendingBroj;
+    this.state.pendingBroj = null;
     this.state.answers = new Map();
     this.state.phase = 'duel-broj';
     this.state.phaseTimeRemaining = ODGOVOR_DURATION;
@@ -870,7 +910,12 @@ export class BitkaModule extends BaseGameModule {
         ? this.guessDistanceOrNull(duel.defenderId, question.answer)
         : null,
     };
-    this.applyDuel(room, resolveBrojDuel(attacker, defender) === 'napadac');
+    this.state.pendingAttackerWin = resolveBrojDuel(attacker, defender) === 'napadac';
+    // Isto pravilo kao kod izbornog pitanja: prvo se vidi tačan broj, obe
+    // procene i ko je bio brži, pa tek onda mapa i animacija.
+    this.state.phase = 'duel-broj-rezultat';
+    this.state.phaseTimeRemaining =
+      this.timings.DUEL_OTKRIVANJE_DURATION ?? DUEL_OTKRIVANJE_DURATION;
   }
 
   private applyDuel(room: Room, attackerWon: boolean): void {
@@ -1244,7 +1289,8 @@ export class BitkaModule extends BaseGameModule {
       phase === 'redosled-pitanje' ||
       phase === 'redosled-odgovor' ||
       phase === 'redosled-rezultat' ||
-      phase === 'duel-broj'
+      phase === 'duel-broj' ||
+      phase === 'duel-broj-rezultat'
     ) {
       const q = this.state.brojQuestion;
       if (!q) return undefined;
@@ -1275,20 +1321,27 @@ export class BitkaModule extends BaseGameModule {
 
   private buildGameState(room: Room): GameState {
     const phase = this.state.phase;
+    /**
+     * `*-pitanje` NAMERNO nije ovde: to je odbrojavanje, i pitanje se u njemu
+     * ne šalje nikom. Dok je stajalo iznad mape, isti tekst se čitao dvaput —
+     * jednom u traci, pa opet preko celog ekrana — a odbrojavanje kaže samo
+     * kad da se digne pogled.
+     */
     const showQuestion =
-      phase === 'redosled-pitanje' ||
       phase === 'redosled-odgovor' ||
       phase === 'redosled-rezultat' ||
-      phase === 'osvajanje-pitanje' ||
       phase === 'osvajanje-odgovor' ||
       phase === 'osvajanje-rezultat' ||
-      phase === 'duel-pitanje' ||
       phase === 'duel-odgovor' ||
+      phase === 'duel-odgovor-rezultat' ||
       phase === 'duel-broj' ||
+      phase === 'duel-broj-rezultat' ||
       phase === 'duel-rezultat';
     const revealing =
       phase === 'redosled-rezultat' ||
       phase === 'osvajanje-rezultat' ||
+      phase === 'duel-odgovor-rezultat' ||
+      phase === 'duel-broj-rezultat' ||
       phase === 'duel-rezultat';
 
     const hostData: BitkaHostData = {
@@ -1314,12 +1367,14 @@ export class BitkaModule extends BaseGameModule {
     }
 
     if (revealing) {
-      if (this.state.choiceQuestion && phase !== 'redosled-rezultat') {
+      // Otkriva se tačno ono pitanje koje je na ekranu (`questionView`) — u
+      // `duel-broj-rezultat` to je broj, pa izborni odgovor tu nema šta da
+      // traži, a u `redosled-rezultat` obrnuto.
+      const brojNaEkranu = phase === 'redosled-rezultat' || phase === 'duel-broj-rezultat';
+      if (this.state.choiceQuestion && !brojNaEkranu) {
         hostData.correctIndex = this.state.choiceQuestion.correctIndex;
       }
-      // `correctValue` prati ono pitanje koje je na ekranu (`questionView`);
-      // broj iz tiebreak-a ide zasebno, jer tada na ekranu stoji izborno.
-      if (this.state.brojQuestion && phase === 'redosled-rezultat') {
+      if (this.state.brojQuestion && brojNaEkranu) {
         hostData.correctValue = this.state.brojQuestion.answer;
       }
       // Nerešen duel: na ekranu ostaje izborno pitanje sa avatarima na
@@ -1367,6 +1422,9 @@ export class BitkaModule extends BaseGameModule {
         attackerCommitted: this.state.answers.has(this.state.duel.attackerId),
         defenderCommitted: !!this.state.duel.defenderId && this.state.answers.has(this.state.duel.defenderId),
       };
+      if (phase === 'duel-odgovor-rezultat' && this.state.pendingBroj) {
+        duel.tiebreakPending = true;
+      }
       if (phase === 'duel-rezultat') {
         duel.outcome = this.state.duel.outcome;
         duel.results = this.state.choiceResults ?? this.answerResults();

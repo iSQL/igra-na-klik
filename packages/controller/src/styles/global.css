@@ -482,9 +482,31 @@ textarea {
   animation: igra-bitka-otkucaj 1s ease-in-out infinite;
 }
 
+/* Brojač do pitanja: svaka cifra je nov element (ključ je sam broj), pa je
+   dovoljna ulazna animacija — bez ijednog tajmera u JS-u. */
+@keyframes igra-bitka-odbrojavanje {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.bitka-odbrojavanje {
+  animation: igra-bitka-odbrojavanje 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bitka-sheen,
-  .bitka-tick {
+  .bitka-tick,
+  .bitka-odbrojavanje {
     animation: none;
   }
 }

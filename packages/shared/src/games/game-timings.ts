@@ -115,8 +115,9 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     gameName: 'KvizAtar',
     fields: [
       { key: 'UVOD_DURATION', label: 'Uvod (upoznavanje mape)', min: 3, max: 20, def: 7 },
-      { key: 'PITANJE_NAJAVA_DURATION', label: 'Čitanje pitanja pre odgovaranja', min: 2, max: 12, def: 4 },
+      { key: 'PITANJE_NAJAVA_DURATION', label: 'Odbrojavanje do pitanja', min: 2, max: 12, def: 4 },
       { key: 'REZULTAT_DURATION', label: 'Prikaz rezultata pitanja', min: 2, max: 20, def: 4 },
+      { key: 'DUEL_OTKRIVANJE_DURATION', label: 'Otkrivanje odgovora u duelu', min: 2, max: 15, def: 3 },
       { key: 'DUEL_REZULTAT_DURATION', label: 'Prikaz ishoda napada', min: 3, max: 20, def: 6 },
       { key: 'LEADERBOARD_DURATION', label: 'Rang lista na kraju', min: 4, max: 40, def: 14 },
     ],

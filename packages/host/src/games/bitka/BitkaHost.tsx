@@ -48,10 +48,29 @@ const PHASE_TITLE: Record<string, string> = {
   'napad-izbor': 'Izbor mete',
   'duel-pitanje': 'Duel',
   'duel-odgovor': 'Duel',
+  'duel-odgovor-rezultat': 'Tačan odgovor',
   'duel-broj': 'Nerešeno — broj odlučuje',
+  'duel-broj-rezultat': 'Ko je bio bliži?',
   'duel-rezultat': 'Ishod napada',
   rezultat: 'Kraj bitke',
   ended: 'Kraj bitke',
+};
+
+/**
+ * Faze koje su samo odbrojavanje do pitanja.
+ *
+ * Pitanje u njima ne stiže ni u broadcast — server ga zadržava dok ne krene
+ * odgovaranje. Ranije je tekst banuo u traku ispod mape, pa se isto pitanje
+ * čitalo dvaput: jednom sitno pored table, pa opet krupno kad se otvori ekran
+ * za odgovaranje. Sad se u toj pauzi vidi samo brojač, i cela soba digne
+ * pogled u istoj sekundi.
+ */
+const COUNTDOWN_PHASES = new Set(['redosled-pitanje', 'osvajanje-pitanje', 'duel-pitanje']);
+
+const COUNTDOWN_LABEL: Record<string, string> = {
+  'redosled-pitanje': 'Ko bira prvi?',
+  'osvajanje-pitanje': 'Pitanje stiže',
+  'duel-pitanje': 'Duel počinje',
 };
 
 export default function BitkaHost() {
@@ -70,7 +89,13 @@ export default function BitkaHost() {
     if (!phase) return;
     if (prevPhaseRef.current !== phase) {
       prevPhaseRef.current = phase;
-      if (phase === 'osvajanje-rezultat' || phase === 'redosled-rezultat') play('reveal');
+      if (
+        phase === 'osvajanje-rezultat' ||
+        phase === 'redosled-rezultat' ||
+        phase === 'duel-odgovor-rezultat' ||
+        phase === 'duel-broj-rezultat'
+      )
+        play('reveal');
       if (phase === 'baza-izbor' || phase === 'napad-izbor') play('join');
       if (phase === 'rezultat') play('victory');
     }
@@ -143,7 +168,9 @@ export default function BitkaHost() {
       phase === 'duel-broj' ||
       phase === 'baza-izbor' ||
       phase === 'napad-izbor' ||
-      phase === 'osvajanje-izbor';
+      phase === 'osvajanje-izbor' ||
+      // Odbrojavanje do pitanja — otkucaji su mu cela poenta.
+      COUNTDOWN_PHASES.has(phase ?? '');
     const sec = Math.ceil(gameState.timeRemaining);
     if (answering && sec !== prevSecRef.current && sec <= 5 && sec > 0) play('tick');
     prevSecRef.current = sec;
@@ -192,7 +219,14 @@ export default function BitkaHost() {
    * traci ispod), ali u duelu se dvoje bore na tajmer — sa fotelje se mora
    * čitati pitanje, videti ko je zaključao odgovor i koliko je ostalo.
    */
-  const duelArena = (phase === 'duel-odgovor' || phase === 'duel-broj') && !!host.duel;
+  const duelArena =
+    (phase === 'duel-odgovor' ||
+      phase === 'duel-broj' ||
+      // Otkrivanje ostaje NA ekranu pitanja: isti raspored, samo se opcije
+      // oboje i avatari sednu na ono što je ko izabrao.
+      phase === 'duel-odgovor-rezultat' ||
+      phase === 'duel-broj-rezultat') &&
+    !!host.duel;
   const showClock =
     phase === 'redosled-odgovor' ||
     phase === 'osvajanje-odgovor' ||
@@ -391,6 +425,15 @@ export default function BitkaHost() {
         </AnimatePresence>
       )}
 
+      {/* Odbrojavanje do pitanja. U duelu deli fazu sa najavom, pa se pojavi
+          tek kad kartica siđe — dve stvari preko iste table u isto vreme se
+          ne bi ni videle. */}
+      <AnimatePresence>
+        {COUNTDOWN_PHASES.has(phase ?? '') && !najava && (
+          <Odbrojavanje seconds={seconds} label={COUNTDOWN_LABEL[phase ?? ''] ?? 'Pitanje stiže'} />
+        )}
+      </AnimatePresence>
+
       {/* Najava napada — pokriva sve iznad, pa ide poslednja. */}
       <AnimatePresence>
         {najava && host.duel && <DuelNajava host={host} />}
@@ -510,6 +553,74 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
   }
 
   return <Line title={host.lastEvent ?? '—'} text="" />;
+}
+
+/**
+ * Brojač preko cele table dok se čeka pitanje.
+ *
+ * Namerno providan: tabla se vidi kroz njega, jer se u toj pauzi i dalje
+ * gleda gde se šta dešava. Zatamnjenje je obično `rgba`, a NE `backdrop-filter`
+ * — ispod je WebGL platno, čija snimka ume da ispadne crna, pa bi se umesto
+ * pritamnjene table videla rupa.
+ */
+function Odbrojavanje({ seconds, label }: { seconds: number; label: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 5,
+        display: 'grid',
+        placeItems: 'center',
+        background: 'rgba(9,20,36,0.42)',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.3em',
+            textTransform: 'uppercase',
+            fontSize: '1.1rem',
+            color: '#F2CE74',
+            textShadow: '0 2px 12px rgba(0,0,0,0.8)',
+          }}
+        >
+          {label}
+        </span>
+        {/* Ključ je sam broj: na svaku sekundu se element zameni novim, pa se
+            ulazna animacija odigra ponovo — bez ijednog dodatnog tajmera. */}
+        <motion.span
+          key={seconds}
+          initial={{ opacity: 0, scale: 1.55 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          style={{
+            width: '12rem',
+            height: '12rem',
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            background: 'rgba(9,20,36,0.5)',
+            border: '3px solid rgba(242,206,116,0.6)',
+            boxShadow: '0 0 70px rgba(242,206,116,0.25)',
+            fontFamily: 'var(--font-display)',
+            fontSize: '6.5rem',
+            fontWeight: 800,
+            lineHeight: 1,
+            color: '#F2CE74',
+          }}
+        >
+          {seconds}
+        </motion.span>
+      </div>
+    </motion.div>
+  );
 }
 
 /**
@@ -737,6 +848,24 @@ function DuelArena({ host, phase }: { host: BitkaHostData; phase: string }) {
   const q = host.question;
   const attacker = host.players.find((p) => p.playerId === duel.attackerId);
   const defender = host.players.find((p) => p.playerId === duel.defenderId);
+  // Otkrivanje se dešava na OVOM ekranu, pre nego što se pređe na mapu: isti
+  // raspored, samo se opcije oboje i vidi se ko je šta izabrao.
+  const revealing = phase.endsWith('-rezultat');
+  const results = host.results ?? [];
+  const verdictOf = (playerId?: string): string | undefined => {
+    if (!revealing || !playerId) return undefined;
+    const r = results.find((x) => x.playerId === playerId);
+    if (q?.kind === 'broj') {
+      if (r?.value == null) return 'nije stigao';
+      return `${r.value}${q.unit ? ` ${q.unit}` : ''} · ${r.seconds ?? '?'}s`;
+    }
+    if (!r || r.optionIndex == null) return 'bez odgovora';
+    return r.correct ? 'tačno ✓' : 'netačno ✗';
+  };
+  const goodOf = (playerId?: string): boolean | undefined => {
+    if (!revealing || !playerId || q?.kind === 'broj') return undefined;
+    return !!results.find((x) => x.playerId === playerId)?.correct;
+  };
   // Svi koji ne odgovaraju gledaju isto pitanje na telefonu — TV to kaže
   // naglas, da niko ne čeka svoj red misleći da mu je ekran zaglavio.
   const watching = host.players.filter(
@@ -757,13 +886,21 @@ function DuelArena({ host, phase }: { host: BitkaHostData; phase: string }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-        <DuelSlot player={attacker} role="napada" committed={duel.attackerCommitted} />
+        <DuelSlot
+          player={attacker}
+          role="napada"
+          committed={duel.attackerCommitted}
+          verdict={verdictOf(duel.attackerId)}
+          good={goodOf(duel.attackerId)}
+        />
         <span style={{ fontSize: '1.6rem' }}>⚔️</span>
         {defender ? (
           <DuelSlot
             player={defender}
             role={duel.onCastle ? 'brani zamak' : 'brani'}
             committed={duel.defenderCommitted}
+            verdict={verdictOf(duel.defenderId ?? undefined)}
+            good={goodOf(duel.defenderId ?? undefined)}
           />
         ) : (
           <div
@@ -815,27 +952,89 @@ function DuelArena({ host, phase }: { host: BitkaHostData; phase: string }) {
             </div>
             {q.kind === 'izbor' && q.options && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                {q.options.map((o) => (
-                  <span
-                    key={o.index}
-                    style={{
-                      padding: '0.8rem 1rem',
-                      borderRadius: '12px',
-                      background: o.color,
-                      color: '#fff',
-                      fontWeight: 800,
-                      fontSize: '1.3rem',
-                    }}
-                  >
-                    {o.text}
-                  </span>
-                ))}
+                {q.options.map((o) => {
+                  const right = revealing && host.correctIndex === o.index;
+                  // Avatari sedaju na opciju koju je taj igrač izabrao — ceo
+                  // ishod pitanja se tako čita sa jednog mesta.
+                  const takers = revealing
+                    ? results
+                        .filter((r) => r.optionIndex === o.index)
+                        .map((r) => host.players.find((p) => p.playerId === r.playerId))
+                        .filter((p): p is BitkaPlayerView => !!p)
+                    : [];
+                  return (
+                    <span
+                      key={o.index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.8rem 1rem',
+                        borderRadius: '12px',
+                        background: right ? 'var(--success)' : o.color,
+                        border: right ? '3px solid #fff' : '3px solid transparent',
+                        opacity: revealing && !right ? 0.35 : 1,
+                        color: '#fff',
+                        fontWeight: 800,
+                        fontSize: '1.3rem',
+                        transition: 'opacity 0.25s',
+                      }}
+                    >
+                      {right && <span>✓</span>}
+                      <span style={{ flex: 1 }}>{o.text}</span>
+                      {takers.map((p) => (
+                        <span
+                          key={p.playerId}
+                          title={p.name}
+                          style={{
+                            width: '2rem',
+                            height: '2rem',
+                            borderRadius: '50%',
+                            background: p.avatarColor,
+                            border: '2px solid rgba(0,0,0,0.35)',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: '1rem',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {p.avatarEmoji}
+                        </span>
+                      ))}
+                    </span>
+                  );
+                })}
               </div>
             )}
-            {q.kind === 'broj' && (
+            {/* Otkrivanje izbornog pitanja koje nije razrešilo duel — bez ove
+                rečenice izgleda kao da posle tačnog odgovora sledi mapa, pa
+                klizač banjne niotkuda. */}
+            {revealing && duel.tiebreakPending && (
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>
+                Nerešeno — odlučiće broj.
+              </div>
+            )}
+            {q.kind === 'broj' && !revealing && (
               <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
                 Procenjuje se broj — opseg {q.min}–{q.max}
                 {q.unit ? ` ${q.unit}` : ''}. Bliži uzima zemlju.
+              </div>
+            )}
+            {/* Otkrivanje broja: tačna vrednost krupno, a ispod obe procene
+                poređane po blizini — tek tu se vidi zašto je zemlja otišla
+                onome kome je otišla. */}
+            {q.kind === 'broj' && revealing && host.correctValue != null && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent)' }}>
+                  Tačno: {host.correctValue}
+                  {q.unit ? ` ${q.unit}` : ''}
+                </div>
+                <Guesses
+                  players={host.players}
+                  results={results}
+                  correct={host.correctValue}
+                  unit={q.unit}
+                />
               </div>
             )}
           </>
@@ -891,10 +1090,15 @@ function DuelSlot({
   player,
   role,
   committed,
+  verdict,
+  good,
 }: {
   player?: BitkaPlayerView;
   role: string;
   committed: boolean;
+  /** Postoji samo u otkrivanju — tada zamenjuje „zaključao ✓". */
+  verdict?: string;
+  good?: boolean;
 }) {
   if (!player) return null;
   return (
@@ -906,8 +1110,18 @@ function DuelSlot({
         gap: '0.6rem',
         padding: '0.5rem 0.8rem',
         borderRadius: '12px',
-        background: committed ? 'rgba(87,179,128,0.16)' : 'rgba(245,235,224,0.06)',
-        border: committed ? '1px solid var(--success)' : '1px dashed var(--line2)',
+        background:
+          good === false
+            ? 'rgba(224,106,94,0.16)'
+            : committed
+              ? 'rgba(87,179,128,0.16)'
+              : 'rgba(245,235,224,0.06)',
+        border:
+          good === false
+            ? '1px solid var(--danger)'
+            : committed
+              ? '1px solid var(--success)'
+              : '1px dashed var(--line2)',
         transition: 'background 0.25s, border-color 0.25s',
       }}
     >
@@ -935,11 +1149,16 @@ function DuelSlot({
         style={{
           marginLeft: 'auto',
           fontWeight: 800,
-          color: committed ? 'var(--success)' : 'var(--text-secondary)',
+          color:
+            good === false
+              ? 'var(--danger)'
+              : verdict || committed
+                ? 'var(--success)'
+                : 'var(--text-secondary)',
           whiteSpace: 'nowrap',
         }}
       >
-        {committed ? 'zaključao ✓' : 'razmišlja…'}
+        {verdict ?? (committed ? 'zaključao ✓' : 'razmišlja…')}
       </span>
     </div>
   );
