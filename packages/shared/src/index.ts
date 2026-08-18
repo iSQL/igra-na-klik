@@ -23,6 +23,7 @@ export * from './types/dve-istine-i-laz.js';
 export * from './games/round-config.js';
 export * from './games/flood-fill.js';
 export * from './games/fibbage-questions.js';
+export * from './games/fibbage-import.js';
 export * from './games/quiz-import.js';
 export * from './games/serbia-projection.js';
 export * from './games/ko-sam-ja-import.js';

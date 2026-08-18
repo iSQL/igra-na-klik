@@ -404,7 +404,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.fibbage.rule1': 'Napišite ubedljiv lažan odgovor na pitanje.',
     'game.fibbage.rule2':
       '+500 za pronalazak istine, +100 za svakog koga prevarite.',
-    'game.fibbage.rule3': 'Ne možete glasati za sopstveni odgovor.',
+    'game.fibbage.rule3':
+      'Ne možete glasati za sopstveni odgovor. Ko ne napiše laž, ne dobija poene za pogođenu istinu.',
     'game.ko-bi-pre.blurb': 'Ko bi pre uradio nešto?',
     'game.ko-bi-pre.rule1': 'Za svako pitanje glasate ko bi pre nešto uradio.',
     'game.ko-bi-pre.rule2': 'Poeni onima koji pogode odgovor većine.',
@@ -875,7 +876,8 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.fibbage.rule1': 'Write a convincing fake answer to the question.',
     'game.fibbage.rule2':
       '+500 for finding the truth, +100 for everyone you fool.',
-    'game.fibbage.rule3': 'You cannot vote for your own answer.',
+    'game.fibbage.rule3':
+      'You cannot vote for your own answer. Skip writing a lie and you earn nothing for finding the truth.',
     'game.ko-bi-pre.blurb': 'Who would do it first?',
     'game.ko-bi-pre.rule1': 'For each question you vote who would do it first.',
     'game.ko-bi-pre.rule2': 'Points for those who match the majority answer.',

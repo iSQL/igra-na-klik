@@ -155,6 +155,7 @@ A `/health` endpoint backs the container healthcheck. Daily-rolling JSON logs go
 | `GLUVO_DOBA_PACKS_DIR` | `./gluvo-doba-packs` | Gluvo doba role packs |
 | `SPIJUN_PACKS_DIR` | `./spijun-packs` | Špijun location packs |
 | `ASOCIJACIJE_PACKS_DIR` | `./asocijacije-packs` | Asocijacije puzzle packs |
+| `FIBBAGE_PACKS_DIR` | `./fibbage-packs` | Lažov question packs |
 | `BITKA_MAPS_DIR` | `./bitka-maps` | KvizAtar maps (manifest + uploaded image per map) |
 | `TIMING_CONFIG_FILE` | `./timing-config.json` | Admin-tuned wait-phase durations |
 | `RECNIK_FILE` | bundled asset | Serbian word list for Složilica (ships in the image; override only to swap dictionaries) |

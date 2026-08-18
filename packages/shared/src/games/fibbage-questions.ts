@@ -2,6 +2,11 @@ import type { FibbageQuestion } from '../types/fibbage.js';
 
 /**
  * Serbian (Latin script) Fibbage question bank.
+ *
+ * This is the **fallback** bank: it is used only when no pack was selected at
+ * game-select, or when every selected pack fails to load. The editable content
+ * lives in `fibbage-packs/` (admin → Lažov); `opsta.json` seeds it with these
+ * questions plus more.
  * Each answer must be real, verifiable, and surprising — never a joke or trick.
  * The fun comes from players' fakes being plausibly real.
  */
@@ -59,7 +64,7 @@ export const FIBBAGE_QUESTION_BANK: FibbageQuestion[] = [
   },
   {
     id: 'sr-animal-4',
-    text: 'Koliko ždrebeta godišnje može da ima ženka kengura?',
+    text: 'Koliko mladunaca ženka kengura obično rodi odjednom?',
     answer: '1',
     category: 'životinje',
   },
@@ -71,7 +76,7 @@ export const FIBBAGE_QUESTION_BANK: FibbageQuestion[] = [
   },
   {
     id: 'sr-animal-6',
-    text: 'Koji se jedini ptica zna ponašati kao ptica grabljivica, a nije to?',
+    text: 'Koja ptica podmeće svoja jaja u tuđa gnezda?',
     answer: 'kukavica',
     category: 'životinje',
   },

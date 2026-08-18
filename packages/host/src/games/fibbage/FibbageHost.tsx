@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { QuestionCard } from './components/QuestionCard';
-import { SubmissionCounter } from './components/SubmissionCounter';
 import { AnswerOptions } from './components/AnswerOptions';
-import { VoteCounter } from './components/VoteCounter';
+import { PhaseProgress } from './components/PhaseProgress';
+import type { FibbageProgressEntry } from './components/PhaseProgress';
 import { ResultsReveal } from './components/ResultsReveal';
 import { Leaderboard } from '../quiz/components/Leaderboard';
 import type {
@@ -13,6 +13,12 @@ import type {
   FibbageResultData,
   FibbageLeaderboardEntry,
 } from '@igra/shared';
+
+// Mirrors the module's active-input constants. These stay hardcoded there as
+// gameplay balance (only wait durations are admin-tunable), so the drain bar
+// can read them directly.
+const WRITING_SECONDS = 30;
+const VOTING_SECONDS = 20;
 
 export default function FibbageHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -25,6 +31,7 @@ export default function FibbageHost() {
     const { phase, timeRemaining } = gameState;
 
     if (phase !== prevPhaseRef.current) {
+      if (phase === 'voting') play('reveal');
       if (phase === 'showing-results') play('reveal');
       if (phase === 'ended') play('victory');
       prevPhaseRef.current = phase;
@@ -46,6 +53,7 @@ export default function FibbageHost() {
   const questionIndex = data.questionIndex as number;
   const totalQuestions = data.totalQuestions as number;
   const question = data.question as FibbageQuestionPublic | undefined;
+  const loading = data.loading === true;
 
   const phaseLabel =
     phase === 'showing-question'
@@ -55,6 +63,15 @@ export default function FibbageHost() {
         : phase === 'voting'
           ? 'Glasajte'
           : undefined;
+
+  const phaseDuration =
+    phase === 'writing-answers'
+      ? WRITING_SECONDS
+      : phase === 'voting'
+        ? VOTING_SECONDS
+        : undefined;
+
+  const autoFinderCount = (data.autoFinderCount as number) ?? 0;
 
   return (
     <div
@@ -78,19 +95,21 @@ export default function FibbageHost() {
             totalQuestions={totalQuestions}
             timeRemaining={timeRemaining}
             phaseLabel={phaseLabel}
+            phaseDuration={phaseDuration}
           />
         )}
 
       {phase === 'showing-question' && (
         <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-          Spremi se...
+          {loading ? 'Pripremam pitanja…' : 'Spremi se...'}
         </p>
       )}
 
       {phase === 'writing-answers' && (
-        <SubmissionCounter
-          submittedCount={(data.submittedCount as number) ?? 0}
-          totalPlayers={(data.totalPlayers as number) ?? 0}
+        <PhaseProgress
+          entries={(data.submitters as FibbageProgressEntry[]) ?? []}
+          title="Igrači pišu svoje laži..."
+          countLabel="napisalo laž"
         />
       )}
 
@@ -99,9 +118,17 @@ export default function FibbageHost() {
           <AnswerOptions
             options={(data.options as FibbageAnswerOptionPublic[]) ?? []}
           />
-          <VoteCounter
-            votedCount={(data.votedCount as number) ?? 0}
-            totalPlayers={(data.totalPlayers as number) ?? 0}
+          <PhaseProgress
+            entries={(data.voters as FibbageProgressEntry[]) ?? []}
+            title="Ko je pronašao istinu?"
+            countLabel="glasalo"
+            note={
+              autoFinderCount > 0
+                ? `${autoFinderCount} ${
+                    autoFinderCount === 1 ? 'igrač je' : 'igrača je'
+                  } već pogodio/la tačan odgovor i ne glasa.`
+                : undefined
+            }
           />
         </>
       )}

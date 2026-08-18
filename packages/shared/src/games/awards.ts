@@ -101,6 +101,42 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'shame',
     subtitle: 'Uvek odgovara, retko pogodi',
   },
+  // Lažov
+  'najveci-lazov': {
+    id: 'najveci-lazov',
+    title: 'Najveći lažov',
+    emoji: '🤥',
+    tone: 'positive',
+    subtitle: 'Laž na koju je nasela cela ekipa',
+  },
+  'detektor-lazi': {
+    id: 'detektor-lazi',
+    title: 'Detektor laži',
+    emoji: '🔎',
+    tone: 'positive',
+    subtitle: 'Skoro uvek pronađe istinu',
+  },
+  naivcina: {
+    id: 'naivcina',
+    title: 'Naivčina',
+    emoji: '🎣',
+    tone: 'shame',
+    subtitle: 'Nasela na svaku tuđu laž',
+  },
+  'nevidljivi-lazov': {
+    id: 'nevidljivi-lazov',
+    title: 'Nevidljivi lažov',
+    emoji: '👻',
+    tone: 'shame',
+    subtitle: 'Pisao/la je, ali niko nije ni pogledao',
+  },
+  'duh-lazov': {
+    id: 'duh-lazov',
+    title: 'Duh',
+    emoji: '💤',
+    tone: 'shame',
+    subtitle: 'Češće ćutao/la nego lagao/la',
+  },
   // Složilica
   slovoslagac: {
     id: 'slovoslagac',

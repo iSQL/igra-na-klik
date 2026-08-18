@@ -12,6 +12,7 @@ import {
   parseKoSamJaImport,
   parseTajniAgentiImport,
   parseGluvoDobaPack,
+  parseFibbagePack,
   parseSpijunPack,
   parseAsocijacijePack,
   parseBitkaMap,
@@ -47,6 +48,7 @@ interface ContentDirs {
   /** Flat folder for uploaded quiz images, served at /quiz-images/<file>. */
   quizImagesDir: string;
   koSamJaPacksDir: string;
+  fibbagePacksDir: string;
   tajniAgentiPacksDir: string;
   gluvoDobaPacksDir: string;
   spijunPacksDir: string;
@@ -632,6 +634,52 @@ export function createContentAdminRouter(dirs: ContentDirs): Router {
       const parsed = parseKoSamJaImport(body.questions);
       if (!parsed.ok) return { ok: false, error: parsed.error };
       return { ok: true, data: parsed.questions };
+    },
+  });
+
+  // ---------- lažov question packs ----------------------------------------------
+  // File on disk: { name?, description?, questions: [{ text, answer,
+  // category?, accept? }] }. Writes accept drafts (allowEmpty) — a pack under
+  // the in-game minimum stays editable but invisible in the game.
+  //
+  // `describe` returns the questions **with answers**: this router is behind
+  // requireAdmin, unlike the public /api/fibbage-packs which serves summaries
+  // only. The editor cannot work without them.
+
+  mountPackRoutes({
+    route: 'fibbage-packs',
+    dir: dirs.fibbagePacksDir,
+    listKey: 'packs',
+    nameRequiredOnCreate: true,
+    describe: (id, raw) => {
+      const strict = parseFibbagePack(raw);
+      const lax = parseFibbagePack(raw, { allowEmpty: true });
+      const obj = (raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? raw
+        : {}) as Record<string, unknown>;
+      const name =
+        (lax.ok ? lax.pack.name : undefined) ??
+        (typeof obj.name === 'string' ? obj.name : undefined);
+      const questions = lax.ok
+        ? lax.pack.questions
+        : Array.isArray(obj.questions)
+          ? obj.questions
+          : [];
+      return {
+        id,
+        name,
+        description: lax.ok ? lax.pack.description : undefined,
+        count: questions.length,
+        visibleInGame: strict.ok,
+        error: strict.ok ? undefined : strict.error,
+        questions,
+      };
+    },
+    create: (_body, name) => ({ ok: true, data: { name, questions: [] } }),
+    replace: (body) => {
+      const parsed = parseFibbagePack(body, { allowEmpty: true });
+      if (!parsed.ok) return { ok: false, error: parsed.error };
+      return { ok: true, data: parsed.pack };
     },
   });
 

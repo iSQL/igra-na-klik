@@ -35,6 +35,7 @@ import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
 import { UPUTSTVA_PAGE_HTML } from './uputstva-page.js';
 import { listQuizPackSummaries } from './game/games/quiz/quiz-pack-resolver.js';
+import { listFibbagePackSummaries } from './game/games/fibbage/fibbage-pack-resolver.js';
 import { createContentAdminRouter } from './admin/content-admin.js';
 import { createTimingAdminRouter } from './admin/timing-admin.js';
 import { initTimingConfig } from './game/timing-config.js';
@@ -90,6 +91,10 @@ const SPIJUN_PACKS_DIR = resolveContentDir(
 const ASOCIJACIJE_PACKS_DIR = resolveContentDir(
   'asocijacije-packs',
   process.env.ASOCIJACIJE_PACKS_DIR
+);
+const FIBBAGE_PACKS_DIR = resolveContentDir(
+  'fibbage-packs',
+  process.env.FIBBAGE_PACKS_DIR
 );
 // Osvajanje: mape se crtaju u adminu. Manifest je <id>.json, otpremljena slika
 // živi u <id>/ pored njega i služi se sa /bitka-files/<id>/<file>.
@@ -163,6 +168,21 @@ app.get('/api/question-packs', async (_req, res) => {
   } catch (err) {
     console.error('Failed to read question packs directory:', err);
     res.status(500).json({ error: 'Failed to read question packs' });
+  }
+});
+
+// Lažov — summaries only. A Lažov manifest carries the answers, so full
+// questions must never leave the server; the chosen packs ride
+// host:start-game as fibbagePackIds and resolve server-side. An empty list
+// means the folder has no valid pack — the game falls back to the built-in
+// bank, so the picker simply has nothing to offer.
+app.get('/api/fibbage-packs', async (_req, res) => {
+  try {
+    const packs = await listFibbagePackSummaries(FIBBAGE_PACKS_DIR);
+    res.json({ packs });
+  } catch (err) {
+    console.error('Failed to read fibbage packs directory:', err);
+    res.status(500).json({ error: 'Failed to read fibbage packs' });
   }
 });
 
@@ -433,6 +453,7 @@ app.use(
     spijunPacksDir: SPIJUN_PACKS_DIR,
     asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
     bitkaMapsDir: BITKA_MAPS_DIR,
+    fibbagePacksDir: FIBBAGE_PACKS_DIR,
   })
 );
 app.use('/api/admin', createTimingAdminRouter());
@@ -447,6 +468,7 @@ app.use(
       { name: 'gluvo-doba-packs', path: GLUVO_DOBA_PACKS_DIR },
       { name: 'spijun-packs', path: SPIJUN_PACKS_DIR },
       { name: 'asocijacije-packs', path: ASOCIJACIJE_PACKS_DIR },
+      { name: 'fibbage-packs', path: FIBBAGE_PACKS_DIR },
       { name: 'bitka-maps', path: BITKA_MAPS_DIR },
     ],
     timingFile: TIMING_CONFIG_FILE,
@@ -494,6 +516,7 @@ const { roomManager } = setupSocket(httpServer, socketOrigins, {
   questionPacksDir: QUESTION_PACKS_DIR,
   asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
   bitkaMapsDir: BITKA_MAPS_DIR,
+  fibbagePacksDir: FIBBAGE_PACKS_DIR,
 });
 
 if (SINGLE_ROOM_MODE) {

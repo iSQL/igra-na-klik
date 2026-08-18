@@ -6,6 +6,10 @@ interface RoundResultProps {
   fooledCount: number;
   roundScore: number;
   realAnswer: string;
+  /** True when the player let the writing phase run out this round. */
+  wroteLie: boolean;
+  /** True when the truth bonus was withheld because they wrote nothing. */
+  truthBonusWithheld: boolean;
 }
 
 export function RoundResult({
@@ -13,6 +17,8 @@ export function RoundResult({
   fooledCount,
   roundScore,
   realAnswer,
+  wroteLie,
+  truthBonusWithheld,
 }: RoundResultProps) {
   const haptics = useHaptics();
 
@@ -82,6 +88,37 @@ export function RoundResult({
             <strong style={{ color: 'var(--success)' }}>{realAnswer}</strong>
           </p>
         </>
+      )}
+
+      {truthBonusWithheld && (
+        <p
+          style={{
+            fontSize: '0.9rem',
+            fontWeight: 800,
+            color: 'var(--danger)',
+            background: 'rgba(255,77,94,.14)',
+            padding: '0.5rem 1rem',
+            borderRadius: '12px',
+            margin: 0,
+            lineHeight: 1.4,
+          }}
+        >
+          Pogodio/la si, ali nisi napisao/la laž — bez poena ove runde.
+        </p>
+      )}
+
+      {!wroteLie && !truthBonusWithheld && (
+        <p
+          style={{
+            fontSize: '0.88rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+            margin: 0,
+            lineHeight: 1.4,
+          }}
+        >
+          Nisi napisao/la laž ove runde.
+        </p>
       )}
 
       {fooledCount > 0 && (

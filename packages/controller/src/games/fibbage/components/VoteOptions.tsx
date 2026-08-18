@@ -1,13 +1,17 @@
 import type { FibbageAnswerOptionPublic } from '@igra/shared';
 import { socket } from '../../../socket';
 import { useHaptics } from '../../../hooks/useHaptics';
+import { PhaseTimer } from './PhaseTimer';
 
 interface VoteOptionsProps {
   options: FibbageAnswerOptionPublic[];
   hasVoted: boolean;
   votedOptionId: string | null;
   myFakeOptionId: string | null;
-  isAutoFinder: boolean;
+  timeRemaining: number;
+  duration: number;
+  votedCount: number;
+  totalPlayers: number;
 }
 
 export function VoteOptions({
@@ -15,13 +19,16 @@ export function VoteOptions({
   hasVoted,
   votedOptionId,
   myFakeOptionId,
-  isAutoFinder,
+  timeRemaining,
+  duration,
+  votedCount,
+  totalPlayers,
 }: VoteOptionsProps) {
   const haptics = useHaptics();
 
   const handleVote = (optionId: string) => {
     if (hasVoted) return;
-    if (!isAutoFinder && optionId === myFakeOptionId) return;
+    if (optionId === myFakeOptionId) return;
     haptics.tap();
     socket.emit('game:player-action', {
       action: 'fibbage:vote',
@@ -36,9 +43,15 @@ export function VoteOptions({
         flexDirection: 'column',
         height: '100%',
         padding: '1rem',
-        gap: '0.75rem',
+        gap: '0.6rem',
       }}
     >
+      <PhaseTimer
+        timeRemaining={timeRemaining}
+        duration={duration}
+        label={`${votedCount}/${totalPlayers} glasalo`}
+      />
+
       <p
         style={{
           fontSize: '0.8rem',
@@ -63,7 +76,7 @@ export function VoteOptions({
         }}
       >
         {options.map((opt) => {
-          const isMine = !isAutoFinder && opt.id === myFakeOptionId;
+          const isMine = opt.id === myFakeOptionId;
           const isSelected = votedOptionId === opt.id;
           const disabled = hasVoted || isMine;
 
@@ -123,6 +136,7 @@ export function VoteOptions({
             textAlign: 'center',
             color: 'var(--text-secondary)',
             fontSize: '0.95rem',
+            margin: 0,
           }}
         >
           Glas poslat! Čekamo ostale...

@@ -291,6 +291,7 @@ function kvizCatById(id){
   var GAMES = [
     { id:'kviz',         label:'Kviz',         icon:'❓', route:'quiz-packs',         listKey:'packs', kind:'table',  itemNoun:'pitanja' },
     { id:'ko-sam-ja',    label:'Ko sam ja',    icon:'🧠', route:'ko-sam-ja-packs',    listKey:'packs', kind:'table',  itemNoun:'pitanja' },
+    { id:'lazov',        label:'Lažov',        icon:'🤥', route:'fibbage-packs',      listKey:'packs', kind:'lazov',  itemNoun:'pitanja' },
     { id:'tajni-agenti', label:'Tajni agenti', icon:'🕵️', route:'tajni-agenti-packs', listKey:'packs', kind:'tajni',  itemNoun:'reči' },
     { id:'gluvo-doba',   label:'Gluvo doba',   icon:'🌙', route:'gluvo-doba-packs',   listKey:'packs', kind:'gluvo',  itemNoun:'uloga' },
     { id:'spijun',       label:'Špijun',       icon:'🔍', route:'spijun-packs',       listKey:'packs', kind:'spijun', itemNoun:'lokacija' },
@@ -2806,7 +2807,165 @@ function kvizCatById(id){
     return ctx.putPack(body, okMsg);
   }
 
+  // ---------- lazov (Fibbage question packs) ----------
+  // A pack is { name?, description?, questions:[{text,answer,category?,accept?}] }.
+  // Rows are edited in a LOCAL working copy and PUT as a whole with an explicit
+  // "Sacuvaj" -- same reason as spijun: a half-typed row must not hit the server
+  // on every keystroke, and the strict re-check drives the visibility line.
+  var lzWork=null;  // { packId, name, description, questions:[], q:'', dirty }
+  function lzClone(list){
+    return (list||[]).map(function(o){
+      return {
+        text:(o&&o.text)||'',
+        answer:(o&&o.answer)||'',
+        category:(o&&o.category)||'',
+        accept:(o&&o.accept)?o.accept.slice():[]
+      };
+    });
+  }
+  function renderLazov(host, ctx){
+    var p=ctx.pack;
+    if(!p){ lzWork=null; host.innerHTML='<div class="empty">Napravi pack da dodas pitanja.</div>'; return; }
+    if(!lzWork || lzWork.packId!==p.id){
+      lzWork={ packId:p.id, name:p.name||'', description:p.description||'', questions:lzClone(p.questions), q:'', dirty:false };
+    }
+    var qs=lzWork.questions;
+    var needle=(lzWork.q||'').trim().toLowerCase();
+
+    // Category chips double as a summary -- a pack with 60+ questions is hard
+    // to eyeball otherwise. Clicking one filters the list.
+    var catCount={}; var catOrder=[];
+    qs.forEach(function(o){
+      var c=(o.category||'').trim(); if(!c)return;
+      if(catCount[c]===undefined){ catCount[c]=0; catOrder.push(c); }
+      catCount[c]++;
+    });
+    var catChips='';
+    catOrder.forEach(function(c){
+      catChips+='<button class="chip" data-cat="'+esc(c)+'" style="cursor:pointer">'+esc(c)+' <b>'+catCount[c]+'</b></button>';
+    });
+
+    var rows='';
+    var shown=0;
+    qs.forEach(function(o,i){
+      if(needle){
+        var hay=((o.text||'')+' '+(o.answer||'')+' '+(o.category||'')).toLowerCase();
+        if(hay.indexOf(needle)<0) return;
+      }
+      shown++;
+      var accept=(o.accept||[]).join(', ');
+      rows+='<div class="panel lz-row" data-i="'+i+'" style="margin-bottom:.6rem">'
+        + '<div style="display:flex;align-items:flex-start;gap:.6rem">'
+        + '<span style="font-weight:800;color:var(--muted);min-width:2.2rem;padding-top:.55rem">'+(i+1)+'.</span>'
+        + '<div style="flex:1;display:flex;flex-direction:column;gap:.45rem">'
+        + '<input class="field" data-f="text" placeholder="Pitanje (npr. Koliko srca ima hobotnica?)" value="'+esc(o.text||'')+'">'
+        + '<div style="display:flex;gap:.45rem;flex-wrap:wrap">'
+        + '<input class="field" data-f="answer" placeholder="Tacan odgovor" value="'+esc(o.answer||'')+'" style="flex:2;min-width:150px">'
+        + '<input class="field" data-f="category" placeholder="Kategorija" value="'+esc(o.category||'')+'" style="flex:1;min-width:110px">'
+        + '</div>'
+        + '<input class="field" data-f="accept" placeholder="Alternativni tacni odgovori, zarezom (opciono)" value="'+esc(accept)+'" style="font-size:.86rem">'
+        + '</div>'
+        + '<button class="iconbtn del" data-del="'+i+'" title="Obrisi pitanje">&#128465;</button>'
+        + '</div></div>';
+    });
+
+    var statusHtml;
+    if(lzWork.dirty) statusHtml='<span style="color:var(--amber)">&#9679; Nesacuvane izmene &mdash; klikni &bdquo;Sacuvaj pitanja&ldquo;.</span>';
+    else if(p.visibleInGame) statusHtml='<span style="color:var(--green)">&#10003; Sacuvano i vidljivo u igri.</span>';
+    else statusHtml='<span style="color:var(--amber)">Sacuvano, ali se ne vidi u igri: '+esc(p.error||'min 3 pitanja')+'</span>';
+
+    host.innerHTML=
+      '<p class="hint" style="margin-bottom:1rem">Odgovor mora biti <b>tacan, kratak i iznenadjujuci</b> &mdash; igraci pisu lazne odgovore pored njega, pa predugacak tacan odgovor sam sebe oda. Ko otkuca bas tacan odgovor dobija bonus, zato dodaj alternativne oblike (npr. 3 / tri).</p>'
+      + '<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">'
+      + '<div style="flex:1;min-width:220px"><label class="lbl">Naziv packa</label><input class="field" id="lz-name" maxlength="60" value="'+esc(lzWork.name)+'"></div>'
+      + '<div style="flex:2;min-width:240px"><label class="lbl">Opis (opciono)</label><input class="field" id="lz-desc" maxlength="200" value="'+esc(lzWork.description)+'"></div>'
+      + '</div>'
+      + (catChips?('<div class="chips" style="margin-bottom:.9rem">'+catChips+'</div>'):'')
+      + '<div style="display:flex;gap:.5rem;margin-bottom:1rem">'
+      + '<input class="field" id="lz-q" placeholder="Pretrazi pitanja..." value="'+esc(lzWork.q)+'">'
+      + '<button class="btn btn-ghost" id="lz-add" style="white-space:nowrap">&#65291; Pitanje</button></div>'
+      + (qs.length===0
+          ? '<div class="empty">Jos nema pitanja &mdash; klikni &bdquo;Pitanje&ldquo;.</div>'
+          : (rows||'<div class="empty">Nista ne odgovara pretrazi.</div>'))
+      + (needle&&qs.length?('<p class="hint">Prikazano '+shown+' od '+qs.length+'.</p>'):'')
+      + '<div style="display:flex;gap:.7rem;align-items:center;margin-top:1rem;position:sticky;bottom:0;background:var(--bg);padding:.6rem 0">'
+      + '<button class="btn btn-primary" id="lz-save"'+(lzWork.dirty?'':' disabled')+'>Sacuvaj pitanja</button>'
+      + '<span class="hint" style="margin:0;font-weight:800">'+statusHtml+'</span>'
+      + '<span class="hint" style="margin:0 0 0 auto;font-weight:800">'+qs.length+' pitanja</span></div>';
+
+    function rerender(){ renderLazov(host, ctx); }
+    function markDirty(){ lzWork.dirty=true; var b=$('lz-save'); if(b)b.disabled=false; }
+
+    $('lz-name').oninput=function(){ lzWork.name=this.value; markDirty(); };
+    $('lz-desc').oninput=function(){ lzWork.description=this.value; markDirty(); };
+
+    // The search box re-renders the whole list, so it debounces and restores
+    // focus/caret afterwards -- otherwise every keystroke would drop focus.
+    var qEl=$('lz-q'); var qTimer=null;
+    qEl.oninput=function(){
+      lzWork.q=this.value;
+      if(qTimer)clearTimeout(qTimer);
+      qTimer=setTimeout(function(){
+        var v=lzWork.q; rerender();
+        var e2=$('lz-q'); if(e2){ e2.focus(); e2.value=v; e2.setSelectionRange(v.length,v.length); }
+      },250);
+    };
+
+    $('lz-add').onclick=function(){
+      qs.unshift({ text:'', answer:'', category:'', accept:[] });
+      lzWork.q=''; markDirty(); rerender();
+      var first=host.querySelector('.lz-row input[data-f="text"]'); if(first)first.focus();
+    };
+
+    var chips=host.querySelectorAll('[data-cat]');
+    for(var c=0;c<chips.length;c++) chips[c].onclick=function(){ lzWork.q=this.getAttribute('data-cat'); rerender(); };
+
+    var fields=host.querySelectorAll('.lz-row input');
+    for(var i=0;i<fields.length;i++) fields[i].oninput=function(){
+      var row=this.parentNode; while(row&&!row.classList.contains('lz-row')) row=row.parentNode;
+      if(!row)return;
+      var idx=parseInt(row.getAttribute('data-i'),10);
+      var f=this.getAttribute('data-f');
+      if(f==='accept'){
+        qs[idx].accept=this.value.split(',').map(function(x){ return x.trim(); }).filter(function(x){ return !!x; });
+      } else {
+        qs[idx][f]=this.value;
+      }
+      markDirty();
+    };
+
+    var dels=host.querySelectorAll('[data-del]');
+    for(var d=0;d<dels.length;d++) dels[d].onclick=function(){
+      var idx=parseInt(this.getAttribute('data-del'),10);
+      if(!window.confirm('Obrisati pitanje?'))return;
+      qs.splice(idx,1); markDirty(); rerender();
+    };
+
+    $('lz-save').onclick=function(){
+      // Drop fully blank rows so an accidental "+ Pitanje" doesn't block the save.
+      var clean=qs.filter(function(o){ return (o.text||'').trim()||(o.answer||'').trim(); });
+      for(var i=0;i<clean.length;i++){
+        if(!(clean[i].text||'').trim()){ showErr('Pitanje #'+(i+1)+': nedostaje tekst.'); return; }
+        if(!(clean[i].answer||'').trim()){ showErr('Pitanje #'+(i+1)+': nedostaje tacan odgovor.'); return; }
+      }
+      var body={ questions: clean.map(function(o){
+        var out={ text:o.text.trim(), answer:o.answer.trim() };
+        if((o.category||'').trim()) out.category=o.category.trim();
+        if((o.accept||[]).length) out.accept=o.accept;
+        return out;
+      }) };
+      var nm=(lzWork.name||'').trim(); if(nm)body.name=nm;
+      var ds=(lzWork.description||'').trim(); if(ds)body.description=ds;
+      $('lz-save').disabled=true;
+      api('PUT','/api/admin/fibbage-packs/'+p.id, body).then(function(d){
+        lzWork.questions=lzClone(d.item.questions); lzWork.dirty=false;
+        ctx.updatePack(d.item); showOk('Sacuvano.');
+      }).catch(function(e){ showErr(e.message); var b=$('lz-save'); if(b)b.disabled=false; });
+    };
+  }
+
   window.AdminApp.register('bitka',    { renderMain: renderBitka });
+  window.AdminApp.register('lazov',    { renderMain: renderLazov });
   window.AdminApp.register('tajni',    { renderMain: renderTajni });
   window.AdminApp.register('gluvo',    { renderMain: renderGluvo });
   window.AdminApp.register('spijun',   { renderMain: renderSpijun });

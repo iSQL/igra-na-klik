@@ -46,6 +46,7 @@ export function setupSocket(
     questionPacksDir?: string;
     asocijacijePacksDir?: string;
     bitkaMapsDir?: string;
+    fibbagePacksDir?: string;
   }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
@@ -80,13 +81,14 @@ export function setupSocket(
   const questionPacksDir = options?.questionPacksDir ?? '';
   const asocijacijePacksDir = options?.asocijacijePacksDir ?? '';
   const bitkaMapsDir = options?.bitkaMapsDir ?? '';
+  const fibbagePacksDir = options?.fibbagePacksDir ?? '';
   gameRegistry.register(() => new TestGameModule());
   gameRegistry.register(() => new QuizGameModule(questionPacksDir));
   gameRegistry.register(() => new DrawGuessModule());
   gameRegistry.register(() => new FakeArtistModule());
   gameRegistry.register(() => new KoBiPreModule());
   gameRegistry.register(() => new DveIstineModule());
-  gameRegistry.register(() => new FibbageModule());
+  gameRegistry.register(() => new FibbageModule(fibbagePacksDir));
   gameRegistry.register(() => new SlepiTelefoniModule());
   gameRegistry.register(() => new KoSamJaModule());
   gameRegistry.register(() => new SpotItModule());

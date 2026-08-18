@@ -42,6 +42,7 @@ export const CONTENT_DIR_NAMES = [
   'gluvo-doba-packs',
   'spijun-packs',
   'asocijacije-packs',
+  'fibbage-packs',
   // Osvajanje: <id>.json manifest + <id>/ folder sa otpremljenom slikom mape.
   'bitka-maps',
 ] as const;

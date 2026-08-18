@@ -97,6 +97,13 @@ export interface ClientToServerEvents {
     // Question-type filter applied to the pooled questions. Undefined or
     // empty = all types.
     quizTypes?: KvizQuestionType[];
+    // Selected Lažov question packs (ids from GET /api/fibbage-packs).
+    // Resolved server-side for the same reason as quizPackIds — a Lažov
+    // manifest carries the answers. Empty/omitted = the built-in bank.
+    fibbagePackIds?: string[];
+    // Optional category filter over the pooled Lažov questions. Undefined or
+    // empty = every category.
+    fibbageCategories?: string[];
     slepiRounds?: number;
     koSamJaCategory?: KoSamJaCategory;
     customKoSamJaQuestions?: KoSamJaImportQuestion[];

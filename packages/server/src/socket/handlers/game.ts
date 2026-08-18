@@ -58,6 +58,8 @@ export function registerGameHandlers(
       customQuestions: data.customQuestions,
       quizPackIds: data.quizPackIds,
       quizTypes: data.quizTypes,
+      fibbagePackIds: data.fibbagePackIds,
+      fibbageCategories: data.fibbageCategories,
       slepiRounds: data.slepiRounds,
       koSamJaCategory: data.koSamJaCategory,
       customKoSamJaQuestions: data.customKoSamJaQuestions,

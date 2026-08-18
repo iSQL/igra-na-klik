@@ -64,6 +64,12 @@ import {
 } from '../store/quizImportStore';
 import { recordRecentPacks } from '../store/quizRecentStore';
 import { KoSamJaImportButton } from '../components/KoSamJaImportButton';
+import { FibbagePackPicker } from '../components/FibbagePackPicker';
+import {
+  useFibbageConfigStore,
+  effectiveFibbagePackIds,
+  fibbageCategoriesOf,
+} from '../store/fibbageConfigStore';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useLanguageStore } from '../store/languageStore';
@@ -343,6 +349,32 @@ export function GameSelectScreen() {
         quizTypes = quizImport.selectedTypes;
       }
     }
+    // Lažov: only pack ids travel (manifests carry answers). An empty
+    // selection would start with zero questions — refuse it here rather than
+    // silently falling back to the built-in bank behind the host's back.
+    let fibbagePackIds: string[] | undefined;
+    let fibbageCategories: string[] | undefined;
+    if (gameId === 'fibbage') {
+      const fib = useFibbageConfigStore.getState();
+      if (fib.packs.length > 0) {
+        const ids = effectiveFibbagePackIds(fib.packs, fib.selectedPackIds);
+        if (ids.length === 0) {
+          setErrorMessage('Izaberi bar jedan paket pitanja.');
+          return;
+        }
+        fibbagePackIds = ids;
+        // Omit the filter when every category is checked.
+        const allCats = fibbageCategoriesOf(fib.packs, fib.selectedPackIds);
+        if (
+          fib.selectedCategories &&
+          fib.selectedCategories.length > 0 &&
+          fib.selectedCategories.length < allCats.length
+        ) {
+          fibbageCategories = fib.selectedCategories;
+        }
+      }
+    }
+
     const slepiRounds =
       gameId === 'slepi-telefoni' ? selectedRounds : undefined;
 
@@ -362,6 +394,8 @@ export function GameSelectScreen() {
       customQuestions,
       quizPackIds,
       quizTypes,
+      fibbagePackIds,
+      fibbageCategories,
       slepiRounds,
       koSamJaCategory: koSamJaCategoryToSend,
       customKoSamJaQuestions,
@@ -910,6 +944,7 @@ export function GameSelectScreen() {
           )}
         </>
       )}
+      {game.id === 'fibbage' && <FibbagePackPicker />}
       {GAME_ROUND_CONFIG[game.id] && (
         <PillRow
           label={t('config.rounds')}

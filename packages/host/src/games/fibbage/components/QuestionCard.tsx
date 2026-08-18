@@ -4,6 +4,8 @@ interface QuestionCardProps {
   totalQuestions: number;
   timeRemaining: number;
   phaseLabel?: string;
+  /** Full length of the running phase — drives the drain bar. Omit to hide it. */
+  phaseDuration?: number;
 }
 
 export function QuestionCard({
@@ -12,7 +14,14 @@ export function QuestionCard({
   totalQuestions,
   timeRemaining,
   phaseLabel,
+  phaseDuration,
 }: QuestionCardProps) {
+  const urgent = timeRemaining <= 5;
+  const pct =
+    phaseDuration && phaseDuration > 0
+      ? Math.max(0, Math.min(1, timeRemaining / phaseDuration))
+      : null;
+
   return (
     <div
       style={{
@@ -44,7 +53,7 @@ export function QuestionCard({
           style={{
             fontWeight: 700,
             fontSize: '1.1rem',
-            color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--accent)',
+            color: urgent ? 'var(--danger)' : 'var(--accent)',
             minWidth: '3ch',
             textAlign: 'right',
           }}
@@ -52,6 +61,31 @@ export function QuestionCard({
           {timeRemaining}s
         </span>
       </div>
+
+      {/* A bare number reads as decoration across a room; the bar is what
+          people actually see from the couch. */}
+      {pct !== null && (
+        <div
+          style={{
+            width: '100%',
+            height: '6px',
+            borderRadius: '999px',
+            background: 'var(--bg-secondary)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: `${pct * 100}%`,
+              height: '100%',
+              background: urgent ? 'var(--danger)' : 'var(--accent)',
+              borderRadius: '999px',
+              transition: 'width 1s linear, background 0.3s',
+            }}
+          />
+        </div>
+      )}
+
       <p
         style={{
           fontSize: '1.8rem',

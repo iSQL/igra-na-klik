@@ -5,12 +5,18 @@ import { AnswerInput } from './components/AnswerInput';
 import { VoteOptions } from './components/VoteOptions';
 import { WaitingScreen } from './components/WaitingScreen';
 import { RoundResult } from './components/RoundResult';
+import { fibbageGlasLabel } from '@igra/shared';
 import type {
   FibbageQuestionPublic,
   FibbageAnswerOptionPublic,
   FibbageResultData,
   FibbageLeaderboardEntry,
 } from '@igra/shared';
+
+// Mirrors the module's active-input constants (hardcoded there as gameplay
+// balance — only wait durations are admin-tunable).
+const WRITING_SECONDS = 30;
+const VOTING_SECONDS = 20;
 
 export default function FibbageController() {
   const gameState = useGameStore((s) => s.gameState);
@@ -19,7 +25,7 @@ export default function FibbageController() {
 
   if (!gameState || !playerId) return null;
 
-  const { phase, data, playerData } = gameState;
+  const { phase, timeRemaining, data, playerData } = gameState;
   const question = data.question as FibbageQuestionPublic | undefined;
 
   if (phase === 'showing-question') {
@@ -44,6 +50,9 @@ export default function FibbageController() {
             {question.text}
           </p>
         )}
+        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--cyan)', margin: 0 }}>
+          {data.loading === true ? 'Pripremam pitanja…' : 'Smisli laž…'}
+        </p>
       </div>
     );
   }
@@ -57,7 +66,7 @@ export default function FibbageController() {
       return (
         <WaitingScreen
           message="Znao/la si odgovor!"
-          subMessage="Čekamo ostale da napišu svoje laži..."
+          subMessage="Bonus je tvoj — ne moraš da glasaš. Čekamo ostale..."
         />
       );
     }
@@ -71,7 +80,15 @@ export default function FibbageController() {
       );
     }
 
-    return <AnswerInput questionText={question.text} />;
+    return (
+      <AnswerInput
+        questionText={question.text}
+        timeRemaining={timeRemaining}
+        duration={WRITING_SECONDS}
+        submittedCount={(data.submittedCount as number) ?? 0}
+        totalPlayers={(data.totalPlayers as number) ?? 0}
+      />
+    );
   }
 
   if (phase === 'voting') {
@@ -82,8 +99,20 @@ export default function FibbageController() {
           votedOptionId: string | null;
           myFakeOptionId: string | null;
           isAutoFinder: boolean;
+          canVote: boolean;
         }
       | undefined;
+
+    // Auto-finders are out of the vote entirely — they already banked the
+    // truth bonus, so a ballot would just be a way to pay it twice.
+    if (myData?.isAutoFinder || myData?.canVote === false) {
+      return (
+        <WaitingScreen
+          message="Već si pogodio/la!"
+          subMessage="Ostali traže tačan odgovor među lažima..."
+        />
+      );
+    }
 
     const voteBody = (
       <VoteOptions
@@ -91,7 +120,10 @@ export default function FibbageController() {
         hasVoted={myData?.hasVoted ?? false}
         votedOptionId={myData?.votedOptionId ?? null}
         myFakeOptionId={myData?.myFakeOptionId ?? null}
-        isAutoFinder={myData?.isAutoFinder ?? false}
+        timeRemaining={timeRemaining}
+        duration={VOTING_SECONDS}
+        votedCount={(data.votedCount as number) ?? 0}
+        totalPlayers={(data.totalPlayers as number) ?? 0}
       />
     );
 
@@ -127,7 +159,7 @@ export default function FibbageController() {
   }
 
   // Hostless room: results and leaderboard phases render one merged screen
-  // (real answer + standings with per-round "+N" deltas + who fooled whom),
+  // (real answer + standings with per-round "+N" deltas + who wrote what),
   // so the phase switch doesn't look like a second screen.
   if (
     hostless &&
@@ -152,6 +184,8 @@ export default function FibbageController() {
           fooledCount: number;
           roundScore: number;
           realAnswer: string;
+          wroteLie: boolean;
+          truthBonusWithheld: boolean;
         }
       | undefined;
 
@@ -163,6 +197,8 @@ export default function FibbageController() {
         fooledCount={myData.fooledCount}
         roundScore={myData.roundScore}
         realAnswer={myData.realAnswer}
+        wroteLie={myData.wroteLie}
+        truthBonusWithheld={myData.truthBonusWithheld}
       />
     );
   }
@@ -218,8 +254,9 @@ export default function FibbageController() {
   return null;
 }
 
-// Hostless one-screen reveal: correct answer on top, standings with the
-// round's "+N" beside each total, then the who-fooled-whom cards.
+// Hostless one-screen reveal: every option with its author and votes, then
+// standings with the round's "+N" beside each total. Mirrors what the TV shows
+// (ResultsReveal), because in a hostless room this phone IS the TV.
 function FibbageMergedResults({
   results,
   leaderboard,
@@ -231,7 +268,6 @@ function FibbageMergedResults({
   myPlayerId: string;
   isFinal: boolean;
 }) {
-  const fools = results.fools.filter((f) => f.fooledPlayerNames.length > 0);
   return (
     <div
       style={{
@@ -274,6 +310,53 @@ function FibbageMergedResults({
       >
         ✓ {results.realAnswer}
       </p>
+
+      {/* Every lie attributed, not just the ones that landed. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {results.revealOptions
+          .filter((o) => !o.isReal)
+          .map((opt) => (
+            <div
+              key={opt.id}
+              style={{
+                padding: '0.55rem 0.8rem',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--line)',
+                borderRadius: '12px',
+                fontSize: '0.85rem',
+                lineHeight: 1.45,
+                opacity: opt.voterPlayerIds.length > 0 ? 1 : 0.62,
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 800,
+                  color: 'var(--pink)',
+                  background: 'rgba(217,123,108,.14)',
+                  padding: '2px 8px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                }}
+              >
+                {opt.authorNames.join(', ')} 🤥
+              </span>{' '}
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                „{opt.text}"
+              </span>{' '}
+              {opt.voterPlayerIds.length > 0 ? (
+                <strong style={{ color: 'var(--accent)' }}>
+                  {opt.voterPlayerIds.length}{' '}
+                  {fibbageGlasLabel(opt.voterPlayerIds.length)} · +
+                  {opt.pointsEarned}
+                </strong>
+              ) : (
+                <span style={{ color: 'var(--dim)', fontWeight: 700 }}>
+                  niko nije poverovao
+                </span>
+              )}
+            </div>
+          ))}
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         {leaderboard.map((entry) => {
@@ -353,41 +436,6 @@ function FibbageMergedResults({
           );
         })}
       </div>
-
-      {fools.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          {fools.map((f) => (
-            <div
-              key={f.optionId}
-              style={{
-                padding: '0.6rem 0.8rem',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--line)',
-                borderRadius: '12px',
-                fontSize: '0.85rem',
-                lineHeight: 1.45,
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: 800,
-                  color: 'var(--pink)',
-                  background: 'rgba(217,123,108,.14)',
-                  padding: '2px 8px',
-                  borderRadius: '7px',
-                  fontSize: '0.78rem',
-                }}
-              >
-                {f.fakerNames.join(', ')} 🤥
-              </span>{' '}
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                „{f.optionText}" nasamario/la:
-              </span>{' '}
-              <strong>{f.fooledPlayerNames.join(', ')}</strong>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

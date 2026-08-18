@@ -79,7 +79,9 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 <li>TV pokaže pitanje sa nedostajućim odgovorom.</li>
 <li>Svako na telefonu upiše lažan, ali uverljiv odgovor.</li>
 <li>Prikažu se sve laži zajedno sa tačnim odgovorom; glasaš koji je pravi.</li>
-<li>Poeni ako pronađeš tačan odgovor — i ako neko nasedne na tvoju laž.</li>
+<li>500 poena ako pronađeš tačan odgovor, 100 za svakog ko nasedne na tvoju laž.</li>
+<li>Ako slučajno upišeš baš tačan odgovor — bonus je odmah tvoj i ne glasaš te runde.</li>
+<li>Ko ne napiše laž može da glasa, ali ne dobija poene za pogođenu istinu.</li>
 </ul>`,
   },
   'ko-bi-pre': {

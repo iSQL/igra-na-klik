@@ -6,93 +6,102 @@ interface ResultsRevealProps {
   results: FibbageResultData;
 }
 
+/** Seconds between two consecutive options coming up. */
+const STAGGER = 0.35;
+
 export function ResultsReveal({ results }: ResultsRevealProps) {
   const players = useRoomStore((s) => s.players);
-  const { realAnswer, realOptionId, options, votes, fools } = results;
-
-  const votesByOption = new Map<string, string[]>();
-  for (const v of votes) votesByOption.set(v.optionId, v.voterPlayerIds);
+  const { realAnswer, revealOptions } = results;
 
   const playerById = (id: string) => players.find((p) => p.id === id);
 
-  return (
-    <div style={{ width: '100%', maxWidth: '800px' }}>
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        style={{ textAlign: 'center', marginBottom: '1.5rem' }}
-      >
-        <p
-          style={{
-            fontSize: '1.1rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.5rem',
-          }}
-        >
-          Tačan odgovor:
-        </p>
-        <p
-          style={{
-            fontSize: '2.2rem',
-            fontWeight: 800,
-            color: 'var(--success)',
-          }}
-        >
-          {realAnswer}
-        </p>
-      </motion.div>
+  // The server hands them over already sorted — lies nobody picked first,
+  // then by rising vote count, truth last — so the reveal builds instead of
+  // dumping everything at once and the real answer is the punchline.
+  const truthDelay = revealOptions.length * STAGGER;
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {options.map((opt, i) => {
-          const voters = votesByOption.get(opt.id) ?? [];
-          const isReal = opt.id === realOptionId;
+  return (
+    <div style={{ width: '100%', maxWidth: '820px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        {revealOptions.map((opt, i) => {
+          const voters = opt.voterPlayerIds;
           return (
             <motion.div
               key={opt.id}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.15, duration: 0.4 }}
+              transition={{ delay: i * STAGGER, duration: 0.35 }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '1rem',
-                padding: '0.9rem 1.25rem',
-                background: 'var(--bg-card)',
+                padding: '0.85rem 1.25rem',
+                background: opt.isReal
+                  ? 'rgba(47,224,138,.12)'
+                  : 'var(--bg-card)',
                 borderRadius: '0.75rem',
-                border: isReal
+                border: opt.isReal
                   ? '2px solid var(--success)'
                   : '2px solid transparent',
-                opacity: isReal || voters.length > 0 ? 1 : 0.55,
               }}
             >
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: '1.2rem',
-                  fontWeight: 600,
-                  color: isReal ? 'var(--success)' : 'var(--text-primary)',
-                }}
-              >
-                {opt.text}
-                {isReal && (
-                  <span
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: '1.25rem',
+                    fontWeight: 700,
+                    color: opt.isReal ? 'var(--success)' : 'var(--text-primary)',
+                  }}
+                >
+                  {opt.text}
+                  {opt.isReal && (
+                    <span
+                      style={{
+                        marginLeft: '0.6rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        color: 'var(--success)',
+                      }}
+                    >
+                      ✓ ISTINA
+                    </span>
+                  )}
+                </div>
+
+                {/* Every lie is attributed, including the ones nobody picked —
+                    the old reveal named only the successful liars, which threw
+                    away the funniest half of the round. */}
+                {!opt.isReal && opt.authorNames.length > 0 && (
+                  <div
                     style={{
-                      marginLeft: '0.5rem',
-                      fontSize: '0.85rem',
-                      color: 'var(--success)',
+                      fontSize: '0.9rem',
+                      color: 'var(--text-secondary)',
+                      marginTop: '0.15rem',
                     }}
                   >
-                    ✓ istina
-                  </span>
+                    🤥 {opt.authorNames.join(', ')}
+                    {opt.pointsEarned > 0 && (
+                      <span
+                        style={{
+                          marginLeft: '0.5rem',
+                          fontWeight: 800,
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        +{opt.pointsEarned}
+                      </span>
+                    )}
+                    {voters.length === 0 && (
+                      <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
+                        · niko nije poverovao
+                      </span>
+                    )}
+                  </div>
                 )}
-              </span>
+              </div>
+
               <div
-                style={{
-                  display: 'flex',
-                  gap: '0.3rem',
-                  alignItems: 'center',
-                }}
+                style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}
               >
                 {voters.map((voterId) => {
                   const p = playerById(voterId);
@@ -101,66 +110,58 @@ export function ResultsReveal({ results }: ResultsRevealProps) {
                       key={voterId}
                       title={p?.name ?? ''}
                       style={{
-                        width: '1.6rem',
-                        height: '1.6rem',
+                        width: '1.8rem',
+                        height: '1.8rem',
                         borderRadius: '50%',
                         backgroundColor: p?.avatarColor ?? '#666',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.95rem',
+                        fontSize: '1rem',
                       }}
                     >
                       {p?.avatarEmoji}
                     </div>
                   );
                 })}
-                <span
-                  style={{
-                    minWidth: '1.5rem',
-                    textAlign: 'right',
-                    fontWeight: 700,
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  {voters.length}
-                </span>
+                {voters.length > 0 && (
+                  <span
+                    style={{
+                      minWidth: '1.5rem',
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {voters.length}
+                  </span>
+                )}
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {fools.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
+      {/* Restated big underneath, once the list has finished building. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: truthDelay, duration: 0.4 }}
+        style={{ textAlign: 'center', marginTop: '1.25rem' }}
+      >
+        <p
           style={{
-            marginTop: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
+            fontSize: '1rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '0.25rem',
           }}
         >
-          {fools.map((f) => (
-            <div
-              key={f.optionId}
-              style={{
-                background: 'var(--bg-secondary)',
-                borderRadius: '0.5rem',
-                padding: '0.6rem 1rem',
-                fontSize: '1rem',
-              }}
-            >
-              <strong>{f.fakerNames.join(', ')}</strong> prevario/la:{' '}
-              <span style={{ color: 'var(--accent)' }}>
-                {f.fooledPlayerNames.join(', ')}
-              </span>
-            </div>
-          ))}
-        </motion.div>
-      )}
+          Tačan odgovor:
+        </p>
+        <p style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--success)' }}>
+          {realAnswer}
+        </p>
+      </motion.div>
     </div>
   );
 }
