@@ -38,6 +38,13 @@ export interface FibbageRevealOption {
   authorNames: string[];
   /** Who voted for this option. */
   voterPlayerIds: string[];
+  /**
+   * Same players by name, in the same order. Carried on the option itself so
+   * all three surfaces can say "X nasamario/la: Y, Z" from one field — the
+   * phone has no player roster of its own, and the hostless strip would
+   * otherwise have to join against the leaderboard.
+   */
+  voterNames: string[];
   /** Points this option earned its author(s) — 0 for the real answer. */
   pointsEarned: number;
 }

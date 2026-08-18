@@ -52,7 +52,7 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     gameName: 'Lažov',
     fields: [
       { key: 'SHOWING_QUESTION_DURATION', label: 'Prikaz pitanja', min: 2, max: 30, def: 5 },
-      { key: 'SHOWING_RESULTS_DURATION', label: 'Prikaz rezultata', min: 2, max: 40, def: 8 },
+      { key: 'SHOWING_RESULTS_DURATION', label: 'Otkrivanje + ko je koga nasamario', min: 2, max: 40, def: 10 },
       { key: 'LEADERBOARD_DURATION', label: 'Rang lista', min: 2, max: 30, def: 5 },
     ],
   },

@@ -93,7 +93,9 @@ export interface FibbageInternalState {
 export const SHOWING_QUESTION_DURATION = 5;
 export const WRITING_ANSWERS_DURATION = 30;
 export const VOTING_DURATION = 20;
-export const SHOWING_RESULTS_DURATION = 8;
+// Bumped from 8 when the reveal grew the "ko je koga nasamario" board —
+// the options stagger in, then the truth, then that block. Still tunable.
+export const SHOWING_RESULTS_DURATION = 10;
 export const LEADERBOARD_DURATION = 5;
 export const NUM_QUESTIONS = 5;
 

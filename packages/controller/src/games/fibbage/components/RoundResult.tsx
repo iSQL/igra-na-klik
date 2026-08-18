@@ -10,6 +10,14 @@ interface RoundResultProps {
   wroteLie: boolean;
   /** True when the truth bonus was withheld because they wrote nothing. */
   truthBonusWithheld: boolean;
+  /** Everyone who fell for this player's lie, by name. */
+  fooledNames: string[];
+  /** This player's lie, so the names have something to point at. */
+  myLieText: string | null;
+  /** Author(s) of the lie this player fell for — empty if they found the truth. */
+  fooledByNames: string[];
+  /** That lie's text. */
+  fooledByText: string | null;
 }
 
 export function RoundResult({
@@ -19,6 +27,10 @@ export function RoundResult({
   realAnswer,
   wroteLie,
   truthBonusWithheld,
+  fooledNames,
+  myLieText,
+  fooledByNames,
+  fooledByText,
 }: RoundResultProps) {
   const haptics = useHaptics();
 
@@ -121,20 +133,73 @@ export function RoundResult({
         </p>
       )}
 
+      {/* Naming who fell for it is the whole point — a bare count tells the
+          player nothing they'd repeat out loud afterwards. */}
       {fooledCount > 0 && (
-        <p
+        <div
           style={{
-            fontSize: '1rem',
-            fontWeight: 800,
             color: 'var(--pink)',
             background: 'rgba(217,123,108,.14)',
-            padding: '0.45rem 1rem',
+            padding: '0.55rem 1rem',
             borderRadius: '12px',
             margin: 0,
+            lineHeight: 1.45,
           }}
         >
-          Nasamario/la si {fooledCount}! 🤥
-        </p>
+          <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>
+            🤥 Nasamario/la si{' '}
+            {fooledNames.length > 0 ? fooledNames.join(', ') : `${fooledCount}!`}
+          </p>
+          {myLieText && (
+            <p
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                margin: '0.15rem 0 0',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              tvojom laži „{myLieText}"
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* And the other direction: whose lie caught you. */}
+      {fooledByNames.length > 0 && (
+        <div
+          style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--line2)',
+            padding: '0.55rem 1rem',
+            borderRadius: '12px',
+            margin: 0,
+            lineHeight: 1.45,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              margin: 0,
+              color: 'var(--text-primary)',
+            }}
+          >
+            🎣 Nasamario/la te je {fooledByNames.join(' i ')}
+          </p>
+          {fooledByText && (
+            <p
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                margin: '0.15rem 0 0',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              laži „{fooledByText}"
+            </p>
+          )}
+        </div>
       )}
 
       {roundScore > 0 && (

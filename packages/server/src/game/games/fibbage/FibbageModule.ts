@@ -720,6 +720,7 @@ export class FibbageModule extends BaseGameModule {
                 .map(nameOf)
                 .filter((n) => n !== '?'),
               voterPlayerIds: voters,
+              voterNames: voters.map(nameOf).filter((n) => n !== '?'),
               pointsEarned: opt.isReal
                 ? 0
                 : voters.length * FOOL_POINTS_PER_VOTER,
@@ -765,9 +766,17 @@ export class FibbageModule extends BaseGameModule {
         };
         data.results = resultData;
 
-        // Per-player summary for controller RoundResult
+        // Per-player summary for controller RoundResult. "Nasamario/la si 2"
+        // says nothing about the round — who fell for it is the part worth
+        // reading, so the names travel here rather than being counted.
         for (const player of room.players) {
           const entry = results.find((r) => r.playerId === player.id);
+          const myOption = revealOptions.find((o) =>
+            o.authorPlayerIds.includes(player.id)
+          );
+          const votedOption = revealOptions.find((o) =>
+            o.voterPlayerIds.includes(player.id)
+          );
           playerData[player.id] = {
             foundTruth: entry?.foundTruth ?? false,
             fooledCount: entry?.fooledCount ?? 0,
@@ -775,6 +784,14 @@ export class FibbageModule extends BaseGameModule {
             wroteLie: entry?.wroteLie ?? false,
             truthBonusWithheld: entry?.truthBonusWithheld ?? false,
             realAnswer: question.answer,
+            // My lie and everyone who fell for it.
+            myLieText: myOption?.text ?? null,
+            fooledNames: myOption?.voterNames ?? [],
+            // Whose lie I fell for (empty when I found the truth).
+            fooledByNames:
+              votedOption && !votedOption.isReal ? votedOption.authorNames : [],
+            fooledByText:
+              votedOption && !votedOption.isReal ? votedOption.text : null,
           };
         }
 

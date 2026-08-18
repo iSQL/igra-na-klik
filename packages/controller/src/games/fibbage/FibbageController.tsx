@@ -5,7 +5,6 @@ import { AnswerInput } from './components/AnswerInput';
 import { VoteOptions } from './components/VoteOptions';
 import { WaitingScreen } from './components/WaitingScreen';
 import { RoundResult } from './components/RoundResult';
-import { fibbageGlasLabel } from '@igra/shared';
 import type {
   FibbageQuestionPublic,
   FibbageAnswerOptionPublic,
@@ -186,6 +185,10 @@ export default function FibbageController() {
           realAnswer: string;
           wroteLie: boolean;
           truthBonusWithheld: boolean;
+          fooledNames: string[];
+          myLieText: string | null;
+          fooledByNames: string[];
+          fooledByText: string | null;
         }
       | undefined;
 
@@ -199,6 +202,10 @@ export default function FibbageController() {
         realAnswer={myData.realAnswer}
         wroteLie={myData.wroteLie}
         truthBonusWithheld={myData.truthBonusWithheld}
+        fooledNames={myData.fooledNames ?? []}
+        myLieText={myData.myLieText ?? null}
+        fooledByNames={myData.fooledByNames ?? []}
+        fooledByText={myData.fooledByText ?? null}
       />
     );
   }
@@ -344,11 +351,17 @@ function FibbageMergedResults({
                 „{opt.text}"
               </span>{' '}
               {opt.voterPlayerIds.length > 0 ? (
-                <strong style={{ color: 'var(--accent)' }}>
-                  {opt.voterPlayerIds.length}{' '}
-                  {fibbageGlasLabel(opt.voterPlayerIds.length)} · +
-                  {opt.pointsEarned}
-                </strong>
+                <>
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    nasamario/la:
+                  </span>{' '}
+                  <strong style={{ color: 'var(--accent)' }}>
+                    {opt.voterNames.join(', ')}
+                  </strong>{' '}
+                  <span style={{ color: 'var(--success)', fontWeight: 800 }}>
+                    +{opt.pointsEarned}
+                  </span>
+                </>
               ) : (
                 <span style={{ color: 'var(--dim)', fontWeight: 700 }}>
                   niko nije poverovao

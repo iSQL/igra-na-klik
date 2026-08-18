@@ -154,6 +154,7 @@ async function main(): Promise<void> {
   let leaks = 0;
   let sawVoting = false;
   let sawReveal = false;
+  let sawFooling = false;
   const seenLoading: boolean[] = [];
 
   const roundChecks: string[] = [];
@@ -237,6 +238,42 @@ async function main(): Promise<void> {
     lastPhase[i] = key;
   }
 
+  // Telefonska strana: RoundResult crta imena iz privatnog dela stanja, pa
+  // proveravamo da su i tamo puna, a ne samo brojevi.
+  players.forEach((sock, i) => {
+    sock.on('game:player-state' as never, ((payload: {
+      playerData: Record<string, Record<string, unknown>>;
+    }) => {
+      const mine = payload.playerData?.[ids[i]];
+      if (!mine || !('fooledNames' in mine)) return;
+      const fooledNames = mine.fooledNames as string[];
+      const fooledCount = mine.fooledCount as number;
+      check(
+        `${names[i]}: fooledNames prati fooledCount`,
+        fooledNames.length === fooledCount,
+        `${fooledNames.length} imena za ${fooledCount}`
+      );
+      if (fooledCount > 0) {
+        check(`${names[i]}: uz imena stiže i tekst laži`, !!mine.myLieText);
+        check(
+          `${names[i]}: ne samara samog/u sebe`,
+          !fooledNames.includes(names[i])
+        );
+      }
+      const fooledBy = mine.fooledByNames as string[];
+      if (mine.foundTruth === true) {
+        check(`${names[i]}: ko nađe istinu nema "nasamario te je"`, fooledBy.length === 0);
+      }
+      if (fooledBy.length > 0) {
+        check(`${names[i]}: uz "nasamario te je" stiže i tekst laži`, !!mine.fooledByText);
+        check(
+          `${names[i]}: nije nasamaran/a sopstvenom laži`,
+          !fooledBy.includes(names[i])
+        );
+      }
+    }) as never);
+  });
+
   players.forEach((sock, i) => {
     sock.on('game:state-update' as never, ((payload: { gameState: GameStateLite }) => {
       shared[i] = payload.gameState;
@@ -319,6 +356,51 @@ async function main(): Promise<void> {
         opt.pointsEarned === opt.voterPlayerIds.length * FOOL_POINTS_PER_VOTER
       );
     }
+
+    // "Ko je koga nasamario" — imena moraju da postoje i da se poklapaju sa
+    // id-jevima, jer i TV tabla i telefon i hostless traka crtaju iz njih.
+    for (const opt of res.revealOptions) {
+      check(
+        `${tag}: voterNames prati voterPlayerIds`,
+        opt.voterNames.length === opt.voterPlayerIds.length,
+        `${opt.voterNames.length} imena za ${opt.voterPlayerIds.length} glasova`
+      );
+      opt.voterPlayerIds.forEach((id, vi) => {
+        const idx = ids.indexOf(id);
+        check(
+          `${tag}: ime glasača odgovara igraču`,
+          idx >= 0 && opt.voterNames[vi] === names[idx],
+          `${opt.voterNames[vi]} vs ${idx >= 0 ? names[idx] : '?'}`
+        );
+      });
+      // Niko ne sme da bude naveden kao žrtva sopstvene laži.
+      const selfFooled = opt.voterPlayerIds.filter((id) =>
+        opt.authorPlayerIds.includes(id)
+      );
+      check(
+        `${tag}: niko ne naseda na sopstvenu laž`,
+        selfFooled.length === 0
+      );
+    }
+    const landed = res.revealOptions.filter(
+      (o) => !o.isReal && o.voterPlayerIds.length > 0
+    );
+    if (landed.length > 0) sawFooling = true;
+
+    // Ispis onoga sto TV crta na tabli "Ko je koga nasamario" — test je jedini
+    // nacin da se ovaj ekran vidi bez dva otvorena browsera.
+    console.log(`
+${tag} · tacan odgovor: ${res.realAnswer}`);
+    if (landed.length === 0) {
+      console.log('  niko nikoga nije nasamario');
+    } else {
+      for (const o of landed) {
+        console.log(
+          `  ${o.authorNames.join(' i ')} nasamario/la: ${o.voterNames.join(', ')}` +
+            ` — „${o.text}" (+${o.pointsEarned})`
+        );
+      }
+    }
   }) as never);
 
   const ended = once<{
@@ -338,6 +420,7 @@ async function main(): Promise<void> {
   check('bilo je faze glasanja', sawVoting);
   check('bilo je pitanja (pack ili ugrađena banka)', roundChecks.length > 0);
   check('bilo je faze otkrivanja', sawReveal);
+  check('bar jednom je neko nekoga nasamario', sawFooling);
   check('odigrane sve runde', roundChecks.length === ROUNDS, `${roundChecks.length}/${ROUNDS}`);
   check('tačan odgovor ne curi pre glasanja', leaks === 0, `${leaks} procurivanja`);
   check(

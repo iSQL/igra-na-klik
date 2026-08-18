@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { FibbageResultData } from '@igra/shared';
 import { useRoomStore } from '../../../store/roomStore';
+import { FoolsBoard } from './FoolsBoard';
 
 interface ResultsRevealProps {
   results: FibbageResultData;
@@ -162,6 +163,8 @@ export function ResultsReveal({ results }: ResultsRevealProps) {
           {realAnswer}
         </p>
       </motion.div>
+
+      <FoolsBoard options={revealOptions} delay={truthDelay + 0.4} />
     </div>
   );
 }
