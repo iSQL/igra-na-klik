@@ -38,7 +38,8 @@ export const DUEL_OTKRIVANJE_DURATION = 3;
  */
 export const DUEL_ISHOD_DURATION = 4;
 export const DUEL_REZULTAT_DURATION = 6;
-export const LEADERBOARD_DURATION = 14;
+// Zasebnog završnog ekrana nema: `finishGame` ide pravo u `ended`, jer odmah
+// posle stiže platformski ekran sa poenima i diplomama.
 
 // Aktivan unos — balans igre, ostaje u kodu.
 export const ODGOVOR_DURATION = 20;

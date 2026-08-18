@@ -31,21 +31,6 @@ export const BITKA_ZID_BONUS = 200;
 export const BITKA_ZIDOVI = 3;
 
 /**
- * Koliko traje najava napada na početku `duel-pitanje` faze.
- *
- * Nije podesivo u adminu i ne dodaje ni sekundu igri: to je prvi deo već
- * postojeće pauze za čitanje pitanja (`PITANJE_NAJAVA_DURATION`, podrazumevano
- * 4 s), pa posle najave ostane vremena i za pitanje. Ako je domaćin tu pauzu
- * spustio na minimum, najava se prosto završi sa fazom — pitanje se ionako
- * čita i na ekranu duela koji dolazi odmah za njom.
- *
- * Stoji u `shared` jer se TV i telefon moraju skloniti u istom trenutku — dva
- * odvojena tajmera bi se razišla i telefon bi zadržao karticu preko mape koju
- * TV već koristi.
- */
-export const BITKA_NAJAVA_MS = 2500;
-
-/**
  * Ispod ovoga mapa nema smisla ni u najmanjoj postavi: po tri teritorije na
  * igrača u punoj Triviador postavi (3 zamka + po dve za osvajanje). Strogi
  * validator odbija manje — ali maks. broj igrača na koji mapa staje zavisi od

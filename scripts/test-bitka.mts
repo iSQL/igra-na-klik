@@ -62,7 +62,6 @@ const REVEAL_PHASES = new Set([
   'duel-broj-rezultat',
   // `duel-rezultat` NAMERNO nije otkrivanje: pitanje je odgledano na svom
   // ekranu, a ovaj je mapa i animacija — tačan odgovor tu više ne sme.
-  'rezultat',
   'ended',
 ]);
 /**
@@ -585,7 +584,6 @@ async function main(): Promise<void> {
     'duel-odgovor-rezultat',
     'duel-ishod',
     'duel-rezultat',
-    'rezultat',
   ];
   const missing = required.filter((p) => !seenPhases.has(p));
 

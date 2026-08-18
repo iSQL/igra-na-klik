@@ -5,7 +5,6 @@ import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
 import {
-  BITKA_NAJAVA_MS,
   BITKA_ZAMAK_BODOVI,
   deriveFxEvents,
   planFxHolds,
@@ -53,7 +52,6 @@ const PHASE_TITLE: Record<string, string> = {
   'duel-broj-rezultat': 'Ko je bio bliži?',
   'duel-ishod': 'Ishod napada',
   'duel-rezultat': 'Ishod napada',
-  rezultat: 'Kraj bitke',
   ended: 'Kraj bitke',
 };
 
@@ -61,10 +59,9 @@ const PHASE_TITLE: Record<string, string> = {
  * Faze koje su samo odbrojavanje do pitanja.
  *
  * Pitanje u njima ne stiže ni u broadcast — server ga zadržava dok ne krene
- * odgovaranje. Ranije je tekst banuo u traku ispod mape, pa se isto pitanje
- * čitalo dvaput: jednom sitno pored table, pa opet krupno kad se otvori ekran
- * za odgovaranje. Sad se u toj pauzi vidi samo brojač, i cela soba digne
- * pogled u istoj sekundi.
+ * odgovaranje. U toj pauzi preko table stoji Objava: krug odbrojava, nadnaslov
+ * kaže šta stiže, a naslov nosi posledicu prethodnog poteza (`lastEvent`) —
+ * odbrojavanje i „šta se upravo desilo" dele isti trenutak, pa dele i element.
  */
 const COUNTDOWN_PHASES = new Set(['redosled-pitanje', 'osvajanje-pitanje', 'duel-pitanje']);
 
@@ -73,6 +70,13 @@ const COUNTDOWN_LABEL: Record<string, string> = {
   'osvajanje-pitanje': 'Pitanje stiže',
   'duel-pitanje': 'Duel počinje',
 };
+
+/**
+ * Faze u kojima igrač bira na telefonu, a TV samo saopštava ko je na potezu.
+ * Naslov, red čekanja i preostalo vreme tada nosi centralna Objava — sat u
+ * zaglavlju i traka ispod mape se sklanjaju (pravilo jednog mesta).
+ */
+const PICK_PHASES = new Set(['baza-izbor', 'osvajanje-izbor', 'napad-izbor']);
 
 export default function BitkaHost() {
   const gameState = useGameStore((s) => s.gameState);
@@ -98,7 +102,6 @@ export default function BitkaHost() {
       )
         play('reveal');
       if (phase === 'baza-izbor' || phase === 'napad-izbor') play('join');
-      if (phase === 'rezultat') play('victory');
     }
   }, [phase, play]);
 
@@ -179,32 +182,25 @@ export default function BitkaHost() {
     prevSecRef.current = sec;
   }, [gameState, phase, play]);
 
-  // Najava napada: kratka kartica preko table na ulasku u duel, da se pre
-  // pitanja vidi ko koga napada i za šta. Vezuje se za DUEL a ne za render —
-  // `gameState` je nov objekat svake sekunde, pa bi se inače vraćala u petlji.
-  // Nastavak opsade NE dobija karticu: napadač i meta su isti, a poruka bi se
-  // ponovila do tri puta u istom napadu.
+  // Zvuk najave napada — jednom po duelu, na ulasku u `duel-pitanje`. Sama
+  // najava je deo Objave sa odbrojavanjem i stoji celu fazu, pa ovde ostaje
+  // samo zvuk. Nastavak opsade ga ne dobija: napadač i meta su isti.
   const duelKey =
     phase === 'duel-pitanje' && host?.duel && !host.duel.opsadaNastavak
       ? `${host.duel.attackerId}:${host.duel.territoryId}`
       : '';
-  const [najava, setNajava] = useState(false);
   useEffect(() => {
-    if (!duelKey) {
-      setNajava(false);
-      return;
-    }
-    setNajava(true);
-    play('reveal');
-    const timer = setTimeout(() => setNajava(false), BITKA_NAJAVA_MS);
-    return () => clearTimeout(timer);
+    if (duelKey) play('reveal');
   }, [duelKey, play]);
 
   if (!gameState || !host) return null;
   // Naslovi i tabela poena idu po pravom stanju; kasni samo mapa.
   const displayBoard = shownBoard.length > 0 ? shownBoard : host.board;
 
-  if (phase === 'rezultat' || phase === 'ended') {
+  // Zasebnog završnog ekrana nema — `ended` stigne u jednom broadcast-u i već
+  // sledećeg trenutka platforma preuzima sa poenima i diplomama. Ovo je samo
+  // prelazni kadar da ne bljesne prazno.
+  if (phase === 'ended') {
     return (
       <FinalBoard
         host={host}
@@ -232,14 +228,26 @@ export default function BitkaHost() {
       phase === 'duel-odgovor-rezultat' ||
       phase === 'duel-broj-rezultat') &&
     !!host.duel;
+  // U fazama izbora vreme nosi krug Objave — sat u zaglavlju bi bio isti broj
+  // na dva mesta u istom kadru.
   const showClock =
     phase === 'redosled-odgovor' ||
     phase === 'osvajanje-odgovor' ||
     phase === 'duel-odgovor' ||
-    phase === 'duel-broj' ||
-    phase === 'baza-izbor' ||
-    phase === 'osvajanje-izbor' ||
-    phase === 'napad-izbor';
+    phase === 'duel-broj';
+
+  // Rezultat osvajanja bez ijednog tačnog odgovora: jedini ishod bez
+  // pobednika, pa umesto otkrivanja na traci stoji siva Objava sa zastavicom.
+  const nikoTacan =
+    phase === 'osvajanje-rezultat' && !(host.results ?? []).some((r) => r.correct);
+
+  // Dok Objava stoji, traka ispod mape se sklanja — ista rečenica ne sme na
+  // dva mesta u istom kadru, a zaglavlje zadržava samo kontekst.
+  const objavaUp =
+    COUNTDOWN_PHASES.has(phase ?? '') ||
+    PICK_PHASES.has(phase ?? '') ||
+    (phase === 'duel-ishod' && !!host.duel?.pendingOutcome) ||
+    nikoTacan;
 
   return (
     <div
@@ -402,8 +410,9 @@ export default function BitkaHost() {
         )}
       </div>
 
-      {/* U duelu pitanje stoji u svojoj koloni, pa donja traka nema šta da nosi. */}
-      {!duelArena && (
+      {/* U duelu pitanje stoji u svojoj koloni; dok Objava stoji, traka se
+          sklanja — ista rečenica nikad na dva mesta u istom kadru. */}
+      {!duelArena && !objavaUp && (
         <AnimatePresence mode="wait">
           <motion.div
             key={panelKey(host, phase ?? '')}
@@ -430,24 +439,22 @@ export default function BitkaHost() {
         </AnimatePresence>
       )}
 
-      {/* Odbrojavanje do pitanja. U duelu deli fazu sa najavom, pa se pojavi
-          tek kad kartica siđe — dve stvari preko iste table u isto vreme se
-          ne bi ni videle. */}
+      {/* Jedan centralni element — Objava — nosi sve poruke iz partije:
+          odbrojavanje, ko je na potezu, najavu duela i ishod napada. Providna
+          je da mapa ostane vidljiva; levi krug je jedini deo koji se menja
+          (broj kad se odbrojava, glif kad se javlja ishod). */}
       <AnimatePresence>
-        {COUNTDOWN_PHASES.has(phase ?? '') && !najava && (
-          <Odbrojavanje seconds={seconds} label={COUNTDOWN_LABEL[phase ?? ''] ?? 'Pitanje stiže'} />
-        )}
-      </AnimatePresence>
-
-      {/* Najava napada — pokriva sve iznad, pa ide poslednja. */}
-      <AnimatePresence>
-        {najava && host.duel && <DuelNajava host={host} />}
-      </AnimatePresence>
-
-      {/* Ishod napada: prozor stoji dok je tabla još stara, pa se prvo pročita
-          šta se desilo, a animacije krenu tek kad se on skloni. */}
-      <AnimatePresence>
-        {phase === 'duel-ishod' && host.duel?.pendingOutcome && <DuelIshod host={host} />}
+        {nikoTacan ? (
+          <NikoTacanObjava key="niko-tacan" host={host} />
+        ) : phase === 'duel-ishod' && host.duel?.pendingOutcome ? (
+          <IshodObjava key="duel-ishod" host={host} />
+        ) : phase === 'duel-pitanje' && host.duel ? (
+          <DuelNajavaObjava key={`najava:${host.duel.territoryId}`} host={host} seconds={seconds} />
+        ) : COUNTDOWN_PHASES.has(phase ?? '') ? (
+          <CountdownObjava key={phase} host={host} phase={phase ?? ''} seconds={seconds} />
+        ) : PICK_PHASES.has(phase ?? '') ? (
+          <PickObjava key={phase} host={host} phase={phase ?? ''} seconds={seconds} />
+        ) : null}
       </AnimatePresence>
     </div>
   );
@@ -491,61 +498,8 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
     );
   }
 
-  if (phase === 'baza-izbor') {
-    const done = new Set(host.baseCommittedIds ?? []);
-    const queue = (host.pickQueue ?? []).slice(1);
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', width: '100%' }}>
-        <Line
-          title={`${named(host.activePlayerId)} bira mesto za zamak`}
-          text={
-            queue.length > 0
-              ? `Na redu posle: ${queue.map(named).join(', ')} — vide gde su zamkovi već podignuti.`
-              : 'Poslednji zamak.'
-          }
-        />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {host.players.map((p) => (
-            <Chip
-              key={p.playerId}
-              player={p}
-              dim={!done.has(p.playerId) && p.playerId !== host.activePlayerId}
-              label={
-                done.has(p.playerId)
-                  ? 'utvrđen'
-                  : p.playerId === host.activePlayerId
-                    ? 'bira…'
-                    : 'čeka'
-              }
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'osvajanje-izbor') {
-    // Čist ekran: pitanje i tačan odgovor su odgledani u prethodnoj fazi.
-    return (
-      <Line
-        title={`${named(host.activePlayerId)} bira slobodnu teritoriju`}
-        text={
-          (host.pickQueue?.length ?? 0) > 1
-            ? `Na redu posle: ${(host.pickQueue ?? []).slice(1).map(named).join(', ')}`
-            : 'Poslednji izbor u ovoj rundi.'
-        }
-      />
-    );
-  }
-
-  if (phase === 'napad-izbor') {
-    return (
-      <Line
-        title={`${named(host.activePlayerId)} bira metu`}
-        text="Napada se susedna tuđa ili ničija teritorija."
-      />
-    );
-  }
+  // Faze izbora (baza/osvajanje/napad) ne stižu dovde: njihov naslov, red
+  // čekanja i vreme nosi centralna Objava, a traka je tada sklonjena.
 
   // Uvodni broj se otkriva kao i svako drugo pitanje, ali ovde otkrivanje nosi
   // i posledicu — ko prvi bira zamak — pa ta rečenica ostaje ispod njega.
@@ -566,185 +520,46 @@ function Panel({ host, phase }: { host: BitkaHostData; phase: string }) {
 }
 
 /** Ikona i boja ishoda — isti rečnik na TV-u i na telefonu. */
-const ISHOD_GLYPH: Record<string, { glyph: string; color: string; label: string }> = {
-  napadac: { glyph: '⚔️', color: '#F2CE74', label: 'Teritorija je pala' },
-  branilac: { glyph: '🛡️', color: '#7fd1a3', label: 'Odbrana je izdržala' },
-  zid: { glyph: '🧱', color: '#F2CE74', label: 'Zid je srušen' },
-  'zamak-pao': { glyph: '🏰', color: '#e06a5e', label: 'Zamak je pao' },
+const ISHOD_GLYPH: Record<
+  string,
+  { glyph: string; color: string; ring: string; label: string }
+> = {
+  napadac: { glyph: '⚔️', color: '#F2CE74', ring: 'rgba(242,206,116,0.7)', label: 'Teritorija je pala' },
+  branilac: { glyph: '🛡️', color: '#7fd1a3', ring: 'rgba(127,209,163,0.7)', label: 'Odbrana je izdržala' },
+  zid: { glyph: '🧱', color: '#F2CE74', ring: 'rgba(242,206,116,0.7)', label: 'Zid je srušen' },
+  'zamak-pao': { glyph: '🏰', color: '#e06a5e', ring: 'rgba(224,106,94,0.75)', label: 'Zamak je pao' },
 };
 
-/**
- * Prozor sa ishodom napada.
- *
- * Stoji dok tabla još pokazuje staro stanje — server posledicu upisuje tek
- * kad ovaj prozor istekne. Dotad je ishod bio red teksta u traci ispod mape
- * na kojoj se sve već odigralo, pa se propuštalo i šta se desilo i zašto.
- */
-function DuelIshod({ host }: { host: BitkaHostData }) {
-  const duel = host.duel!;
-  const outcome = duel.pendingOutcome!;
-  const look = ISHOD_GLYPH[outcome] ?? ISHOD_GLYPH.napadac;
-  const place = host.map.territories.find((t) => t.id === duel.territoryId)?.name ?? '';
-  const walls = duel.wallsAfter ?? host.board.find((x) => x.id === duel.territoryId)?.walls ?? 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 7,
-        display: 'grid',
-        placeItems: 'center',
-        // Obično zatamnjenje, ne `backdrop-filter` — ispod je WebGL platno.
-        background: 'rgba(9,20,36,0.62)',
-        pointerEvents: 'none',
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.94 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 1.04 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 24 }}
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1rem',
-          padding: '2.2rem 3.4rem',
-          borderRadius: '24px',
-          background: 'var(--bg-card)',
-          border: `1px solid ${look.color}`,
-          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
-          textAlign: 'center',
-          maxWidth: '70vw',
-        }}
-      >
-        <span className="bitka-sheen" />
-        <span style={{ fontSize: '4.4rem', lineHeight: 1 }}>{look.glyph}</span>
-        <span
-          style={{
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '0.24em',
-            textTransform: 'uppercase',
-            fontSize: '0.95rem',
-            color: look.color,
-          }}
-        >
-          {look.label}
-        </span>
-        <span
-          style={{
-            fontSize: '2.4rem',
-            fontWeight: 800,
-            lineHeight: 1.2,
-            color: 'var(--text-primary)',
-          }}
-        >
-          {host.lastEvent ?? place}
-        </span>
-        {duel.onCastle && outcome !== 'zamak-pao' && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>zidovi</span>
-            <Walls walls={walls} size={16} />
-          </span>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
+// --- Objava ------------------------------------------------------------------
 
 /**
- * Brojač preko cele table dok se čeka pitanje.
+ * Jedan centralni element za sve poruke iz partije.
  *
- * Namerno providan: tabla se vidi kroz njega, jer se u toj pauzi i dalje
- * gleda gde se šta dešava. Zatamnjenje je obično `rgba`, a NE `backdrop-filter`
- * — ispod je WebGL platno, čija snimka ume da ispadne crna, pa bi se umesto
- * pritamnjene table videla rupa.
+ * Providan prekrivač preko table + kartica: krug levo (broj kad se odbrojava,
+ * glif kad se javlja ishod), desno nadnaslov, naslov u jednoj rečenici i
+ * podred. Zatamnjenje je obično `rgba`, a NE `backdrop-filter` — ispod je
+ * WebGL platno, čija snimka ume da ispadne crna, pa bi se umesto pritamnjene
+ * table videla rupa.
  */
-function Odbrojavanje({ seconds, label }: { seconds: number; label: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 5,
-        display: 'grid',
-        placeItems: 'center',
-        background: 'rgba(9,20,36,0.42)',
-        pointerEvents: 'none',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '0.3em',
-            textTransform: 'uppercase',
-            fontSize: '1.1rem',
-            color: '#F2CE74',
-            textShadow: '0 2px 12px rgba(0,0,0,0.8)',
-          }}
-        >
-          {label}
-        </span>
-        {/* Ključ je sam broj: na svaku sekundu se element zameni novim, pa se
-            ulazna animacija odigra ponovo — bez ijednog dodatnog tajmera. */}
-        <motion.span
-          key={seconds}
-          initial={{ opacity: 0, scale: 1.55 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          style={{
-            width: '12rem',
-            height: '12rem',
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            background: 'rgba(9,20,36,0.5)',
-            border: '3px solid rgba(242,206,116,0.6)',
-            boxShadow: '0 0 70px rgba(242,206,116,0.25)',
-            fontFamily: 'var(--font-display)',
-            fontSize: '6.5rem',
-            fontWeight: 800,
-            lineHeight: 1,
-            color: '#F2CE74',
-          }}
-        >
-          {seconds}
-        </motion.span>
-      </div>
-    </motion.div>
-  );
-}
-
-/**
- * Najava napada — kartica koja na sekundu i po pokrije tablu čim duel počne.
- *
- * Dotad se napad video tek iz uske trake ispod mape, u istom trenutku kad i
- * pitanje, pa je soba čitala pitanje umesto da vidi ko je kome krenuo na
- * zemlju. Ovo je jedini ekran u igri koji svesno sakrije mapu: traje kratko,
- * ne dodaje vreme partiji (jede prvi deo pauze za čitanje pitanja) i posle
- * njega ostaje isti duel ekran.
- */
-function DuelNajava({ host }: { host: BitkaHostData }) {
-  const duel = host.duel!;
-  const attacker = host.players.find((p) => p.playerId === duel.attackerId);
-  const defender = host.players.find((p) => p.playerId === duel.defenderId);
-  const territory = host.map.territories.find((t) => t.id === duel.territoryId);
-  const st = host.board.find((x) => x.id === duel.territoryId);
-  const walls = st?.walls ?? 0;
-  const value = st?.castle ? BITKA_ZAMAK_BODOVI : territoryValue(territory ?? {});
-
+function Objava({
+  dim = 0.42,
+  border = 'rgba(242,206,116,0.4)',
+  cardBg = 'rgba(9,20,36,0.52)',
+  pulse = false,
+  sheen = true,
+  circle,
+  children,
+}: {
+  /** Zatamnjenje table: 0.42 za odbrojavanja i poteze, 0.58 samo za ishod. */
+  dim?: number;
+  border?: string;
+  cardBg?: string;
+  /** Crveni puls opsade — jedini napad koji izbacuje igrača iz partije. */
+  pulse?: boolean;
+  sheen?: boolean;
+  circle: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -757,82 +572,438 @@ function DuelNajava({ host }: { host: BitkaHostData }) {
         zIndex: 6,
         display: 'grid',
         placeItems: 'center',
-        // Tabla ostaje da se vidi ispod — najava je nadgradnja nad njom, a ne
-        // zaseban ekran. Zato zatamnjenje, a NE `backdrop-filter`: ispod je
-        // WebGL platno, čiji sadržaj u toj snimci ume da ispadne crn, pa bi se
-        // umesto pritamnjene table videla crna rupa.
-        background: 'rgba(9,20,36,0.58)',
+        background: `rgba(9,20,36,${dim})`,
         pointerEvents: 'none',
       }}
     >
       <motion.div
         initial={{ opacity: 0, y: 18, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 1.05 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 24 }}
+        exit={{ opacity: 0, scale: 1.04 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+        className={pulse ? 'bitka-siege' : undefined}
         style={{
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: '1.4rem',
-          padding: '2.4rem 3.6rem',
-          borderRadius: '24px',
-          background: 'var(--bg-card)',
-          border: '1px solid rgba(242,206,116,0.55)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+          gap: '2rem',
+          padding: '1.7rem 2.6rem 1.7rem 1.7rem',
+          borderRadius: '28px',
+          background: cardBg,
+          border: `1px solid ${border}`,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          maxWidth: '82vw',
         }}
       >
-        <span className="bitka-sheen" />
-        <span
-          style={{
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '0.28em',
-            textTransform: 'uppercase',
-            fontSize: '1rem',
-            color: '#F2CE74',
-          }}
-        >
-          {duel.onCastle ? 'Opsada zamka' : defender ? 'Napad' : 'Pohod na ničiju zemlju'}
-        </span>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.6rem' }}>
-          <NajavaSide player={attacker} role="napada" />
-          <span style={{ fontSize: '2.6rem', filter: 'drop-shadow(0 0 18px rgba(242,206,116,0.7))' }}>
-            ⚔️
-          </span>
-          {defender ? (
-            <NajavaSide player={defender} role={duel.onCastle ? 'brani zamak' : 'brani'} mirrored />
-          ) : (
-            <span style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--dim)' }}>
-              ničija zemlja
-            </span>
-          )}
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.8rem',
-            padding: '0.5rem 1.2rem',
-            borderRadius: '999px',
-            background: 'rgba(242,206,116,0.14)',
-            border: '1px solid rgba(242,206,116,0.4)',
-          }}
-        >
-          <span style={{ fontSize: '1.3rem' }}>{st?.castle ? '🏰' : '🚩'}</span>
-          <span style={{ fontWeight: 800, fontSize: '1.25rem', color: '#F2CE74' }}>
-            {territory?.name ?? ''}
-          </span>
-          {duel.onCastle && <Walls walls={walls} size={12} />}
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            · {value} poena
-          </span>
+        {sheen && <span className="bitka-sheen" />}
+        {circle}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 }}>
+          {children}
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/** Krug Objave sa brojem — odbrojavanje; na svaku sekundu uskoči nov broj. */
+function ObjavaBroj({
+  seconds,
+  color = '#F2CE74',
+  border = 'rgba(242,206,116,0.6)',
+  glow = 'rgba(242,206,116,0.22)',
+}: {
+  seconds: number;
+  color?: string;
+  border?: string;
+  glow?: string;
+}) {
+  return (
+    <motion.span
+      // Ključ je sam broj: element se svake sekunde zameni novim, pa se ulazna
+      // animacija odigra ponovo — bez ijednog dodatnog tajmera.
+      key={seconds}
+      initial={{ opacity: 0, scale: 1.4 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      style={{
+        width: '9rem',
+        height: '9rem',
+        flexShrink: 0,
+        borderRadius: '50%',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'rgba(9,20,36,0.5)',
+        border: `3px solid ${border}`,
+        boxShadow: `0 0 70px ${glow}`,
+        fontFamily: 'var(--font-display)',
+        fontSize: '4.6rem',
+        fontWeight: 800,
+        lineHeight: 1,
+        color,
+      }}
+    >
+      {seconds}
+    </motion.span>
+  );
+}
+
+/** Krug Objave sa glifom — ishod umesto broja, isti gabarit. */
+function ObjavaGlif({ glyph, border }: { glyph: string; border: string }) {
+  return (
+    <span
+      style={{
+        width: '9rem',
+        height: '9rem',
+        flexShrink: 0,
+        borderRadius: '50%',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'rgba(9,20,36,0.5)',
+        border: `3px solid ${border}`,
+        fontSize: '4rem',
+        lineHeight: 1,
+      }}
+    >
+      {glyph}
+    </span>
+  );
+}
+
+function ObjavaNadnaslov({
+  children,
+  color = '#F2CE74',
+  spacing = '0.28em',
+}: {
+  children: React.ReactNode;
+  color?: string;
+  spacing?: string;
+}) {
+  return (
+    <span
+      style={{
+        fontFamily: 'var(--font-display)',
+        textTransform: 'uppercase',
+        letterSpacing: spacing,
+        fontSize: '1rem',
+        color,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ObjavaNaslov({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '2.6rem',
+        fontWeight: 800,
+        lineHeight: 1.1,
+        color: 'var(--text-primary)',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ObjavaPodred({ children }: { children: React.ReactNode }) {
+  return <span style={{ fontSize: '1.15rem', color: 'var(--text-secondary)' }}>{children}</span>;
+}
+
+/**
+ * Odbrojavanje do pitanja. Krug broji, nadnaslov kaže šta stiže, a naslov nosi
+ * posledicu prethodnog poteza („Pera uzima Porodin") — dele isti trenutak, pa
+ * dele i element. U `redosled-pitanje` još nema posledice, ostaje sam brojač.
+ */
+function CountdownObjava({
+  host,
+  phase,
+  seconds,
+}: {
+  host: BitkaHostData;
+  phase: string;
+  seconds: number;
+}) {
+  const title = phase === 'osvajanje-pitanje' ? host.lastEvent : undefined;
+  return (
+    <Objava circle={<ObjavaBroj seconds={seconds} />}>
+      <ObjavaNadnaslov>{COUNTDOWN_LABEL[phase] ?? 'Pitanje stiže'}</ObjavaNadnaslov>
+      {title && <ObjavaNaslov>{title}</ObjavaNaslov>}
+    </Objava>
+  );
+}
+
+/**
+ * Faza izbora: ko je na potezu, ko čeka i koliko je vremena ostalo — sve u
+ * jednoj Objavi umesto tri mesta (sat gore, naslov u zaglavlju, red u traci).
+ */
+function PickObjava({
+  host,
+  phase,
+  seconds,
+}: {
+  host: BitkaHostData;
+  phase: string;
+  seconds: number;
+}) {
+  const named = (id: string | null | undefined) =>
+    host.players.find((p) => p.playerId === id)?.name ?? 'Igrač';
+  const queue = (host.pickQueue ?? []).slice(1);
+
+  if (phase === 'baza-izbor') {
+    const done = new Set(host.baseCommittedIds ?? []);
+    return (
+      <Objava circle={<ObjavaBroj seconds={seconds} />}>
+        <ObjavaNadnaslov>Podizanje zamkova</ObjavaNadnaslov>
+        <ObjavaNaslov>{named(host.activePlayerId)} bira mesto za zamak</ObjavaNaslov>
+        <ObjavaPodred>
+          {queue.length > 0
+            ? `Na redu posle: ${queue.map(named).join(', ')} — vide gde su zamkovi već podignuti.`
+            : 'Poslednji zamak.'}
+        </ObjavaPodred>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
+          {host.players.map((p) => (
+            <Chip
+              key={p.playerId}
+              player={p}
+              dim={!done.has(p.playerId) && p.playerId !== host.activePlayerId}
+              label={
+                done.has(p.playerId)
+                  ? 'utvrđen'
+                  : p.playerId === host.activePlayerId
+                    ? 'bira…'
+                    : 'čeka'
+              }
+            />
+          ))}
+        </div>
+      </Objava>
+    );
+  }
+
+  if (phase === 'napad-izbor') {
+    return (
+      <Objava circle={<ObjavaBroj seconds={seconds} />}>
+        <ObjavaNadnaslov>Izbor mete</ObjavaNadnaslov>
+        <ObjavaNaslov>{named(host.activePlayerId)} bira metu</ObjavaNaslov>
+        <ObjavaPodred>Napada se susedna tuđa ili ničija teritorija.</ObjavaPodred>
+      </Objava>
+    );
+  }
+
+  return (
+    <Objava circle={<ObjavaBroj seconds={seconds} />}>
+      <ObjavaNadnaslov>Biranje teritorije</ObjavaNadnaslov>
+      <ObjavaNaslov>{named(host.activePlayerId)} bira slobodnu teritoriju</ObjavaNaslov>
+      <ObjavaPodred>
+        {queue.length > 0
+          ? `Na redu posle: ${queue.map(named).join(', ')}`
+          : 'Poslednji izbor u ovoj rundi.'}
+      </ObjavaPodred>
+    </Objava>
+  );
+}
+
+/**
+ * Niko nije odgovorio tačno — jedini ishod bez pobednika, zato bez zlatne
+ * konture, bez sjaja i bez glifa oružja: sivi krug sa zastavicom. Mapa se ne
+ * menja, pa zatamnjenje ostaje slabo.
+ */
+function NikoTacanObjava({ host }: { host: BitkaHostData }) {
+  const q = host.question;
+  const correct =
+    q?.kind === 'izbor' && host.correctIndex != null
+      ? q.options?.[host.correctIndex]?.text
+      : host.correctValue != null
+        ? `${host.correctValue}${q?.unit ? ` ${q.unit}` : ''}`
+        : null;
+  return (
+    <Objava
+      border="rgba(138,145,162,0.55)"
+      sheen={false}
+      circle={<ObjavaGlif glyph="🚩" border="rgba(138,145,162,0.55)" />}
+    >
+      <ObjavaNadnaslov color="#c9c2b3">Niko tačan</ObjavaNadnaslov>
+      <ObjavaNaslov>Niko ne uzima zemlju</ObjavaNaslov>
+      <ObjavaPodred>
+        {correct ? (
+          <>
+            Tačno je bilo <strong style={{ color: 'var(--accent)' }}>{correct}</strong> —
+            teritorije ostaju slobodne.
+          </>
+        ) : (
+          'Teritorije ostaju slobodne.'
+        )}
+      </ObjavaPodred>
+    </Objava>
+  );
+}
+
+/**
+ * Ishod napada — ista Objava, samo krug menja glif i boju konture: zelena za
+ * odbranu, zlatna za pad teritorije, crvena za pad zamka.
+ *
+ * Stoji dok tabla još pokazuje staro stanje — server posledicu upisuje tek kad
+ * prozor istekne, pa se prvo pročita šta se desilo, a animacije krenu posle.
+ * Zatamnjenje se ovde diže na 0.58 baš zato što tabla ispod još „laže".
+ */
+function IshodObjava({ host }: { host: BitkaHostData }) {
+  const duel = host.duel!;
+  const outcome = duel.pendingOutcome!;
+  const look = ISHOD_GLYPH[outcome] ?? ISHOD_GLYPH.napadac;
+  const named = (id: string | null | undefined) =>
+    host.players.find((p) => p.playerId === id)?.name ?? 'Igrač';
+  const territory = host.map.territories.find((t) => t.id === duel.territoryId);
+  const place = territory?.name ?? '';
+  const walls = duel.wallsAfter ?? host.board.find((x) => x.id === duel.territoryId)?.walls ?? 0;
+
+  const sub =
+    outcome === 'zamak-pao'
+      ? duel.defenderId
+        ? `${named(duel.defenderId)} ispada iz bitke — sve preuzima ${named(duel.attackerId)}.`
+        : `Sve preuzima ${named(duel.attackerId)}.`
+      : outcome === 'zid'
+        ? 'Opsada se nastavlja — novo pitanje protiv istog zamka.'
+        : outcome === 'napadac'
+          ? `${named(duel.attackerId)} osvaja ${territoryValue(territory ?? {})} poena.`
+          : duel.defenderId
+            ? `Napad propada — ${named(duel.attackerId)} ostaje bez poteza u ovoj rundi.`
+            : `${place} ostaje ničiji.`;
+
+  return (
+    <Objava
+      dim={0.58}
+      cardBg="rgba(9,20,36,0.6)"
+      border={look.color}
+      circle={<ObjavaGlif glyph={look.glyph} border={look.ring} />}
+    >
+      <ObjavaNadnaslov color={look.color} spacing="0.24em">
+        {look.label}
+      </ObjavaNadnaslov>
+      <ObjavaNaslov>{host.lastEvent ?? place}</ObjavaNaslov>
+      <ObjavaPodred>{sub}</ObjavaPodred>
+      {duel.onCastle && outcome !== 'zamak-pao' && (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>zidovi</span>
+          <Walls walls={walls} size={16} />
+        </span>
+      )}
+    </Objava>
+  );
+}
+
+/**
+ * Duel počinje — najava i odbrojavanje u istom kadru: strane duela u naslovu,
+ * krug već broji do pitanja. Kartica najave više nije poseban ekran, pa faza
+ * traje samo pauzu za čitanje.
+ *
+ * Opsada je jedini napad koji izbacuje igrača iz partije — zato je to jedina
+ * varijanta koja celu Objavu boji u crveno i nosi stanje zidova. Nastavak
+ * opsade ne dobija punu najavu (ista poruka po treći put u istom napadu je
+ * šum) — ostaje krug sa odbrojavanjem i rečenica o nastavku.
+ */
+function DuelNajavaObjava({ host, seconds }: { host: BitkaHostData; seconds: number }) {
+  const duel = host.duel!;
+  const siege = duel.onCastle;
+  const attacker = host.players.find((p) => p.playerId === duel.attackerId);
+  const defender = host.players.find((p) => p.playerId === duel.defenderId);
+  const territory = host.map.territories.find((t) => t.id === duel.territoryId);
+  const st = host.board.find((x) => x.id === duel.territoryId);
+  const walls = st?.walls ?? 0;
+  const value = st?.castle ? BITKA_ZAMAK_BODOVI : territoryValue(territory ?? {});
+
+  const circle = (
+    <ObjavaBroj
+      seconds={seconds}
+      color={siege ? '#f0b3ab' : '#F2CE74'}
+      border={siege ? 'rgba(224,106,94,0.75)' : 'rgba(242,206,116,0.6)'}
+      glow={siege ? 'rgba(224,106,94,0.25)' : 'rgba(242,206,116,0.22)'}
+    />
+  );
+
+  if (duel.opsadaNastavak) {
+    return (
+      <Objava dim={0.5} border="#e06a5e" cardBg="rgba(9,20,36,0.6)" circle={circle}>
+        <ObjavaNadnaslov color="#f0b3ab">🏰 Opsada se nastavlja</ObjavaNadnaslov>
+        {host.lastEvent && <ObjavaNaslov>{host.lastEvent}</ObjavaNaslov>}
+      </Objava>
+    );
+  }
+
+  return (
+    <Objava
+      dim={siege ? 0.5 : 0.42}
+      border={siege ? '#e06a5e' : 'rgba(242,206,116,0.4)'}
+      cardBg={siege ? 'rgba(9,20,36,0.6)' : 'rgba(9,20,36,0.52)'}
+      pulse={siege}
+      circle={circle}
+    >
+      <ObjavaNadnaslov color={siege ? '#f0b3ab' : '#F2CE74'}>
+        {siege
+          ? '🏰 Opsada zamka · duel počinje'
+          : defender
+            ? 'Duel počinje · napad'
+            : 'Duel počinje · pohod na ničiju zemlju'}
+      </ObjavaNadnaslov>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+        <NajavaSide player={attacker} role="napada" />
+        <span
+          style={{
+            fontSize: '2.2rem',
+            filter: `drop-shadow(0 0 18px ${siege ? 'rgba(224,106,94,0.7)' : 'rgba(242,206,116,0.7)'})`,
+          }}
+        >
+          ⚔️
+        </span>
+        {defender ? (
+          <NajavaSide player={defender} role={siege ? 'brani zamak' : 'brani'} mirrored />
+        ) : (
+          <span style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--dim)' }}>
+            ničija zemlja
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.8rem',
+          padding: '0.4rem 1.1rem',
+          borderRadius: '999px',
+          background: siege ? 'rgba(224,106,94,0.16)' : 'rgba(242,206,116,0.14)',
+          border: `1px solid ${siege ? 'rgba(224,106,94,0.45)' : 'rgba(242,206,116,0.4)'}`,
+          alignSelf: 'flex-start',
+        }}
+      >
+        <span style={{ fontSize: '1.2rem' }}>{st?.castle ? '🏰' : '🚩'}</span>
+        <span
+          style={{
+            fontWeight: 800,
+            fontSize: '1.2rem',
+            color: siege ? '#f0b3ab' : '#F2CE74',
+          }}
+        >
+          {territory?.name ?? ''}
+        </span>
+        {siege && (
+          <>
+            <Walls walls={walls} size={12} />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+              · još {walls} od 3
+            </span>
+          </>
+        )}
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+          · {value} poena
+        </span>
+      </div>
+    </Objava>
   );
 }
 

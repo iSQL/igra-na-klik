@@ -247,6 +247,13 @@ export class GameManager {
     if (newState) {
       active.gameState = newState;
       this.emitGameState(roomCode, newState);
+
+      // Modul sme da završi igru i odavde (npr. u bici ode pretposlednji
+      // igrač) — bez ove provere bi `onTick` do kraja vraćao null i igra se
+      // nikad ne bi formalno završila.
+      if (newState.phase === 'ended') {
+        this.endGame(roomCode);
+      }
     }
   }
 

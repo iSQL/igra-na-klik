@@ -78,18 +78,25 @@ function Body({
     );
   }
 
+  // U fazama izbora naslov poteza („Pera bira slobodnu teritoriju") nosi SAMO
+  // centralna kartica preko mape — ovde ostaju red čekanja i pravilo, da ista
+  // rečenica ne stoji na dva mesta u istom kadru.
   if (phase === 'baza-izbor') {
     const done = new Set(host.baseCommittedIds ?? []);
     const queue = (host.pickQueue ?? []).slice(1);
     return (
       <Card>
-        <strong style={{ fontSize: '0.85rem' }}>
-          {named(host.activePlayerId)} bira mesto za zamak
-        </strong>
         <Small>
-          {queue.length > 0
-            ? `Na redu posle: ${queue.map(named).join(', ')}`
-            : 'Poslednji zamak u ovoj partiji.'}
+          {queue.length > 0 ? (
+            <>
+              Na redu posle:{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>
+                {queue.map(named).join(', ')}
+              </strong>
+            </>
+          ) : (
+            'Poslednji zamak u ovoj partiji.'
+          )}
         </Small>
         <Chips
           players={host.players}
@@ -111,18 +118,20 @@ function Body({
     const queue = (host.pickQueue ?? []).slice(1);
     return (
       <Card>
-        <strong style={{ fontSize: '0.85rem' }}>
-          {phase === 'napad-izbor'
-            ? `${named(host.activePlayerId)} bira metu`
-            : `${named(host.activePlayerId)} bira slobodnu teritoriju`}
-        </strong>
         {phase === 'napad-izbor' ? (
           <Small>Napada se susedna tuđa ili ničija teritorija.</Small>
         ) : (
           <Small>
-            {queue.length > 0
-              ? `Na redu posle: ${queue.map(named).join(', ')}`
-              : 'Poslednji izbor u ovoj rundi.'}
+            {queue.length > 0 ? (
+              <>
+                Na redu posle:{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>
+                  {queue.map(named).join(', ')}
+                </strong>
+              </>
+            ) : (
+              'Poslednji izbor u ovoj rundi.'
+            )}
           </Small>
         )}
       </Card>

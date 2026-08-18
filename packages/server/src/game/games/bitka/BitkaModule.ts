@@ -24,7 +24,6 @@ import {
   BITKA_RUNDE_IZBOR,
   BITKA_ODBRANA_BONUS,
   BITKA_ZAMAK_BODOVI,
-  BITKA_NAJAVA_MS,
   BITKA_ZID_BONUS,
   BITKA_ZIDOVI,
   KVIZ_BANK_PACK_ID,
@@ -49,7 +48,6 @@ import {
   DUEL_ISHOD_DURATION,
   DUEL_OTKRIVANJE_DURATION,
   IZBOR_DURATION,
-  LEADERBOARD_DURATION,
   NAPAD_IZBOR_DURATION,
   ODGOVOR_DURATION,
   PITANJE_NAJAVA_DURATION,
@@ -473,11 +471,6 @@ export class BitkaModule extends BaseGameModule {
         this.nextAttack(room);
         break;
       }
-
-      case 'rezultat':
-        this.state.phase = 'ended';
-        this.state.phaseTimeRemaining = 0;
-        break;
     }
   }
 
@@ -846,13 +839,11 @@ export class BitkaModule extends BaseGameModule {
     );
     this.state.lastEvent = `${this.nameOf(room, attackerId)} napada ${this.territoryName(territoryId)}.`;
     this.state.phase = 'duel-pitanje';
-    // Kartica sa najavom pokriva prvih `BITKA_NAJAVA_MS`, pa odbrojavanje
-    // dobija svoje vreme POVRH nje. Dok je delilo istu pauzu, brojač bi se
-    // pojavio na jedinici i istog trena nestao — izgledalo je kao kvar.
-    // U nastavku opsade kartice nema, pa nema ni tog dodatka.
+    // Najava i odbrojavanje su jedna Objava (krug broji, naslov nosi strane
+    // duela), pa faza traje samo pauzu za čitanje — najava više ne dodaje
+    // svoje vreme povrh nje.
     this.state.phaseTimeRemaining =
-      (continuation ? 0 : BITKA_NAJAVA_MS / 1000) +
-      (this.timings.PITANJE_NAJAVA_DURATION ?? PITANJE_NAJAVA_DURATION);
+      this.timings.PITANJE_NAJAVA_DURATION ?? PITANJE_NAJAVA_DURATION;
   }
 
   private finishDuelOdgovor(room: Room): void {
@@ -1101,9 +1092,11 @@ export class BitkaModule extends BaseGameModule {
           : `Bitka se otegla — pobeđuje najveći zbir poena.`;
     this.state.activePlayerId = null;
     this.state.duel = null;
-    this.state.phase = 'rezultat';
-    this.state.phaseTimeRemaining =
-      this.timings.LEADERBOARD_DURATION ?? LEADERBOARD_DURATION;
+    // Pravo na kraj — bez sopstvenog ekrana „Bitka je gotova": odmah posle
+    // ionako stiže platformski ekran sa poenima i diplomama, pa je zaseban
+    // međuekran bio isti sadržaj dvaput.
+    this.state.phase = 'ended';
+    this.state.phaseTimeRemaining = 0;
   }
 
   // --- Diplome -------------------------------------------------------------
@@ -1480,7 +1473,7 @@ export class BitkaModule extends BaseGameModule {
       hostData.duel = duel;
     }
 
-    if (phase === 'rezultat' || phase === 'ended') {
+    if (phase === 'ended') {
       hostData.leaderboard = this.playerViews(room)
         .map((p) => ({
           playerId: p.playerId,

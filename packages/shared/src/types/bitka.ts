@@ -99,7 +99,8 @@ export type BitkaPhase =
   // Ishod napada u prozoru preko ekrana; tabla se još NIJE promenila.
   | 'duel-ishod'
   | 'duel-rezultat'
-  | 'rezultat'
+  // Nema zasebnog završnog ekrana — `ended` odmah predaje platformskom ekranu
+  // sa poenima i diplomama.
   | 'ended';
 
 /** Stanje jedne teritorije u partiji. */

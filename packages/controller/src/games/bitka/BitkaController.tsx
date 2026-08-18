@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  BITKA_NAJAVA_MS,
   BITKA_ZAMAK_BODOVI,
   deriveFxEvents,
   planFxHolds,
@@ -106,26 +105,6 @@ export default function BitkaController() {
     }
   }, [hostMaybe, phaseKey, playerId, haptics]);
 
-  // Najava napada — ista kartica i isto trajanje kao na TV-u (BITKA_NAJAVA_MS
-  // je zato u shared paketu): dva odvojena tajmera bi se razišla, pa bi telefon
-  // držao karticu preko mape na kojoj TV već igra.
-  // Nastavak opsade NE dobija karticu — ista poruka po treći put u istom
-  // napadu je šum; TV je preskače po istom pravilu.
-  const duelKey =
-    phaseKey === 'duel-pitanje' && hostMaybe?.duel && !hostMaybe.duel.opsadaNastavak
-      ? `${hostMaybe.duel.attackerId}:${hostMaybe.duel.territoryId}`
-      : '';
-  const [najava, setNajava] = useState(false);
-  useEffect(() => {
-    if (!duelKey) {
-      setNajava(false);
-      return;
-    }
-    setNajava(true);
-    const timer = setTimeout(() => setNajava(false), BITKA_NAJAVA_MS);
-    return () => clearTimeout(timer);
-  }, [duelKey]);
-
   if (!gameState || !playerId) return null;
   const host = gameState.data.host as BitkaHostData | undefined;
   if (!host) return null;
@@ -142,7 +121,9 @@ export default function BitkaController() {
     host.map.territories.find((t) => t.id === id)?.name ?? '';
 
   // --- kraj ----------------------------------------------------------------
-  if (phase === 'rezultat' || phase === 'ended') {
+  // Bez zasebnog završnog ekrana: `ended` je jedan broadcast pre nego što
+  // platforma preuzme sa poenima i diplomama — ovo je samo prelazni kadar.
+  if (phase === 'ended') {
     const entries = (host.leaderboard ?? []).map((e) => ({
       playerId: e.playerId,
       name: e.name,
@@ -485,26 +466,43 @@ export default function BitkaController() {
     );
   }
 
+  // Najava duela stoji CELU `duel-pitanje` fazu — najava i odbrojavanje su
+  // jedna kartica (krug broji u njoj), kao i na TV-u. Nastavak opsade ne
+  // dobija najavu (ista poruka po treći put u istom napadu je šum) — njemu
+  // ostaje sam brojač.
+  const najavaUp = phase === 'duel-pitanje' && !!host.duel && !host.duel.opsadaNastavak;
+
   // --- čekanje / gledanje --------------------------------------------------
   return (
     <MapStage
       overlay={
         phase === 'duel-ishod' && host.duel?.pendingOutcome ? (
           <DuelIshodCard host={host} me={me} />
-        ) : najava && host.duel ? (
-          <DuelNajavaCard host={host} me={me} />
+        ) : najavaUp && host.duel ? (
+          <DuelNajavaCard host={host} me={me} seconds={seconds} />
         ) : undefined
       }
       // Brojač je namerno providan i bez zatamnjenja: mapa se kroz njega vidi,
       // jer se u toj pauzi i dalje prati gde se šta dešava.
       center={
-        countdown && !najava ? (
-          <Odbrojavanje seconds={seconds} label={countdown} />
+        countdown && !najavaUp ? (
+          <Odbrojavanje
+            seconds={seconds}
+            label={
+              phase === 'duel-pitanje' && host.duel?.opsadaNastavak
+                ? 'Opsada se nastavlja'
+                : countdown
+            }
+          />
         ) : (
           // Ko šta radi i šta se upravo desilo — dotad sitan red teksta u
-          // vrhu, preko šarene mape jedva čitljiv. `duel-rezultat` je izuzet:
-          // tu se gleda animacija preuzimanja i ništa ne sme preko nje.
+          // vrhu, preko šarene mape jedva čitljiv. U fazama izbora kartica
+          // nosi i krug sa preostalim vremenom — jedina Objava u kadru.
+          // `duel-rezultat` je izuzet: tu se gleda animacija preuzimanja i
+          // ništa ne sme preko nje.
           <StatusCard
+            overline={WAIT_OVERLINE[phase]}
+            seconds={WAIT_OVERLINE[phase] ? seconds : undefined}
             title={waitTitle(phase, host, me, named)}
             line={me?.lastOutcome ?? (hostless ? undefined : host.lastEvent)}
             muted={phase === 'duel-rezultat'}
@@ -580,7 +578,8 @@ function waitTitle(
     case 'osvajanje-rezultat':
       return 'Rezultat';
     case 'osvajanje-izbor':
-      return `${named(host.activePlayerId)} bira teritoriju`;
+      // Ista rečenica kao na TV-u i u hostless traci — jedan potez, jedan tekst.
+      return `${named(host.activePlayerId)} bira slobodnu teritoriju`;
     case 'napad-izbor':
       return `${named(host.activePlayerId)} bira metu`;
     // U ovim fazama naslov nosi sam brojač preko mape.
@@ -614,6 +613,17 @@ const COUNTDOWN_LABEL: Record<string, string> = {
   'redosled-pitanje': 'Ko bira prvi?',
   'osvajanje-pitanje': 'Pitanje stiže',
   'duel-pitanje': 'Duel počinje',
+};
+
+/**
+ * Nadnaslov centralne kartice u fazama izbora — uz njega ide i krug sa
+ * preostalim vremenom, pa je kartica jedina Objava u kadru (ista rečenica se
+ * ne ponavlja ni u hostless traci, ni u zaglavlju).
+ */
+const WAIT_OVERLINE: Record<string, string> = {
+  'baza-izbor': 'Podizanje zamkova',
+  'osvajanje-izbor': 'Biranje teritorije',
+  'napad-izbor': 'Izbor mete',
 };
 
 /**
@@ -685,10 +695,16 @@ function Odbrojavanje({ seconds, label }: { seconds: number; label: string }) {
 function StatusCard({
   title,
   line,
+  overline,
+  seconds,
   muted,
 }: {
   title: string;
   line?: string;
+  /** Nadnaslov mini-Objave — „Biranje teritorije", „Izbor mete"… */
+  overline?: string;
+  /** Krug sa preostalim vremenom — u fazama izbora sat živi ovde, ne u uglu. */
+  seconds?: number;
   /** Kad se ispod igra animacija — tada ništa ne sme na sredinu. */
   muted?: boolean;
 }) {
@@ -696,20 +712,56 @@ function StatusCard({
   return (
     <div
       style={{
-        maxWidth: '86%',
+        maxWidth: '88%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.3rem',
-        padding: '0.8rem 1.2rem',
-        borderRadius: '16px',
-        background: 'rgba(9,20,36,0.62)',
-        border: '1px solid rgba(242,206,116,0.35)',
+        gap: '0.55rem',
+        padding: '1rem 1.1rem',
+        borderRadius: '18px',
+        background: 'rgba(9,20,36,0.56)',
+        border: '1px solid rgba(242,206,116,0.4)',
         textAlign: 'center',
         textShadow: 'none',
         pointerEvents: 'none',
       }}
     >
+      {seconds != null && (
+        <span
+          // Ključ je sam broj — na svaku sekundu uskoči nov, kao u brojaču.
+          key={seconds}
+          className="bitka-odbrojavanje"
+          style={{
+            width: '4.6rem',
+            height: '4.6rem',
+            borderRadius: '50%',
+            display: 'grid',
+            placeItems: 'center',
+            background: 'rgba(9,20,36,0.5)',
+            border: '3px solid rgba(242,206,116,0.6)',
+            fontFamily: 'var(--font-display)',
+            fontSize: '2.1rem',
+            fontWeight: 800,
+            lineHeight: 1,
+            color: '#F2CE74',
+          }}
+        >
+          {seconds}
+        </span>
+      )}
+      {overline && (
+        <span
+          style={{
+            fontFamily: 'var(--font-display)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.2em',
+            fontSize: '0.68rem',
+            color: '#F2CE74',
+          }}
+        >
+          {overline}
+        </span>
+      )}
       {title && (
         <span
           style={{
@@ -1131,9 +1183,11 @@ function MapStage({
 }
 
 /**
- * Najava napada na telefonu — ista kartica koju TV baci preko table, samo
- * uspravna.
+ * Najava duela na telefonu — ista Objava koju TV baci preko table, samo
+ * uspravna. Stoji celu `duel-pitanje` fazu: krug u njoj odbrojava do pitanja,
+ * pa najava i brojač nikad nisu dve stvari preko iste mape.
  *
+ * Opsada boji karticu u crveno — jedini napad koji izbacuje igrača iz partije.
  * Duelantima poslednji red piše iz njihovog ugla („Napadaš Miku" / „Mika te
  * napada"), posmatraču da pitanje stiže i njemu — inače bi kartica izgledala
  * kao poruka koja se njega ne tiče.
@@ -1141,11 +1195,14 @@ function MapStage({
 function DuelNajavaCard({
   host,
   me,
+  seconds,
 }: {
   host: BitkaHostData;
   me: BitkaControllerData | undefined;
+  seconds: number;
 }) {
   const duel = host.duel!;
+  const siege = duel.onCastle;
   const attacker = host.players.find((p) => p.playerId === duel.attackerId);
   const defender = host.players.find((p) => p.playerId === duel.defenderId);
   const territory = host.map.territories.find((t) => t.id === duel.territoryId);
@@ -1175,22 +1232,43 @@ function DuelNajavaCard({
         padding: '1.3rem 1rem',
         borderRadius: '20px',
         background: 'var(--bg-card)',
-        border: '1px solid rgba(242,206,116,0.55)',
+        border: `1px solid ${siege ? 'var(--danger)' : 'rgba(242,206,116,0.55)'}`,
         boxShadow: '0 18px 48px rgba(0,0,0,0.55)',
         textShadow: 'none',
       }}
     >
       <span className="bitka-sheen" />
       <span
+        // Krug odbrojava u samoj najavi — TV i telefon broje isti serverski sat.
+        key={seconds}
+        className="bitka-odbrojavanje"
+        style={{
+          width: '4.4rem',
+          height: '4.4rem',
+          borderRadius: '50%',
+          display: 'grid',
+          placeItems: 'center',
+          background: 'rgba(9,20,36,0.5)',
+          border: `3px solid ${siege ? 'rgba(224,106,94,0.75)' : 'rgba(242,206,116,0.6)'}`,
+          fontFamily: 'var(--font-display)',
+          fontSize: '2rem',
+          fontWeight: 800,
+          lineHeight: 1,
+          color: siege ? '#f0b3ab' : '#F2CE74',
+        }}
+      >
+        {seconds}
+      </span>
+      <span
         style={{
           fontFamily: 'var(--font-display)',
           letterSpacing: '0.24em',
           textTransform: 'uppercase',
           fontSize: '0.78rem',
-          color: '#F2CE74',
+          color: siege ? '#f0b3ab' : '#F2CE74',
         }}
       >
-        {duel.onCastle ? 'Opsada zamka' : defender ? 'Napad' : 'Ničija zemlja'}
+        {siege ? '🏰 Opsada zamka' : defender ? 'Duel počinje' : 'Pohod na ničiju zemlju'}
       </span>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', width: '100%' }}>
@@ -1207,15 +1285,21 @@ function DuelNajavaCard({
           gap: '0.55rem',
           padding: '0.45rem 0.9rem',
           borderRadius: '999px',
-          background: 'rgba(242,206,116,0.14)',
-          border: '1px solid rgba(242,206,116,0.4)',
+          background: siege ? 'rgba(224,106,94,0.16)' : 'rgba(242,206,116,0.14)',
+          border: `1px solid ${siege ? 'rgba(224,106,94,0.45)' : 'rgba(242,206,116,0.4)'}`,
         }}
       >
         <span style={{ fontSize: '1.1rem' }}>{st?.castle ? '🏰' : '🚩'}</span>
-        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#F2CE74' }}>
+        <span
+          style={{
+            fontWeight: 800,
+            fontSize: '1.05rem',
+            color: siege ? '#f0b3ab' : '#F2CE74',
+          }}
+        >
           {territory?.name ?? ''}
         </span>
-        {duel.onCastle && <Walls walls={walls} />}
+        {siege && <Walls walls={walls} />}
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>· {value}</span>
       </div>
 
