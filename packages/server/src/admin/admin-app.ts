@@ -173,6 +173,8 @@ input,textarea,select{font:inherit}
 .pk-opt .o-dot{width:8px;height:8px;border-radius:50%;flex:none}
 .pk-sep{border-top:1px solid rgba(29,53,87,.1);margin:.35rem 0}
 .pk-cat{font-size:.7rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:.5rem .6rem .2rem}
+.pk-opt.pk-all .o-name{color:var(--navy)}
+.pk-opt.pk-all.on{background:rgba(29,53,87,.10)}
 .pk-new{width:100%;display:flex;align-items:center;gap:.5rem;background:transparent;border-radius:10px;padding:.55rem .6rem;color:var(--navy);font-weight:800}
 .pk-new:hover{background:rgba(194,155,71,.10)}
 .badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:800;padding:4px 11px;border-radius:20px}
@@ -309,6 +311,8 @@ function kvizCatById(id){
     game: 'kviz',
     packsByGame: {},   // gameId -> array of pack summaries
     packIdByGame: {},  // gameId -> selected pack id
+    allMode: true,     // kviz only: one list across every pack (see isAllMode);
+                       // the default view — pick a pack to narrow it down
     pickerOpen: false
   };
 
@@ -319,6 +323,18 @@ function kvizCatById(id){
     var id = curPackId(); var list = curPacks();
     for (var i=0;i<list.length;i++) if (list[i].id===id) return list[i];
     return null;
+  }
+  // Kviz-only "Sva pitanja": one list across every pack, picked from the same
+  // dropdown. The per-pack selection is kept untouched, so leaving the mode
+  // lands back on the pack the user was editing.
+  function isAllMode(){ return state.allMode && curGame().id === 'kviz'; }
+  function totalQuestions(){
+    var list = curPacks(), n = 0;
+    for (var i=0;i<list.length;i++){
+      var p = list[i];
+      n += p.questions ? p.questions.length : (p.count || 0);
+    }
+    return n;
   }
   function packDisplayName(p){ return (p && (p.name || p.id)) || '—'; }
   function packMetaText(p, g){
@@ -354,9 +370,10 @@ function kvizCatById(id){
     var g = curGame();
     if (!g.route){ bar.innerHTML = ''; return; }  // timinzi has no packs
     var packs = curPacks();
+    var all = isAllMode();
     var cur = curPack();
     var html = '<div class="picker"><button class="picker-btn" id="pk-toggle">'
-      + '<span class="pk-name">' + esc(cur ? packDisplayName(cur) : 'Nema packa') + '</span>'
+      + '<span class="pk-name">' + esc(all ? '🗂 Sva pitanja' : (cur ? packDisplayName(cur) : 'Nema packa')) + '</span>'
       + '<span style="font-size:.85rem;color:var(--dim)">▾</span></button>';
     if (state.pickerOpen){
       html += '<div class="picker-scrim" id="pk-scrim"></div><div class="picker-menu">';
@@ -370,6 +387,10 @@ function kvizCatById(id){
           + '<span class="o-dot" style="background:' + (p.visibleInGame?'#3E7D57':'#A07D2E') + '"></span></button>';
       }
       if (g.id === 'kviz'){
+        html += '<button class="pk-opt pk-all' + (all ? ' on' : '') + '" id="pk-all">'
+          + '<span style="flex:1;min-width:0"><span class="o-name">🗂 Sva pitanja</span>'
+          + '<span class="o-meta">' + esc(totalQuestions() + ' pitanja · ' + packs.length + ' packova') + '</span></span>'
+          + '</button><div class="pk-sep"></div>';
         // Group by category, in KVIZ_CATS order; skip empty sections.
         KVIZ_CATS.forEach(function(cat){
           var inCat = packs.filter(function(p){ return kvizCatById(p.category).id === cat.id; });
@@ -383,7 +404,7 @@ function kvizCatById(id){
       html += '<div class="pk-sep"></div><button class="pk-new" id="pk-new">＋ Novi pack</button></div>';
     }
     html += '</div>';
-    if (cur){
+    if (cur && !all){
       var pmod = MODULES[g.kind];
       var showSet = pmod && pmod.hasSettings && pmod.hasSettings(g);
       if (showSet) html += '<button class="btn btn-ghost btn-sm" id="pk-settings">⚙ Podaci</button>';
@@ -400,13 +421,17 @@ function kvizCatById(id){
     if (scrim) scrim.onclick = function(){ state.pickerOpen = false; renderPicker(); };
     var opts = document.querySelectorAll('.pk-opt');
     for (var i=0;i<opts.length;i++){
+      if (!opts[i].getAttribute('data-pk')) continue;  // "Sva pitanja" is wired below
       opts[i].onclick = function(){
         var id = this.getAttribute('data-pk');
         state.packIdByGame[state.game] = id;
+        state.allMode = false;
         state.pickerOpen = false;
         renderAll();
       };
     }
+    var pkAll = $('pk-all');
+    if (pkAll) pkAll.onclick = function(){ state.allMode = true; state.pickerOpen = false; renderAll(); };
     var nw = $('pk-new'); if (nw) nw.onclick = function(){ state.pickerOpen = false; createPackFlow(); };
     var st = $('pk-settings'); if (st) st.onclick = function(){ openSettings(); };
     var del = $('pk-delete'); if (del) del.onclick = function(){ deletePackFlow(); };
@@ -424,6 +449,7 @@ function kvizCatById(id){
       list.sort(function(a,b){ return a.id < b.id ? -1 : 1; });
       state.packsByGame[state.game] = list;
       state.packIdByGame[state.game] = data.item.id;
+      state.allMode = false;
       renderAll();
       showOk('Pack napravljen.');
     }).catch(function(e){ showErr(e.message); });
@@ -487,11 +513,26 @@ function kvizCatById(id){
     });
   }
 
+  /** Whole-file PUT for any pack of the current game (not just the selected one). */
+  function putPackById(packId, body, okMsg){
+    var g = curGame();
+    return api('PUT', '/api/admin/' + g.route + '/' + packId, body).then(function(data){
+      var list = curPacks().slice();
+      for (var i=0;i<list.length;i++) if (list[i].id===data.item.id){ list[i]=data.item; break; }
+      state.packsByGame[state.game] = list;
+      renderAll();
+      if (okMsg) showOk(okMsg);
+      return data.item;
+    });
+  }
+
   // ---- shared context passed to modules ----
   function ctx(){
     return {
       $:$, esc:esc, api:api, showErr:showErr, showOk:showOk,
-      game: curGame(), pack: curPack(), packs: curPacks(),
+      game: curGame(), pack: isAllMode() ? null : curPack(), packs: curPacks(),
+      // True while the kviz table lists every pack at once; "pack" is null then.
+      allMode: isAllMode(),
       // Replace the current pack summary in state after a PUT and re-render.
       updatePack: function(item){
         var list = curPacks().slice();
@@ -502,16 +543,18 @@ function kvizCatById(id){
       renderAll: renderAll,
       // Whole-file PUT helper (modules build the body).
       putPack: function(body, okMsg){
-        var g = curGame(); var p = curPack();
+        var p = curPack();
         if (!p) return Promise.reject(new Error('Nema packa.'));
-        return api('PUT', '/api/admin/' + g.route + '/' + p.id, body).then(function(data){
-          var list = curPacks().slice();
-          for (var i=0;i<list.length;i++) if (list[i].id===data.item.id){ list[i]=data.item; break; }
-          state.packsByGame[state.game] = list;
-          renderAll();
-          if (okMsg) showOk(okMsg);
-          return data.item;
-        });
+        return putPackById(p.id, body, okMsg);
+      },
+      // Same, for a pack that isn't the selected one — "Sva pitanja" edits
+      // rows that belong to any pack.
+      putPackById: putPackById,
+      // Leave "Sva pitanja" and select one pack (row → pack jump).
+      openPack: function(packId){
+        state.allMode = false;
+        state.packIdByGame[state.game] = packId;
+        renderAll();
       },
       // Slide-in sheet host helpers (Faza 1).
       sheetHost: $('sheet-host')
@@ -527,6 +570,7 @@ function kvizCatById(id){
     goToPack: function(gameId, packId){
       state.game = gameId;
       state.pickerOpen = false;
+      state.allMode = false;   // a jump always targets one concrete pack
       var g = gameById(gameId);
       function finish(){ if (packId) state.packIdByGame[gameId] = packId; renderAll(); }
       if (g.route && !state.packsByGame[gameId]){
@@ -619,8 +663,8 @@ function kvizCatById(id){
 
   // Player feedback (reports + ratings), fetched once, keyed pack:<id>:<index>.
   var feedbackCache=null, feedbackLoading=false;
-  function fbKey(ctx,idx){ return 'pack:'+ctx.pack.id+':'+idx; }
-  function fbFor(ctx,idx){ return (feedbackCache && ctx.pack && feedbackCache[fbKey(ctx,idx)]) || null; }
+  function fbKey(packId,idx){ return 'pack:'+packId+':'+idx; }
+  function fbFor(packId,idx){ return (feedbackCache && packId && feedbackCache[fbKey(packId,idx)]) || null; }
   function fbAvg(fb){ return (fb && fb.ratingCount>0) ? (fb.ratingSum/fb.ratingCount) : null; }
   function ensureFeedback(host,ctx){
     if (feedbackCache!==null || feedbackLoading) return;
@@ -628,25 +672,31 @@ function kvizCatById(id){
     api('GET','/api/admin/quiz-feedback').then(function(d){ feedbackCache=d.feedback||{}; feedbackLoading=false; renderMain(host,ctx); })
       .catch(function(){ feedbackCache={}; feedbackLoading=false; });
   }
-  function clearFeedback(ctx,idx){
-    var k=fbKey(ctx,idx);
+  function clearFeedback(packId,idx){
+    var k=fbKey(packId,idx);
     api('POST','/api/admin/quiz-feedback/clear',{key:k}).then(function(){ if(feedbackCache)delete feedbackCache[k]; window.AdminApp.renderAll(); showOk('Feedback obrisan.'); })
       .catch(function(e){ showErr(e.message); });
   }
 
-  // table state persists across re-renders; reset when switching game.
-  var tv = { game:null, search:'', filter:'all', sort:'none' };
+  // table state persists across re-renders; reset when switching game/mode.
+  // "limit" is how many rows are in the DOM right now — the list grows in
+  // CHUNK steps as the sentinel scrolls into view, never all 1600+ at once.
+  var tv = { game:null, all:null, search:'', filter:'all', sort:'none', limit:0 };
+  var CHUNK = 60;
+  var rowObserver = null;   // IntersectionObserver on the "load more" sentinel
+  var pendingOpen = null;   // {packId, idx}: sheet to open after a pack jump
 
   function packMaps(ctx){ var p=ctx.pack; return (p && p.maps && typeof p.maps==='object')?p.maps:{}; }
-  function fileUrl(ctx,name){ return '/kviz-files/'+ctx.pack.id+'/'+name; }
-  function imgSrcOf(ctx,q){ if(q.imageUrl)return q.imageUrl; if(q.imageFile)return fileUrl(ctx,q.imageFile); return null; }
+  function fileUrlFor(packId,name){ return '/kviz-files/'+packId+'/'+name; }
+  function fileUrl(ctx,name){ return fileUrlFor(ctx.pack.id,name); }
+  function imgSrcOf(packId,q){ if(q.imageUrl)return q.imageUrl; if(q.imageFile)return fileUrlFor(packId,q.imageFile); return null; }
 
-  function mediaTagFor(g,q,ctx){
+  function mediaTagFor(g,q,packId){
     if (g.id!=='kviz') return '';
     var t=typeOf(g,q);
     if (t==='audio') return 'audio';
     if (t==='video') return 'video';
-    if (imgSrcOf(ctx,q)) return 'slika';
+    if (imgSrcOf(packId,q)) return 'slika';
     return '';
   }
 
@@ -707,28 +757,115 @@ function kvizCatById(id){
   }
 
   // ---------- table view ----------
+
+  /**
+   * Flatten what the table shows into {pack, idx, q} rows, so the per-pack view
+   * and "Sva pitanja" share one filter/sort/render path. "idx" stays the index
+   * inside its OWN pack — every edit still writes that pack's own array.
+   */
+  function collectRows(ctx){
+    var out=[];
+    function push(pk){ var qs=pk.questions||[]; for(var i=0;i<qs.length;i++) out.push({pack:pk, idx:i, q:qs[i]}); }
+    if (ctx.allMode) (ctx.packs||[]).forEach(push);
+    else if (ctx.pack) push(ctx.pack);
+    return out;
+  }
+
+  function packById(ctx,packId){
+    var l=ctx.packs||[];
+    for(var i=0;i<l.length;i++) if(l[i].id===packId) return l[i];
+    return null;
+  }
+
+  /** Search haystack for one row — every field any question type can carry. */
+  function rowHay(row){
+    var q=row.q, h=[q.text||'', q.caption||'', q.emojis||'', q.quote||'', q.explanation||''];
+    if (q.answer!=null) h.push(String(q.answer));
+    if (Array.isArray(q.options)) h.push(q.options.join(' '));
+    if (Array.isArray(q.accept)) h.push(q.accept.join(' '));
+    if (Array.isArray(q.cells)) h.push(q.cells.join(' '));
+    if (Array.isArray(q.items)) h.push(q.items.map(function(x){ return (x && typeof x==='object') ? (x.label||'') : x; }).join(' '));
+    if (row.pack) h.push(row.pack.name||row.pack.id);
+    return h.join(' ').toLowerCase();
+  }
+
+  var DEF_TEXTS = { geo:'Gde je ovo slikano?', emoji:'Šta se krije iza emojija?', uljez:'Pronađi uljeza!', dopuna:'Završi citat!', piksel:'Šta je na slici?', anagram:'Reši anagram!', domino:'Pre ili posle?', matrica:'Poveži 3 pojma koja idu zajedno!' };
+
+  /** One table row. showPack adds the pack chip ("Sva pitanja" only). */
+  function rowHtml(g, row, showPack){
+    var TM=typesFor(g), q=row.q, idx=row.idx;
+    var packId=row.pack?row.pack.id:'';
+    var isKviz=(g.id==='kviz');
+    var t=typeOf(g,q);
+    var m=TM[t]||{icon:'•',label:t,color:'#6E6A5E',bg:'#eee'};
+    var mt=mediaTagFor(g,q,packId);
+    var mtHtml = mt ? '<span class="t-mtag" style="color:'+m.color+';background:'+m.bg+'">'+mt+'</span>' : '';
+    var catHtml = (!isKviz && q.category) ? '<span class="t-mtag'+(q.category==='nsfw'?' tag-nsfw':'')+'" style="background:var(--surface2);color:var(--muted)">'+esc(q.category)+'</span>' : '';
+    var tagsHtml='';
+    if (isKviz && Array.isArray(q.tags)){
+      q.tags.forEach(function(tg){ var td=tagLabel(tg); if(td) tagsHtml+='<span class="t-mtag" style="color:'+td.color+';background:'+td.color+'22">'+esc(td.label)+'</span>'; });
+    }
+    var fbHtml='';
+    if (isKviz){
+      var fb=fbFor(packId,idx);
+      if (fb){
+        if (fb.reports>0) fbHtml+='<span class="t-mtag" style="color:#B85C4F;background:rgba(184,92,79,.14)" title="Prijava kao netačno">🚩 '+fb.reports+'</span>';
+        var avg=fbAvg(fb);
+        if (avg!=null) fbHtml+='<span class="t-mtag" style="color:#8a6f2c;background:rgba(194,155,71,.16)" title="'+fb.ratingCount+' ocena">★ '+avg.toFixed(1)+' <span style="opacity:.7">('+fb.ratingCount+')</span></span>';
+      }
+    }
+    var packHtml = showPack
+      ? '<button class="t-pack" data-act="pack" data-pk="'+esc(packId)+'" title="Otvori ovaj pack">'+esc(row.pack.name||row.pack.id)+'</button>'
+      : '';
+    var text = q.text || DEF_TEXTS[t] || '(bez teksta)';
+    var da = ' data-pk="'+esc(packId)+'" data-idx="'+idx+'"';
+    var clearBtn = (isKviz && fbHtml) ? '<button class="iconbtn fbclear" title="Obriši feedback" data-act="fbclear"'+da+'>✖🚩</button>' : '';
+    return '<div class="tbl-row" data-idx="'+idx+'">'
+      + '<div class="t-type"><span class="ti">'+m.icon+'</span><span class="tl" style="color:'+m.color+'">'+esc(m.label)+'</span></div>'
+      + '<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
+      + '<span class="t-text">'+esc(text)+'</span>'+packHtml+mtHtml+catHtml+tagsHtml+fbHtml+'</div>'
+      + '<div class="t-ans">'+answerLine(g,q)+'</div></div>'
+      + '<div class="t-acts">'
+      + (q.timeLimit && g.id!=='kviz' ? '<span class="t-time">⏱ '+esc(q.timeLimit)+'s</span>' : '')
+      + clearBtn
+      + '<button class="iconbtn dup" title="Dupliraj" data-act="dup"'+da+'>⧉</button>'
+      + '<button class="iconbtn edit" title="Izmeni" data-act="edit"'+da+'>✎</button>'
+      + '<button class="iconbtn del" title="Obriši" data-act="del"'+da+'>🗑</button></div></div>';
+  }
+
+  /** Edit a row: from "Sva pitanja" this first jumps to the row's own pack. */
+  function openRow(ctx, packId, idx){
+    if (!ctx.allMode && ctx.pack && ctx.pack.id===packId){ openSheet(ctx, idx); return; }
+    pendingOpen={packId:packId, idx:idx};
+    ctx.openPack(packId);
+  }
+
   function renderMain(host, ctx){
-    var g=ctx.game, p=ctx.pack;
-    if (tv.game!==g.id){ tv.game=g.id; tv.search=''; tv.filter='all'; tv.sort='none'; }
-    if (!p){ host.innerHTML='<div class="empty">Nema izabranog packa — napravi novi pack (dugme gore).</div>'; return; }
+    var g=ctx.game;
+    var all=!!ctx.allMode;
+    if (tv.game!==g.id || tv.all!==all){ tv.game=g.id; tv.all=all; tv.search=''; tv.filter='all'; tv.sort='none'; tv.limit=CHUNK; }
+    if (!tv.limit) tv.limit=CHUNK;
+    if (!all && !ctx.pack){ host.innerHTML='<div class="empty">Nema izabranog packa — napravi novi pack (dugme gore).</div>'; return; }
     var isKviz=(g.id==='kviz');
     if (isKviz) ensureFeedback(host,ctx);
     var TM=typesFor(g);
-    var list=p.questions||[];
-    var counts={all:list.length};
+    var rows=collectRows(ctx);
+
+    var counts={all:rows.length};
     for (var k in TM) counts[k]=0;
     var reportedCount=0;
-    list.forEach(function(q,idx){ var t=typeOf(g,q); if(counts[t]!=null)counts[t]++; if(isKviz){ var fb=fbFor(ctx,idx); if(fb&&fb.reports>0)reportedCount++; } });
+    rows.forEach(function(r){
+      var t=typeOf(g,r.q); if(counts[t]!=null)counts[t]++;
+      if(isKviz){ var fb=fbFor(r.pack.id,r.idx); if(fb&&fb.reports>0)reportedCount++; }
+    });
 
     var filtersHtml='<button class="chip-f'+(tv.filter==='all'?' on':'')+'" data-f="all">Sve <span class="c-n">'+counts.all+'</span></button>';
     for (var kk in TM){ filtersHtml+='<button class="chip-f'+(tv.filter===kk?' on':'')+'" data-f="'+kk+'">'+TM[kk].icon+' '+esc(TM[kk].label)+' <span class="c-n">'+(counts[kk]||0)+'</span></button>'; }
     if (isKviz){ filtersHtml+='<button class="chip-f'+(tv.filter==='reported'?' on':'')+'" data-f="reported" style="'+(reportedCount?'':'opacity:.55;')+'">🚩 Prijavljena <span class="c-n">'+reportedCount+'</span></button>'; }
 
-    // Build display order (original indices), then sort by feedback if asked.
-    var order=[]; for(var oi=0;oi<list.length;oi++) order.push(oi);
     if (isKviz && tv.sort!=='none'){
-      order.sort(function(a,b){
-        var fa=fbFor(ctx,a), fbb=fbFor(ctx,b);
+      rows.sort(function(a,b){
+        var fa=fbFor(a.pack.id,a.idx), fbb=fbFor(b.pack.id,b.idx);
         if (tv.sort==='reports') return (fbb?fbb.reports:0)-(fa?fa.reports:0);
         var av=fbAvg(fa), bv=fbAvg(fbb);
         if (tv.sort==='rating-asc'){ return (av==null?99:av)-(bv==null?99:bv); }
@@ -736,110 +873,151 @@ function kvizCatById(id){
       });
     }
 
-    var s=tv.search.trim().toLowerCase();
-    var rowsHtml=''; var shown=0;
-    order.forEach(function(idx){
-      var q=list[idx];
-      var t=typeOf(g,q);
-      if (tv.filter==='reported'){ var fbr=fbFor(ctx,idx); if(!fbr||!fbr.reports) return; }
-      else if (tv.filter!=='all' && t!==tv.filter) return;
-      if (s && (q.text||'').toLowerCase().indexOf(s)<0 && (q.caption||'').toLowerCase().indexOf(s)<0
-        && String(q.answer||'').toLowerCase().indexOf(s)<0 && (q.emojis||'').toLowerCase().indexOf(s)<0
-        && (q.quote||'').toLowerCase().indexOf(s)<0
-        && (Array.isArray(q.items)?q.items.join(' '):'').toLowerCase().indexOf(s)<0) return;
-      shown++;
-      var m=TM[t]||{icon:'•',label:t,color:'#6E6A5E',bg:'#eee'};
-      var mt=mediaTagFor(g,q,ctx);
-      var mtHtml = mt ? '<span class="t-mtag" style="color:'+m.color+';background:'+m.bg+'">'+mt+'</span>' : '';
-      var catHtml = (g.id!=='kviz' && q.category) ? '<span class="t-mtag'+(q.category==='nsfw'?' tag-nsfw':'')+'" style="background:var(--surface2);color:var(--muted)">'+esc(q.category)+'</span>' : '';
-      // Author tags (kviz) — internal, shown to admin only.
-      var tagsHtml='';
-      if (isKviz && Array.isArray(q.tags)){
-        q.tags.forEach(function(tg){ var td=tagLabel(tg); if(td) tagsHtml+='<span class="t-mtag" style="color:'+td.color+';background:'+td.color+'22">'+esc(td.label)+'</span>'; });
-      }
-      // Feedback badges (kviz).
-      var fbHtml='';
-      if (isKviz){
-        var fb=fbFor(ctx,idx);
-        if (fb){
-          if (fb.reports>0) fbHtml+='<span class="t-mtag" style="color:#B85C4F;background:rgba(184,92,79,.14)" title="Prijava kao netačno">🚩 '+fb.reports+'</span>';
-          var avg=fbAvg(fb);
-          if (avg!=null) fbHtml+='<span class="t-mtag" style="color:#8a6f2c;background:rgba(194,155,71,.16)" title="'+fb.ratingCount+' ocena">★ '+avg.toFixed(1)+' <span style="opacity:.7">('+fb.ratingCount+')</span></span>';
-        }
-      }
-      var DEF_TEXTS = { geo:'Gde je ovo slikano?', emoji:'Šta se krije iza emojija?', uljez:'Pronađi uljeza!', dopuna:'Završi citat!', piksel:'Šta je na slici?', anagram:'Reši anagram!', domino:'Pre ili posle?', matrica:'Poveži 3 pojma koja idu zajedno!' };
-      var text = q.text || DEF_TEXTS[t] || '(bez teksta)';
-      var clearBtn = (isKviz && fbHtml) ? '<button class="iconbtn fbclear" title="Obriši feedback" data-idx="'+idx+'">✖🚩</button>' : '';
-      rowsHtml += '<div class="tbl-row" data-idx="'+idx+'">'
-        + '<div class="t-type"><span class="ti">'+m.icon+'</span><span class="tl" style="color:'+m.color+'">'+esc(m.label)+'</span></div>'
-        + '<div class="t-main"><div class="t-line1"><span class="t-num">'+(idx+1)+'.</span>'
-        + '<span class="t-text">'+esc(text)+'</span>'+mtHtml+catHtml+tagsHtml+fbHtml+'</div>'
-        + '<div class="t-ans">'+answerLine(g,q)+'</div></div>'
-        + '<div class="t-acts">'
-        + (q.timeLimit && g.id!=='kviz' ? '<span class="t-time">⏱ '+esc(q.timeLimit)+'s</span>' : '')
-        + clearBtn
-        + '<button class="iconbtn dup" title="Dupliraj" data-idx="'+idx+'">⧉</button>'
-        + '<button class="iconbtn edit" title="Izmeni" data-idx="'+idx+'">✎</button>'
-        + '<button class="iconbtn del" title="Obriši" data-idx="'+idx+'">🗑</button></div></div>';
+    var sq=tv.search.trim().toLowerCase();
+    var filtered=rows.filter(function(r){
+      if (tv.filter==='reported'){ var fbr=fbFor(r.pack.id,r.idx); if(!fbr||!fbr.reports) return false; }
+      else if (tv.filter!=='all' && typeOf(g,r.q)!==tv.filter) return false;
+      if (sq && rowHay(r).indexOf(sq)<0) return false;
+      return true;
     });
-    if (shown===0) rowsHtml='<div class="empty">'+(list.length?'Nema pitanja za ovaj filter.':'Prazan pack — dodaj prvo pitanje.')+'</div>';
+
+    var rowsHtml='';
+    for (var ri=0; ri<Math.min(tv.limit, filtered.length); ri++) rowsHtml+=rowHtml(g, filtered[ri], all);
+    if (!filtered.length) rowsHtml='<div class="empty">'+(rows.length?'Nema pitanja za ovaj filter.':'Prazan pack — dodaj prvo pitanje.')+'</div>';
 
     // Sort control lives on its own row so it never squeezes the type filters.
     var sortHtml='';
     if (isKviz){
-      var so=[['none','— Redosled u packu —'],['reports','Najviše prijava'],['rating-asc','Najlošije ocenjena'],['rating-desc','Najbolje ocenjena']];
+      var so=[['none', all?'— Pack po pack —':'— Redosled u packu —'],['reports','Najviše prijava'],['rating-asc','Najlošije ocenjena'],['rating-desc','Najbolje ocenjena']];
       sortHtml='<div class="tbl-sortbar"><span class="tbl-sortlbl">Sortiraj:</span><select class="tbl-sort" id="tbl-sort">';
-      for(var si=0;si<so.length;si++) sortHtml+='<option value="'+so[si][0]+'"'+(tv.sort===so[si][0]?' selected':'')+'>'+so[si][1]+'</option>';
+      for(var si=0;si<so.length;si++) sortHtml+='<option value="'+so[si][0]+'"'+(tv.sort===so[si][0]?' selected':'')+'>'+esc(so[si][1])+'</option>';
       sortHtml+='</select></div>';
     }
 
     host.innerHTML =
       '<div class="tbl-tools">'
-      + '<div class="tbl-search"><span>🔎</span><input class="field" id="tbl-q" placeholder="Pretraži pitanja…" value="'+esc(tv.search)+'"></div>'
-      + '<button class="btn btn-primary" id="tbl-new" style="margin-left:auto">＋ Novo pitanje</button></div>'
+      + '<div class="tbl-search"><span>🔎</span><input class="field" id="tbl-q" placeholder="'+(all?'Pretraži sva pitanja…':'Pretraži pitanja…')+'" value="'+esc(tv.search)+'"></div>'
+      + '<span class="tbl-count" id="tbl-count"></span>'
+      + (all ? '' : '<button class="btn btn-primary" id="tbl-new">＋ Novo pitanje</button>')
+      + '</div>'
       + '<div class="tbl-filterbar"><div class="tbl-filters">'+filtersHtml+'</div></div>'
       + sortHtml
-      + '<div class="tbl'+(g.id==='kviz'?' tbl-icont':'')+'"><div class="tbl-head"><span>Tip</span><span>Pitanje</span><span style="text-align:right">Radnje</span></div>'
+      + '<div class="tbl'+(isKviz?' tbl-icont':'')+'"><div class="tbl-head"><span>Tip</span><span>Pitanje</span><span style="text-align:right">Radnje</span></div>'
       + rowsHtml + '</div>'
-      + '<button class="add-row" id="tbl-add">＋ Dodaj pitanje</button>';
+      + (filtered.length>tv.limit ? '<div class="tbl-more" id="tbl-more"><button class="btn btn-ghost btn-sm" id="tbl-more-btn">Učitaj još</button></div>' : '')
+      + (all ? '' : '<button class="add-row" id="tbl-add">＋ Dodaj pitanje</button>');
 
-    // wiring
-    var q=$('tbl-q');
-    q.oninput=function(){ tv.search=this.value; var pos=this.selectionStart; renderMain(host,ctx); var nq=$('tbl-q'); if(nq){nq.focus(); try{nq.setSelectionRange(pos,pos);}catch(e){}} };
-    var sortSel=$('tbl-sort'); if(sortSel) sortSel.onchange=function(){ tv.sort=this.value; renderMain(host,ctx); };
+    var tblEl=host.querySelector('.tbl');
+
+    function updateCount(){
+      var c=$('tbl-count'); if(!c) return;
+      var n=Math.min(tv.limit, filtered.length);
+      c.textContent = (filtered.length===rows.length)
+        ? ('Prikazano ' + n + ' od ' + filtered.length)
+        : ('Prikazano ' + n + ' od ' + filtered.length + ' (ukupno ' + rows.length + ')');
+    }
+
+    function syncMore(){
+      var wrap=$('tbl-more'), left=filtered.length-tv.limit;
+      if (left<=0){
+        if (rowObserver){ rowObserver.disconnect(); rowObserver=null; }
+        if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+        return;
+      }
+      var btn=$('tbl-more-btn');
+      if (btn) btn.textContent='Učitaj još ('+left+')';
+    }
+
+    /** Append the next CHUNK rows to the DOM — no full re-render, no refetch. */
+    function loadMore(){
+      if (tv.limit>=filtered.length) return;
+      var from=tv.limit, to=Math.min(filtered.length, from+CHUNK), html='';
+      for (var i=from;i<to;i++) html+=rowHtml(g, filtered[i], all);
+      tv.limit=to;
+      if (tblEl) tblEl.insertAdjacentHTML('beforeend', html);
+      syncMore(); updateCount();
+    }
+
+    // The observer fires once per intersection *change*, so on a tall screen one
+    // chunk may not push the sentinel out of view — keep pulling until it is
+    // safely below the fold.
+    function pump(){
+      var el=$('tbl-more'); if(!el) return;
+      var r=el.getBoundingClientRect();
+      if (r.top < (window.innerHeight||600)+400){
+        loadMore();
+        if ($('tbl-more')) window.requestAnimationFrame(pump);
+      }
+    }
+
+    updateCount(); syncMore();
+    if (rowObserver){ rowObserver.disconnect(); rowObserver=null; }
+    var moreEl=$('tbl-more');
+    if (moreEl){
+      var mb=$('tbl-more-btn'); if(mb) mb.onclick=function(){ loadMore(); pump(); };
+      if (window.IntersectionObserver){
+        rowObserver=new IntersectionObserver(function(entries){
+          for(var i=0;i<entries.length;i++) if(entries[i].isIntersecting){ pump(); return; }
+        }, { rootMargin:'400px 0px' });
+        rowObserver.observe(moreEl);
+      }
+      window.requestAnimationFrame(pump);   // fill a tall viewport on first paint
+    }
+
+    // Row actions are delegated, so chunks appended later need no extra wiring.
+    if (tblEl) tblEl.onclick=function(ev){
+      var t=ev.target;
+      var b=(t && t.closest) ? t.closest('[data-act]') : null;
+      if (!b || !tblEl.contains(b)) return;
+      var act=b.getAttribute('data-act');
+      var pid=b.getAttribute('data-pk');
+      var idx=parseInt(b.getAttribute('data-idx'),10);
+      if (act==='pack'){ ctx.openPack(pid); return; }
+      if (act==='edit'){ openRow(ctx,pid,idx); return; }
+      if (act==='dup'){ dupQuestion(ctx,pid,idx); return; }
+      if (act==='del'){ delQuestion(ctx,pid,idx); return; }
+      if (act==='fbclear'){ if(window.confirm('Obrisati prijave i ocene za ovo pitanje?')) clearFeedback(pid,idx); return; }
+    };
+
+    var qEl=$('tbl-q');
+    qEl.oninput=function(){ tv.search=this.value; tv.limit=CHUNK; var pos=this.selectionStart; renderMain(host,ctx); var nq=$('tbl-q'); if(nq){nq.focus(); try{nq.setSelectionRange(pos,pos);}catch(e){}} };
+    var sortSel=$('tbl-sort'); if(sortSel) sortSel.onchange=function(){ tv.sort=this.value; tv.limit=CHUNK; renderMain(host,ctx); };
     var fbtns=host.querySelectorAll('.chip-f');
-    for (var i=0;i<fbtns.length;i++) fbtns[i].onclick=function(){ tv.filter=this.getAttribute('data-f'); renderMain(host,ctx); };
-    $('tbl-new').onclick=function(){ openSheet(ctx,null); };
-    $('tbl-add').onclick=function(){ openSheet(ctx,null); };
-    var edits=host.querySelectorAll('.iconbtn.edit');
-    for (var e=0;e<edits.length;e++) edits[e].onclick=function(){ openSheet(ctx, parseInt(this.getAttribute('data-idx'),10)); };
-    var dups=host.querySelectorAll('.iconbtn.dup');
-    for (var d=0;d<dups.length;d++) dups[d].onclick=function(){ dupQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
-    var dels=host.querySelectorAll('.iconbtn.del');
-    for (var x=0;x<dels.length;x++) dels[x].onclick=function(){ delQuestion(ctx, parseInt(this.getAttribute('data-idx'),10)); };
-    var fcs=host.querySelectorAll('.iconbtn.fbclear');
-    for (var fci=0;fci<fcs.length;fci++) fcs[fci].onclick=function(){ if(window.confirm('Obrisati prijave i ocene za ovo pitanje?')) clearFeedback(ctx, parseInt(this.getAttribute('data-idx'),10)); };
+    for (var i=0;i<fbtns.length;i++) fbtns[i].onclick=function(){ tv.filter=this.getAttribute('data-f'); tv.limit=CHUNK; renderMain(host,ctx); };
+    var nb=$('tbl-new'); if(nb) nb.onclick=function(){ openSheet(ctx,null); };
+    var ab=$('tbl-add'); if(ab) ab.onclick=function(){ openSheet(ctx,null); };
+
+    // A row jump out of "Sva pitanja" lands here — open that question's editor.
+    if (pendingOpen && !all && ctx.pack && ctx.pack.id===pendingOpen.packId){
+      var pIdx=pendingOpen.idx; pendingOpen=null;
+      openSheet(ctx, pIdx);
+    }
   }
 
-  function saveQuestions(ctx, questions, okMsg){
-    var g=ctx.game, p=ctx.pack, body;
+  /** Save questions into a specific pack (not necessarily the selected one). */
+  function saveQuestionsFor(ctx, pack, questions, okMsg){
+    var g=ctx.game, body;
     if (g.id==='kviz'){
-      body={ name: p.name || p.id, questions: questions };
-      if (p.description) body.description=p.description;
-      if (p.category) body.category=p.category;
-      var maps=packMaps(ctx); if (Object.keys(maps).length) body.maps=maps;
+      body={ name: pack.name || pack.id, questions: questions };
+      if (pack.description) body.description=pack.description;
+      if (pack.category) body.category=pack.category;
+      var maps=(pack.maps && typeof pack.maps==='object')?pack.maps:{};
+      if (Object.keys(maps).length) body.maps=maps;
     } else { body={ questions: questions }; }
-    return ctx.putPack(body, okMsg);
+    return ctx.putPackById(pack.id, body, okMsg);
   }
-  function dupQuestion(ctx, idx){
-    var arr=(ctx.pack.questions||[]).slice(); if(!arr[idx])return;
+  function saveQuestions(ctx, questions, okMsg){ return saveQuestionsFor(ctx, ctx.pack, questions, okMsg); }
+  function dupQuestion(ctx, packId, idx){
+    var pk=packById(ctx,packId)||ctx.pack; if(!pk)return;
+    var arr=(pk.questions||[]).slice(); if(!arr[idx])return;
     arr.splice(idx+1,0,JSON.parse(JSON.stringify(arr[idx])));
-    saveQuestions(ctx, arr, 'Pitanje duplirano.').catch(function(e){ showErr(e.message); });
+    saveQuestionsFor(ctx, pk, arr, 'Pitanje duplirano.').catch(function(e){ showErr(e.message); });
   }
-  function delQuestion(ctx, idx){
+  function delQuestion(ctx, packId, idx){
+    var pk=packById(ctx,packId)||ctx.pack; if(!pk)return;
     if(!window.confirm('Obrisati ovo pitanje?'))return;
-    var arr=(ctx.pack.questions||[]).slice(); arr.splice(idx,1);
-    saveQuestions(ctx, arr, 'Pitanje obrisano.').catch(function(e){ showErr(e.message); });
+    var arr=(pk.questions||[]).slice(); arr.splice(idx,1);
+    saveQuestionsFor(ctx, pk, arr, 'Pitanje obrisano.').catch(function(e){ showErr(e.message); });
   }
 
   // ---------- sheet chrome ----------
@@ -2656,6 +2834,9 @@ const ADMIN_VIEW_CSS = `
 .tbl-filters{display:flex;gap:.3rem;flex-wrap:wrap}
 .tbl-sortbar{display:flex;align-items:center;gap:.5rem;margin:-.4rem 0 .9rem}
 .tbl-sortlbl{font-size:.8rem;font-weight:700;color:var(--dim)}
+/* Pushed right so it sits next to the primary button (or at the far end when
+   "Sva pitanja" hides it). */
+.tbl-count{margin-left:auto;font-size:.78rem;font-weight:700;color:var(--dim);white-space:nowrap}
 .tbl-sort{background:var(--surface3);color:var(--ink);border:1.5px solid var(--line2);border-radius:9px;padding:.35rem .6rem;font-size:.82rem;font-weight:600;cursor:pointer;max-width:230px}
 .fb-head{display:flex;align-items:flex-start;gap:1rem;justify-content:space-between;margin-bottom:1.1rem;flex-wrap:wrap}
 .fb-title{font-size:1.15rem;font-weight:800;color:var(--navy)}
@@ -2692,6 +2873,10 @@ const ADMIN_VIEW_CSS = `
 .t-num{font-size:.72rem;font-weight:800;color:var(--dim);flex:none}
 .t-text{font-weight:700;font-size:.95rem;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t-mtag{font-size:.62rem;font-weight:800;padding:1px 6px;border-radius:6px;flex:none}
+/* Which pack a row belongs to — only rendered in "Sva pitanja"; click opens it. */
+.t-pack{font-size:.64rem;font-weight:800;padding:1px 7px;border-radius:6px;flex:none;cursor:pointer;max-width:170px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(29,53,87,.07);color:var(--navy);border:1px solid rgba(29,53,87,.14)}
+.t-pack:hover{background:rgba(194,155,71,.20);border-color:var(--gold)}
 .t-ans{color:var(--muted);font-size:.82rem;margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t-ans .ok{color:var(--green);font-weight:800}
 .t-acts{display:flex;align-items:center;gap:.4rem}
@@ -2702,6 +2887,8 @@ const ADMIN_VIEW_CSS = `
 .add-row{width:100%;margin-top:.7rem;border:1.5px dashed rgba(29,53,87,.28);background:transparent;color:var(--navy);
   font-weight:700;font-size:.9rem;padding:.75rem;border-radius:13px;cursor:pointer}
 .add-row:hover{background:var(--surface);border-color:var(--gold)}
+/* Lazy-load sentinel: the observer watches it and appends the next chunk. */
+.tbl-more{display:flex;justify-content:center;padding:.9rem 0 .2rem}
 .tag-chip{display:inline-block;font-size:.62rem;font-weight:800;padding:1px 7px;border-radius:6px;background:var(--surface2);color:var(--muted);
   margin-right:.3rem;text-transform:uppercase;letter-spacing:.04em}
 .tag-nsfw{background:rgba(176,74,66,.14);color:var(--red)}
@@ -2782,6 +2969,7 @@ const ADMIN_VIEW_CSS = `
   .tbl-filters::-webkit-scrollbar{height:0}
   .chip-f{flex:none}
   .tbl-search{order:2;max-width:none}
-  .tbl-tools .btn-primary{order:3}
+  .tbl-count{order:3;margin-left:0;text-align:center}
+  .tbl-tools .btn-primary{order:4}
 }
 `;

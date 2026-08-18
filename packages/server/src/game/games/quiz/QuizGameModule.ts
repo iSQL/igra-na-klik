@@ -111,6 +111,11 @@ export class QuizGameModule extends BaseGameModule {
   private feedbackKeys = new Map<string, string>();
   // Dedupe: `<playerId>|<questionId>|<report|rating>` already submitted.
   private feedbackSeen = new Set<string>();
+  // Runtime question id → the name of the pack it came from, shown on the
+  // answering screen as the question's category. Built-in bank questions and
+  // inline custom ones have no meaningful pack, so they are simply absent and
+  // the category is omitted.
+  private packNames = new Map<string, string>();
 
   constructor(private readonly packsDir: string = '') {
     super();
@@ -150,6 +155,7 @@ export class QuizGameModule extends BaseGameModule {
     // packs resolve in loadPacks.
     this.feedbackKeys.clear();
     this.feedbackSeen.clear();
+    this.packNames.clear();
     this.registerBankFeedbackKeys();
 
     const packIds = Array.isArray(cc.quizPackIds)
@@ -291,6 +297,9 @@ export class QuizGameModule extends BaseGameModule {
         pool.push(...QUIZ_QUESTION_BANK);
       } else if (resolved[i]) {
         this.registerPackFeedbackKeys(resolved[i]!.id, resolved[i]!.questions);
+        for (const q of resolved[i]!.questions) {
+          this.packNames.set(q.id, resolved[i]!.name);
+        }
         pool.push(...resolved[i]!.questions);
       }
     }
@@ -914,6 +923,10 @@ export class QuizGameModule extends BaseGameModule {
       // Runtime id so the controller can attach report/rating feedback to the
       // right question (see handleFeedback). Not sensitive — carries no answer.
       data.questionId = question.id;
+      // Pack name = the question's category strip on the phone. Prompt-side
+      // metadata only — it carries no part of the answer.
+      const packName = this.packNames.get(question.id);
+      if (packName) data.packName = packName;
     }
 
     const playerData: Record<string, Record<string, unknown>> = {};

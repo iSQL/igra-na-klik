@@ -24,7 +24,7 @@ Dev URLs: landing `localhost:3001/`, host `:3001/host/` (or `:5173/host/`), cont
 
 **No test runner and no linter are configured.** "Testing" means `npm run dev` plus exercising the flow in two browser tabs (host + controller). There is no single-test command; if you add a harness, document its invocation here.
 
-The `free-dev-ports` skill ([.claude/skills/free-dev-ports/](.claude/skills/free-dev-ports/)) kills leftover node processes holding 3001/5173/5174.
+`npm run free-ports` ([scripts/free-ports.mjs](scripts/free-ports.mjs)) kills whatever is listening on 3001/5173/5174 (`-- 3000 3001` for specific ports). `predev` only *reports* busy ports and prints that command, and the server's `EADDRINUSE` handler does the same instead of dumping a stack trace — neither kills anything on its own. The `free-dev-ports` skill ([.claude/skills/free-dev-ports/](.claude/skills/free-dev-ports/)) is the PowerShell equivalent.
 
 ## Architecture
 

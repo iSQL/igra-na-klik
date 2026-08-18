@@ -10,6 +10,7 @@
     "dev:server": "npm run dev -w @igra/server",
     "dev:host": "npm run dev -w @igra/host",
     "dev:controller": "npm run dev -w @igra/controller",
+    "free-ports": "node scripts/free-ports.mjs",
     "predev": "node scripts/dev-clean.mjs",
     "predev:server": "node scripts/dev-clean.mjs",
     "dev": "npm run build:shared && concurrently \"npm:dev:server\" \"npm:dev:host\" \"npm:dev:controller\"",

@@ -897,6 +897,21 @@ function pickLanIp(): string | undefined {
   return candidates[0]?.address;
 }
 
+// Zauzet port je najčešća greška pri pokretanju (stari `npm run dev` koji nije
+// ugašen). Podrazumevani Node ispis je goli stack trace, pa se ovde presreće i
+// zameni porukom sa gotovom komandom — ugasiti tuđi proces bez pitanja nije
+// posao servera, samo se ponudi komanda.
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code !== 'EADDRINUSE') throw err;
+  console.error(`
+  ✖ Port ${PORT} je zauzet — verovatno stari dev proces.`);
+  console.error(`     Ugasi ga sa:  npm run free-ports -- ${PORT}`);
+  console.error('     (bez argumenta oslobađa 3001, 5173 i 5174)');
+  console.error(`     Ili pokreni server na drugom portu:  PORT=${PORT + 1} npm run dev:server
+`);
+  process.exit(1);
+});
+
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`Question packs dir: ${QUESTION_PACKS_DIR}`);

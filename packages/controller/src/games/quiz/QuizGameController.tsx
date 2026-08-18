@@ -89,8 +89,7 @@ function QuizGameControllerInner() {
         }}
       >
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <QuestionHeader data={data} />
-          {questionText && <QuestionCard text={questionText} compact />}
+          <QuestionPanel data={data} text={questionText} compact />
         </div>
         <PhoneMedia
           key={data.questionIndex as number}
@@ -150,8 +149,7 @@ function QuizGameControllerInner() {
           }}
         >
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <QuestionHeader data={data} />
-            {questionText && <QuestionCard text={questionText} compact />}
+            <QuestionPanel data={data} text={questionText} compact />
           </div>
           <PhotoFrame imageUrl={imageUrl} />
           <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
@@ -174,8 +172,7 @@ function QuizGameControllerInner() {
           textAlign: 'center',
         }}
       >
-        <QuestionHeader data={data} />
-        {questionText && <QuestionCard text={questionText} />}
+        <QuestionPanel data={data} text={questionText} />
         {/* piksel renders its own (pixelated) canvas below — never the sharp image. */}
         {imageUrl && questionType !== 'geo' && questionType !== 'piksel' && (
           <QuestionImage src={imageUrl} />
@@ -187,7 +184,10 @@ function QuizGameControllerInner() {
               {data.emojis as string}
             </p>
             {data.emojiCategory != null && (
-              <CategoryChip label={data.emojiCategory as string} />
+              <CategoryChip
+                label={data.emojiCategory as string}
+                neutral={data.packName != null}
+              />
             )}
           </>
         )}
@@ -323,7 +323,10 @@ function QuizGameControllerInner() {
                 {(data.emojis as string) ?? ''}
               </p>
               {data.emojiCategory != null && (
-                <CategoryChip label={data.emojiCategory as string} />
+                <CategoryChip
+                  label={data.emojiCategory as string}
+                  neutral={data.packName != null}
+                />
               )}
             </div>
           }
@@ -421,8 +424,7 @@ function QuizGameControllerInner() {
           }}
         >
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <QuestionHeader data={data} />
-            {questionText && <QuestionCard text={questionText} compact />}
+            <QuestionPanel data={data} text={questionText} compact />
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <RedosledPicker
@@ -463,8 +465,7 @@ function QuizGameControllerInner() {
           }}
         >
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <QuestionHeader data={data} />
-            {questionText && <QuestionCard text={questionText} compact />}
+            <QuestionPanel data={data} text={questionText} compact />
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <MatricaPicker key={data.questionIndex as number} cells={cells} pick={3} timeRemaining={timeRemaining} />
@@ -494,8 +495,7 @@ function QuizGameControllerInner() {
           }}
         >
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <QuestionHeader data={data} />
-            {questionText && <QuestionCard text={questionText} compact />}
+            <QuestionPanel data={data} text={questionText} compact />
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <DominoPlayer
@@ -548,8 +548,7 @@ function QuizGameControllerInner() {
         }}
       >
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <QuestionHeader data={data} />
-          {questionText && <QuestionCard text={questionText} compact />}
+          <QuestionPanel data={data} text={questionText} compact />
           {imageUrl && <QuestionImage src={imageUrl} compact />}
         </div>
         <AnswerCountdown
@@ -1059,8 +1058,7 @@ function TextAnswerScreen({
       }}
     >
       <div style={{ textAlign: 'center', flexShrink: 0 }}>
-        <QuestionHeader data={headerData} />
-        {questionText && <QuestionCard text={questionText} compact />}
+        <QuestionPanel data={headerData} text={questionText} compact />
       </div>
       {visual}
       {hint && (
@@ -1688,39 +1686,96 @@ function MatricaResultView({
 
 // --- small shared bits --------------------------------------------------------
 
-function QuestionHeader({ data }: { data: Record<string, unknown> }) {
-  return (
-    <p
+/**
+ * Question card with the pack name and the question counter sewn onto its top
+ * edge in one strip (design 2b): the category reads as the question's source
+ * rather than as a separate element, and moving the counter into the same row
+ * means the category costs no vertical space at all — the answer grid below
+ * keeps every pixel it has today. Without a known pack (built-in bank, inline
+ * custom questions) the strip is just the counter, as before.
+ */
+function QuestionPanel({
+  data,
+  text,
+  compact,
+}: {
+  data: Record<string, unknown>;
+  text?: string;
+  compact?: boolean;
+}) {
+  const category = typeof data.packName === 'string' ? data.packName : '';
+  const radius = compact ? '16px' : '18px';
+  const strip = (
+    <div
       style={{
-        fontSize: '0.72rem',
-        fontWeight: 800,
-        color: 'var(--text-secondary)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        margin: 0,
-        marginBottom: '0.35rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: category ? 'space-between' : 'center',
+        gap: '0.6rem',
+        padding: '0.45rem 0.8rem',
+        background: 'rgba(194,155,71,0.12)',
+        borderBottom: text ? '1px solid rgba(194,155,71,0.28)' : 'none',
       }}
     >
-      Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
-    </p>
+      {category && (
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            letterSpacing: '0.03em',
+            textTransform: 'uppercase',
+            color: 'var(--accent)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {category}
+        </span>
+      )}
+      <span
+        style={{
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          flex: 'none',
+        }}
+      >
+        Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
+      </span>
+    </div>
   );
-}
 
-function QuestionCard({ text, compact }: { text: string; compact?: boolean }) {
   return (
-    <p
-      className="display card"
+    <div
+      className="card"
       style={{
-        fontSize: compact ? '1.1rem' : '1.3rem',
-        fontWeight: 600,
-        lineHeight: 1.25,
-        margin: 0,
-        padding: compact ? '0.8rem 1rem' : '1.1rem 1.2rem',
-        borderRadius: compact ? '16px' : '18px',
+        width: '100%',
+        borderRadius: radius,
+        overflow: 'hidden',
+        marginBottom: '0.35rem',
+        textAlign: 'left',
       }}
     >
-      {text}
-    </p>
+      {strip}
+      {text && (
+        <p
+          className="display"
+          style={{
+            fontSize: compact ? '1.1rem' : '1.3rem',
+            fontWeight: 600,
+            lineHeight: 1.25,
+            margin: 0,
+            padding: compact ? '0.8rem 1rem' : '1.1rem 1.2rem',
+            textAlign: 'center',
+          }}
+        >
+          {text}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -1929,15 +1984,17 @@ function AnswerCountdown({
 }
 
 // Small pill showing the emoji riddle's answer-category hint (Film, Lokacija…).
-function CategoryChip({ label }: { label: string }) {
+// `neutral` drops the gold fill: when the pack name is already on screen as the
+// question's category, gold stays with the pack so the two don't compete.
+function CategoryChip({ label, neutral }: { label: string; neutral?: boolean }) {
   return (
     <span
       style={{
         display: 'inline-block',
         padding: '0.2rem 0.75rem',
         borderRadius: 999,
-        background: 'rgba(194,155,71,0.16)',
-        color: 'var(--accent)',
+        background: neutral ? 'rgba(245,235,224,0.1)' : 'rgba(194,155,71,0.16)',
+        color: neutral ? 'var(--text-secondary)' : 'var(--accent)',
         fontWeight: 800,
         fontSize: '0.8rem',
         letterSpacing: '0.03em',
