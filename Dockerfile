@@ -56,6 +56,7 @@ COPY tajni-agenti-packs ./seed/tajni-agenti-packs
 COPY gluvo-doba-packs   ./seed/gluvo-doba-packs
 COPY spijun-packs       ./seed/spijun-packs
 COPY asocijacije-packs  ./seed/asocijacije-packs
+COPY fibbage-packs      ./seed/fibbage-packs
 COPY bitka-maps         ./seed/bitka-maps
 
 ENV PORT=3001

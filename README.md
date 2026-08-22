@@ -274,7 +274,7 @@ packages/
   controller/   # phone controller PWA (Vite, port 5174, base /play/)
 question-packs/ ko-sam-ja-packs/ tajni-agenti-packs/
 gluvo-doba-packs/ spijun-packs/ asocijacije-packs/
-bitka-maps/                                           # editable content
+fibbage-packs/ bitka-maps/                            # editable content
 docs/           # design references and planning notes
 CLAUDE.md       # architecture guide (also useful for humans)
 PLAN.md         # original implementation plan
