@@ -8,6 +8,7 @@ import type {
   BitkaQuestionView,
 } from '@igra/shared';
 import { useHaptics } from '../../../hooks/useHaptics';
+import { BitkaPackChip } from './BitkaPackChip';
 
 /**
  * Telefonski ekrani za redosled, domino i slobodan tekst.
@@ -223,7 +224,7 @@ export function BitkaRedosledScreen({
   };
 
   return (
-    <Screen header={header} footer={footer} title={question.text}>
+    <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
       <BitkaRedosledView
         question={question}
         host={host}
@@ -390,7 +391,7 @@ export function BitkaDominoScreen({
 
   if (revealing) {
     return (
-      <Screen header={header} footer={footer} title={question.text}>
+      <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
         <BitkaDominoView
           question={question}
           host={host}
@@ -404,7 +405,7 @@ export function BitkaDominoScreen({
 
   if (!d || d.done || !d.current) {
     return (
-      <Screen header={header} footer={footer} title={question.text}>
+      <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <p style={{ fontSize: '2.2rem', margin: 0 }}>{d && d.streak >= steps ? '🏆' : '🔒'}</p>
           <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
@@ -417,7 +418,7 @@ export function BitkaDominoScreen({
   }
 
   return (
-    <Screen header={header} footer={footer} title={question.text}>
+    <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
       {d.reference && (
         <div
           style={{
@@ -609,7 +610,7 @@ export function BitkaTextScreen({
   const solved = !!me?.hasAnswered;
 
   return (
-    <Screen header={header} footer={footer} title={question.text}>
+    <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
       <BitkaTextView
         question={question}
         host={host}
@@ -677,11 +678,14 @@ function Screen({
   header,
   footer,
   title,
+  pack,
   children,
 }: {
   header: ReactNode;
   footer?: ReactNode;
   title: string;
+  /** Ime paka — kategorija iznad pitanja; nema ga za ugrađenu banku. */
+  pack?: string;
   children: ReactNode;
 }) {
   return (
@@ -695,6 +699,7 @@ function Screen({
       }}
     >
       {header}
+      <BitkaPackChip name={pack} />
       <p
         style={{
           margin: 0,

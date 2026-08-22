@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import type { BitkaAnswerResult, BitkaHostData, BitkaQuestionView } from '@igra/shared';
 import type { BitkaPlayerView } from '@igra/shared';
 import { useHaptics } from '../../../hooks/useHaptics';
+import { BitkaPackChip } from './BitkaPackChip';
 
 /**
  * Mreža 3×3 na telefonu — jedan crtež za sva četiri mesta na kojima se
@@ -251,6 +252,7 @@ export function BitkaMatricaScreen({
       }}
     >
       {header}
+      <BitkaPackChip name={question.packName} />
       <p
         style={{
           margin: 0,

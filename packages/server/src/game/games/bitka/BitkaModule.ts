@@ -186,6 +186,13 @@ export class BitkaModule extends BaseGameModule {
   private state!: BitkaInternalState;
   private timings: Record<string, number> = {};
   private territoryById = new Map<string, BitkaTerritory>();
+  /**
+   * id pitanja -> ime paka iz kog je došlo. Pool se pri učitavanju spljošti u
+   * jednu listu, pa je ovo jedino mesto gde poreklo pitanja preživi — telefon
+   * po njemu ispisuje kategoriju, isto kao u Kvizu. Ugrađena banka i rezervni
+   * broj-pak nemaju ime i namerno ostaju bez natpisa.
+   */
+  private packNames = new Map<string, string>();
 
   constructor(
     private readonly packsDir: string,
@@ -1493,6 +1500,7 @@ export class BitkaModule extends BaseGameModule {
   ): Promise<void> {
     const pitanja: BitkaQuestionFull[] = [];
     const broj: KvizBrojQuestionFull[] = [];
+    this.packNames.clear();
 
     const resolved = await Promise.all(
       packIds.map((id) =>
@@ -1502,10 +1510,9 @@ export class BitkaModule extends BaseGameModule {
       )
     );
     for (let i = 0; i < packIds.length; i++) {
-      const questions =
-        packIds[i] === KVIZ_BANK_PACK_ID
-          ? QUIZ_QUESTION_BANK
-          : (resolved[i]?.questions ?? []);
+      const pack = packIds[i] === KVIZ_BANK_PACK_ID ? null : resolved[i];
+      const questions = pack ? pack.questions : packIds[i] === KVIZ_BANK_PACK_ID ? QUIZ_QUESTION_BANK : [];
+      if (pack) for (const q of questions) this.packNames.set(q.id, pack.name);
       pitanja.push(...questions.filter(isBitkaQuestion));
       broj.push(...questions.filter(isBrojQuestion));
     }
@@ -1711,7 +1718,20 @@ export class BitkaModule extends BaseGameModule {
     };
   }
 
+  /**
+   * Pogled na pitanje + kategorija (ime paka). Broj-pitanje je ostavljeno bez
+   * nje namerno: uvodno merenje i razrešenje nerešenog duela su mašinerija, a
+   * ne izbor sadržaja — pak im bira server (rezerva `pogodi-broj`), pa bi
+   * natpis govorio o nečemu što igrač nije birao.
+   */
   private questionView(): BitkaQuestionView | undefined {
+    const view = this.buildQuestionView();
+    if (!view || view.kind === 'broj') return view;
+    const pack = this.state.question ? this.packNames.get(this.state.question.id) : undefined;
+    return pack ? { ...view, packName: pack } : view;
+  }
+
+  private buildQuestionView(): BitkaQuestionView | undefined {
     const phase = this.state.phase;
     // `redosled-rezultat` je otkrivanje uvodnog broj-pitanja i mora da ostane
     // NA njemu — inače se tačan broj nigde ne vidi, a po njemu se određuje ko

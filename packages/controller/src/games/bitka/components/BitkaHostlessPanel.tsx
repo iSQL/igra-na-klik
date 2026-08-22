@@ -1,5 +1,6 @@
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { BitkaQuestionImage } from './BitkaQuestionImage';
+import { BitkaPackChip } from './BitkaPackChip';
 import { BitkaMatricaCells, BitkaMatricaScoreRow } from './BitkaMatricaCells';
 import { BitkaDominoView, BitkaRedosledView, BitkaTextView } from './BitkaNewTypes';
 
@@ -230,6 +231,8 @@ function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean
   if (!q) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      {/* Traka stoji uz mapu i sve u njoj je levo poravnato, pa i kategorija. */}
+      <BitkaPackChip name={q.packName} align="left" size="0.62rem" />
       <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.25 }}>{q.text}</div>
       {/* Traka je uska i stoji uz mapu, pa slika ide niža nego na ekranu
           pitanja — dovoljno da se vidi šta se pita, a mapa ostaje glavna. */}

@@ -21,6 +21,7 @@ import { BrojSlider } from '../quiz/components/BrojSlider';
 import { BitkaMapPicker } from './components/BitkaMapPicker';
 import { BitkaHostlessPanel, BitkaMiniStandings } from './components/BitkaHostlessPanel';
 import { BitkaQuestionImage } from './components/BitkaQuestionImage';
+import { BitkaPackChip } from './components/BitkaPackChip';
 import {
   BitkaMatricaCells,
   BitkaMatricaScoreRow,
@@ -367,6 +368,7 @@ export default function BitkaController() {
         ) : (
           <Muted>{revealing ? 'Tačan odgovor' : `Osvajanje zemlje · ${seconds}s`}</Muted>
         )}
+        <BitkaPackChip name={question.packName} />
         <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {question.text}
         </p>
@@ -1894,6 +1896,7 @@ function DuelSpectator({
         <span style={{ marginLeft: 'auto' }}>{value} poena</span>
       </div>
 
+      {q && <BitkaPackChip name={q.packName} />}
       {q && (
         <p style={{ margin: '0.2rem 0 0', fontSize: '1.3rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3 }}>
           {q.text}

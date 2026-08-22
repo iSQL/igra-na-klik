@@ -135,6 +135,12 @@ export interface BitkaQuestionView {
   kind: 'izbor' | 'broj' | 'matrica' | 'redosled' | 'domino' | 'tekst';
   text: string;
   imageUrl?: string;
+  /**
+   * Ime paka iz kog je pitanje — kategorija na telefonu, isto kao `packName`
+   * u Kvizu. Metapodatak sa strane pitanja: ne nosi nijedan deo odgovora, pa
+   * sme u broadcast. Nema ga za ugrađenu banku i za broj-pitanja.
+   */
+  packName?: string;
   /** kind === 'izbor' */
   options?: { index: number; text: string; color: string }[];
   /** kind === 'broj' */
