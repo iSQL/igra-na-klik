@@ -623,6 +623,9 @@ export default function BitkaController() {
   // Nastavak opsade ne dobija punu karticu — ista poruka po treći put u istom
   // napadu je šum; njemu ostaje sam providni brojač, bez zatamnjenja.
   const opsadaNastavak = phase === 'duel-pitanje' && !!host.duel?.opsadaNastavak;
+  // Prozor ishoda (`duel-ishod`) nosi i rečenicu poteza i „šta to znači za
+  // mene" — dok on stoji, centralna kartica ispod njega bi ponovila oba.
+  const ishodUp = phase === 'duel-ishod' && !!host.duel?.pendingOutcome;
 
   // --- čekanje / gledanje --------------------------------------------------
   return (
@@ -638,7 +641,7 @@ export default function BitkaController() {
       // — ekran je mali, pa je i zatamnjenje blaže nego na TV-u.
       overlayDim={phase === 'duel-ishod' ? 0.5 : 0.42}
       center={
-        najavaUp ? undefined : nikoTacan ? (
+        najavaUp || ishodUp ? undefined : nikoTacan ? (
           <StatusCard
             tone="sivo"
             glyph="🚩"

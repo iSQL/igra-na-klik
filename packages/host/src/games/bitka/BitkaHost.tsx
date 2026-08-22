@@ -1824,24 +1824,12 @@ function Side({ player, role }: { player?: BitkaPlayerView; role: string }) {
   );
 }
 
+/**
+ * Ishod napada u jednoj rečenici — serverov `lastEvent` („Pera osvaja Porodin.")
+ * već pokriva svaki ishod, pa se ovde ne sastavlja drugi, parafrazirani red.
+ */
 function DuelOutcome({ host }: { host: BitkaHostData }) {
-  const duel = host.duel!;
-  const named = (id: string | null | undefined) =>
-    host.players.find((p) => p.playerId === id)?.name ?? 'Igrač';
-  const place = host.map.territories.find((t) => t.id === duel.territoryId)?.name ?? '';
-  const walls = host.board.find((st) => st.id === duel.territoryId)?.walls ?? 0;
-
-  const text =
-    duel.outcome === 'zamak-pao'
-      ? `Zamak je pao — ${named(duel.attackerId)} uzima svu zemlju!`
-      : duel.outcome === 'zid'
-        ? `Jedan zid manje — ostalo ih je ${walls}.`
-        : duel.outcome === 'napadac'
-          ? `${place} menja gospodara.`
-          : duel.defenderId
-            ? `${named(duel.defenderId)} je odbranio ${place}.`
-            : `${place} ostaje ničiji.`;
-  return <Line title={host.lastEvent ?? 'Ishod'} text={text} />;
+  return <Line title={host.lastEvent ?? 'Ishod'} text="" />;
 }
 
 /** Preostali zidovi zamka kao pločice — puna je zid koji još stoji. */

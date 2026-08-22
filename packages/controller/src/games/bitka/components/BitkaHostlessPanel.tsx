@@ -57,6 +57,9 @@ function Context({ host, phase }: { host: BitkaHostData; phase: string }) {
   );
 }
 
+/** Faze u kojima rečenicu poteza nosi centralna Objava, ne traka. */
+const OBJAVA_PHASES = new Set(['redosled-pitanje', 'osvajanje-pitanje', 'duel-pitanje', 'duel-ishod']);
+
 function Body({
   host,
   phase,
@@ -70,6 +73,12 @@ function Body({
   named: (id: string | null | undefined) => string;
   territoryName: (id: string | null | undefined) => string;
 }) {
+  // Isto pravilo kao na TV-u (`objavaUp`): dok Objava preko mape nosi poruku
+  // — odbrojavanje sa posledicom prethodnog poteza, najava duela, prozor
+  // ishoda — traka ćuti. Inače „Zamak je pao — sve preuzima Pera!" stoji i
+  // u prozoru i iznad mape u istom kadru.
+  if (OBJAVA_PHASES.has(phase)) return null;
+
   if (phase === 'uvod') {
     return (
       <Card>
@@ -142,22 +151,11 @@ function Body({
   }
 
   if (phase === 'duel-rezultat' && host.duel) {
-    const duel = host.duel;
-    const walls = host.board.find((st) => st.id === duel.territoryId)?.walls ?? 0;
-    const place = territoryName(duel.territoryId);
-    const text =
-      duel.outcome === 'zamak-pao'
-        ? `Zamak je pao — ${named(duel.attackerId)} uzima svu zemlju!`
-        : duel.outcome === 'zid'
-          ? `Jedan zid manje — ostalo ih je ${walls}.`
-          : duel.outcome === 'napadac'
-            ? `${place} menja gospodara.`
-            : duel.defenderId
-              ? `${named(duel.defenderId)} je odbranio ${place}.`
-              : `${place} ostaje ničiji.`;
-    // Samo rečenica o ishodu: pitanje i tačan odgovor su odgledani na svojim
+    // Samo rečenica o ishodu — serverov `lastEvent` („Pera osvaja Porodin."),
+    // ista koju nosi i TV. Pitanje i tačan odgovor su odgledani na svojim
     // ekranima (`duel-odgovor-rezultat`, `duel-broj-rezultat`), a ovde se prati
     // mapa. Server pitanje u ovoj fazi i ne šalje.
+    const text = host.lastEvent ?? 'Ishod napada';
     return (
       <Card>
         <strong style={{ fontSize: '0.9rem', color: 'var(--accent)' }}>{text}</strong>
