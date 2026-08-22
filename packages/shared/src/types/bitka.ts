@@ -101,8 +101,11 @@ export type BitkaPhase =
   // Ishod napada u prozoru preko ekrana; tabla se još NIJE promenila.
   | 'duel-ishod'
   | 'duel-rezultat'
-  // Nema zasebnog završnog ekrana — `ended` odmah predaje platformskom ekranu
-  // sa poenima i diplomama.
+  // Završni beat: konačna mapa + rečenica kako se rat završio (`lastEvent`)
+  // + ime pobednika, `KRAJ_DURATION` sekundi. Bez njega je `pobeda` efekat
+  // padao u scenu koja odmah nestaje, a „pao je poslednji zamak" niko nije
+  // pročitao.
+  | 'kraj'
   | 'ended';
 
 /** Stanje jedne teritorije u partiji. */
@@ -275,6 +278,12 @@ export interface BitkaDuelView {
   wallsAfter?: number;
   /** Popunjeno tek u `duel-rezultat`. */
   outcome?: BitkaDuelOutcome;
+  /**
+   * Promena poena obe strane koju će ishod doneti — ide uz `pendingOutcome`
+   * u `duel-ishod`, da se na prozoru vidi „Pera +200 · Mika −200" i da
+   * bodovanje (zamak 1000, zid +200, odbrana +100) ne ostane nevidljivo.
+   */
+  scoreDeltas?: { attacker: number; defender: number };
 }
 
 export interface BitkaLeaderboardEntry {
@@ -350,6 +359,14 @@ export interface BitkaHostData {
 
   /** Kratak srpski banner o poslednjem ishodu ("Pera je uzeo Porodin"). */
   lastEvent?: string;
+  /**
+   * Izabrani pakovi imaju manje pitanja nego što će partija potrošiti — pool
+   * se tiho reciklira. Pokazuje se u `uvod`-u, da niko ne bude iznenađen
+   * pitanjem koje je već video sa odgovorom.
+   */
+  poolWarning?: string;
+  /** Kratka legenda bodovanja za `uvod` — iste brojke koje pravila koriste. */
+  scoringLegend?: string;
 
   leaderboard?: BitkaLeaderboardEntry[];
   winnerId?: string | null;

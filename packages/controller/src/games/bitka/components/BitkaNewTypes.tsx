@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatBrojValue } from '@igra/shared';
 import type {
   BitkaAnswerResult,
@@ -9,6 +9,8 @@ import type {
 } from '@igra/shared';
 import { useHaptics } from '../../../hooks/useHaptics';
 import { BitkaPackChip } from './BitkaPackChip';
+import { BitkaMatricaScoreRow } from './BitkaMatricaCells';
+import { SubmittedBar } from './BitkaSubmittedBar';
 
 /**
  * Telefonski ekrani za redosled, domino i slobodan tekst.
@@ -39,50 +41,27 @@ function Avatar({ player, size }: { player: BitkaPlayerView; size: string }) {
   );
 }
 
-/** „Pera 3/5" — isti red koji TV crta ispod pitanja. */
-export function BitkaScoreChips({
-  results,
-  players,
-  max,
-  myPlayerId,
-}: {
-  results: BitkaAnswerResult[];
-  players: BitkaPlayerView[];
-  max: number;
-  myPlayerId?: string;
-}) {
-  const rows = [...results].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+/**
+ * Sat u zaglavlju SVAKOG ekrana odgovaranja — jedan element, nezavisan od
+ * dugmeta za slanje. Dotad je brojač živeo u tekstu dugmeta („Pošalji · 7s"),
+ * pa je nestajao čim je dugme onemogućeno ili poslato. Ispod 5 s pocrveni i
+ * otkucava, isto što je DuelBanner već radio.
+ */
+export function Clock({ seconds, size = '1.4rem' }: { seconds: number; size?: string }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', justifyContent: 'center' }}>
-      {rows.map((r) => {
-        const p = players.find((x) => x.playerId === r.playerId);
-        if (!p) return null;
-        const score = r.score ?? 0;
-        return (
-          <span
-            key={r.playerId}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              padding: '0.2rem 0.5rem',
-              borderRadius: '999px',
-              background: 'var(--bg-secondary)',
-              border: `2px solid ${p.playerId === myPlayerId ? 'var(--accent)' : 'var(--line2)'}`,
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-            }}
-          >
-            <Avatar player={p} size="1.2rem" />
-            <span>{p.name}</span>
-            <span style={{ color: score > 0 ? 'var(--accent)' : 'var(--dim)' }}>
-              {score}/{max}
-            </span>
-          </span>
-        );
-      })}
-    </div>
+    <span
+      className={seconds <= 5 ? 'bitka-tick' : undefined}
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 800,
+        fontSize: size,
+        lineHeight: 1,
+        flexShrink: 0,
+        color: seconds <= 5 ? 'var(--danger)' : 'var(--text-secondary)',
+      }}
+    >
+      {seconds}s
+    </span>
   );
 }
 
@@ -158,7 +137,11 @@ export function BitkaRedosledView({
           >
             <span
               style={{
-                minWidth: '1.3rem',
+                minWidth: '1.6rem',
+                // Redni broj je ono što igrač proverava pre potvrde — mora
+                // da se pročita i sa pola metra.
+                fontSize: compact ? '0.9rem' : '1.3rem',
+                lineHeight: 1,
                 fontWeight: 900,
                 color: revealing && pos >= 0 ? 'var(--success)' : at >= 0 ? 'var(--accent)' : 'var(--dim)',
               }}
@@ -177,10 +160,10 @@ export function BitkaRedosledView({
         );
       })}
       {revealing && results && (
-        <BitkaScoreChips
+        <BitkaMatricaScoreRow
           results={results}
           players={host.players}
-          max={items.length}
+          pick={items.length}
           myPlayerId={myPlayerId}
         />
       )}
@@ -197,7 +180,7 @@ export function BitkaRedosledScreen({
   playerId,
   me,
   revealing,
-  seconds,
+  hostless,
   onSubmit,
 }: {
   question: BitkaQuestionView;
@@ -207,7 +190,7 @@ export function BitkaRedosledScreen({
   playerId: string;
   me: BitkaControllerData | undefined;
   revealing: boolean;
-  seconds: number;
+  hostless: boolean;
   onSubmit: (order: number[]) => void;
 }) {
   const haptics = useHaptics();
@@ -234,20 +217,52 @@ export function BitkaRedosledScreen({
         onToggle={locked ? undefined : toggle}
         myPlayerId={playerId}
       />
+      {!revealing && answered && (
+        <SubmittedBar host={host} myPlayerId={playerId} hostless={hostless} />
+      )}
       {!revealing && !answered && (
-        <button
-          className="btn-primary"
-          disabled={shown.length !== items.length}
-          onClick={() => {
-            haptics.success();
-            onSubmit([...shown]);
-          }}
-          style={{ minHeight: '50px', fontSize: '1rem', fontWeight: 800 }}
-        >
-          {shown.length === items.length
-            ? 'Potvrdi'
-            : `Poređano ${shown.length}/${items.length} · ${seconds}s`}
-        </button>
+        <>
+          {/* Ispravka bez ponovnog tapkanja po listi: skini poslednji ili
+              kreni ispočetka. Tap na već poređanu stavku je i dalje moguć,
+              ali on vadi stavku iz sredine — što retko ko hoće. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={shown.length === 0}
+              onClick={() => {
+                haptics.tap();
+                setPicked((prev) => prev.slice(0, -1));
+              }}
+              style={{ minHeight: '42px', fontSize: '0.9rem', fontWeight: 800 }}
+            >
+              ⌫ poslednji
+            </button>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={shown.length === 0}
+              onClick={() => {
+                haptics.tap();
+                setPicked([]);
+              }}
+              style={{ minHeight: '42px', fontSize: '0.9rem', fontWeight: 800 }}
+            >
+              ispočetka
+            </button>
+          </div>
+          <button
+            className="btn-primary"
+            disabled={shown.length !== items.length}
+            onClick={() => {
+              haptics.tap();
+              onSubmit([...shown]);
+            }}
+            style={{ minHeight: '50px', fontSize: '1rem', fontWeight: 800 }}
+          >
+            {shown.length === items.length ? 'Potvrdi' : `Poređano ${shown.length}/${items.length}`}
+          </button>
+        </>
       )}
     </Screen>
   );
@@ -303,10 +318,10 @@ export function BitkaDominoView({
           ))}
         </div>
         {results && (
-          <BitkaScoreChips
+          <BitkaMatricaScoreRow
             results={results}
             players={host.players}
-            max={steps}
+            pick={steps}
             myPlayerId={myPlayerId}
           />
         )}
@@ -374,6 +389,7 @@ export function BitkaDominoScreen({
   playerId,
   me,
   revealing,
+  hostless,
   onStep,
 }: {
   question: BitkaQuestionView;
@@ -383,6 +399,7 @@ export function BitkaDominoScreen({
   playerId: string;
   me: BitkaControllerData | undefined;
   revealing: boolean;
+  hostless: boolean;
   onStep: (dir: 'before' | 'after') => void;
 }) {
   const haptics = useHaptics();
@@ -406,12 +423,15 @@ export function BitkaDominoScreen({
   if (!d || d.done || !d.current) {
     return (
       <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <p style={{ fontSize: '2.2rem', margin: 0 }}>{d && d.streak >= steps ? '🏆' : '🔒'}</p>
-          <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
-            {d?.streak ?? 0}/{steps} tačno
-          </p>
-        </div>
+        <p style={{ fontSize: '2.2rem', margin: 0, textAlign: 'center' }}>
+          {d && d.streak >= steps ? '🏆' : '🔒'}
+        </p>
+        <SubmittedBar
+          host={host}
+          myPlayerId={playerId}
+          hostless={hostless}
+          note={`${d?.streak ?? 0}/${steps} tačno`}
+        />
         <BitkaDominoView question={question} host={host} myPlayerId={playerId} />
       </Screen>
     );
@@ -592,7 +612,7 @@ export function BitkaTextScreen({
   playerId,
   me,
   revealing,
-  seconds,
+  hostless,
   onSubmit,
 }: {
   question: BitkaQuestionView;
@@ -602,15 +622,54 @@ export function BitkaTextScreen({
   playerId: string;
   me: BitkaControllerData | undefined;
   revealing: boolean;
-  seconds: number;
+  hostless: boolean;
   onSubmit: (text: string) => void;
 }) {
   const haptics = useHaptics();
   const [draft, setDraft] = useState('');
+  const [tries, setTries] = useState(0);
+  const [shake, setShake] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const solved = !!me?.hasAnswered;
+  const wrong = me?.lastWrongText ?? null;
+
+  // Promašaj: zatrese polje, zazuji i OZNAČI tekst umesto da ga obriše —
+  // tipfeler se ispravlja sa dva slova, a ne kucanjem ispočetka. Prvi render
+  // (reconnect sa starim promašajem) ne trese.
+  const firstWrongRef = useRef(true);
+  useEffect(() => {
+    if (wrong == null) return;
+    if (firstWrongRef.current) {
+      firstWrongRef.current = false;
+      return;
+    }
+    haptics.error();
+    setShake((n) => n + 1);
+    const el = inputRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, [wrong, haptics]);
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text) return;
+    haptics.tap();
+    setTries((n) => n + 1);
+    onSubmit(text);
+  };
 
   return (
-    <Screen header={header} footer={footer} title={question.text} pack={question.packName}>
+    <Screen
+      header={header}
+      footer={footer}
+      title={question.text}
+      pack={question.packName}
+      // Od vrha naniže: zagonetka → polje → dugme. Centriranje bi tastatura
+      // gurnula tako da dugme ode ispod nje.
+      align="start"
+    >
       <BitkaTextView
         question={question}
         host={host}
@@ -618,36 +677,48 @@ export function BitkaTextScreen({
         revealing={revealing}
       />
       {!revealing && solved && (
-        <p style={{ margin: 0, textAlign: 'center', fontWeight: 800, color: 'var(--success)' }}>
-          Pogodio si: {me?.myText} — čeka se protivnik.
-        </p>
+        <SubmittedBar
+          host={host}
+          myPlayerId={playerId}
+          hostless={hostless}
+          note={me?.myText ? `Pogodio si: ${me.myText}` : undefined}
+        />
       )}
       {!revealing && !solved && (
         <>
-          {me?.lastWrongText && (
+          {wrong && (
             <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8rem', color: 'var(--danger)' }}>
-              „{me.lastWrongText}" nije to — probaj opet.
+              „{wrong}" nije to — probaj opet.{tries > 0 ? ` (${tries}. pokušaj)` : ''}
             </p>
           )}
           <input
+            ref={inputRef}
+            // Ključ tera nov element na svaki promašaj, pa se animacija
+            // trešenja odigra ponovo; fokus se vraća u efektu iznad.
+            key={shake}
+            className={shake > 0 ? 'bitka-shake' : undefined}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key !== 'Enter' || !draft.trim()) return;
-              haptics.tap();
-              onSubmit(draft.trim());
-              setDraft('');
+              if (e.key === 'Enter') submit();
             }}
             placeholder="Tvoj odgovor…"
+            // Fokus odmah, i po ulasku u fazu i po povratku (reconnect) — da
+            // se ne troši sekunda na tap u polje.
+            autoFocus
+            enterKeyHint="send"
+            inputMode="text"
             autoComplete="off"
             autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             style={{
               width: '100%',
               padding: '0.8rem',
               fontSize: '1rem',
               fontWeight: 700,
               borderRadius: '12px',
-              border: '2px solid var(--line2)',
+              border: `2px solid ${wrong ? 'var(--danger)' : 'var(--line2)'}`,
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
               textAlign: 'center',
@@ -656,14 +727,10 @@ export function BitkaTextScreen({
           <button
             className="btn-primary"
             disabled={!draft.trim()}
-            onClick={() => {
-              haptics.tap();
-              onSubmit(draft.trim());
-              setDraft('');
-            }}
+            onClick={submit}
             style={{ minHeight: '50px', fontSize: '1rem', fontWeight: 800 }}
           >
-            Pošalji · {seconds}s
+            Pošalji
           </button>
         </>
       )}
@@ -679,6 +746,7 @@ function Screen({
   footer,
   title,
   pack,
+  align = 'center',
   children,
 }: {
   header: ReactNode;
@@ -686,6 +754,8 @@ function Screen({
   title: string;
   /** Ime paka — kategorija iznad pitanja; nema ga za ugrađenu banku. */
   pack?: string;
+  /** `start` — sadržaj od vrha (tekstualni unos, zbog tastature). */
+  align?: 'center' | 'start';
   children: ReactNode;
 }) {
   return (
@@ -718,11 +788,22 @@ function Screen({
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
-          gap: '0.6rem',
+          // `safe center`: kad sadržaj ne staje, obično centriranje mu odseče
+          // vrh (ono što ode iznad ivice ne može da se doskroluje). Unutrašnji
+          // omotač sa `margin: auto` radi isto i tamo gde `safe` nije podržan.
+          justifyContent: align === 'start' ? 'flex-start' : 'safe center',
         }}
       >
-        {children}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.6rem',
+            margin: align === 'start' ? '0' : 'auto 0',
+          }}
+        >
+          {children}
+        </div>
       </div>
       {footer}
     </div>

@@ -120,6 +120,7 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
       { key: 'DUEL_OTKRIVANJE_DURATION', label: 'Otkrivanje odgovora u duelu', min: 2, max: 15, def: 3 },
       { key: 'DUEL_ISHOD_DURATION', label: 'Prozor sa ishodom napada', min: 2, max: 15, def: 4 },
       { key: 'DUEL_REZULTAT_DURATION', label: 'Mapa i animacije posle napada', min: 3, max: 20, def: 6 },
+      { key: 'KRAJ_DURATION', label: 'Završni kadar (konačna mapa i pobednik)', min: 3, max: 20, def: 6 },
     ],
   },
   {

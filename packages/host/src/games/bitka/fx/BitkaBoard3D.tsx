@@ -13,6 +13,8 @@ interface BitkaBoard3DProps {
   events: BitkaFxEvent[];
   /** Visina platna; '100%' kad raspored sam daje visinu. */
   heightCss?: string;
+  /** Gledalac traži manje pokreta — scena gasi puls i primicanje kamere. */
+  reducedMotion?: boolean;
   /** WebGL nije dostupan — pozivalac se vraća na 2D mapu. */
   onFail?: () => void;
 }
@@ -30,6 +32,7 @@ export default function BitkaBoard3D({
   activePlayerId,
   events,
   heightCss = '62vh',
+  reducedMotion = false,
   onFail,
 }: BitkaBoard3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -88,6 +91,11 @@ export default function BitkaBoard3D({
       setReady(false);
     };
   }, [mapId, onFail]);
+
+  useEffect(() => {
+    if (!ready) return;
+    sceneRef.current?.setReducedMotion(reducedMotion);
+  }, [ready, reducedMotion]);
 
   useEffect(() => {
     if (!ready) return;

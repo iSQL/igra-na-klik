@@ -47,6 +47,10 @@ export function BitkaMapView({
     const byId = new Map(players.map((p) => [p.playerId, p.avatarColor]));
     return (playerId: string | null) => (playerId ? (byId.get(playerId) ?? NEUTRAL) : NEUTRAL);
   }, [players]);
+  const ownerEmoji = useMemo(() => {
+    const byId = new Map(players.map((p) => [p.playerId, p.avatarEmoji]));
+    return (playerId: string | null) => (playerId ? (byId.get(playerId) ?? '') : '');
+  }, [players]);
 
   const stateById = useMemo(
     () => new Map(board.map((st) => [st.id, st])),
@@ -108,13 +112,10 @@ export function BitkaMapView({
               strokeWidth={isFocus ? 5 : isPick ? 6 : 2}
               strokeDasharray={isPick && !isFocus ? '10 6' : undefined}
               vectorEffect="non-scaling-stroke"
-              style={
-                isFocus
-                  ? { animation: 'igra-pop 0.5s ease-out' }
-                  : isPick
-                    ? { animation: 'igra-bitka-ponuda 1.1s ease-in-out infinite' }
-                    : undefined
-              }
+              // Ponuda pulsira kroz klasu, da je `prefers-reduced-motion`
+              // može zameniti mirnom debljom konturom.
+              className={isPick && !isFocus ? 'bitka-ponuda' : undefined}
+              style={isFocus ? { animation: 'igra-pop 0.5s ease-out' } : undefined}
             />
           );
         })}
@@ -124,6 +125,7 @@ export function BitkaMapView({
         const st = stateById.get(t.id);
         const castle = st?.castle && (st?.walls ?? 0) > 0;
         const activeCastle = castle && !!activePlayerId && st?.ownerId === activePlayerId;
+        const emoji = castle ? ownerEmoji(st?.ownerId ?? null) : '';
         return (
           <div
             key={t.id}
@@ -140,6 +142,25 @@ export function BitkaMapView({
               textAlign: 'center',
             }}
           >
+            {/* Čiji je zamak — avatar iznad kule, isto kao sprajt na 3D tabli. */}
+            {emoji && (
+              <div
+                style={{
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '50%',
+                  background: 'rgba(9,20,36,0.78)',
+                  border: '2px solid #F2CE74',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '0.85rem',
+                  lineHeight: 1,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.7)',
+                }}
+              >
+                {emoji}
+              </div>
+            )}
             {castle && (
               <div
                 style={{

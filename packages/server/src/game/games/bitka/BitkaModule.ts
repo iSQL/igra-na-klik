@@ -1,6 +1,7 @@
 import type {
   BitkaAnswerResult,
   BitkaControllerData,
+  BitkaDuelOutcome,
   BitkaDuelView,
   BitkaHostData,
   BitkaMapView,
@@ -29,6 +30,7 @@ import {
   BITKA_RUNDE_DEF,
   BITKA_RUNDE_IZBOR,
   BITKA_ODBRANA_BONUS,
+  BITKA_TERITORIJA_BODOVI,
   BITKA_ZAMAK_BODOVI,
   BITKA_ZID_BONUS,
   BITKA_ZIDOVI,
@@ -64,6 +66,7 @@ import {
   DUEL_ISHOD_DURATION,
   DUEL_OTKRIVANJE_DURATION,
   IZBOR_DURATION,
+  KRAJ_DURATION,
   NAPAD_IZBOR_DURATION,
   ODGOVOR_DURATION,
   PITANJE_NAJAVA_DURATION,
@@ -272,6 +275,7 @@ export class BitkaModule extends BaseGameModule {
       pendingBroj: null,
       pendingOutcome: null,
       pendingWalls: 0,
+      pendingDeltas: null,
       priority: [],
       baseChoice: new Map(),
       baseQueue: [],
@@ -288,8 +292,8 @@ export class BitkaModule extends BaseGameModule {
           : BITKA_MAX_RATNIH_RUNDI,
       turnOrder: [],
       turnPointer: 0,
+      roundStartPointer: 0,
       activePlayerId: null,
-      attacksThisRound: 0,
       duel: null,
       eliminated: new Set(),
       bonus: new Map(),
@@ -297,6 +301,7 @@ export class BitkaModule extends BaseGameModule {
       lastEvent: '',
       lastOutcome: new Map(),
       winnerId: null,
+      poolWarning: null,
     };
 
     const packIds = Array.isArray(cc.quizPackIds)
@@ -305,7 +310,11 @@ export class BitkaModule extends BaseGameModule {
     // Kao kod Kviza: onStart ne sme biti async, pa uvod čeka na pitanja.
     this.feedback.reset();
     this.packNames.clear();
-    void this.loadPools(packIds, this.parseTypeFilter(cc.quizTypes));
+    void this.loadPools(
+      packIds,
+      this.parseTypeFilter(cc.quizTypes),
+      room.players.filter((p) => p.isConnected).length
+    );
 
     return this.buildGameState(room);
   }
@@ -673,7 +682,9 @@ export class BitkaModule extends BaseGameModule {
     playerId: string
   ): GameState | null {
     // Stiže tek kad istekne grejs — do tada je igrač samo posivio.
-    if (this.state.phase === 'ended') return null;
+    // U završnom kadru je rat već presuđen — ko sad ode, ode sa svojim
+    // rezultatom, a ne kao ispali.
+    if (this.state.phase === 'ended' || this.state.phase === 'kraj') return null;
     if (this.state.eliminated.has(playerId)) return null;
 
     this.state.expected.delete(playerId);
@@ -700,7 +711,8 @@ export class BitkaModule extends BaseGameModule {
       this.nextAttack(room);
     } else if (this.state.activePlayerId === playerId) {
       if (this.state.phase === 'napad-izbor') this.nextAttack(room);
-      else if (this.state.phase === 'osvajanje-izbor') this.nextPicker(room);
+      // Red je već očišćen od njega — `fresh`, da se ne skine i sledeći.
+      else if (this.state.phase === 'osvajanje-izbor') this.nextPicker(room, true);
       // Otišao je dok je bio na potezu za zamak — red ide dalje bez njega.
       else if (this.state.phase === 'baza-izbor') this.startBaseTurn(room);
     } else if (ANSWER_PHASES.has(this.state.phase) && this.allAnswered(room)) {
@@ -811,6 +823,11 @@ export class BitkaModule extends BaseGameModule {
         this.nextAttack(room);
         break;
       }
+      // Završni kadar je odstajao — tek sad platforma preuzima.
+      case 'kraj':
+        this.state.phase = 'ended';
+        this.state.phaseTimeRemaining = 0;
+        break;
     }
   }
 
@@ -889,6 +906,10 @@ export class BitkaModule extends BaseGameModule {
     }
     this.state.activePlayerId = next;
     this.state.phaseTimeRemaining = BAZA_IZBOR_DURATION;
+    // Igrač u grejsu (telefon zaspao) ne može da bira — mesto mu se dodeljuje
+    // odmah, a ne posle punog tajmera koji bi celo društvo gledalo uzalud.
+    // Rekurzija je ograničena: svaki korak skida jednog iz reda.
+    if (!this.isConnected(room, next)) this.autoPlaceBase(room);
   }
 
   /** Zamak je postavljen (ili dodeljen) — sledeći igrač. */
@@ -1036,6 +1057,9 @@ export class BitkaModule extends BaseGameModule {
     this.state.activePlayerId = this.state.pickQueue[0];
     this.state.phase = 'osvajanje-izbor';
     this.state.phaseTimeRemaining = IZBOR_DURATION;
+    // Pogodio je, zemlja mu pripada — ali ako mu je telefon zaspao, bira se
+    // umesto njega odmah, ne posle punog tajmera. Svaki korak skraćuje red.
+    if (!this.isConnected(room, this.state.activePlayerId)) this.autoPickFree(room);
   }
 
   private claimFree(room: Room, playerId: string, territoryId: string): void {
@@ -1043,7 +1067,11 @@ export class BitkaModule extends BaseGameModule {
     if (!st) return;
     st.ownerId = playerId;
     this.recomputeScores(room);
-    this.state.lastEvent = `${this.nameOf(room, playerId)} uzima ${this.territoryName(territoryId)}.`;
+    // Sa poenima: bodovanje se inače nigde ne vidi dok se igra.
+    const value = territoryValue(this.territoryById.get(territoryId) ?? {});
+    this.state.lastEvent = `${this.nameOf(room, playerId)} uzima ${this.territoryName(
+      territoryId
+    )} (+${value}).`;
     this.nextPicker(room);
   }
 
@@ -1084,41 +1112,42 @@ export class BitkaModule extends BaseGameModule {
 
   private beginRat(room: Room): void {
     this.state.round = 1;
-    this.state.attacksThisRound = 0;
-    this.state.turnPointer = 0;
     this.state.pickQueue = [];
     this.state.lastEvent = 'Mapa je podeljena — počinje rat.';
-    this.beginAttackTurn(room, true);
+    this.beginRound(room);
   }
 
-  private beginAttackTurn(room: Room, firstOfRound = false): void {
+  /**
+   * Nova ratna runda. Runda N počinje na (N-1)-om živom igraču u redosledu:
+   * sa istim prvim napadačem celu partiju bi onaj ko je dobio uvodno pitanje
+   * uvek prvi birao najslabiju metu. Pokazivač se pamti kao početak runde —
+   * runda je gotova tek kad se potez vrati na njega (`nextAttack`).
+   */
+  private beginRound(room: Room): void {
+    const alive = this.aliveInOrder(room);
+    if (alive.length <= 1 || this.state.round > this.state.totalRounds) {
+      this.finishGame(room);
+      return;
+    }
+    const starter = alive[(this.state.round - 1) % alive.length];
+    const idx = Math.max(0, this.state.turnOrder.indexOf(starter));
+    this.state.turnPointer = idx;
+    this.state.roundStartPointer = idx;
+    this.beginAttackTurn(room);
+  }
+
+  /** Potez igrača na koga pokazuje `turnPointer` — on mora biti živ. */
+  private beginAttackTurn(room: Room): void {
     const alive = this.aliveInOrder(room);
     if (alive.length <= 1) {
       this.finishGame(room);
       return;
     }
-    if (this.state.round > this.state.totalRounds) {
+    const picked = this.state.turnOrder[this.state.turnPointer];
+    if (!picked || !alive.includes(picked)) {
       this.finishGame(room);
       return;
     }
-
-    // Nađi sledećeg živog počev od pokazivača. Kad neko ispadne, potez se
-    // pravi ponovo na istom indeksu — inkrementiranje bi preskočilo sledećeg.
-    const order = this.state.turnOrder;
-    let picked: string | null = null;
-    for (let i = 0; i < order.length; i++) {
-      const idx = (this.state.turnPointer + i) % order.length;
-      if (alive.includes(order[idx])) {
-        this.state.turnPointer = idx;
-        picked = order[idx];
-        break;
-      }
-    }
-    if (!picked) {
-      this.finishGame(room);
-      return;
-    }
-    if (firstOfRound) this.state.attacksThisRound = 0;
 
     // Poruke iz prethodnog poteza se ne prenose u sledeći.
     this.state.lastOutcome.clear();
@@ -1128,6 +1157,19 @@ export class BitkaModule extends BaseGameModule {
     this.state.expected = new Set();
     this.state.phase = 'napad-izbor';
     this.state.phaseTimeRemaining = NAPAD_IZBOR_DURATION;
+
+    // Igrač u grejsu ne može da napadne — potez ide dalje odmah, a ne posle
+    // punog tajmera. Ako nema nijednog povezanog, nema ni s kim da se igra.
+    // Rekurzija kroz `nextAttack` je ograničena: svaki korak pomera pokazivač,
+    // a obilazak kruga ili prelazi na povezanog igrača ili troši rundu.
+    if (!this.isConnected(room, picked)) {
+      if (!alive.some((id) => this.isConnected(room, id))) {
+        this.finishGame(room);
+        return;
+      }
+      this.state.lastEvent = `${this.nameOf(room, picked)} nije tu — potez ide dalje.`;
+      this.nextAttack(room);
+    }
   }
 
   /** Mete: susedne tuđe/neutralne; ako ih nema, bilo koja tuđa (upad iz vazduha). */
@@ -1294,6 +1336,10 @@ export class BitkaModule extends BaseGameModule {
 
     const attackerName = this.nameOf(room, duel.attackerId);
     const place = this.territoryName(duel.territoryId);
+    const placeValue = territoryValue(this.territoryById.get(duel.territoryId) ?? {});
+
+    // Poeni PRE upisa — drugi prolaz poredi stvarnu promenu sa najavljenom.
+    const before = new Map(room.players.map((p) => [p.id, p.score]));
 
     switch (outcome) {
       case 'branilac':
@@ -1323,10 +1369,10 @@ export class BitkaModule extends BaseGameModule {
           st.ownerId = duel.attackerId;
           this.statsFor(duel.attackerId).osvojeno += 1;
         }
-        this.state.lastEvent = `${attackerName} osvaja ${place}.`;
-        this.state.lastOutcome.set(duel.attackerId, `Osvojio si ${place}.`);
+        this.state.lastEvent = `${attackerName} osvaja ${place} (+${placeValue}).`;
+        this.state.lastOutcome.set(duel.attackerId, `Osvojio si ${place}. +${placeValue}`);
         if (duel.defenderId) {
-          this.state.lastOutcome.set(duel.defenderId, `Izgubio si ${place}.`);
+          this.state.lastOutcome.set(duel.defenderId, `Izgubio si ${place}. −${placeValue}`);
         }
         break;
 
@@ -1373,6 +1419,7 @@ export class BitkaModule extends BaseGameModule {
       this.state.pendingAttackerWin = attackerWon;
       this.state.pendingOutcome = outcome;
       this.state.pendingWalls = outcome === 'zid' ? Math.max(0, st.walls - 1) : st.walls;
+      this.state.pendingDeltas = this.outcomeDeltas(duel.defenderId, duel.territoryId, outcome);
       this.state.phase = 'duel-ishod';
       this.state.phaseTimeRemaining =
         this.timings.DUEL_ISHOD_DURATION ?? DUEL_ISHOD_DURATION;
@@ -1381,6 +1428,21 @@ export class BitkaModule extends BaseGameModule {
 
     this.state.pendingOutcome = null;
     this.recomputeScores(room);
+
+    // Najavljeno u `duel-ishod` mora da bude i upisano — inače prozor laže.
+    const expected = this.state.pendingDeltas;
+    if (expected) {
+      const after = (id: string | null) =>
+        id ? (room.players.find((p) => p.id === id)?.score ?? 0) - (before.get(id) ?? 0) : 0;
+      const gotA = after(duel.attackerId);
+      const gotD = after(duel.defenderId);
+      if (gotA !== expected.attacker || gotD !== expected.defender) {
+        console.warn(
+          `[bitka] scoreDeltas se ne slažu: najavljeno ${expected.attacker}/${expected.defender}, upisano ${gotA}/${gotD} (${outcome})`
+        );
+      }
+    }
+    this.state.pendingDeltas = null;
     this.state.phase = 'duel-rezultat';
     this.state.phaseTimeRemaining =
       this.timings.DUEL_REZULTAT_DURATION ?? DUEL_REZULTAT_DURATION;
@@ -1403,18 +1465,28 @@ export class BitkaModule extends BaseGameModule {
       return;
     }
 
-    this.state.attacksThisRound += 1;
-    this.state.turnPointer = (this.state.turnPointer + 1) % Math.max(1, this.state.turnOrder.length);
-
-    if (this.state.attacksThisRound >= alive.length) {
-      this.state.round += 1;
-      if (this.state.round > this.state.totalRounds) {
-        this.finishGame(room);
-        return;
+    // Pokazivač ide na sledećeg ŽIVOG; ako usput pređe preko početka runde,
+    // runda je gotova. Brojanje napada je ovde bilo pogrešno: kad A ispadne
+    // usred runde, živih je manje, brojač ih „stigne" i poslednji u nizu
+    // ostane bez poteza.
+    const order = this.state.turnOrder;
+    const n = Math.max(1, order.length);
+    let wrapped = false;
+    let nextIdx = -1;
+    for (let i = 1; i <= n; i++) {
+      const idx = (this.state.turnPointer + i) % n;
+      if (idx === this.state.roundStartPointer) wrapped = true;
+      if (alive.includes(order[idx])) {
+        nextIdx = idx;
+        break;
       }
-      this.beginAttackTurn(room, true);
+    }
+    if (wrapped || nextIdx === -1) {
+      this.state.round += 1;
+      this.beginRound(room);
       return;
     }
+    this.state.turnPointer = nextIdx;
     this.beginAttackTurn(room);
   }
 
@@ -1424,8 +1496,8 @@ export class BitkaModule extends BaseGameModule {
       .filter((p) => !this.state.eliminated.has(p.id))
       .sort((a, b) => b.score - a.score);
     this.state.winnerId = standing[0]?.id ?? null;
-    // Normalno se pobeđuje rušenjem svih tuđih zamkova; ako je udario
-    // osigurač od zaglavljene partije, to treba i reći.
+    // Rečenica „kako se završilo" stoji u završnom kadru: pao je poslednji
+    // zamak, istekle su runde, ili je udario osigurač od zaglavljene partije.
     this.state.lastEvent =
       standing.length <= 1
         ? `${this.nameOf(room, this.state.winnerId)} je ostao jedini sa zamkom!`
@@ -1434,11 +1506,12 @@ export class BitkaModule extends BaseGameModule {
           : `Bitka se otegla — pobeđuje najveći zbir poena.`;
     this.state.activePlayerId = null;
     this.state.duel = null;
-    // Pravo na kraj — bez sopstvenog ekrana „Bitka je gotova": odmah posle
-    // ionako stiže platformski ekran sa poenima i diplomama, pa je zaseban
-    // međuekran bio isti sadržaj dvaput.
-    this.state.phase = 'ended';
-    this.state.phaseTimeRemaining = 0;
+    this.setQuestion(null);
+    this.state.expected = new Set();
+    // Završni kadar: konačna mapa, pobednik i rečenica iznad — pa tek onda
+    // `ended` i platformski ekran sa poenima i diplomama.
+    this.state.phase = 'kraj';
+    this.state.phaseTimeRemaining = this.timings.KRAJ_DURATION ?? KRAJ_DURATION;
   }
 
   // --- Diplome -------------------------------------------------------------
@@ -1512,7 +1585,8 @@ export class BitkaModule extends BaseGameModule {
 
   private async loadPools(
     packIds: string[],
-    types: KvizQuestionType[] | null
+    types: KvizQuestionType[] | null,
+    players: number
   ): Promise<void> {
     const pitanja: BitkaQuestionFull[] = [];
     const broj: KvizBrojQuestionFull[] = [];
@@ -1562,6 +1636,17 @@ export class BitkaModule extends BaseGameModule {
       if (fallback) this.feedback.registerPack(fallback.id, fallback.questions);
       broj.push(...(fallback?.questions ?? []).filter(isBrojQuestion));
     }
+
+    // Procena potrošnje: po igraču i rundi ~1,6 pitanja (napad + nastavak
+    // opsade i poneko ponovljeno), plus trka za zemlju na početku. Ako je
+    // bazen manji, pitanja će se reciklirati — to treba reći u uvodu, a ne
+    // pustiti da neko dobije pitanje čiji je odgovor već video.
+    const rounds = this.state.mode === 'runde' ? this.state.totalRounds : 12;
+    const needed = Math.ceil(players * rounds * 1.6 + 3 * players);
+    this.state.poolWarning =
+      pitanja.length < needed
+        ? `Izabrani pakovi imaju ${pitanja.length} pitanja — neka će se ponoviti.`
+        : null;
 
     this.state.questionPool = shuffled(pitanja);
     this.state.brojPool = shuffled(broj);
@@ -1696,6 +1781,47 @@ export class BitkaModule extends BaseGameModule {
   private nameOf(room: Room, playerId: string | null): string {
     if (!playerId) return 'Igrač';
     return room.players.find((p) => p.id === playerId)?.name ?? 'Igrač';
+  }
+
+  /** Igrač je u sobi i telefon mu je budan (nije u grejsu). */
+  private isConnected(room: Room, playerId: string | null): boolean {
+    return !!playerId && !!room.players.find((p) => p.id === playerId)?.isConnected;
+  }
+
+  /**
+   * Koliko će ishod promeniti poene obe strane kad se upiše — isto ono što
+   * `commit` prolaz `applyDuel` kasnije zaista uradi (on to i proverava).
+   * Pad zamka prenosi SVU zemlju palog, a njegov zamak postaje obična
+   * teritorija — zato napadač ne dobija 1000 za njega, nego vrednost zemlje.
+   */
+  private outcomeDeltas(
+    defenderId: string | null,
+    territoryId: string,
+    outcome: BitkaDuelOutcome
+  ): { attacker: number; defender: number } {
+    const value = territoryValue(this.territoryById.get(territoryId) ?? {});
+    switch (outcome) {
+      case 'branilac':
+        return {
+          attacker: 0,
+          defender: defenderId && this.state.answers.has(defenderId) ? BITKA_ODBRANA_BONUS : 0,
+        };
+      case 'napadac':
+        return { attacker: value, defender: defenderId ? -value : 0 };
+      case 'zid':
+        return { attacker: BITKA_ZID_BONUS, defender: 0 };
+      case 'zamak-pao': {
+        let gained = 0;
+        let lost = 0;
+        for (const t of this.state.board.values()) {
+          if (t.ownerId !== defenderId) continue;
+          const land = territoryValue(this.territoryById.get(t.id) ?? {});
+          gained += land;
+          lost += t.castle ? BITKA_ZAMAK_BODOVI : land;
+        }
+        return { attacker: BITKA_ZID_BONUS + gained, defender: -lost };
+      }
+    }
   }
 
   private statsFor(playerId: string): BitkaStats {
@@ -1889,6 +2015,13 @@ export class BitkaModule extends BaseGameModule {
     }
     if (this.state.lastEvent) hostData.lastEvent = this.state.lastEvent;
 
+    // Samo u uvodu: legenda bodovanja (iste brojke kao u pravilima) i
+    // upozorenje da je bazen pitanja manji nego što će partija potrošiti.
+    if (phase === 'uvod') {
+      hostData.scoringLegend = `zamak ${BITKA_ZAMAK_BODOVI} · teritorija ${BITKA_TERITORIJA_BODOVI} · zid +${BITKA_ZID_BONUS} · odbrana +${BITKA_ODBRANA_BONUS} · ${BITKA_ZIDOVI} zida = ceo posed`;
+      if (this.state.poolWarning) hostData.poolWarning = this.state.poolWarning;
+    }
+
     if (showQuestion) {
       hostData.question = this.questionView();
       hostData.expectedIds = [...this.state.expected];
@@ -1970,12 +2103,20 @@ export class BitkaModule extends BaseGameModule {
       if (phase === 'duel-ishod' && this.state.pendingOutcome) {
         duel.pendingOutcome = this.state.pendingOutcome;
         duel.wallsAfter = this.state.pendingWalls;
+        if (this.state.pendingDeltas) duel.scoreDeltas = this.state.pendingDeltas;
       }
       if (phase === 'duel-rezultat') duel.outcome = this.state.duel.outcome;
       hostData.duel = duel;
     }
 
-    if (phase === 'ended') {
+    if (phase === 'kraj' || phase === 'ended') {
+      // Ko je ispao (pao mu zamak ili je otišao) rangira se ISPOD svakog
+      // preživelog, bez obzira na poene — u oba moda je izgubio rat; poeni
+      // rešavaju redosled samo unutar grupe. Napomena: platformski ekran posle
+      // `ended` rangira po `player.score` i ovaj poredak ne vidi; ispali obično
+      // i tako ostanu ispod (zemlja im je otišla, ostao je samo bonus), ali
+      // to ne garantuje — poeni se namerno ne prepravljaju da bi se poklopilo.
+      const elim = this.state.eliminated;
       hostData.leaderboard = this.playerViews(room)
         .map((p) => ({
           playerId: p.playerId,
@@ -1986,7 +2127,12 @@ export class BitkaModule extends BaseGameModule {
           territories: p.territories,
           rank: 0,
         }))
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => {
+          const ea = elim.has(a.playerId) ? 1 : 0;
+          const eb = elim.has(b.playerId) ? 1 : 0;
+          if (ea !== eb) return ea - eb;
+          return b.score - a.score;
+        })
         .map((entry, i) => ({ ...entry, rank: i + 1 }));
       hostData.winnerId = this.state.winnerId;
     }

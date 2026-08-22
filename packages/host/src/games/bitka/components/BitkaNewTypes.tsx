@@ -181,31 +181,56 @@ export function BitkaDominoBoard({
 
   if (revealing) {
     const chain = host.dominoChain ?? [];
+    // Avatar sedi ispod pločice do koje je igrač stigao: `streak` tačnih
+    // koraka od polazne pločice (indeks 0) znači da je poslednja osvojena
+    // pločica baš `chain[streak]` — ista gramatika kao avatar na opciji.
+    const reachedBy = (i: number) =>
+      results
+        .filter((r) => r.streak != null && Math.min(r.streak, chain.length - 1) === i)
+        .map((r) => host.players.find((p) => p.playerId === r.playerId))
+        .filter((p): p is BitkaPlayerView => !!p);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '0.3rem' : '0.6rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? '0.25rem' : '0.4rem' }}>
-          {chain.map((it, i) => (
-            <span
-              key={i}
-              style={{
-                display: 'inline-flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: compact ? '0.2rem 0.4rem' : '0.4rem 0.7rem',
-                borderRadius: '10px',
-                background: 'var(--bg-secondary)',
-                border: '2px solid var(--line)',
-                fontSize: compact ? '0.7rem' : '0.95rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-              }}
-            >
-              <span>{it.label}</span>
-              <span style={{ color: 'var(--accent)', fontWeight: 900 }}>
-                {formatBrojValue(it.value, question.unit, question.valueType)}
+          {chain.map((it, i) => {
+            const takers = reachedBy(i);
+            return (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: compact ? '0.2rem 0.4rem' : '0.4rem 0.7rem',
+                    borderRadius: '10px',
+                    background: 'var(--bg-secondary)',
+                    border: takers.length > 0 ? '2px solid var(--accent)' : '2px solid var(--line)',
+                    fontSize: compact ? '0.7rem' : '0.95rem',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <span>{it.label}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 900 }}>
+                    {formatBrojValue(it.value, question.unit, question.valueType)}
+                  </span>
+                </span>
+                <span style={{ display: 'flex', gap: '0.15rem', minHeight: compact ? '1.2rem' : '1.7rem' }}>
+                  {takers.map((p) => (
+                    <Avatar key={p.playerId} player={p} size={compact ? '1.2rem' : '1.7rem'} />
+                  ))}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </div>
         <BitkaScoreRow results={results} players={host.players} max={steps} compact={compact} />
       </div>

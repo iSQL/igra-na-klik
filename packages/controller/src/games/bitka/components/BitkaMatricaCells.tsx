@@ -3,6 +3,7 @@ import type { BitkaAnswerResult, BitkaHostData, BitkaQuestionView } from '@igra/
 import type { BitkaPlayerView } from '@igra/shared';
 import { useHaptics } from '../../../hooks/useHaptics';
 import { BitkaPackChip } from './BitkaPackChip';
+import { SubmittedBar } from './BitkaSubmittedBar';
 
 /**
  * Mreža 3×3 na telefonu — jedan crtež za sva četiri mesta na kojima se
@@ -127,7 +128,10 @@ export function BitkaMatricaCells({
   );
 }
 
-/** Koliko je ko pogodio — „2/3". Isti red koji TV crta ispod mreže. */
+/**
+ * Koliko je ko pogodio — „2/3". Isti red koji TV crta ispod mreže; koriste ga
+ * i redosled (`pick` = broj stavki) i domino (`pick` = broj koraka).
+ */
 export function BitkaMatricaScoreRow({
   results,
   players,
@@ -207,7 +211,7 @@ export function BitkaMatricaScreen({
   answered,
   mySelection,
   revealing,
-  seconds,
+  hostless,
   onSubmit,
 }: {
   question: BitkaQuestionView;
@@ -218,7 +222,7 @@ export function BitkaMatricaScreen({
   answered: boolean;
   mySelection: number[] | null;
   revealing: boolean;
-  seconds: number;
+  hostless: boolean;
   onSubmit: (cells: number[]) => void;
 }) {
   const haptics = useHaptics();
@@ -264,7 +268,17 @@ export function BitkaMatricaScreen({
       >
         {question.text}
       </p>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.6rem' }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'safe center',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', margin: 'auto 0' }}>
         <BitkaMatricaCells
           cells={question.cells ?? []}
           selected={shown}
@@ -289,18 +303,22 @@ export function BitkaMatricaScreen({
             {host.explanation}
           </p>
         )}
+        {!revealing && answered && (
+          <SubmittedBar host={host} myPlayerId={playerId} hostless={hostless} />
+        )}
+        </div>
       </div>
       {!revealing && !answered && (
         <button
           className="btn-primary"
           disabled={shown.size !== pick}
           onClick={() => {
-            haptics.success();
+            haptics.tap();
             onSubmit([...shown]);
           }}
           style={{ minHeight: '52px', fontSize: '1rem', fontWeight: 800 }}
         >
-          {shown.size === pick ? 'Pošalji' : `Izabrano ${shown.size}/${pick} · ${seconds}s`}
+          {shown.size === pick ? 'Pošalji' : `Izabrano ${shown.size}/${pick}`}
         </button>
       )}
       {footer}

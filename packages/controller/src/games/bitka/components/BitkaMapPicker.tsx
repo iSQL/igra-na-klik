@@ -12,6 +12,13 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 /** Pomeraj (u CSS px) preko kog se dodir tumači kao prevlačenje, ne kao tap. */
 const TAP_THRESHOLD = 8;
+/**
+ * Tolerancija za debeo prst (CSS px): tap koji ne pogodi nijedan poligon uzima
+ * najbližu ponuđenu teritoriju čije je sidro imena unutar ovog kruga.
+ */
+const FAT_FINGER_PX = 22;
+/** Koliko stoji crveni obris odbijene teritorije — isto što i CSS animacija. */
+const REJECT_MS = 600;
 
 interface SinglePointerStart {
   x: number;
@@ -39,13 +46,17 @@ interface BitkaMapPickerProps {
   activePlayerId?: string | null;
   onSelect?: (territoryId: string) => void;
   /**
+   * Tap na teritoriju koja se NE nudi — roditelj odlučuje šta da kaže (nije
+   * susedna, već je tvoja…); mapa je samo crveno obrubi i zazuji.
+   */
+  onReject?: (territoryId: string) => void;
+  /**
    * Popuni sav prostor koji roditelj da (roditelj mora biti flex sa
    * `flex:1; minHeight:0`). Meri se kutija, jer se od `aspect-ratio` i
    * `max-height` u CSS-u širina ne preračunava nazad — mapa bi ostala
-   * uska ili bi prelila.
+   * uska ili bi prelila. Svi pozivi ga danas prosleđuju.
    */
   fill?: boolean;
-  maxHeightCss?: string;
   /**
    * Događaji sa mape — teritorija koja je promenila vlasnika ili primila udar
    * kratko blesne. Telefon nema 3D teren kao TV, ali ni tiha promena boje nije
@@ -71,8 +82,8 @@ const FLASH_MS: Record<string, number> = {
  *
  * Gesture matematika je ista kao kod kviz geo mape (ista normalizovana [0,1]
  * osnova); jedina razlika je što se umesto pina radi **pogodak u poligon** nad
- * istim koordinatama. Ispod mape stoji i lista dugmadi — mapa je lepa, ali
- * lista je ta koja garantuje precizan izbor na malom ekranu.
+ * istim koordinatama. Spisak teritorija kao rezervni način izbora ne stoji
+ * ovde nego u profilnom popupu (components/BitkaBoardMenu.tsx).
  */
 export function BitkaMapPicker({
   map,
@@ -83,8 +94,7 @@ export function BitkaMapPicker({
   focusId,
   activePlayerId,
   onSelect,
-  fill,
-  maxHeightCss = '46dvh',
+  onReject,
   fxEvents,
 }: BitkaMapPickerProps) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -97,7 +107,6 @@ export function BitkaMapPicker({
   const [ratio, setRatio] = useState(3 / 2);
 
   useEffect(() => {
-    if (!fill) return;
     const el = boxRef.current;
     if (!el) return;
     const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
@@ -105,7 +114,7 @@ export function BitkaMapPicker({
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [fill]);
+  }, []);
 
   // Bleskovi: teritorija → boja. Ključ `nonce` tera SVG da ponovo pokrene
   // animaciju i kad ista teritorija blesne dvaput za redom.
@@ -183,6 +192,17 @@ export function BitkaMapPicker({
     };
   }, [fxEvents]);
 
+  // Odbijen tap: poligon na kratko dobije crven obris. `nonce` tera SVG da
+  // animaciju pokrene ponovo i kad ista teritorija bude tapnuta dvaput.
+  const [rejected, setRejected] = useState<{ id: string; nonce: number } | null>(null);
+  const rejectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+    },
+    []
+  );
+
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const singleStartRef = useRef<SinglePointerStart | null>(null);
   const pinchStartRef = useRef<PinchStart | null>(null);
@@ -208,7 +228,14 @@ export function BitkaMapPicker({
     []
   );
 
-  /** Tap → normalizovane koordinate → teritorija ispod prsta. */
+  /**
+   * Tap → normalizovane koordinate → teritorija ispod prsta.
+   *
+   * Proverava se SVAKI poligon, ne samo ponuđeni: tap na teritoriju koja se
+   * ne nudi dobija crven obris i poruku, umesto da prođe bez traga kao da
+   * ekran ne radi. Kad prst ne pogodi nijedan poligon (granica, more), uzima
+   * se najbliža ponuđena teritorija u krugu od `FAT_FINGER_PX`.
+   */
   const pickAtClient = useCallback(
     (clientX: number, clientY: number) => {
       if (!onSelect || selectable.size === 0) return;
@@ -224,14 +251,27 @@ export function BitkaMapPicker({
       // Odozgo nadole — poslednje iscrtana teritorija je i vizuelno na vrhu.
       for (let i = map.territories.length - 1; i >= 0; i--) {
         const t = map.territories[i];
-        if (!selectable.has(t.id)) continue;
-        if (pointInPolygon(point, t.polygon)) {
+        if (!pointInPolygon(point, t.polygon)) continue;
+        if (selectable.has(t.id)) {
           onSelect(t.id);
           return;
         }
+        if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current);
+        setRejected({ id: t.id, nonce: Date.now() });
+        rejectTimerRef.current = setTimeout(() => setRejected(null), REJECT_MS);
+        onReject?.(t.id);
+        return;
       }
+      // Nigde — najbliže ponuđeno sidro, u CSS pikselima (rect već nosi zum).
+      let best: { id: string; d: number } | null = null;
+      for (const t of map.territories) {
+        if (!selectable.has(t.id)) continue;
+        const d = Math.hypot((t.label.x - point.x) * rect.width, (t.label.y - point.y) * rect.height);
+        if (d <= FAT_FINGER_PX && (!best || d < best.d)) best = { id: t.id, d };
+      }
+      if (best) onSelect(best.id);
     },
-    [map, onSelect, selectable]
+    [map, onSelect, onReject, selectable]
   );
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -345,9 +385,9 @@ export function BitkaMapPicker({
     if (pointersRef.current.size === 0) singleStartRef.current = null;
   };
 
-  // U `fill` režimu se veličina računa iz izmerene kutije: uzmi ono što je
-  // uže — širinu kutije, ili širinu koju dozvoljava njena visina.
-  const filled = fill && box.w > 0 && box.h > 0;
+  // Veličina se računa iz izmerene kutije: uzmi ono što je uže — širinu
+  // kutije, ili širinu koju dozvoljava njena visina.
+  const filled = box.w > 0 && box.h > 0;
   const width = filled ? Math.min(box.w, box.h * ratio) : 0;
 
   const mapEl = (
@@ -359,7 +399,7 @@ export function BitkaMapPicker({
       onPointerCancel={handlePointerCancel}
       style={{
         position: 'relative',
-        width: filled ? `${width}px` : `min(100%, calc(${maxHeightCss} * ${ratio}))`,
+        width: `${width}px`,
         aspectRatio: `${ratio}`,
         margin: '0 auto',
         background: '#0B1728',
@@ -430,6 +470,24 @@ export function BitkaMapPicker({
               />
             );
           })}
+
+          {/* Odbijen tap — crven obris koji se ugasi za pola sekunde. */}
+          {rejected &&
+            (() => {
+              const t = map.territories.find((x) => x.id === rejected.id);
+              if (!t) return null;
+              return (
+                <polygon
+                  key={`odbijeno:${rejected.nonce}`}
+                  className="bitka-reject"
+                  points={t.polygon.map((p) => `${p.x},${p.y}`).join(' ')}
+                  fill="#e06a5e"
+                  stroke="#e06a5e"
+                  strokeWidth={5}
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            })()}
 
           {/* Odjek događaja — preko postojećih poligona, pa se ugasi. */}
           {flashes.map((f) => {
@@ -604,7 +662,6 @@ export function BitkaMapPicker({
     </div>
   );
 
-  if (!fill) return mapEl;
   return (
     <div
       ref={boxRef}

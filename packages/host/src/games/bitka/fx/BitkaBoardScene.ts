@@ -62,6 +62,9 @@ interface Territory {
   toppling: boolean;
   /** Zamak igrača koji je na potezu — veći i sa zlatnim sjajem. */
   activeCastle: boolean;
+  /** Avatar vlasnika iznad zamka — sprajt sa teksturom iscrtanom na platnu. */
+  badge: THREE.Sprite;
+  badgeEmoji: string;
 }
 
 export interface BitkaBoardInput {
@@ -105,6 +108,14 @@ export class BitkaBoardScene {
   private readonly wantAim = new THREE.Vector3();
   /** Prvi kadar se ne uklizava — tabla se odmah vidi uokvirena. */
   private camSettled = false;
+  /**
+   * Manje pokreta: bez pulsa ponuđenih ploča i aktivnog zamka, kamera
+   * preskače na cilj umesto da klizi. Efekti (udar, osvajanje) ostaju —
+   * oni su događaji, ne ukras koji se ponavlja.
+   */
+  private reducedMotion = false;
+  /** Teksture avatara po emodžiju — isti emodži se crta jednom po sceni. */
+  private readonly badgeTextures = new Map<string, THREE.CanvasTexture>();
 
   constructor(canvas: HTMLCanvasElement, map: BitkaMapData) {
     this.map = map;
@@ -173,9 +184,14 @@ export class BitkaBoardScene {
     this.frame();
   }
 
+  setReducedMotion(on: boolean) {
+    this.reducedMotion = on;
+  }
+
   /** Stanje partije → ciljne boje, visine i zamkovi. Petlja ih dostiže glatko. */
   update(input: BitkaBoardInput) {
     const colorOf = new Map(input.players.map((p) => [p.playerId, p.avatarColor]));
+    const emojiOf = new Map(input.players.map((p) => [p.playerId, p.avatarEmoji]));
     const highlight = new Set(input.highlightIds ?? []);
 
     for (const st of input.board) {
@@ -184,10 +200,11 @@ export class BitkaBoardScene {
       const owner = st.ownerId ? colorOf.get(st.ownerId) : null;
       // Boje se upisuju u postojeće objekte: ovo se zove na svaki tick, a
       // partija traje ~25 minuta — nove instance bi bile čisto smeće.
-      // Kapica se tonira vlasnikovom bojom, ali blago: ispod nje je crtež
-      // mape i on mora da ostane čitljiv.
+      // Kapica se tonira vlasnikovom bojom, ublaženo belom tek toliko da
+      // crtež mape ispod ostane čitljiv — sa 55 % bele su se dve boje
+      // igrača stapale u isti pastel, sa 30 % se još razlikuju.
       if (owner) {
-        t.targetCap.set(owner).lerp(WHITE, 0.55);
+        t.targetCap.set(owner).lerp(WHITE, 0.3);
         t.targetSide.set(owner);
       } else {
         t.targetCap.setScalar(0.78);
@@ -216,12 +233,54 @@ export class BitkaBoardScene {
         t.activeCastle =
           hasCastle && !!input.activePlayerId && st.ownerId === input.activePlayerId;
         towerMat.emissive.set(GOLD);
+        // Čiji je zamak — avatar iznad kule. Boja ploče kaže isto, ali se sa
+        // fotelje četiri pastela ne razaznaju; emodži se prepozna odmah.
+        const emoji = (st.ownerId && emojiOf.get(st.ownerId)) || '';
+        if (emoji !== t.badgeEmoji) {
+          t.badgeEmoji = emoji;
+          t.badge.material.map = emoji ? this.badgeTexture(emoji) : null;
+          t.badge.material.needsUpdate = true;
+        }
+        t.badge.visible = hasCastle && !!emoji;
       }
     }
 
     const focus = input.focusId ? this.territories.get(input.focusId) : null;
-    if (focus) this.aimAt(focus.anchor, 0.62);
+    // Bez pokreta: kamera ne prilazi dvoboju — ostaje ceo kadar.
+    if (focus && !this.reducedMotion) this.aimAt(focus.anchor, 0.62);
     else this.frame();
+  }
+
+  /**
+   * Emodži iscrtan na 2D platnu kao tekstura sprajta — bez ijednog asseta,
+   * a sprajt uvek gleda u kameru pa se čita iz svakog ugla.
+   */
+  private badgeTexture(emoji: string): THREE.CanvasTexture {
+    const cached = this.badgeTextures.get(emoji);
+    if (cached) return cached;
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(9,20,36,0.78)';
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = GOLD;
+      ctx.stroke();
+      ctx.font = `${Math.round(size * 0.58)}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(emoji, size / 2, size / 2 + size * 0.04);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    this.badgeTextures.set(emoji, texture);
+    return texture;
   }
 
   playFx(ev: BitkaFxEvent, delaySeconds = 0) {
@@ -252,6 +311,7 @@ export class BitkaBoardScene {
     cancelAnimationFrame(this.raf);
     this.clearFx();
     for (const d of this.disposables) d.dispose();
+    for (const tex of this.badgeTextures.values()) tex.dispose();
     this.texture?.dispose();
     this.renderer.dispose();
   }
@@ -320,7 +380,7 @@ export class BitkaBoardScene {
         territory.label.y * this.depth
       );
 
-      const { group, tower, walls } = this.buildCastle(anchor);
+      const { group, tower, walls, badge } = this.buildCastle(anchor);
 
       this.territories.set(territory.id, {
         id: territory.id,
@@ -338,6 +398,8 @@ export class BitkaBoardScene {
         walls,
         toppling: false,
         activeCastle: false,
+        badge,
+        badgeEmoji: '',
       });
 
       this.disposables.push(geometry, cap, side);
@@ -376,8 +438,18 @@ export class BitkaBoardScene {
       this.disposables.push(wallMat);
     }
 
-    this.disposables.push(towerGeo, towerMat, crownGeo, crownMat, wallGeo);
-    return { group, tower, walls };
+    // Avatar vlasnika lebdi iznad krune; tekstura stiže kad se zamak
+    // podigne (`update`), pa se ovde samo ostavi mesto.
+    const badgeMat = new THREE.SpriteMaterial({ transparent: true, depthTest: false });
+    const badge = new THREE.Sprite(badgeMat);
+    badge.position.y = 0.095;
+    badge.scale.setScalar(0.055);
+    badge.visible = false;
+    badge.renderOrder = 5;
+    group.add(badge);
+
+    this.disposables.push(towerGeo, towerMat, crownGeo, crownMat, wallGeo, badgeMat);
+    return { group, tower, walls, badge };
   }
 
   // --- kamera ---------------------------------------------------------------
@@ -479,7 +551,12 @@ export class BitkaBoardScene {
       t.side.color.lerp(t.targetSide, 1 - Math.exp(-6 * dt));
       // Ponuđene i napadnute teritorije dišu — isto značenje kao isprekidana
       // zlatna kontura na 2D mapi.
-      const pulse = t.glow > 0 ? t.glow * (0.45 + 0.55 * Math.sin(this.clock * 4)) : 0;
+      const pulse =
+        t.glow > 0
+          ? this.reducedMotion
+            ? t.glow * 0.8
+            : t.glow * (0.45 + 0.55 * Math.sin(this.clock * 4))
+          : 0;
       t.cap.emissiveIntensity = pulse;
       const y = damp(t.mesh.position.y, t.targetY, 7, dt);
       t.mesh.position.y = y;
@@ -487,16 +564,17 @@ export class BitkaBoardScene {
       if (!t.toppling) {
         t.castle.position.y = t.anchor.y;
         // Aktivan zamak diše: veći je i zlatno pulsira, ostali miruju.
-        const wanted = t.activeCastle ? 1.45 + 0.12 * Math.sin(this.clock * 3.2) : 1;
+        const breath = this.reducedMotion ? 0 : Math.sin(this.clock * 3.2);
+        const wanted = t.activeCastle ? 1.45 + 0.12 * breath : 1;
         const scale = damp(t.castle.scale.x, wanted, 8, dt);
         t.castle.scale.setScalar(scale);
         (t.tower.material as THREE.MeshStandardMaterial).emissiveIntensity = t.activeCastle
-          ? 0.35 + 0.25 * Math.sin(this.clock * 3.2)
+          ? 0.35 + 0.25 * breath
           : 0;
       }
     }
 
-    if (this.camSettled) {
+    if (this.camSettled && !this.reducedMotion) {
       this.camPos.set(
         damp(this.camPos.x, this.wantPos.x, 3.2, dt),
         damp(this.camPos.y, this.wantPos.y, 3.2, dt),

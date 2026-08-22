@@ -982,6 +982,8 @@ async function main(): Promise<void> {
     'duel-odgovor-rezultat',
     'duel-ishod',
     'duel-rezultat',
+    // Završni kadar: konačna mapa + pobednik, pa tek onda `ended`.
+    'kraj',
   ];
   const missing = required.filter((p) => !seenPhases.has(p));
 

@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { BitkaQuestionImage } from './BitkaQuestionImage';
 import { BitkaPackChip } from './BitkaPackChip';
 import { BitkaMatricaCells, BitkaMatricaScoreRow } from './BitkaMatricaCells';
 import { BitkaDominoView, BitkaRedosledView, BitkaTextView } from './BitkaNewTypes';
+
+// Mini tabla je u svom fajlu (uvoze je i ekrani pitanja); ovde ostaje izvoz
+// da stari uvozi i dalje rade.
+export { BitkaMiniStandings } from './BitkaMiniStandings';
 
 /**
  * Ono što je u TV sobi nosio televizor, a u hostless sobi nije nosio niko.
@@ -14,8 +19,6 @@ import { BitkaDominoView, BitkaRedosledView, BitkaTextView } from './BitkaNewTyp
  * odgovori, ko je odgovorio, red čekanja, kontekst runde. Tačan odgovor se ne
  * pogađa ovde — server ga pošalje tek kad krene otkrivanje.
  */
-
-const PICK_PHASES = ['baza-izbor', 'osvajanje-izbor', 'napad-izbor'];
 
 export function BitkaHostlessPanel({
   host,
@@ -47,9 +50,7 @@ function Context({ host, phase }: { host: BitkaHostData; phase: string }) {
       ? `Rat · runda ${host.round} · zamkova još ${standing}`
       : host.osvajanjeRound
         ? `Osvajanje zemlje · ${host.osvajanjeRound}. pitanje`
-        : phase === 'uvod'
-          ? host.map.name
-          : host.map.name;
+        : host.map.name;
   return (
     <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
       {text}
@@ -131,7 +132,7 @@ function Body({
     return (
       <Card>
         {phase === 'napad-izbor' ? (
-          <Small>Napada se susedna tuđa ili ničija teritorija.</Small>
+          <Small>Napada se susedna teritorija.</Small>
         ) : (
           <Small>
             {queue.length > 0 ? (
@@ -166,7 +167,7 @@ function Body({
   if (host.question) {
     return (
       <Card>
-        <Question host={host} revealing={phase.endsWith('-rezultat')} />
+        <Question key={host.question.id ?? host.question.text} host={host} revealing={phase.endsWith('-rezultat')} />
         <Chips
           players={host.players.filter((p) => (host.expectedIds ?? []).includes(p.playerId))}
           myPlayerId={myPlayerId}
@@ -226,15 +227,31 @@ function Body({
  */
 function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean }) {
   const q = host.question;
+  // Tekst je sabijen na dva reda (traka stoji nad mapom); tap ga raširi.
+  // Ključ je pitanje, pa se novo pitanje uvek otvori sabijeno.
+  const [expanded, setExpanded] = useState(false);
   if (!q) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
       {/* Traka stoji uz mapu i sve u njoj je levo poravnato, pa i kategorija. */}
       <BitkaPackChip name={q.packName} align="left" size="0.62rem" />
-      <div style={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.25 }}>{q.text}</div>
+      <div
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          fontSize: '0.82rem',
+          fontWeight: 700,
+          lineHeight: 1.25,
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: expanded ? undefined : 2,
+          overflow: 'hidden',
+        }}
+      >
+        {q.text}
+      </div>
       {/* Traka je uska i stoji uz mapu, pa slika ide niža nego na ekranu
           pitanja — dovoljno da se vidi šta se pita, a mapa ostaje glavna. */}
-      <BitkaQuestionImage url={q.imageUrl} maxHeight="16vh" />
+      <BitkaQuestionImage url={q.imageUrl} maxHeight="10vh" />
       {q.kind === 'izbor' && q.options && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
           {q.options.map((o) => {
@@ -379,49 +396,6 @@ function Chips({
           </span>
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Uska tabla poena — u hostless sobi ne postoji drugo mesto gde se vidi ko
- * vodi. Pun prikaz i dalje živi u profilnom popupu.
- */
-export function BitkaMiniStandings({
-  host,
-  myPlayerId,
-}: {
-  host: BitkaHostData;
-  myPlayerId: string;
-}) {
-  const sorted = [...host.players].sort((a, b) => b.score - a.score);
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: 'center' }}>
-      {sorted.map((p) => (
-        <span
-          key={p.playerId}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.28rem',
-            padding: '0.15rem 0.45rem',
-            borderRadius: '999px',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            background: 'rgba(0,0,0,0.45)',
-            borderLeft: `3px solid ${p.avatarColor}`,
-            textShadow: 'none',
-            opacity: p.eliminated ? 0.45 : 1,
-          }}
-        >
-          <span>{p.avatarEmoji}</span>
-          <span>{p.playerId === myPlayerId ? 'ti' : p.name}</span>
-          <span style={{ color: 'var(--text-secondary)' }}>
-            {p.eliminated ? 'ispao' : `${p.territories}t`}
-          </span>
-          <strong style={{ color: 'var(--accent)' }}>{p.score}</strong>
-        </span>
-      ))}
     </div>
   );
 }

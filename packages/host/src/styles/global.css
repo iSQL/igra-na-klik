@@ -214,7 +214,8 @@ button {
   }
 }
 
-/* Odsjaj koji jednom u dve sekunde prelete preko kartice najave. */
+/* Odsjaj koji JEDNOM prelete preko kartice kad se pojavi — ponavljanje je
+   svetlucalo preko svake Objave celu partiju, pa se prestalo primećivati. */
 .bitka-sheen {
   position: absolute;
   top: 0;
@@ -222,7 +223,8 @@ button {
   width: 40%;
   height: 100%;
   background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.14), transparent);
-  animation: igra-bitka-sjaj 2.2s ease-in-out infinite;
+  animation: igra-bitka-sjaj 2.2s ease-in-out 1;
+  animation-fill-mode: forwards;
   pointer-events: none;
 }
 
@@ -254,14 +256,6 @@ button {
   animation: igra-bitka-opsada 1.8s ease-out infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bitka-sheen,
-  .bitka-tick,
-  .bitka-siege {
-    animation: none;
-  }
-}
-
 /* Osvajanje: teritorija koju igrač na potezu sme da uzme — diše, da se ne
    izgubi u crtežu mape. */
 @keyframes igra-bitka-ponuda {
@@ -273,5 +267,23 @@ button {
   50% {
     fill-opacity: 0.16;
     stroke-opacity: 0.6;
+  }
+}
+
+.bitka-ponuda {
+  animation: igra-bitka-ponuda 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bitka-sheen,
+  .bitka-tick,
+  .bitka-siege,
+  .bitka-ponuda {
+    animation: none;
+  }
+  /* Ponuda bez disanja: mirna, deblja kontura nosi isto značenje. */
+  .bitka-ponuda {
+    stroke-width: 9px;
+    fill-opacity: 0.42;
   }
 }

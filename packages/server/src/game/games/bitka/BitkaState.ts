@@ -76,8 +76,14 @@ export const DUEL_OTKRIVANJE_DURATION = 3;
  */
 export const DUEL_ISHOD_DURATION = 4;
 export const DUEL_REZULTAT_DURATION = 6;
-// Zasebnog završnog ekrana nema: `finishGame` ide pravo u `ended`, jer odmah
-// posle stiže platformski ekran sa poenima i diplomama.
+/**
+ * Završni kadar — konačna mapa, pobednik i rečenica kako se rat završio.
+ *
+ * Ranije je `finishGame` išao pravo u `ended`, pa je efekat pobede padao u
+ * scenu koja odmah nestaje i niko nije stigao da pročita „pao je poslednji
+ * zamak". Platformski ekran sa poenima i diplomama stiže tek posle ovoga.
+ */
+export const KRAJ_DURATION = 6;
 
 // Aktivan unos — balans igre, ostaje u kodu.
 export const ODGOVOR_DURATION = 20;
@@ -87,8 +93,11 @@ export const ODGOVOR_DURATION = 20;
  * kasnije zna gde su prethodni, pa je pozni izbor taktički, a ne kockanje.
  */
 export const BAZA_IZBOR_DURATION = 14;
-/** Vreme jednom igraču da izabere slobodnu teritoriju. */
-export const IZBOR_DURATION = 12;
+/**
+ * Vreme jednom igraču da izabere slobodnu teritoriju. Kratko namerno: izbor
+ * je jedan tap po mapi, a čeka ga celo društvo.
+ */
+export const IZBOR_DURATION = 8;
 export const NAPAD_IZBOR_DURATION = 15;
 
 /** Odgovor jednog igrača na tekuće pitanje. */
@@ -187,6 +196,12 @@ export interface BitkaInternalState {
   pendingOutcome: BitkaDuelOutcome | null;
   /** Zidovi posle udarca — poruka mora da važi pre nego što se tabla upiše. */
   pendingWalls: number;
+  /**
+   * Koliko će ko dobiti/izgubiti kad se ishod upiše — računa se u prvom
+   * prolazu `applyDuel` i objavljuje u `duel-ishod`, a drugi prolaz proverava
+   * da se stvarna promena poena s tim slaže.
+   */
+  pendingDeltas: { attacker: number; defender: number } | null;
 
   /** Redosled po rezultatu uvodnog broj-pitanja; određuje ko prvi bira zamak. */
   priority: string[];
@@ -203,9 +218,15 @@ export interface BitkaInternalState {
   totalRounds: number;
   turnOrder: string[];
   turnPointer: number;
+  /**
+   * Indeks u `turnOrder` na kome je tekuća runda počela. Runda je gotova kad
+   * pokazivač ponovo stigne do njega — a ne kad se izbroje napadi, jer bi
+   * ispadanje usred runde smanjilo imenilac i poslednjem u nizu uzelo potez.
+   * Svaka runda počinje na sledećem živom igraču, da isti ne napada prvi
+   * celu partiju.
+   */
+  roundStartPointer: number;
   activePlayerId: string | null;
-  /** Koliko je napada odigrano u tekućoj ratnoj rundi. */
-  attacksThisRound: number;
 
   duel: BitkaDuelState | null;
 
@@ -217,4 +238,6 @@ export interface BitkaInternalState {
   lastEvent: string;
   lastOutcome: Map<string, string>;
   winnerId: string | null;
+  /** Izabrani pakovi su manji nego što će partija potrošiti — pokazuje se u uvodu. */
+  poolWarning: string | null;
 }

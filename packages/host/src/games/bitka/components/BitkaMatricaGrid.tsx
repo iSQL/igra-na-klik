@@ -8,8 +8,9 @@ import type { BitkaAnswerResult, BitkaPlayerView } from '@igra/shared';
  * jednog mesta. Razlika je što ovde ćelija može biti i tačna i promašena
  * istovremeno — pogođena ćelija dobija oba obeležja.
  *
- * `compact` je varijanta za usku traku pored mape (trka za zemlju); duel je
- * dobija preko celog desnog stupca.
+ * `compact` je varijanta za usku traku ispod mape; arena pitanja (duel i
+ * trka za zemlju) dobija punu, preko celog desnog stupca. Rezultat po igraču
+ * („2/3") ide kroz `BitkaScoreRow` iz BitkaNewTypes.
  */
 export function BitkaMatricaGrid({
   cells,
@@ -101,66 +102,6 @@ export function BitkaMatricaGrid({
               </span>
             )}
           </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Rezultat matrice u jednom redu po igraču — „2/3". Bez ovoga se sa TV-a ne
- * vidi zašto je duel otišao onome kome je otišao: avatari na ćelijama kažu ko
- * je šta tapnuo, ali ne i koliko je to ukupno vredelo.
- */
-export function BitkaMatricaScores({
-  results,
-  players,
-  pick,
-}: {
-  results: BitkaAnswerResult[];
-  players: BitkaPlayerView[];
-  pick: number;
-}) {
-  const rows = [...results].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-      {rows.map((r) => {
-        const p = players.find((x) => x.playerId === r.playerId);
-        if (!p) return null;
-        const score = r.score ?? 0;
-        return (
-          <span
-            key={r.playerId}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.3rem 0.7rem',
-              borderRadius: '999px',
-              background: 'var(--bg-secondary)',
-              border: `2px solid ${score > 0 ? 'var(--accent)' : 'var(--line)'}`,
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-            }}
-          >
-            <span
-              style={{
-                width: '1.6rem',
-                height: '1.6rem',
-                borderRadius: '50%',
-                background: p.avatarColor,
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '0.85rem',
-              }}
-            >
-              {p.avatarEmoji}
-            </span>
-            <span>{p.name}</span>
-            <span style={{ color: score > 0 ? 'var(--accent)' : 'var(--dim)' }}>
-              {score}/{pick}
-            </span>
-          </span>
         );
       })}
     </div>
