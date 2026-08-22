@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import {
+  BITKA_QUIZ_TYPES,
   BITKA_RUNDE_IZBOR,
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
@@ -332,7 +333,8 @@ export function GameSelectScreen() {
           availableQuestionCount(
             quizImport.packs,
             quizImport.selectedPackIds,
-            quizImport.selectedTypes
+            quizImport.selectedTypes ??
+              (gameId === 'osvajanje' ? BITKA_QUIZ_TYPES : null)
           ) === 0
         ) {
           setErrorMessage(t('quizConfig.emptySelection'));
@@ -341,10 +343,13 @@ export function GameSelectScreen() {
         quizPackIds = ids;
         recordRecentPacks(ids);
       }
-      // Omit the filter when every type is checked.
+      // Omit the filter when every type is checked. KvizAtar counts against
+      // its OWN list — with the full four checked there is nothing to filter,
+      // and sending them would look like a narrowing that isn't one.
+      const allTypes = gameId === 'osvajanje' ? BITKA_QUIZ_TYPES : KVIZ_ALL_TYPES;
       if (
         quizImport.selectedTypes &&
-        quizImport.selectedTypes.length < KVIZ_ALL_TYPES.length
+        quizImport.selectedTypes.length < allTypes.length
       ) {
         quizTypes = quizImport.selectedTypes;
       }
@@ -534,7 +539,7 @@ export function GameSelectScreen() {
               newGamesConfig.setBitkaRounds(Number(v));
             }}
           />
-          <QuizImportButton />
+          <QuizImportButton types={BITKA_QUIZ_TYPES} />
         </>
       )}
       {game.id === 'asocijacije' && (

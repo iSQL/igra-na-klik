@@ -8,6 +8,49 @@
 // mape crteži a ne projekcije.
 
 import type { BitkaPoint, BitkaTerritory } from '../types/bitka.js';
+import type { KvizQuestionType } from '../types/quiz.js';
+
+/**
+ * Tipovi kviz-pitanja koje KvizAtar ume da postavi — jedini izvor istine za
+ * server (filtriranje pakova) i za selektor pitanja na TV-u i telefonu.
+ *
+ * Svi idu i u trku za slobodnu zemlju i u duel: pak je jedan, a duel je isto
+ * pitanje sa dva odgovarača. Ostaju napolju samo tri stvari koje se ne mogu
+ * odigrati na ovoj tabli: medij (TV već nosi mapu, a hostless soba nema gde da
+ * ga pusti), druga mapa (`geo` — mapa JESTE bojno polje) i `piksel`, kome
+ * treba postepeno izoštravanje slike.
+ *
+ * Cena tekstualnih tipova je poznata i prihvaćena: kucanje znači da brzina
+ * palca učestvuje u ishodu, a promašaj se sme ponavljati do isteka vremena, pa
+ * duel na njima češće ide do kraja od 20 s umesto da se prekine čim oba
+ * odgovore. Zato ih ima smisla čekirati svesno, a ne držati sve upaljeno.
+ *
+ * `broj` je ovde jer nosi razrešenje nerešenog duela i uvodno merenje; ostali
+ * se postavljaju kao pitanje (`BITKA_PITANJE_TYPES`).
+ */
+export const BITKA_QUIZ_TYPES: KvizQuestionType[] = [
+  'obicno',
+  'uljez',
+  'matrica',
+  'redosled',
+  'domino',
+  'emoji',
+  'dopuna',
+  'anagram',
+  'broj',
+];
+
+/** Tipovi koji smeju da budu POSTAVLJENI kao pitanje (bez razrešenja). */
+export const BITKA_PITANJE_TYPES: KvizQuestionType[] = [
+  'obicno',
+  'uljez',
+  'matrica',
+  'redosled',
+  'domino',
+  'emoji',
+  'dopuna',
+  'anagram',
+];
 
 /**
  * Svaki igrač drži tačno jedan zamak, pa je broj igrača i broj zamkova.

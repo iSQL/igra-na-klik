@@ -12,10 +12,16 @@ import type {
   GameState,
   KvizBrojQuestionFull,
   KvizChoiceQuestionFull,
+  KvizDominoQuestionFull,
+  KvizMatricaQuestionFull,
   KvizQuestionFull,
+  KvizQuestionType,
+  KvizRedosledQuestionFull,
   Room,
 } from '@igra/shared';
 import {
+  BITKA_PITANJE_TYPES,
+  BITKA_QUIZ_TYPES,
   BITKA_MAX_IGRACA,
   BITKA_MAX_OSVAJANJE_RUNDI,
   BITKA_MAX_RATNIH_RUNDI,
@@ -28,6 +34,8 @@ import {
   BITKA_ZIDOVI,
   KVIZ_BANK_PACK_ID,
   QUIZ_QUESTION_BANK,
+  checkEmojiGuess,
+  checkTextGuess,
   bitkaMinTeritorija,
   shuffled,
   territoryValue,
@@ -40,8 +48,15 @@ import {
   firstValidBitkaMapIdSync,
   resolveBitkaMapSync,
 } from './bitka-map-resolver.js';
-import { duelOutcome, resolveBrojDuel, resolveChoiceDuel, type DuelSide } from './duel.js';
-import type { BitkaAnswer, BitkaInternalState, BitkaStats } from './BitkaState.js';
+import { duelOutcome, resolveBrojDuel, resolveScoredDuel, type DuelSide } from './duel.js';
+import type {
+  BitkaAnswer,
+  BitkaDominoProgress,
+  BitkaInternalState,
+  BitkaQuestionFull,
+  BitkaStats,
+  BitkaTextQuestionFull,
+} from './BitkaState.js';
 import {
   BAZA_IZBOR_DURATION,
   DUEL_REZULTAT_DURATION,
@@ -61,18 +76,88 @@ interface BitkaStartOptions {
   bitkaMode?: unknown;
   bitkaRounds?: unknown;
   quizPackIds?: unknown;
+  quizTypes?: unknown;
 }
 
 /** Pak sa broj-pitanjima koji se dovlači kad izabrani pakovi nemaju nijedno. */
 const BROJ_FALLBACK_PACK = 'pogodi-broj';
 
-/** Igra koristi samo tekstualna izborna pitanja — bez medija i bez mape. */
-function isChoiceQuestion(q: KvizQuestionFull): q is KvizChoiceQuestionFull {
+/**
+ * Pitanja koja igra ume da postavi: izborna i matrica. Medija nema (TV već
+ * nosi tablu, a hostless soba nema gde da je pusti), mape nema (mapa je već
+ * bojno polje), kucanja nema (u duelu bi odlučivala brzina palca).
+ */
+function isBitkaQuestion(q: KvizQuestionFull): q is BitkaQuestionFull {
+  return (BITKA_PITANJE_TYPES as string[]).includes(q.type);
+}
+
+function isChoiceQuestion(q: BitkaQuestionFull): q is KvizChoiceQuestionFull {
   return q.type === 'obicno' || q.type === 'uljez';
+}
+
+function isMatricaQuestion(q: BitkaQuestionFull): q is KvizMatricaQuestionFull {
+  return q.type === 'matrica';
+}
+
+function isRedosledQuestion(q: BitkaQuestionFull): q is KvizRedosledQuestionFull {
+  return q.type === 'redosled';
+}
+
+function isDominoQuestion(q: BitkaQuestionFull): q is KvizDominoQuestionFull {
+  return q.type === 'domino';
+}
+
+function isTextQuestion(q: BitkaQuestionFull): q is BitkaTextQuestionFull {
+  return q.type === 'emoji' || q.type === 'dopuna' || q.type === 'anagram';
 }
 
 function isBrojQuestion(q: KvizQuestionFull): q is KvizBrojQuestionFull {
   return q.type === 'broj';
+}
+
+/**
+ * Izmešana slova odgovora za anagram — bez razmaka, velikim slovima.
+ *
+ * Za razliku od Kviza slova se NE slažu postepeno kako vreme prolazi: duel
+ * traje 20 s, pa bi postepeno otkrivanje značilo još jedno stanje po pitanju i
+ * još jednu površinu na kojoj tačan odgovor curi u broadcast.
+ */
+function scrambleOf(answer: string): string {
+  const letters: string[] = [];
+  for (const ch of answer.toUpperCase()) if (ch !== ' ') letters.push(ch);
+  let pool = shuffled(letters);
+  // Ako se izmeša u sam odgovor, promešaj opet — inače pitanje nije zagonetka.
+  for (let tries = 0; tries < 5; tries++) {
+    if (letters.length < 2 || pool.join('') !== letters.join('')) break;
+    pool = shuffled(letters);
+  }
+  return pool.join('');
+}
+
+/**
+ * Najveći mogući rezultat na pitanju.
+ *
+ * Stepenovani tipovi (matrica, redosled, domino) su ovde vredniji nego što
+ * izgledaju: pošto duel poredi rezultate, oni razrešavaju sami sebe i ređe
+ * šalju partiju na klizač. Tekstualni tipovi su binarni kao i izborni.
+ */
+function maxScoreOf(q: BitkaQuestionFull): number {
+  if (isMatricaQuestion(q)) return q.correct.length;
+  if (isRedosledQuestion(q)) return q.items.length;
+  if (isDominoQuestion(q)) return Math.max(1, q.items.length - 1);
+  return 1;
+}
+
+/**
+ * Prag „dovoljno dobar" — polovina mogućeg, zaokruženo naviše.
+ *
+ * Za izborno pitanje to je 1 od 1, dakle doslovno staro pravilo; za matricu 2
+ * od 3. Prag postoji samo zbog dva mesta gde nema s kim da se poredi: trke za
+ * slobodnu zemlju (ko sme da bira) i napada na neutralnu teritoriju (nema
+ * branioca). Duel dvoje igrača poredi sam rezultat, ne prag.
+ */
+function qualifyThreshold(q: BitkaQuestionFull): number {
+  return Math.ceil(maxScoreOf(q) / 2);
 }
 
 /** Faze u kojima igrači aktivno odgovaraju na pitanje. */
@@ -157,12 +242,16 @@ export class BitkaModule extends BaseGameModule {
       castleSites: map.castleSites?.length ? map.castleSites : null,
       board,
       loading: true,
-      choicePool: [],
+      questionPool: [],
       brojPool: [],
-      choiceCursor: 0,
+      questionCursor: 0,
       brojCursor: 0,
-      choiceQuestion: null,
+      question: null,
       brojQuestion: null,
+      shuffledItems: [],
+      scramble: '',
+      dominoProgress: new Map(),
+      wrongText: new Map(),
       answers: new Map(),
       expected: new Set(),
       pendingAttackerWin: null,
@@ -200,7 +289,7 @@ export class BitkaModule extends BaseGameModule {
       ? (cc.quizPackIds.filter((v) => typeof v === 'string') as string[])
       : [];
     // Kao kod Kviza: onStart ne sme biti async, pa uvod čeka na pitanja.
-    void this.loadPools(packIds);
+    void this.loadPools(packIds, this.parseTypeFilter(cc.quizTypes));
 
     return this.buildGameState(room);
   }
@@ -217,6 +306,10 @@ export class BitkaModule extends BaseGameModule {
     if (this.state.eliminated.has(playerId)) return null;
 
     if (action === 'bitka:answer') return this.handleAnswer(room, playerId, data);
+    if (action === 'bitka:matrica') return this.handleMatrica(room, playerId, data);
+    if (action === 'bitka:order') return this.handleOrder(room, playerId, data);
+    if (action === 'bitka:domino') return this.handleDomino(room, playerId, data);
+    if (action === 'bitka:text') return this.handleText(room, playerId, data);
     if (action === 'bitka:guess') return this.handleGuess(room, playerId, data);
     if (action === 'bitka:pick') return this.handlePick(room, playerId, data);
     return null;
@@ -234,8 +327,8 @@ export class BitkaModule extends BaseGameModule {
     // `redosled` je broj-pitanje — na njega se odgovara sa bitka:guess.
     if (phase === 'redosled-odgovor') return null;
 
-    const question = this.state.choiceQuestion;
-    if (!question) return null;
+    const question = this.state.question;
+    if (!question || !isChoiceQuestion(question)) return null;
     if (!this.state.expected.has(playerId)) return null;
     if (this.state.answers.has(playerId)) return null;
 
@@ -247,11 +340,233 @@ export class BitkaModule extends BaseGameModule {
     this.state.answers.set(playerId, {
       optionIndex: raw,
       remaining: Math.max(0, this.state.phaseTimeRemaining),
+      score: correct ? 1 : 0,
       correct,
     });
 
     if (this.allAnswered(room)) this.advancePhase(room);
     return this.buildGameState(room);
+  }
+
+  /**
+   * Matrica — igrač šalje tačno tri ćelije odjednom, jednom, kao i kod
+   * izbornog pitanja. Kviz ovde daje delimične poene; ovde delimičan pogodak
+   * nosi delimičan rezultat, pa 2:3 rešava duel bez klizača.
+   */
+  private handleMatrica(
+    room: Room,
+    playerId: string,
+    data: Record<string, unknown>
+  ): GameState | null {
+    const phase = this.state.phase;
+    if (phase !== 'osvajanje-odgovor' && phase !== 'duel-odgovor') return null;
+
+    const question = this.state.question;
+    if (!question || !isMatricaQuestion(question)) return null;
+    if (!this.state.expected.has(playerId)) return null;
+    if (this.state.answers.has(playerId)) return null;
+
+    const raw = data.cells;
+    if (!Array.isArray(raw) || raw.length !== question.correct.length) return null;
+    const seen = new Set<number>();
+    const cells: number[] = [];
+    for (const v of raw) {
+      if (
+        typeof v !== 'number' ||
+        !Number.isInteger(v) ||
+        v < 0 ||
+        v >= question.cells.length ||
+        seen.has(v)
+      ) {
+        return null;
+      }
+      seen.add(v);
+      cells.push(v);
+    }
+
+    const correctSet = new Set(question.correct);
+    const score = cells.filter((v) => correctSet.has(v)).length;
+    this.state.answers.set(playerId, {
+      cells,
+      remaining: Math.max(0, this.state.phaseTimeRemaining),
+      score,
+      correct: score >= qualifyThreshold(question),
+    });
+
+    if (this.allAnswered(room)) this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  /**
+   * Redosled — ceo poredak stiže odjednom, na „Potvrdi". Rezultat je broj
+   * pojmova na tačnom mestu, pa 4:5 rešava duel bez klizača.
+   */
+  private handleOrder(
+    room: Room,
+    playerId: string,
+    data: Record<string, unknown>
+  ): GameState | null {
+    const phase = this.state.phase;
+    if (phase !== 'osvajanje-odgovor' && phase !== 'duel-odgovor') return null;
+
+    const question = this.state.question;
+    if (!question || !isRedosledQuestion(question)) return null;
+    if (!this.state.expected.has(playerId)) return null;
+    if (this.state.answers.has(playerId)) return null;
+
+    const raw = data.order;
+    const n = question.items.length;
+    if (!Array.isArray(raw) || raw.length !== n) return null;
+    const seen = new Set<number>();
+    const order: number[] = [];
+    for (const v of raw) {
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v >= n || seen.has(v)) {
+        return null;
+      }
+      seen.add(v);
+      order.push(v);
+    }
+
+    // `order` su indeksi u PRIKAZANU listu; tačan poredak je original, pa se
+    // poređenje radi kroz `shuffledItems`.
+    const shown = this.state.shuffledItems;
+    let score = 0;
+    for (let pos = 0; pos < order.length; pos++) {
+      if (shown[order[pos]] === pos) score += 1;
+    }
+
+    this.state.answers.set(playerId, {
+      order,
+      remaining: Math.max(0, this.state.phaseTimeRemaining),
+      score,
+      correct: score >= qualifyThreshold(question),
+    });
+
+    if (this.allAnswered(room)) this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  /**
+   * Domino — jedini tip koji se ne šalje odjednom: igrač hoda niz korak po
+   * korak i staje na prvoj grešci. Zato se u `answers` upisuje tek kad je
+   * gotov; ko ne stigne do kraja dobija svoj delimičan niz na isteku faze
+   * (`materializePartial`), inače bi trud do greške vredeo nula.
+   */
+  private handleDomino(
+    room: Room,
+    playerId: string,
+    data: Record<string, unknown>
+  ): GameState | null {
+    const phase = this.state.phase;
+    if (phase !== 'osvajanje-odgovor' && phase !== 'duel-odgovor') return null;
+
+    const question = this.state.question;
+    if (!question || !isDominoQuestion(question)) return null;
+    if (!this.state.expected.has(playerId)) return null;
+
+    const dir = data.answer;
+    if (dir !== 'before' && dir !== 'after') return null;
+
+    const items = question.items;
+    const prog = this.dominoProgressOf(playerId);
+    if (prog.done || prog.pos >= items.length) return null;
+
+    const correctDir = items[prog.pos].value >= items[prog.pos - 1].value ? 'after' : 'before';
+    if (dir === correctDir) {
+      prog.streak += 1;
+      prog.pos += 1;
+      if (prog.pos >= items.length) prog.done = true;
+    } else {
+      prog.done = true;
+    }
+    this.state.dominoProgress.set(playerId, prog);
+
+    if (prog.done) {
+      this.state.answers.set(playerId, {
+        streak: prog.streak,
+        remaining: Math.max(0, this.state.phaseTimeRemaining),
+        score: prog.streak,
+        correct: prog.streak >= qualifyThreshold(question),
+      });
+      if (this.allAnswered(room)) this.advancePhase(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  /**
+   * Emoji / citat / anagram — slobodan tekst.
+   *
+   * Ovo je jedini unos u igri koji sme da se ponavlja: promašaj ne troši
+   * odgovor, jer bi tipfeler inače koštao zamka, a proveravanje već toleriše
+   * sitne greške u kucanju. Cena je da faza ide do kraja kad neko ne pogodi —
+   * rani izlazak radi samo kad SVI pogode. To je svesna razmena, i razlog zašto
+   * tekstualne tipove treba čekirati namerno.
+   */
+  private handleText(
+    room: Room,
+    playerId: string,
+    data: Record<string, unknown>
+  ): GameState | null {
+    const phase = this.state.phase;
+    if (phase !== 'osvajanje-odgovor' && phase !== 'duel-odgovor') return null;
+
+    const question = this.state.question;
+    if (!question || !isTextQuestion(question)) return null;
+    if (!this.state.expected.has(playerId)) return null;
+    if (this.state.answers.has(playerId)) return null;
+
+    const raw = typeof data.text === 'string' ? data.text.trim() : '';
+    if (!raw) return null;
+
+    const solved =
+      question.type === 'emoji'
+        ? checkEmojiGuess(raw, question)
+        : checkTextGuess(raw, question);
+
+    if (!solved) {
+      this.state.wrongText.set(playerId, raw);
+      return this.buildGameState(room);
+    }
+
+    this.state.wrongText.delete(playerId);
+    this.state.answers.set(playerId, {
+      text: raw,
+      remaining: Math.max(0, this.state.phaseTimeRemaining),
+      score: 1,
+      correct: true,
+    });
+
+    if (this.allAnswered(room)) this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  private dominoProgressOf(playerId: string): BitkaDominoProgress {
+    return (
+      this.state.dominoProgress.get(playerId) ?? { pos: 1, streak: 0, done: false }
+    );
+  }
+
+  /**
+   * Domino se ne šalje odjednom, pa na isteku faze igrači koji nisu stigli do
+   * kraja nemaju nijedan upis. Bez ovoga bi niz od četiri tačna koraka vredeo
+   * isto koliko i nijedan.
+   */
+  private materializePartial(): void {
+    const question = this.state.question;
+    if (!question || !isDominoQuestion(question)) return;
+    for (const id of this.state.expected) {
+      if (this.state.answers.has(id)) continue;
+      const prog = this.state.dominoProgress.get(id);
+      const streak = prog?.streak ?? 0;
+      this.state.answers.set(id, {
+        streak,
+        // Ko nije stigao do kraja nije ni „potvrdio", pa mu brzina ne pomaže u
+        // izjednačenju — 0 preostalih sekundi je tačno to.
+        remaining: 0,
+        score: streak,
+        correct: streak >= qualifyThreshold(question),
+      });
+    }
   }
 
   private handleGuess(
@@ -274,7 +589,9 @@ export class BitkaModule extends BaseGameModule {
       value: normalizeGuess(raw, question),
       remaining: Math.max(0, this.state.phaseTimeRemaining),
       // Kod broj-pitanja „tačno" znači samo da je odgovorio — poređenje je
-      // relativno (ko je bliži), pa se ishod računa pri razrešenju.
+      // relativno (ko je bliži), pa se ishod računa pri razrešenju. Isto važi
+      // za `score`: nosi ga `distance`, ne ovaj broj.
+      score: 1,
       correct: true,
     });
 
@@ -486,9 +803,8 @@ export class BitkaModule extends BaseGameModule {
       this.beginBaza(room);
       return;
     }
+    this.setQuestion(null);
     this.state.brojQuestion = question;
-    this.state.choiceQuestion = null;
-    this.state.answers = new Map();
     this.state.expected = new Set(alive);
     this.state.phase = 'redosled-pitanje';
     this.state.phaseTimeRemaining =
@@ -630,16 +946,14 @@ export class BitkaModule extends BaseGameModule {
       return;
     }
 
-    const question = this.nextChoice();
+    const question = this.nextQuestion();
     if (!question) {
       this.beginRat(room);
       return;
     }
     this.state.osvajanjeRound += 1;
     this.state.lastOutcome.clear();
-    this.state.choiceQuestion = question;
-    this.state.brojQuestion = null;
-    this.state.answers = new Map();
+    this.setQuestion(question);
     this.state.expected = new Set(this.alivePlayerIds(room));
     this.state.pickQueue = [];
     this.state.activePlayerId = null;
@@ -649,20 +963,26 @@ export class BitkaModule extends BaseGameModule {
   }
 
   private finishOsvajanjeOdgovor(room: Room): void {
+    this.materializePartial();
     for (const id of this.state.expected) {
       const answer = this.state.answers.get(id);
       const stats = this.statsFor(id);
       if (answer?.correct) stats.tacnih += 1;
       else stats.netacnih += 1;
     }
-    // Ko je tačan bira, a brži bira pre sporijeg.
+    // Ko je prešao prag bira, bolji rezultat bira pre slabijeg, a na istom
+    // rezultatu brži pre sporijeg. Kod izbornog pitanja su svi rezultati 0 ili
+    // 1, pa se ovo svodi na staro pravilo „tačni po brzini"; matrica time
+    // razdvaja 3:3 od 2:3 bez ijedne posebne grane.
     this.state.pickQueue = [...this.state.expected]
       .filter((id) => this.state.answers.get(id)?.correct)
-      .sort(
-        (a, b) =>
-          (this.state.answers.get(b)?.remaining ?? 0) -
-          (this.state.answers.get(a)?.remaining ?? 0)
-      );
+      .sort((a, b) => {
+        const aa = this.state.answers.get(a);
+        const bb = this.state.answers.get(b);
+        const ds = (bb?.score ?? 0) - (aa?.score ?? 0);
+        if (ds !== 0) return ds;
+        return (bb?.remaining ?? 0) - (aa?.remaining ?? 0);
+      });
     // Poruka o ishodu mora da se napiše i kad ishoda NEMA: inače na ekranu
     // ostane rečenica iz prethodne runde („Pera uzima Porodin"), pa izgleda
     // kao da se upravo desilo nešto što se nije.
@@ -781,9 +1101,7 @@ export class BitkaModule extends BaseGameModule {
     this.state.lastOutcome.clear();
     this.state.activePlayerId = picked;
     this.state.duel = null;
-    this.state.choiceQuestion = null;
-    this.state.brojQuestion = null;
-    this.state.answers = new Map();
+    this.setQuestion(null);
     this.state.expected = new Set();
     this.state.phase = 'napad-izbor';
     this.state.phaseTimeRemaining = NAPAD_IZBOR_DURATION;
@@ -816,7 +1134,7 @@ export class BitkaModule extends BaseGameModule {
     continuation = false
   ): void {
     const st = this.state.board.get(territoryId)!;
-    const question = this.nextChoice();
+    const question = this.nextQuestion();
     if (!question) {
       this.nextAttack(room);
       return;
@@ -828,9 +1146,7 @@ export class BitkaModule extends BaseGameModule {
       onCastle: st.castle,
       continuation,
     };
-    this.state.choiceQuestion = question;
-    this.state.brojQuestion = null;
-    this.state.answers = new Map();
+    this.setQuestion(question);
     this.state.pendingAttackerWin = null;
     this.state.pendingBroj = null;
     this.state.pendingOutcome = null;
@@ -852,6 +1168,7 @@ export class BitkaModule extends BaseGameModule {
       this.nextAttack(room);
       return;
     }
+    this.materializePartial();
     for (const id of this.state.expected) {
       const stats = this.statsFor(id);
       if (this.state.answers.get(id)?.correct) stats.tacnih += 1;
@@ -860,7 +1177,7 @@ export class BitkaModule extends BaseGameModule {
 
     const attacker = this.sideOf(duel.attackerId);
     const defender = duel.defenderId ? this.sideOf(duel.defenderId) : null;
-    const verdict = resolveChoiceDuel(attacker, defender);
+    const verdict = resolveScoredDuel(attacker, defender);
 
     if (verdict === 'tiebreak') {
       const question = this.nextBroj();
@@ -910,12 +1227,14 @@ export class BitkaModule extends BaseGameModule {
       return;
     }
     const attacker: DuelSide = {
-      correct: true,
+      score: 0,
+      qualifies: true,
       remaining: this.state.answers.get(duel.attackerId)?.remaining ?? null,
       distance: this.guessDistanceOrNull(duel.attackerId, question.answer),
     };
     const defender: DuelSide = {
-      correct: true,
+      score: 0,
+      qualifies: true,
       remaining: duel.defenderId
         ? (this.state.answers.get(duel.defenderId)?.remaining ?? null)
         : null,
@@ -1149,8 +1468,30 @@ export class BitkaModule extends BaseGameModule {
    * su poseban bazen (tiebreak): ako ih u izabranim pakovima nema, dovlači se
    * `pogodi-broj`; ako ni to ne uspe, izjednačenje rešava brzina.
    */
-  private async loadPools(packIds: string[]): Promise<void> {
-    const choice: KvizChoiceQuestionFull[] = [];
+  /**
+   * Filter tipova sa ekrana za izbor igre (isti selektor kao Kviz).
+   *
+   * Bez ovoga je čekiranje tipova bilo dugme koje ništa ne radi: TV nudi
+   * filter, `host:start-game` ga nosi, a modul ga je ignorisao — pa se novi tip
+   * nije mogao ni tražiti, nego samo čekati da se sam pojavi među 3% pitanja.
+   *
+   * `null` = bez filtriranja. Tipovi koje igra ne ume da postavi se odbacuju
+   * ovde, pa „geo + matrica" znači isto što i „matrica".
+   */
+  private parseTypeFilter(raw: unknown): KvizQuestionType[] | null {
+    if (!Array.isArray(raw)) return null;
+    const types = raw.filter((v): v is KvizQuestionType =>
+      (BITKA_QUIZ_TYPES as string[]).includes(v as string)
+    );
+    if (types.length === 0 || types.length === BITKA_QUIZ_TYPES.length) return null;
+    return types;
+  }
+
+  private async loadPools(
+    packIds: string[],
+    types: KvizQuestionType[] | null
+  ): Promise<void> {
+    const pitanja: BitkaQuestionFull[] = [];
     const broj: KvizBrojQuestionFull[] = [];
 
     const resolved = await Promise.all(
@@ -1165,32 +1506,74 @@ export class BitkaModule extends BaseGameModule {
         packIds[i] === KVIZ_BANK_PACK_ID
           ? QUIZ_QUESTION_BANK
           : (resolved[i]?.questions ?? []);
-      choice.push(...questions.filter(isChoiceQuestion));
+      pitanja.push(...questions.filter(isBitkaQuestion));
       broj.push(...questions.filter(isBrojQuestion));
     }
 
-    if (choice.length === 0) choice.push(...QUIZ_QUESTION_BANK.filter(isChoiceQuestion));
+    // Novi tipovi NEMAJU rezervu: ako izabrani pakovi nose samo izborna
+    // pitanja, igra je izborna. Namerno — ti tipovi žive u namenskim pakovima
+    // (`matrica.json` je sav matrica), pa bi dovlačenje rezerve pretvorilo
+    // izbor „hoću istoriju" u partiju mreža koju niko nije tražio.
+    // Filter tipova dira SAMO pitanja, ne i broj-pak: razrešenje nerešenog
+    // duela i uvodno merenje su mašinerija, a ne izbor sadržaja — ko čekira
+    // „samo matrica" ne traži partiju bez razrešenja.
+    if (types) {
+      const filtered = pitanja.filter((q) => types.includes(q.type));
+      // Prazan rezultat vraća nefiltrirani pak, isto kao u Kvizu: bolje pitanje
+      // pogrešnog tipa nego partija bez ijednog pitanja.
+      if (filtered.length > 0) {
+        pitanja.length = 0;
+        pitanja.push(...filtered);
+      }
+    }
+
+    if (pitanja.length === 0) pitanja.push(...QUIZ_QUESTION_BANK.filter(isBitkaQuestion));
     // Ugrađena banka nema broj-pitanja, pa je jedina rezerva poseban pak.
     if (broj.length === 0 && this.packsDir) {
       const fallback = await resolveQuizPack(this.packsDir, BROJ_FALLBACK_PACK);
       broj.push(...(fallback?.questions ?? []).filter(isBrojQuestion));
     }
 
-    this.state.choicePool = shuffled(choice);
+    this.state.questionPool = shuffled(pitanja);
     this.state.brojPool = shuffled(broj);
-    this.state.choiceCursor = 0;
+    this.state.questionCursor = 0;
     this.state.brojCursor = 0;
     this.state.loading = false;
   }
 
-  private nextChoice(): KvizChoiceQuestionFull | null {
-    const pool = this.state.choicePool;
-    if (pool.length === 0) return null;
-    if (this.state.choiceCursor >= pool.length) {
-      this.state.choicePool = shuffled(pool);
-      this.state.choiceCursor = 0;
+  /**
+   * Postavi pitanje i pripremi sve što uz njega ide.
+   *
+   * Mešanje mora ovde, a ne u `buildGameState`: prikazani redosled i izmešana
+   * slova moraju da budu isti za svakog igrača i kroz svako ponovno slanje
+   * stanja (a ono ide na svaki tik), inače bi se lista premeštala pod prstom.
+   */
+  private setQuestion(question: BitkaQuestionFull | null): void {
+    this.state.question = question;
+    this.state.brojQuestion = null;
+    this.state.answers = new Map();
+    this.state.dominoProgress = new Map();
+    this.state.wrongText = new Map();
+    this.state.shuffledItems = [];
+    this.state.scramble = '';
+    if (!question) return;
+
+    if (isRedosledQuestion(question)) {
+      // `shuffledItems[k]` = originalni indeks pojma prikazanog na k-tom mestu.
+      this.state.shuffledItems = shuffled(question.items.map((_, i) => i));
+    } else if (question.type === 'anagram') {
+      this.state.scramble = scrambleOf(question.answer);
     }
-    return this.state.choicePool[this.state.choiceCursor++];
+  }
+
+  private nextQuestion(): BitkaQuestionFull | null {
+    const pool = this.state.questionPool;
+    if (pool.length === 0) return null;
+    if (this.state.questionCursor >= pool.length) {
+      this.state.questionPool = shuffled(pool);
+      this.state.questionCursor = 0;
+    }
+    return this.state.questionPool[this.state.questionCursor++];
   }
 
   private nextBroj(): KvizBrojQuestionFull | null {
@@ -1250,7 +1633,8 @@ export class BitkaModule extends BaseGameModule {
   private sideOf(playerId: string): DuelSide {
     const answer = this.state.answers.get(playerId);
     return {
-      correct: !!answer?.correct,
+      score: answer?.score ?? 0,
+      qualifies: !!answer?.correct,
       remaining: answer?.remaining ?? null,
     };
   }
@@ -1343,8 +1727,51 @@ export class BitkaModule extends BaseGameModule {
       if (!q) return undefined;
       return this.brojView(q);
     }
-    const q = this.state.choiceQuestion;
+    const q = this.state.question;
     if (!q) return undefined;
+    if (isMatricaQuestion(q)) {
+      // Devet pojmova je samo pitanje — bez njih se nema šta rešavati. Tačna
+      // trojka (`q.correct`) i objašnjenje ostaju ovde do otkrivanja.
+      return {
+        kind: 'matrica',
+        text: q.text,
+        cells: q.cells,
+        pick: q.correct.length,
+      };
+    }
+    if (isRedosledQuestion(q)) {
+      // Pojmovi idu IZMEŠANI (`shuffledItems`), isti za sve; original je
+      // ujedno i tačan poredak, pa ne sme napolje.
+      return {
+        kind: 'redosled',
+        text: q.text,
+        items: this.state.shuffledItems.map((i) => q.items[i]),
+      };
+    }
+    if (isDominoQuestion(q)) {
+      // Sam niz NE ide u broadcast — igrač ga hoda korak po korak kroz
+      // `playerData`. Ovde stoje samo natpisi na dugmadima i dužina niza.
+      return {
+        kind: 'domino',
+        text: q.text,
+        lowerLabel: q.lowerLabel,
+        higherLabel: q.higherLabel,
+        unit: q.unit,
+        valueType: q.valueType,
+        steps: Math.max(1, q.items.length - 1),
+      };
+    }
+    if (isTextQuestion(q)) {
+      return {
+        kind: 'tekst',
+        text: q.text,
+        textKind: q.type,
+        emojis: q.type === 'emoji' ? q.emojis : undefined,
+        category: q.type === 'emoji' ? q.category : undefined,
+        quote: q.type === 'dopuna' ? q.quote : undefined,
+        scramble: q.type === 'anagram' ? this.state.scramble : undefined,
+      };
+    }
     return {
       kind: 'izbor',
       text: q.text,
@@ -1360,6 +1787,11 @@ export class BitkaModule extends BaseGameModule {
         playerId,
         optionIndex: answer?.optionIndex ?? null,
         value: answer?.value ?? null,
+        cells: answer?.cells ?? null,
+        order: answer?.order ?? null,
+        streak: answer?.streak ?? null,
+        text: answer?.text ?? null,
+        score: answer?.score ?? 0,
         correct: !!answer?.correct,
         seconds: answer ? Math.round((ODGOVOR_DURATION - answer.remaining) * 10) / 10 : null,
       };
@@ -1414,6 +1846,13 @@ export class BitkaModule extends BaseGameModule {
       hostData.expectedIds = [...this.state.expected];
       // Samo KO je odgovorio; ŠTA je odgovorio ostaje u playerData.
       hostData.answeredIds = [...this.state.answers.keys()];
+      const q = this.state.question;
+      if (q && isDominoQuestion(q)) {
+        hostData.dominoProgress = [...this.state.expected].map((id) => {
+          const prog = this.dominoProgressOf(id);
+          return { playerId: id, streak: prog.streak, done: prog.done };
+        });
+      }
     }
 
     if (revealing) {
@@ -1421,8 +1860,23 @@ export class BitkaModule extends BaseGameModule {
       // `duel-broj-rezultat` to je broj, pa izborni odgovor tu nema šta da
       // traži, a u `redosled-rezultat` obrnuto.
       const brojNaEkranu = phase === 'redosled-rezultat' || phase === 'duel-broj-rezultat';
-      if (this.state.choiceQuestion && !brojNaEkranu) {
-        hostData.correctIndex = this.state.choiceQuestion.correctIndex;
+      const q = this.state.question;
+      if (q && !brojNaEkranu) {
+        if (isMatricaQuestion(q)) {
+          hostData.correctCells = q.correct;
+          if (q.explanation) hostData.explanation = q.explanation;
+        } else if (isRedosledQuestion(q)) {
+          // Tačan poredak izražen u indeksima PRIKAZANE liste, pa ekran ne
+          // mora da zna kako je mešano.
+          const at = new Map(this.state.shuffledItems.map((orig, shown) => [orig, shown]));
+          hostData.correctOrder = q.items.map((_, orig) => at.get(orig) ?? 0);
+        } else if (isDominoQuestion(q)) {
+          hostData.dominoChain = q.items.map((it) => ({ label: it.label, value: it.value }));
+        } else if (isTextQuestion(q)) {
+          hostData.correctText = q.answer;
+        } else {
+          hostData.correctIndex = q.correctIndex;
+        }
       }
       if (this.state.brojQuestion && brojNaEkranu) {
         hostData.correctValue = this.state.brojQuestion.answer;
@@ -1544,6 +1998,27 @@ export class BitkaModule extends BaseGameModule {
     if (answer) {
       data.selectedIndex = answer.optionIndex ?? null;
       data.myGuess = answer.value ?? null;
+      data.selectedCells = answer.cells ?? null;
+      data.selectedOrder = answer.order ?? null;
+      data.myText = answer.text ?? null;
+    }
+    const wrong = this.state.wrongText.get(playerId);
+    if (wrong) data.lastWrongText = wrong;
+
+    // Domino: referenca sa vrednošću i SLEDEĆI pojam bez nje. Cela lista bi
+    // odala sve odgovore odjednom, pa ovde ide tačno jedan korak.
+    const q = this.state.question;
+    if (q && isDominoQuestion(q) && this.state.expected.has(playerId)) {
+      const prog = this.dominoProgressOf(playerId);
+      const prev = q.items[prog.pos - 1];
+      const cur = q.items[prog.pos];
+      data.domino = {
+        reference: prev ? { label: prev.label, value: prev.value } : null,
+        current: prog.done || !cur ? null : cur.label,
+        streak: prog.streak,
+        done: prog.done,
+        steps: Math.max(1, q.items.length - 1),
+      };
     }
 
     if (duel) {

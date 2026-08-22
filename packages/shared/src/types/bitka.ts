@@ -11,6 +11,8 @@
 // `BitkaControllerData` samo vlasniku. Šta sme u koji — vidi anti-leak
 // komentar u BitkaModule.
 
+import type { KvizValueType } from './quiz.js';
+
 export interface BitkaPoint {
   x: number;
   y: number;
@@ -130,7 +132,7 @@ export interface BitkaPlayerView {
 
 /** Pitanje kakvo se šalje na ekran — nikad sa tačnim odgovorom. */
 export interface BitkaQuestionView {
-  kind: 'izbor' | 'broj';
+  kind: 'izbor' | 'broj' | 'matrica' | 'redosled' | 'domino' | 'tekst';
   text: string;
   imageUrl?: string;
   /** kind === 'izbor' */
@@ -140,6 +142,45 @@ export interface BitkaQuestionView {
   max?: number;
   step?: number;
   unit?: string;
+  /**
+   * kind === 'matrica' — svih 9 pojmova mreže. Sami pojmovi su javni (bez njih
+   * nema pitanja); tačna trojka i objašnjenje ostaju na serveru do otkrivanja.
+   */
+  cells?: string[];
+  /** kind === 'matrica' — koliko ćelija treba izabrati (uvek 3 zasad). */
+  pick?: number;
+  /**
+   * kind === 'redosled' — pojmovi u IZMEŠANOM redosledu, isti za sve. Tačan
+   * poredak ostaje na serveru do otkrivanja.
+   */
+  items?: string[];
+  /**
+   * kind === 'domino' — natpisi na dva dugmeta i koliko koraka niz nosi.
+   * Sam niz i njegove vrednosti NE idu ovde: svaki igrač hoda svoj korak i
+   * dobija ga kroz `playerData`, pa cela lista nikad ne stoji u broadcastu.
+   */
+  lowerLabel?: string;
+  higherLabel?: string;
+  steps?: number;
+  /** kind === 'domino' | 'broj' — kako se vrednost ispisuje. */
+  valueType?: KvizValueType;
+  /**
+   * kind === 'tekst' — koji je od tri tipa slobodnog teksta, jer se svaki
+   * drugačije postavlja: emoji nosi zagonetku, citat početak rečenice,
+   * anagram izmešana slova.
+   */
+  textKind?: 'emoji' | 'dopuna' | 'anagram';
+  /** textKind === 'emoji' — emoji koji JESU pitanje, plus kategorija. */
+  emojis?: string;
+  category?: string;
+  /** textKind === 'dopuna' — vidljivi deo citata; nastavak je odgovor. */
+  quote?: string;
+  /**
+   * textKind === 'anagram' — izmešana slova odgovora. U Kvizu se ona
+   * postepeno slažu kako vreme ističe; ovde su fiksna, jer duel traje 20 s i
+   * postepeno otkrivanje bi mu dodalo stanje i još jednu površinu curenja.
+   */
+  scramble?: string;
 }
 
 /** Rezultat jednog igrača na upravo završenom pitanju. */
@@ -149,6 +190,23 @@ export interface BitkaAnswerResult {
   optionIndex?: number | null;
   /** Za broj-pitanja; null ako nije stigao. */
   value?: number | null;
+  /** Za matricu — indeksi ćelija koje je izabrao; null ako nije stigao. */
+  cells?: number[] | null;
+  /** Za redosled — njegov poredak kao indeksi u `items`; null ako nije stigao. */
+  order?: number[] | null;
+  /** Za domino — dokle je stigao niz pre prve greške. */
+  streak?: number | null;
+  /** Za tekstualna pitanja — šta je otkucao; null ako nije pogodio ni jednom. */
+  text?: string | null;
+  /**
+   * Rezultat na pitanju, veće je bolje. Izborno pitanje daje 0 ili 1, matrica
+   * 0–3. Duel se rešava poređenjem ovog broja, pa TV sme da ga i ispiše.
+   */
+  score?: number;
+  /**
+   * Da li je odgovor „dovoljno dobar" — kod izbornog pitanja tačan, kod
+   * matrice bar dva od tri pojma. To je prag koji nosi zemlju u trci.
+   */
   correct: boolean;
   /** Sekunde do odgovora — TV prikazuje redosled biranja. */
   seconds: number | null;
@@ -233,11 +291,31 @@ export interface BitkaHostData {
   question?: BitkaQuestionView;
   /** Ko je već potvrdio — samo id-jevi, nikad šta je izabrao. */
   answeredIds?: string[];
+  /**
+   * Domino, dok se igra: dokle je ko stigao. Sme u broadcast jer je to brojka
+   * koraka, a ne sadržaj odgovora — svi hodaju isti niz, pa tuđi napredak ne
+   * kaže ni jedan „pre/posle". Bez ovoga TV nema šta da prikaže dok dvoje
+   * gaze niz, jer se odgovori ne šalju odjednom.
+   */
+  dominoProgress?: { playerId: string; streak: number; done: boolean }[];
   expectedIds?: string[];
 
   /** Otkrivanje posle pitanja — tek u `*-rezultat` fazama. */
   correctIndex?: number;
   correctValue?: number;
+  /** Matrica: indeksi tačne trojke. Ide tek u otkrivanju, kao i `correctIndex`. */
+  correctCells?: number[];
+  /** Redosled: tačan poredak kao indeksi u `items`. Samo u otkrivanju. */
+  correctOrder?: number[];
+  /** Tekstualna pitanja: tačan odgovor. Samo u otkrivanju. */
+  correctText?: string;
+  /**
+   * Domino: ceo niz sa vrednostima. Samo u otkrivanju — dok se igra, igrač
+   * vidi isključivo svoj tekući korak, kroz `playerData`.
+   */
+  dominoChain?: { label: string; value: number }[];
+  /** Matrica: rečenica koja objašnjava vezu, kad je pitanje nosi. */
+  explanation?: string;
   results?: BitkaAnswerResult[];
   /**
    * Samo u `duel-rezultat` i samo kad je duel bio nerešen: pitanje sa brojem
@@ -275,6 +353,26 @@ export interface BitkaControllerData {
   /** Šta je OVAJ igrač izabrao — nikad ne ide u broadcast. */
   selectedIndex?: number | null;
   myGuess?: number | null;
+  /** Njegov izbor ćelija u matrici, dok traje pitanje (drugi ga ne vide). */
+  selectedCells?: number[] | null;
+  /** Njegov poredak u redosled-pitanju. */
+  selectedOrder?: number[] | null;
+  /** Šta je otkucao na tekstualnom pitanju kad je pogodio. */
+  myText?: string | null;
+  /** Poslednji promašen pokušaj — telefon ga pokazuje kao „nije to". */
+  lastWrongText?: string | null;
+  /**
+   * Domino, korak po korak. Ceo niz NIKAD ne izlazi iz modula dok traje
+   * pitanje — igrač dobija referencu (sa vrednošću) i sledeći pojam (bez nje),
+   * pa je poređenje i dalje na njemu.
+   */
+  domino?: {
+    reference: { label: string; value: number } | null;
+    current: string | null;
+    streak: number;
+    done: boolean;
+    steps: number;
+  };
   /** Teritorije koje ovaj igrač sme da tapne, ako je na njemu red. */
   selectableIds?: string[];
   /** Njegov izbor baze dok traje `baza-izbor` (drugi ga ne vide). */

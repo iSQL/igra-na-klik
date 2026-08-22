@@ -10,8 +10,19 @@ import type { BitkaDuelOutcome } from '@igra/shared';
  */
 
 export interface DuelSide {
-  /** Da li je odgovorio tačno. Neodgovoren = netačan. */
-  correct: boolean;
+  /**
+   * Rezultat na pitanju; veće je bolje, 0 = ništa (i neodgovoreno). Izborno
+   * pitanje daje 0 ili 1, matrica 0–3. Duel se rešava poređenjem OVOG broja,
+   * pa stepenovani tipovi pitanja retko završe nerešeno — što je i razlog
+   * zašto su pušteni u duel.
+   */
+  score: number;
+  /**
+   * Da li je odgovor prešao prag „dovoljno dobar" — kod izbornog pitanja to je
+   * tačan odgovor, kod matrice bar dva pojma od tri. Bitno samo kad nema
+   * branioca: tada nema šta da se poredi, pa odlučuje prag.
+   */
+  qualifies: boolean;
   /**
    * Koliko je sekundi ostalo kad je potvrdio; `null` znači da nije stigao.
    * Brzina rešava izjednačenje u broj-pitanju kad su odstupanja ista.
@@ -27,20 +38,24 @@ export interface DuelSide {
 export type DuelVerdict = 'napadac' | 'branilac' | 'tiebreak';
 
 /**
- * Izborno pitanje u duelu. Napadač uzima zemlju samo ako je bio tačan a
- * branilac nije; obrnuto branilac drži. Isti ishod na obe strane (oba tačna
- * ILI oba netačna) ide na broj-pitanje — kao u Triviadoru.
+ * Prvo pitanje duela, bilo kog tipa. Bolji rezultat uzima zemlju; isti
+ * rezultat na obe strane ide na broj-pitanje — kao u Triviadoru.
  *
- * Neutralna teritorija nema branioca: napadač je uzima ako je tačan, inače
- * ostaje neutralna. Bez tiebreak-a, jer nema s kim.
+ * Za izborno pitanje su rezultati samo 0 i 1, pa je ovo doslovno staro
+ * pravilo: tačan protiv netačnog nosi, oba tačna ili oba netačna su nerešena.
+ * Stepenovani tipovi (matrica 0–3) time dobijaju razrešenje bez ijedne nove
+ * grane — i ređe stižu do klizača, jer je 2:3 već odluka.
+ *
+ * Neutralna teritorija nema branioca: napadač je uzima ako je prešao prag,
+ * inače ostaje neutralna. Bez tiebreak-a, jer nema s kim.
  */
-export function resolveChoiceDuel(
+export function resolveScoredDuel(
   attacker: DuelSide,
   defender: DuelSide | null
 ): DuelVerdict {
-  if (!defender) return attacker.correct ? 'napadac' : 'branilac';
-  if (attacker.correct && !defender.correct) return 'napadac';
-  if (!attacker.correct && defender.correct) return 'branilac';
+  if (!defender) return attacker.qualifies ? 'napadac' : 'branilac';
+  if (attacker.score > defender.score) return 'napadac';
+  if (defender.score > attacker.score) return 'branilac';
   return 'tiebreak';
 }
 

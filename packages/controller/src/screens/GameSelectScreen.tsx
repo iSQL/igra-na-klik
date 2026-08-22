@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   BITKA_RUNDE_DEF,
+  BITKA_QUIZ_TYPES,
   BITKA_RUNDE_IZBOR,
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
@@ -470,6 +471,13 @@ export function GameSelectScreen() {
       if (bitkaMode === 'runde') payload.bitkaRounds = bitkaRounds;
       const ids = effectiveQuizPackIds(quizPacks, quizPackIds);
       if (ids.length > 0) payload.quizPackIds = ids;
+      // Filter tipova putuje i odavde: hostless soba ima isti selektor, pa bi
+      // inače čekiranje na telefonu radilo samo kad partiju pokreće TV.
+      // Broji se prema spisku koji KvizAtar ume — sa sva četiri čekirana nema
+      // šta da se filtrira.
+      if (quizTypes && quizTypes.length < BITKA_QUIZ_TYPES.length) {
+        payload.quizTypes = quizTypes;
+      }
     }
     if (GAME_ROUND_CONFIG[game.id]) {
       payload.roundCount =
@@ -1275,8 +1283,10 @@ export function GameSelectScreen() {
                           </Pill>
                         ))}
                       </div>
-                      {/* Pitanja dolaze iz istih kviz paketa; tip pitanja bira
-                          igra sama (obično/uljez + broj za tiebreak). */}
+                      {/* Pitanja dolaze iz istih kviz paketa, ali samo tipovi
+                          koje igra ume da postavi — filter je ovde stvaran
+                          izbor, a ne ukras: matrica je ~3% pakova, pa je
+                          čekiranje jedini način da se traži. */}
                       <QuizConfig
                         packs={quizPacks}
                         selectedIds={quizPackIds}
@@ -1288,6 +1298,7 @@ export function GameSelectScreen() {
                         error={null}
                         setError={() => {}}
                         hideImport
+                        types={BITKA_QUIZ_TYPES}
                       />
                     </div>
                   )}
@@ -1711,6 +1722,7 @@ function QuizConfig({
   error,
   setError,
   hideImport,
+  types,
 }: {
   packs: QuestionPackSummary[];
   selectedIds: string[] | null;
@@ -1725,14 +1737,20 @@ function QuizConfig({
   setError: (e: string | null) => void;
   /** Hot-potato kviz mode: packs only — no inline .json import. */
   hideImport?: boolean;
+  /**
+   * Sužava ponuđene tipove na one koje igra ume da postavi. KvizAtar je bez
+   * ovoga nudio geo/audio/video čipove koje njegov modul odbacuje.
+   */
+  types?: KvizQuestionType[];
 }) {
   const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const offeredTypes = types ?? KVIZ_ALL_TYPES;
   const isFileImport = imported !== null;
   const checkedIds = effectiveQuizPackIds(packs, selectedIds);
-  const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
-  const available = availableQuizCount(packs, selectedIds, selectedTypes);
+  const checkedTypes = selectedTypes ?? offeredTypes;
+  const available = availableQuizCount(packs, selectedIds, selectedTypes ?? types ?? null);
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -2000,11 +2018,11 @@ function QuizConfig({
 
           {labelRow(
             t('quizConfig.types'),
-            () => setSelectedTypes(null),
+            () => setSelectedTypes(types ? [...types] : null),
             () => setSelectedTypes([])
           )}
           <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-            {KVIZ_ALL_TYPES.map((ty) => {
+            {offeredTypes.map((ty) => {
               const on = checkedTypes.includes(ty);
               return (
                 <button

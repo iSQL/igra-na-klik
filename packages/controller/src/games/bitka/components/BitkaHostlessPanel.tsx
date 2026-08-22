@@ -1,5 +1,7 @@
 import type { BitkaHostData, BitkaPlayerView } from '@igra/shared';
 import { BitkaQuestionImage } from './BitkaQuestionImage';
+import { BitkaMatricaCells, BitkaMatricaScoreRow } from './BitkaMatricaCells';
+import { BitkaDominoView, BitkaRedosledView, BitkaTextView } from './BitkaNewTypes';
 
 /**
  * Ono što je u TV sobi nosio televizor, a u hostless sobi nije nosio niko.
@@ -177,6 +179,20 @@ function Body({
               if (host.question?.kind === 'broj') {
                 return r?.value == null ? 'nije stigao' : String(r.value);
               }
+              // Kod stepenovanih tipova „tačno/netačno" krije upravo ono što
+              // je odlučilo — 2:3 je pobeda, a izgledalo bi isto kao 3:3.
+              const q = host.question;
+              if (q?.kind === 'matrica') {
+                if (!r?.cells) return 'nije stigao';
+                return `${r.score ?? 0}/${q.pick ?? 3}`;
+              }
+              if (q?.kind === 'redosled') {
+                if (!r?.order) return 'nije stigao';
+                return `${r.score ?? 0}/${(q.items ?? []).length}`;
+              }
+              if (q?.kind === 'domino') {
+                return `${r?.streak ?? 0}/${q.steps ?? 1}`;
+              }
               return r?.correct ? 'tačno' : 'netačno';
             }
             return (host.answeredIds ?? []).includes(p.playerId) ? 'odgovorio' : '…';
@@ -257,6 +273,52 @@ function Question({ host, revealing }: { host: BitkaHostData; revealing: boolean
             );
           })}
         </div>
+      )}
+      {q.kind === 'matrica' && q.cells && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+          <BitkaMatricaCells
+            cells={q.cells}
+            correctCells={revealing ? host.correctCells : undefined}
+            results={revealing ? (host.results ?? []) : undefined}
+            players={host.players}
+            revealing={revealing}
+            compact
+          />
+          {revealing && (
+            <BitkaMatricaScoreRow
+              results={host.results ?? []}
+              players={host.players}
+              pick={q.pick ?? 3}
+            />
+          )}
+        </div>
+      )}
+      {q.kind === 'redosled' && (
+        <BitkaRedosledView
+          question={q}
+          host={host}
+          results={revealing ? (host.results ?? []) : undefined}
+          revealing={revealing}
+          compact
+        />
+      )}
+      {q.kind === 'domino' && (
+        <BitkaDominoView
+          question={q}
+          host={host}
+          results={revealing ? (host.results ?? []) : undefined}
+          revealing={revealing}
+          compact
+        />
+      )}
+      {q.kind === 'tekst' && (
+        <BitkaTextView
+          question={q}
+          host={host}
+          results={revealing ? (host.results ?? []) : undefined}
+          revealing={revealing}
+          compact
+        />
       )}
       {q.kind === 'broj' && (
         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>

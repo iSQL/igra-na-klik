@@ -1,0 +1,725 @@
+import { useState, type ReactNode } from 'react';
+import { formatBrojValue } from '@igra/shared';
+import type {
+  BitkaAnswerResult,
+  BitkaControllerData,
+  BitkaHostData,
+  BitkaPlayerView,
+  BitkaQuestionView,
+} from '@igra/shared';
+import { useHaptics } from '../../../hooks/useHaptics';
+
+/**
+ * Telefonski ekrani za redosled, domino i slobodan tekst.
+ *
+ * Svaki tip ima jednu komponentu koja pokriva i odgovaranje i otkrivanje, i
+ * jednu „samo gledanje" varijantu koju koriste posmatrač duela i hostless
+ * traka — isti crtež, bez dugmadi. Isto što je matrica već radila.
+ */
+
+function Avatar({ player, size }: { player: BitkaPlayerView; size: string }) {
+  return (
+    <span
+      title={player.name}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: player.avatarColor,
+        border: '2px solid rgba(0,0,0,0.35)',
+        display: 'grid',
+        placeItems: 'center',
+        fontSize: `calc(${size} * 0.55)`,
+        flexShrink: 0,
+      }}
+    >
+      {player.avatarEmoji}
+    </span>
+  );
+}
+
+/** „Pera 3/5" — isti red koji TV crta ispod pitanja. */
+export function BitkaScoreChips({
+  results,
+  players,
+  max,
+  myPlayerId,
+}: {
+  results: BitkaAnswerResult[];
+  players: BitkaPlayerView[];
+  max: number;
+  myPlayerId?: string;
+}) {
+  const rows = [...results].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', justifyContent: 'center' }}>
+      {rows.map((r) => {
+        const p = players.find((x) => x.playerId === r.playerId);
+        if (!p) return null;
+        const score = r.score ?? 0;
+        return (
+          <span
+            key={r.playerId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              padding: '0.2rem 0.5rem',
+              borderRadius: '999px',
+              background: 'var(--bg-secondary)',
+              border: `2px solid ${p.playerId === myPlayerId ? 'var(--accent)' : 'var(--line2)'}`,
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              color: 'var(--text-primary)',
+            }}
+          >
+            <Avatar player={p} size="1.2rem" />
+            <span>{p.name}</span>
+            <span style={{ color: score > 0 ? 'var(--accent)' : 'var(--dim)' }}>
+              {score}/{max}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Redosled
+// ---------------------------------------------------------------------------
+
+/**
+ * Lista pojmova — u otkrivanju prepisana u tačan poredak, sa avatarima onih
+ * koji su stavku pogodili baš na to mesto.
+ */
+export function BitkaRedosledView({
+  question,
+  host,
+  results,
+  revealing,
+  picked,
+  onToggle,
+  myPlayerId,
+  compact,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  results?: BitkaAnswerResult[];
+  revealing?: boolean;
+  /** picked[k] = indeks prikazane stavke na k-tom mestu igračevog poretka. */
+  picked?: number[];
+  onToggle?: (shownIdx: number) => void;
+  myPlayerId?: string;
+  compact?: boolean;
+}) {
+  const items = question.items ?? [];
+  const rows =
+    revealing && host.correctOrder
+      ? host.correctOrder.map((shownIdx, pos) => ({ shownIdx, pos }))
+      : items.map((_, shownIdx) => ({ shownIdx, pos: -1 }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '0.2rem' : '0.35rem' }}>
+      {rows.map(({ shownIdx, pos }) => {
+        const at = picked?.indexOf(shownIdx) ?? -1;
+        const takers =
+          revealing && pos >= 0
+            ? (results ?? [])
+                .filter((r) => (r.order ?? [])[pos] === shownIdx)
+                .map((r) => host.players.find((p) => p.playerId === r.playerId))
+                .filter((p): p is BitkaPlayerView => !!p)
+            : [];
+        return (
+          <button
+            key={shownIdx}
+            type="button"
+            disabled={!onToggle}
+            onClick={onToggle ? () => onToggle(shownIdx) : undefined}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: compact ? '0.25rem 0.45rem' : '0.55rem 0.7rem',
+              borderRadius: '12px',
+              background: 'var(--bg-secondary)',
+              border:
+                revealing && pos >= 0
+                  ? '2px solid var(--success)'
+                  : at >= 0
+                    ? '2px solid var(--accent)'
+                    : '2px solid var(--line2)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              fontSize: compact ? '0.72rem' : '0.9rem',
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                minWidth: '1.3rem',
+                fontWeight: 900,
+                color: revealing && pos >= 0 ? 'var(--success)' : at >= 0 ? 'var(--accent)' : 'var(--dim)',
+              }}
+            >
+              {revealing && pos >= 0 ? `${pos + 1}.` : at >= 0 ? `${at + 1}.` : '·'}
+            </span>
+            <span style={{ flex: 1 }}>{items[shownIdx]}</span>
+            {takers.map((p) => (
+              <Avatar
+                key={p.playerId}
+                player={p}
+                size={compact ? '1rem' : '1.3rem'}
+              />
+            ))}
+          </button>
+        );
+      })}
+      {revealing && results && (
+        <BitkaScoreChips
+          results={results}
+          players={host.players}
+          max={items.length}
+          myPlayerId={myPlayerId}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Ekran odgovaranja: tapni pojmove redom, pa „Potvrdi" — jedan odgovor. */
+export function BitkaRedosledScreen({
+  question,
+  host,
+  header,
+  footer,
+  playerId,
+  me,
+  revealing,
+  seconds,
+  onSubmit,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  header: ReactNode;
+  footer?: ReactNode;
+  playerId: string;
+  me: BitkaControllerData | undefined;
+  revealing: boolean;
+  seconds: number;
+  onSubmit: (order: number[]) => void;
+}) {
+  const haptics = useHaptics();
+  const items = question.items ?? [];
+  const [picked, setPicked] = useState<number[]>([]);
+  const answered = !!me?.hasAnswered;
+  const shown = answered && me?.selectedOrder ? me.selectedOrder : picked;
+  const locked = answered || revealing;
+
+  const toggle = (idx: number) => {
+    if (locked) return;
+    haptics.tap();
+    setPicked((prev) => (prev.includes(idx) ? prev.filter((v) => v !== idx) : [...prev, idx]));
+  };
+
+  return (
+    <Screen header={header} footer={footer} title={question.text}>
+      <BitkaRedosledView
+        question={question}
+        host={host}
+        results={revealing ? (host.results ?? []) : undefined}
+        revealing={revealing}
+        picked={shown}
+        onToggle={locked ? undefined : toggle}
+        myPlayerId={playerId}
+      />
+      {!revealing && !answered && (
+        <button
+          className="btn-primary"
+          disabled={shown.length !== items.length}
+          onClick={() => {
+            haptics.success();
+            onSubmit([...shown]);
+          }}
+          style={{ minHeight: '50px', fontSize: '1rem', fontWeight: 800 }}
+        >
+          {shown.length === items.length
+            ? 'Potvrdi'
+            : `Poređano ${shown.length}/${items.length} · ${seconds}s`}
+        </button>
+      )}
+    </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Domino
+// ---------------------------------------------------------------------------
+
+/** Trka po igraču — dokle je ko stigao; u otkrivanju ceo niz sa vrednostima. */
+export function BitkaDominoView({
+  question,
+  host,
+  results,
+  revealing,
+  myPlayerId,
+  compact,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  results?: BitkaAnswerResult[];
+  revealing?: boolean;
+  myPlayerId?: string;
+  compact?: boolean;
+}) {
+  const steps = question.steps ?? 1;
+
+  if (revealing) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', justifyContent: 'center' }}>
+          {(host.dominoChain ?? []).map((it, i) => (
+            <span
+              key={i}
+              style={{
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '0.2rem 0.4rem',
+                borderRadius: '10px',
+                background: 'var(--bg-secondary)',
+                border: '2px solid var(--line2)',
+                fontSize: compact ? '0.65rem' : '0.75rem',
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+              }}
+            >
+              <span>{it.label}</span>
+              <span style={{ color: 'var(--accent)', fontWeight: 900 }}>
+                {formatBrojValue(it.value, question.unit, question.valueType)}
+              </span>
+            </span>
+          ))}
+        </div>
+        {results && (
+          <BitkaScoreChips
+            results={results}
+            players={host.players}
+            max={steps}
+            myPlayerId={myPlayerId}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+      {(host.dominoProgress ?? []).map((pr) => {
+        const p = host.players.find((x) => x.playerId === pr.playerId);
+        if (!p) return null;
+        const pct = Math.round((Math.min(pr.streak, steps) / steps) * 100);
+        return (
+          <div key={pr.playerId} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <Avatar player={p} size={compact ? '1.1rem' : '1.4rem'} />
+            <div
+              style={{
+                flex: 1,
+                height: '0.5rem',
+                borderRadius: '999px',
+                background: 'var(--bg-secondary)',
+                border: '1.5px solid var(--line2)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: '100%',
+                  background: pr.done ? 'var(--dim)' : 'var(--accent)',
+                  transition: 'width 0.3s',
+                }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                color: pr.done ? 'var(--dim)' : 'var(--accent)',
+                minWidth: '2.2rem',
+                textAlign: 'right',
+              }}
+            >
+              {pr.streak}/{steps}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Ekran odgovaranja: referenca sa vrednošću, sledeći pojam bez nje, dva
+ * dugmeta. Igrač hoda niz sam i staje na prvoj grešci — jedini unos u igri
+ * koji nije jedan potez, pa se rezultat upisuje tek kad stane (ili istekne
+ * vreme, kad server upiše dokle je stigao).
+ */
+export function BitkaDominoScreen({
+  question,
+  host,
+  header,
+  footer,
+  playerId,
+  me,
+  revealing,
+  onStep,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  header: ReactNode;
+  footer?: ReactNode;
+  playerId: string;
+  me: BitkaControllerData | undefined;
+  revealing: boolean;
+  onStep: (dir: 'before' | 'after') => void;
+}) {
+  const haptics = useHaptics();
+  const d = me?.domino;
+  const steps = question.steps ?? 1;
+
+  if (revealing) {
+    return (
+      <Screen header={header} footer={footer} title={question.text}>
+        <BitkaDominoView
+          question={question}
+          host={host}
+          results={host.results ?? []}
+          revealing
+          myPlayerId={playerId}
+        />
+      </Screen>
+    );
+  }
+
+  if (!d || d.done || !d.current) {
+    return (
+      <Screen header={header} footer={footer} title={question.text}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <p style={{ fontSize: '2.2rem', margin: 0 }}>{d && d.streak >= steps ? '🏆' : '🔒'}</p>
+          <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
+            {d?.streak ?? 0}/{steps} tačno
+          </p>
+        </div>
+        <BitkaDominoView question={question} host={host} myPlayerId={playerId} />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen header={header} footer={footer} title={question.text}>
+      {d.reference && (
+        <div
+          style={{
+            background: 'var(--bg-secondary)',
+            borderRadius: '14px',
+            padding: '0.6rem 0.8rem',
+            textAlign: 'center',
+            border: '2px solid var(--line2)',
+          }}
+        >
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>Referenca</p>
+          <p style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0.1rem 0 0' }}>
+            {d.reference.label}
+          </p>
+          <p style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--accent)', margin: 0 }}>
+            {formatBrojValue(d.reference.value, question.unit, question.valueType)}
+          </p>
+        </div>
+      )}
+      <p
+        style={{
+          margin: 0,
+          textAlign: 'center',
+          fontSize: '1.15rem',
+          fontWeight: 800,
+          color: 'var(--text-primary)',
+        }}
+      >
+        {d.current}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+        {(['before', 'after'] as const).map((dir) => (
+          <button
+            key={dir}
+            className="btn-primary"
+            onClick={() => {
+              haptics.tap();
+              onStep(dir);
+            }}
+            style={{ minHeight: '58px', fontSize: '1rem', fontWeight: 800 }}
+          >
+            {dir === 'before' ? (question.lowerLabel ?? 'Pre') : (question.higherLabel ?? 'Posle')}
+          </button>
+        ))}
+      </div>
+      <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        Niz: {d.streak}/{steps}
+      </p>
+    </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Slobodan tekst — emoji / citat / anagram
+// ---------------------------------------------------------------------------
+
+/** Zagonetka + (u otkrivanju) tačan odgovor i šta je ko otkucao. */
+export function BitkaTextView({
+  question,
+  host,
+  results,
+  revealing,
+  compact,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  results?: BitkaAnswerResult[];
+  revealing?: boolean;
+  compact?: boolean;
+}) {
+  const riddle =
+    question.textKind === 'emoji'
+      ? question.emojis
+      : question.textKind === 'anagram'
+        ? question.scramble
+        : question.quote;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+      {riddle && (
+        <div
+          style={{
+            textAlign: 'center',
+            fontWeight: 800,
+            color: 'var(--text-primary)',
+            lineHeight: 1.25,
+            letterSpacing: question.textKind === 'anagram' ? '0.25em' : undefined,
+            fontSize:
+              question.textKind === 'emoji'
+                ? compact
+                  ? '1.5rem'
+                  : '2.6rem'
+                : compact
+                  ? '0.8rem'
+                  : '1.1rem',
+          }}
+        >
+          {riddle}
+          {question.textKind === 'dopuna' && ' …'}
+        </div>
+      )}
+      {question.category && !revealing && (
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {question.category}
+        </div>
+      )}
+      {revealing && host.correctText && (
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: compact ? '0.85rem' : '1.2rem',
+            fontWeight: 900,
+            color: 'var(--accent)',
+          }}
+        >
+          {host.correctText}
+        </div>
+      )}
+      {revealing && results && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', justifyContent: 'center' }}>
+          {results.map((r) => {
+            const p = host.players.find((x) => x.playerId === r.playerId);
+            if (!p) return null;
+            return (
+              <span
+                key={r.playerId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '999px',
+                  background: 'var(--bg-secondary)',
+                  border: `2px solid ${r.correct ? 'var(--success)' : 'var(--line2)'}`,
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                }}
+              >
+                <Avatar player={p} size="1.1rem" />
+                <span style={{ color: r.correct ? 'var(--success)' : 'var(--dim)' }}>
+                  {r.correct ? (r.text ?? '✓') : 'nije pogodio'}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Ekran odgovaranja za slobodan tekst.
+ *
+ * Promašaj NE troši odgovor — jedini unos u igri koji se sme ponavljati, jer
+ * bi inače tipfeler koštao zamka. Cena je da faza ide do kraja kad neko ne
+ * pogodi, pošto rani izlazak traži da su svi gotovi.
+ */
+export function BitkaTextScreen({
+  question,
+  host,
+  header,
+  footer,
+  playerId,
+  me,
+  revealing,
+  seconds,
+  onSubmit,
+}: {
+  question: BitkaQuestionView;
+  host: BitkaHostData;
+  header: ReactNode;
+  footer?: ReactNode;
+  playerId: string;
+  me: BitkaControllerData | undefined;
+  revealing: boolean;
+  seconds: number;
+  onSubmit: (text: string) => void;
+}) {
+  const haptics = useHaptics();
+  const [draft, setDraft] = useState('');
+  const solved = !!me?.hasAnswered;
+
+  return (
+    <Screen header={header} footer={footer} title={question.text}>
+      <BitkaTextView
+        question={question}
+        host={host}
+        results={revealing ? (host.results ?? []) : undefined}
+        revealing={revealing}
+      />
+      {!revealing && solved && (
+        <p style={{ margin: 0, textAlign: 'center', fontWeight: 800, color: 'var(--success)' }}>
+          Pogodio si: {me?.myText} — čeka se protivnik.
+        </p>
+      )}
+      {!revealing && !solved && (
+        <>
+          {me?.lastWrongText && (
+            <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8rem', color: 'var(--danger)' }}>
+              „{me.lastWrongText}" nije to — probaj opet.
+            </p>
+          )}
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || !draft.trim()) return;
+              haptics.tap();
+              onSubmit(draft.trim());
+              setDraft('');
+            }}
+            placeholder="Tvoj odgovor…"
+            autoComplete="off"
+            autoCorrect="off"
+            style={{
+              width: '100%',
+              padding: '0.8rem',
+              fontSize: '1rem',
+              fontWeight: 700,
+              borderRadius: '12px',
+              border: '2px solid var(--line2)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              textAlign: 'center',
+            }}
+          />
+          <button
+            className="btn-primary"
+            disabled={!draft.trim()}
+            onClick={() => {
+              haptics.tap();
+              onSubmit(draft.trim());
+              setDraft('');
+            }}
+            style={{ minHeight: '50px', fontSize: '1rem', fontWeight: 800 }}
+          >
+            Pošalji · {seconds}s
+          </button>
+        </>
+      )}
+    </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/** Zajednički okvir: zaglavlje, tekst pitanja, sadržaj, podnožje. */
+function Screen({
+  header,
+  footer,
+  title,
+  children,
+}: {
+  header: ReactNode;
+  footer?: ReactNode;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        padding: '0.9rem',
+        gap: '0.6rem',
+      }}
+    >
+      {header}
+      <p
+        style={{
+          margin: 0,
+          fontSize: '1rem',
+          fontWeight: 800,
+          textAlign: 'center',
+          lineHeight: 1.3,
+        }}
+      >
+        {title}
+      </p>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: '0.6rem',
+        }}
+      >
+        {children}
+      </div>
+      {footer}
+    </div>
+  );
+}

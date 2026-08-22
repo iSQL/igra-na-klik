@@ -15,7 +15,7 @@
  */
 
 import { createServer } from 'http';
-import { mkdtempSync, writeFileSync } from 'fs';
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -25,7 +25,7 @@ import { initTimingConfig } from '../packages/server/src/game/timing-config.js';
 import {
   duelOutcome,
   resolveBrojDuel,
-  resolveChoiceDuel,
+  resolveScoredDuel,
 } from '../packages/server/src/game/games/bitka/duel.js';
 import { BITKA_MAX_IGRACA, BITKA_MIN_IGRACA } from '../packages/shared/src/games/bitka-rules.js';
 
@@ -46,13 +46,134 @@ const PLAYERS = Math.max(
 /** Trajanje: bez `--rounds` ide do poslednjeg zamka, inače toliko rundi. */
 const ROUNDS = Number(arg('rounds') ?? 0);
 const MODE = ROUNDS > 0 ? 'runde' : 'zamkovi';
+/**
+ * Kviz paketi iz kojih se vuku pitanja. Bez `--pack` igra NE čita ništa sa
+ * diska nego uzme ugrađenu banku — što je i razlog zašto se novi tipovi tu ne
+ * vide. `--pack all` šalje sve pakete, isto što TV šalje kad igrač ne dira
+ * izbor; `--pack matrica` šalje jedan.
+ */
+const PACK_ARG = arg('pack') ?? '';
+const PACK_IDS =
+  PACK_ARG === 'all'
+    ? readdirSync(path.join(REPO_ROOT, 'question-packs'))
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => f.slice(0, -5))
+    : PACK_ARG.split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+/**
+ * Filter tipova sa ekrana za izbor igre (`--types matrica`). Isti put kojim
+ * ide i TV: `host:start-game` nosi `quizTypes`, modul ih presecа sa onim što
+ * ume da postavi. Bez ovoga se nov tip pojavljuje samo srazmerno svom udelu u
+ * paketima — matrica je ~3%, pa u partiji od dvadesetak pitanja obično nijednom.
+ */
+const TYPES = (arg('types') ?? '')
+  .split(',')
+  .map((v) => v.trim())
+  .filter(Boolean);
+
+/**
+ * Odgovori na tekstualna pitanja iz izabranih paketa.
+ *
+ * Server namerno NE šalje odgovor, pa bot nema odakle da ga zna — a bez njega
+ * se uspešna grana `handleText` nikad ne prođe: sve što bi test video je
+ * promašaj i istek vremena. Harness zato čita pakete sa diska i traži pitanje
+ * po onome što JESTE javno: emoji nizu, početku citata, odnosno slovima
+ * anagrama (izmešana su, pa se poklapaju kad se sortiraju).
+ */
+const textAnswers: { kind: string; key: string; answer: string }[] = [];
+
+function letterKey(v: string): string {
+  return [...v.toUpperCase().replace(/[^A-ZŠĐČĆŽ]/g, '')].sort().join('');
+}
+
+function loadTextAnswers(): void {
+  for (const id of PACK_IDS) {
+    let raw: unknown;
+    try {
+      raw = JSON.parse(
+        readFileSync(path.join(REPO_ROOT, 'question-packs', `${id}.json`), 'utf8')
+      );
+    } catch {
+      continue;
+    }
+    const list = Array.isArray(raw)
+      ? raw
+      : ((raw as { questions?: unknown[] }).questions ?? []);
+    for (const q of list) {
+      if (!q || typeof q !== 'object') continue;
+      const it = q as Record<string, unknown>;
+      const answer = typeof it.answer === 'string' ? it.answer : '';
+      if (!answer) continue;
+      if (it.type === 'emoji' && typeof it.emojis === 'string') {
+        textAnswers.push({ kind: 'emoji', key: it.emojis, answer });
+      } else if (it.type === 'dopuna' && typeof it.quote === 'string') {
+        textAnswers.push({ kind: 'dopuna', key: it.quote, answer });
+      } else if (it.type === 'anagram') {
+        textAnswers.push({ kind: 'anagram', key: letterKey(answer), answer });
+      }
+    }
+  }
+}
+
+function textAnswerFor(q: {
+  textKind?: string;
+  emojis?: string;
+  quote?: string;
+  scramble?: string;
+}): string | null {
+  const key =
+    q.textKind === 'emoji'
+      ? q.emojis
+      : q.textKind === 'dopuna'
+        ? q.quote
+        : q.scramble
+          ? letterKey(q.scramble)
+          : undefined;
+  if (!key) return null;
+  return textAnswers.find((t) => t.kind === q.textKind && t.key === key)?.answer ?? null;
+}
 
 // --- anti-leak ---------------------------------------------------------------
 
 /** Polja koja u broadcastu smeju da postoje samo u fazama otkrivanja. */
-const REVEAL_ONLY = ['correctIndex', 'correctValue', 'tiebreak'];
-/** Polja koja u broadcastu ne smeju da postoje NIKAD. */
-const NEVER = ['answer', 'options.correct', 'selectedIndex', 'myGuess', 'baseChoice'];
+const REVEAL_ONLY = [
+  'correctIndex',
+  'correctValue',
+  'correctCells',
+  'correctOrder',
+  'correctText',
+  // Ceo domino niz sa vrednostima; dok se igra, igrač vidi samo svoj korak.
+  'dominoChain',
+  'explanation',
+  'tiebreak',
+];
+/**
+ * Polja koja u broadcastu ne smeju da postoje NIKAD.
+ *
+ * `selectedCells` je matričin parnjak `selectedIndex`-a: devet pojmova mreže
+ * jesu javni (bez njih nema pitanja), ali koje je tri neko tapnuo ostaje u
+ * njegovom `playerData` do otkrivanja.
+ */
+const NEVER = [
+  'answer',
+  'options.correct',
+  'selectedIndex',
+  'selectedCells',
+  'selectedOrder',
+  'myGuess',
+  'myText',
+  'lastWrongText',
+  'baseChoice',
+];
+/**
+ * Isto „nikad", ali provereno kao KLJUČ (`"x":`) a ne kao reč.
+ *
+ * `domino` mora ovako: kao gola reč se poklapa sa vrednošću `"kind":"domino"`,
+ * pa bi svako domino pitanje ispalo curenje. Ključ `"domino":` je privatni
+ * korak igrača (referenca + sledeći pojam) i njega u broadcastu ne sme biti.
+ */
+const NEVER_KEYS = ['domino'];
 const REVEAL_PHASES = new Set([
   'redosled-rezultat',
   'osvajanje-rezultat',
@@ -77,6 +198,9 @@ function scanBroadcast(phase: string, payload: unknown): void {
   const json = JSON.stringify(payload);
   for (const key of NEVER) {
     if (json.includes(`"${key}"`)) leaks.push(`[${phase}] broadcast sadrži "${key}"`);
+  }
+  for (const key of NEVER_KEYS) {
+    if (json.includes(`"${key}":`)) leaks.push(`[${phase}] broadcast sadrži ključ "${key}"`);
   }
   if (COUNTDOWN_PHASES.has(phase) && json.includes('"question"')) {
     leaks.push(`[${phase}] odbrojavanje već nosi pitanje`);
@@ -109,6 +233,112 @@ let siegeContinued = 0;
  */
 let pendingSiege: { attackerId: string; territoryId: string } | null = null;
 let lastDuelKey = '';
+
+/**
+ * Svaki tip pitanja mora da stigne i u trku za zemlju i u duel, i mora da se
+ * otkrije NA SVOM ekranu — sa tačnim odgovorom i sa rezultatom po igraču.
+ *
+ * Prati se po tipu jer je otkrivanje za svaki drugo polje: `correctIndex` za
+ * izbor, `correctCells` za matricu, `correctOrder` za redosled, `dominoChain`
+ * za domino, `correctText` za slobodan tekst. Bez ovoga tip može da radi u
+ * fazi odgovaranja a da se na otkrivanju ne vidi ništa — pa igrač nikad ne
+ * sazna zašto je izgubio zemlju.
+ */
+const sawKind = new Map<string, number>();
+const sawKindReveal = new Map<string, number>();
+/** Isti tip mora da stigne i u trku i u duel — brojano odvojeno. */
+const sawByPhase = new Map<string, number>();
+let pendingKind: string | null = null;
+
+function bump(map: Map<string, number>, key: string): void {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+/** Polje otkrivanja koje taj tip MORA da nosi. */
+function revealFieldOf(kind: string): string | null {
+  if (kind === 'izbor') return 'correctIndex';
+  if (kind === 'matrica') return 'correctCells';
+  if (kind === 'redosled') return 'correctOrder';
+  if (kind === 'domino') return 'dominoChain';
+  if (kind === 'tekst') return 'correctText';
+  return null;
+}
+
+function trackQuestionKinds(state: GameStateLite): void {
+  const host = state.data.host as Record<string, unknown>;
+  const q = host.question as
+    | { kind?: string; cells?: unknown[]; pick?: number; items?: unknown[]; steps?: number }
+    | undefined;
+
+  if (state.phase === 'osvajanje-odgovor' || state.phase === 'duel-odgovor') {
+    if (q?.kind && !pendingKind) {
+      pendingKind = q.kind;
+      bump(sawKind, q.kind);
+      bump(sawByPhase, `${q.kind}:${state.phase === 'duel-odgovor' ? 'duel' : 'trka'}`);
+      if (q.kind === 'matrica' && (!Array.isArray(q.cells) || q.cells.length < 9)) {
+        ruleFailures.push('matrica: pitanje ne nosi svih devet pojmova');
+      }
+      if (q.kind === 'redosled' && (!Array.isArray(q.items) || q.items.length < 2)) {
+        ruleFailures.push('redosled: pitanje ne nosi pojmove za ređanje');
+      }
+      if (q.kind === 'domino' && !q.steps) {
+        ruleFailures.push('domino: pitanje ne kaže koliko koraka niz nosi');
+      }
+    }
+    return;
+  }
+  const kind = pendingKind;
+  if (!kind) return;
+  if (state.phase !== 'osvajanje-rezultat' && state.phase !== 'duel-odgovor-rezultat') return;
+  pendingKind = null;
+
+  if ((host.question as { kind?: string } | undefined)?.kind !== kind) {
+    ruleFailures.push(`${kind}: otkrivanje nije ostalo na ekranu tog pitanja`);
+    return;
+  }
+  const field = revealFieldOf(kind);
+  if (field && host[field] == null) {
+    ruleFailures.push(`${kind}: otkrivanje ne nosi "${field}"`);
+    return;
+  }
+  const results =
+    (host.results as
+      | { cells?: number[] | null; order?: number[] | null; score?: number }[]
+      | undefined) ?? [];
+  if (results.length === 0) {
+    ruleFailures.push(`${kind}: otkrivanje ne nosi rezultate igrača`);
+    return;
+  }
+  // Kod matrice se rezultat da proveriti spolja: presek izbora i tačne trojke.
+  // Ako se ta dva raziđu, duel poredi broj koji nema veze sa ekranom.
+  if (kind === 'matrica') {
+    const correct = (host.correctCells as number[] | undefined) ?? [];
+    for (const r of results) {
+      if (!r.cells) continue;
+      const hits = r.cells.filter((c) => correct.includes(c)).length;
+      if ((r.score ?? -1) !== hits) {
+        ruleFailures.push(`matrica: score ${r.score} ne odgovara ${hits} pogodaka`);
+        return;
+      }
+    }
+  }
+  // Isto za redosled: broj stavki na tačnom mestu.
+  if (kind === 'redosled') {
+    const correct = (host.correctOrder as number[] | undefined) ?? [];
+    for (const r of results) {
+      if (!r.order) continue;
+      let hits = 0;
+      for (let pos = 0; pos < r.order.length; pos++) {
+        if (correct[pos] === r.order[pos]) hits += 1;
+      }
+      if ((r.score ?? -1) !== hits) {
+        ruleFailures.push(`redosled: score ${r.score} ne odgovara ${hits} na mestu`);
+        return;
+      }
+    }
+  }
+  bump(sawKindReveal, kind);
+}
 
 /**
  * Nerešen duel se rešava brojem, i taj broj MORA da se otkrije: posle
@@ -222,34 +452,45 @@ function expect(label: string, actual: unknown, wanted: unknown): void {
 }
 
 function checkDuelRules(): void {
-  const yes = { correct: true, remaining: 10 };
-  const no = { correct: false, remaining: 10 };
+  const yes = { score: 1, qualifies: true, remaining: 10 };
+  const no = { score: 0, qualifies: false, remaining: 10 };
 
-  expect('samo napadač tačan', resolveChoiceDuel(yes, no), 'napadac');
-  expect('samo branilac tačan', resolveChoiceDuel(no, yes), 'branilac');
-  expect('oba tačna', resolveChoiceDuel(yes, yes), 'tiebreak');
-  expect('oba netačna', resolveChoiceDuel(no, no), 'tiebreak');
-  expect('neutralna, tačan', resolveChoiceDuel(yes, null), 'napadac');
-  expect('neutralna, netačan', resolveChoiceDuel(no, null), 'branilac');
+  expect('samo napadač tačan', resolveScoredDuel(yes, no), 'napadac');
+  expect('samo branilac tačan', resolveScoredDuel(no, yes), 'branilac');
+  expect('oba tačna', resolveScoredDuel(yes, yes), 'tiebreak');
+  expect('oba netačna', resolveScoredDuel(no, no), 'tiebreak');
+  expect('neutralna, tačan', resolveScoredDuel(yes, null), 'napadac');
+  expect('neutralna, netačan', resolveScoredDuel(no, null), 'branilac');
+
+  // Matrica: rezultat je 0–3, pa se duel rešava razlikom u pogocima i klizač
+  // ostaje samo za pravo izjednačenje. To je i razlog zašto je puštena u duel.
+  const m = (score: number) => ({ score, qualifies: score >= 2, remaining: 10 });
+  expect('matrica 3:2 nosi napad', resolveScoredDuel(m(3), m(2)), 'napadac');
+  expect('matrica 1:2 drži odbrana', resolveScoredDuel(m(1), m(2)), 'branilac');
+  expect('matrica 2:2 ide na broj', resolveScoredDuel(m(2), m(2)), 'tiebreak');
+  expect('matrica 0:0 ide na broj', resolveScoredDuel(m(0), m(0)), 'tiebreak');
+  // Bez branioca nema šta da se poredi, pa odlučuje prag (2 od 3).
+  expect('matrica 2/3 uzima neutralnu', resolveScoredDuel(m(2), null), 'napadac');
+  expect('matrica 1/3 ne uzima neutralnu', resolveScoredDuel(m(1), null), 'branilac');
 
   expect(
     'tiebreak: bliži pobeđuje',
-    resolveBrojDuel({ correct: true, remaining: 1, distance: 3 }, { correct: true, remaining: 9, distance: 8 }),
+    resolveBrojDuel({ score: 0, qualifies: true, remaining: 1, distance: 3 }, { score: 0, qualifies: true, remaining: 9, distance: 8 }),
     'napadac'
   );
   expect(
     'tiebreak: isto odstupanje → brži',
-    resolveBrojDuel({ correct: true, remaining: 9, distance: 5 }, { correct: true, remaining: 2, distance: 5 }),
+    resolveBrojDuel({ score: 0, qualifies: true, remaining: 9, distance: 5 }, { score: 0, qualifies: true, remaining: 2, distance: 5 }),
     'napadac'
   );
   expect(
     'tiebreak: niko nije odgovorio → branilac drži',
-    resolveBrojDuel({ correct: true, remaining: null, distance: null }, { correct: true, remaining: null, distance: null }),
+    resolveBrojDuel({ score: 0, qualifies: true, remaining: null, distance: null }, { score: 0, qualifies: true, remaining: null, distance: null }),
     'branilac'
   );
   expect(
     'tiebreak: napadač ćuti → branilac drži',
-    resolveBrojDuel({ correct: true, remaining: null, distance: null }, { correct: true, remaining: 3, distance: 40 }),
+    resolveBrojDuel({ score: 0, qualifies: true, remaining: null, distance: null }, { score: 0, qualifies: true, remaining: 3, distance: 40 }),
     'branilac'
   );
 
@@ -292,6 +533,7 @@ interface GameStateLite {
 
 async function main(): Promise<void> {
   checkDuelRules();
+  loadTextAnswers();
   console.log(
     ruleFailures.length === 0
       ? 'pravila duela: OK'
@@ -362,6 +604,7 @@ async function main(): Promise<void> {
         trackIshod(data.gameState);
         trackSiege(data.gameState);
         trackTiebreak(data.gameState);
+        trackQuestionKinds(data.gameState);
       }
       act(i);
     }) as never);
@@ -418,10 +661,50 @@ async function main(): Promise<void> {
       acted = new Set();
       actedIn.set(key, acted);
     }
+
+    // Domino je jedini tip koji traži VIŠE poteza po pitanju, pa se ključ
+    // proširuje korakom — inače bi bot odigrao samo prvi korak niza.
+    const dom = mine.domino as
+      | { current?: string | null; streak?: number; done?: boolean }
+      | undefined;
+    if (
+      (state.phase === 'osvajanje-odgovor' || state.phase === 'duel-odgovor') &&
+      dom &&
+      !dom.done &&
+      dom.current
+    ) {
+      const stepKey = `${key}|domino|${dom.streak ?? 0}`;
+      let steppedIn = actedIn.get(stepKey);
+      if (!steppedIn) {
+        steppedIn = new Set();
+        actedIn.set(stepKey, steppedIn);
+      }
+      if (steppedIn.has(i)) return;
+      steppedIn.add(i);
+      players[i].emit('game:player-action' as never, {
+        action: 'bitka:domino',
+        data: { answer: Math.random() < 0.5 ? 'before' : 'after' },
+      } as never);
+      return;
+    }
+
     if (acted.has(i)) return;
 
     const question = host.question as
-      | { kind: string; options?: unknown[]; min?: number; max?: number }
+      | {
+          kind: string;
+          options?: unknown[];
+          min?: number;
+          max?: number;
+          cells?: unknown[];
+          pick?: number;
+          items?: unknown[];
+          steps?: number;
+          textKind?: string;
+          emojis?: string;
+          quote?: string;
+          scramble?: string;
+        }
       | undefined;
     const expected = (host.expectedIds as string[] | undefined) ?? [];
     const selectable = (mine.selectableIds as string[] | undefined) ?? [];
@@ -437,6 +720,72 @@ async function main(): Promise<void> {
         action: 'bitka:answer',
         data: { optionIndex: Math.floor(Math.random() * count) },
       } as never);
+      return;
+    }
+
+    if (
+      (state.phase === 'osvajanje-odgovor' || state.phase === 'duel-odgovor') &&
+      question?.kind === 'matrica' &&
+      expected.includes(ids[i])
+    ) {
+      acted.add(i);
+      const total = question.cells?.length ?? 9;
+      const pick = question.pick ?? 3;
+      // Nasumična trojka bez ponavljanja — server odbija duplikate, pa bi
+      // lenji `Math.random()` po ćeliji povremeno poslao nevažeći odgovor i
+      // tiho oborio fazu na istek vremena umesto na odgovor.
+      const bag = Array.from({ length: total }, (_, k) => k);
+      const cells: number[] = [];
+      for (let k = 0; k < pick && bag.length > 0; k++) {
+        cells.push(...bag.splice(Math.floor(Math.random() * bag.length), 1));
+      }
+      players[i].emit('game:player-action' as never, {
+        action: 'bitka:matrica',
+        data: { cells },
+      } as never);
+      return;
+    }
+
+    if (
+      (state.phase === 'osvajanje-odgovor' || state.phase === 'duel-odgovor') &&
+      question?.kind === 'redosled' &&
+      expected.includes(ids[i])
+    ) {
+      acted.add(i);
+      const n = question.items?.length ?? 0;
+      const bag = Array.from({ length: n }, (_, k) => k);
+      const order: number[] = [];
+      while (bag.length > 0) {
+        order.push(...bag.splice(Math.floor(Math.random() * bag.length), 1));
+      }
+      players[i].emit('game:player-action' as never, {
+        action: 'bitka:order',
+        data: { order },
+      } as never);
+      return;
+    }
+
+    if (
+      (state.phase === 'osvajanje-odgovor' || state.phase === 'duel-odgovor') &&
+      question?.kind === 'tekst' &&
+      expected.includes(ids[i])
+    ) {
+      acted.add(i);
+      // Prvo promašaj, pa tačan odgovor: promašaj NE sme da potroši odgovor,
+      // pa se oba puta moraju proći. Tačan se traži u paketima (harness ima
+      // pravo na to; igrač nema — server ga ne šalje).
+      players[i].emit('game:player-action' as never, {
+        action: 'bitka:text',
+        data: { text: `botov-promasaj-${i}` },
+      } as never);
+      const answer = textAnswerFor(question);
+      // Svaki drugi bot ćuti, pa se prođe i faza koja ide do isteka vremena.
+      if (answer && i % 2 === 0) {
+        players[i].emit('game:player-action' as never, {
+          action: 'bitka:text',
+          data: { text: answer },
+        } as never);
+      }
       return;
     }
 
@@ -528,6 +877,8 @@ async function main(): Promise<void> {
     bitkaMapId: MAP_ID,
     bitkaMode: MODE,
     bitkaRounds: ROUNDS > 0 ? ROUNDS : undefined,
+    quizPackIds: PACK_IDS.length > 0 ? PACK_IDS : undefined,
+    quizTypes: TYPES.length > 0 ? TYPES : undefined,
   } as never);
 
   const startError = new Promise<never>((_, reject) => {
@@ -609,6 +960,37 @@ async function main(): Promise<void> {
 
   console.log(`srušenih zidova: ${wallHits}, nastavljenih opsada: ${siegeContinued}`);
   console.log(`nerešenih duela: ${sawDuelBroj}, otkrivenih brojeva: ${sawTiebreakReveal}`);
+  for (const [kind, n] of [...sawKind].sort()) {
+    console.log(
+      `  ${kind}: ${n} (trka ${sawByPhase.get(`${kind}:trka`) ?? 0}, duel ${sawByPhase.get(`${kind}:duel`) ?? 0}), otkriveno ${sawKindReveal.get(kind) ?? 0}`
+    );
+    // Postavljen tip koji se nikad ne otkrije znači da igrač ne sazna zašto je
+    // izgubio zemlju.
+    if ((sawKindReveal.get(kind) ?? 0) === 0) {
+      ruleFailures.push(`${kind}: nijedno pitanje nije otkriveno kako treba`);
+    }
+  }
+  // Traženi tipovi MORAJU da se pojave — inače je čekiranje tipa opet dugme
+  // koje ništa ne radi. Prazan `--pack` ne broji: bez paketa igra uzima
+  // ugrađenu banku, koja nosi samo izborna pitanja.
+  const kindOf: Record<string, string> = {
+    matrica: 'matrica',
+    redosled: 'redosled',
+    domino: 'domino',
+    emoji: 'tekst',
+    dopuna: 'tekst',
+    anagram: 'tekst',
+    obicno: 'izbor',
+    uljez: 'izbor',
+  };
+  if (PACK_IDS.length > 0) {
+    for (const ty of TYPES) {
+      const kind = kindOf[ty];
+      if (kind && !sawKind.has(kind)) {
+        ruleFailures.push(`filter tipova: tražen je ${ty}, a nijedno takvo pitanje nije postavljeno`);
+      }
+    }
+  }
 
   let failed = false;
   if (ruleFailures.length > 0) {

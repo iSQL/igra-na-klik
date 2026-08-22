@@ -4,9 +4,47 @@ import type {
   BitkaMapView,
   BitkaPhase,
   BitkaTerritoryState,
+  KvizAnagramQuestionFull,
   KvizBrojQuestionFull,
   KvizChoiceQuestionFull,
+  KvizDominoQuestionFull,
+  KvizDopunaQuestionFull,
+  KvizEmojiQuestionFull,
+  KvizMatricaQuestionFull,
+  KvizRedosledQuestionFull,
 } from '@igra/shared';
+
+/**
+ * Tipovi pitanja koji smeju u trku za zemlju i u duel.
+ *
+ * Zajedničko im je troje: svi vide istu stvar na ekranu (pa posmatrač duela
+ * ima šta da gleda), unos je tap (ne kucanje, jer bi u duelu odlučivala brzina
+ * palca), i rezultat je broj — što je ono što razrešava duel bez klizača.
+ * Broj-pitanje NIJE ovde: ono ostaje razrešenje nerešenog duela i uvodno
+ * merenje, gde je njegova neprekidna skala jedina koja razdvaja iz prvog puta.
+ */
+export type BitkaQuestionFull =
+  | KvizChoiceQuestionFull
+  | KvizMatricaQuestionFull
+  | KvizRedosledQuestionFull
+  | KvizDominoQuestionFull
+  | KvizEmojiQuestionFull
+  | KvizDopunaQuestionFull
+  | KvizAnagramQuestionFull;
+
+/** Slobodan tekst — tri tipa sa istim unosom i istim proveravanjem. */
+export type BitkaTextQuestionFull =
+  | KvizEmojiQuestionFull
+  | KvizDopunaQuestionFull
+  | KvizAnagramQuestionFull;
+
+/** Dokle je igrač stigao kroz domino niz. */
+export interface BitkaDominoProgress {
+  /** Indeks pojma koji trenutno poredi sa prethodnim. */
+  pos: number;
+  streak: number;
+  done: boolean;
+}
 
 // Faze čekanja (podesive kroz /admin → Timinzi).
 export const UVOD_DURATION = 7;
@@ -57,8 +95,25 @@ export const NAPAD_IZBOR_DURATION = 15;
 export interface BitkaAnswer {
   optionIndex?: number;
   value?: number;
+  /** Matrica — indeksi izabranih ćelija, redom kojim su tapnute. */
+  cells?: number[];
+  /** Redosled — njegov poredak kao indeksi u prikazanoj listi. */
+  order?: number[];
+  /** Domino — dokle je stigao niz. */
+  streak?: number;
+  /** Tekstualna pitanja — pogođen odgovor onako kako ga je otkucao. */
+  text?: string;
   /** Koliko je sekundi ostalo kad je potvrdio — brzina rešava izjednačenja. */
   remaining: number;
+  /**
+   * Rezultat na pitanju; veće je bolje. Izborno pitanje daje 0 ili 1, matrica
+   * broj pogođenih pojmova. Duel i red biranja porede OVO.
+   */
+  score: number;
+  /**
+   * Prag „dovoljno dobar": tačan izborni odgovor, odnosno bar dva od tri pojma
+   * u matrici. Nosi zemlju u trci i broji se u statistiku tačnih.
+   */
   correct: boolean;
 }
 
@@ -99,14 +154,25 @@ export interface BitkaInternalState {
 
   /** Pitanja se učitavaju asinhrono; uvod čeka dok ne stignu. */
   loading: boolean;
-  choicePool: KvizChoiceQuestionFull[];
+  questionPool: BitkaQuestionFull[];
   brojPool: KvizBrojQuestionFull[];
-  choiceCursor: number;
+  questionCursor: number;
   brojCursor: number;
 
   /** Tekuće pitanje — puna verzija sa odgovorom, nikad ne izlazi iz modula. */
-  choiceQuestion: KvizChoiceQuestionFull | null;
+  question: BitkaQuestionFull | null;
   brojQuestion: KvizBrojQuestionFull | null;
+  /**
+   * Izmešani pojmovi redosled-pitanja i izmešana slova anagrama — računaju se
+   * jednom, kad se pitanje postavi, jer moraju da budu isti za svakog igrača i
+   * kroz svaki ponovni `buildGameState`.
+   */
+  shuffledItems: number[];
+  scramble: string;
+  /** Domino: dokle je ko stigao. Ceo niz ostaje ovde, nikad u broadcastu. */
+  dominoProgress: Map<string, BitkaDominoProgress>;
+  /** Poslednji promašen tekstualni pokušaj, po igraču — samo njemu se vraća. */
+  wrongText: Map<string, string>;
   answers: Map<string, BitkaAnswer>;
   expected: Set<string>;
   /**

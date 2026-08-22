@@ -4,6 +4,13 @@ import type { BitkaAnswerResult, BitkaHostData, BitkaPlayerView } from '@igra/sh
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
 import { BitkaMapView } from './components/BitkaMapView';
+import { BitkaMatricaGrid, BitkaMatricaScores } from './components/BitkaMatricaGrid';
+import {
+  BitkaDominoBoard,
+  BitkaRedosledList,
+  BitkaScoreRow,
+  BitkaTextPanel,
+} from './components/BitkaNewTypes';
 import {
   BITKA_ZAMAK_BODOVI,
   deriveFxEvents,
@@ -815,12 +822,20 @@ function PickObjava({
  */
 function NikoTacanObjava({ host }: { host: BitkaHostData }) {
   const q = host.question;
+  // Matrica nema jedan tačan odgovor nego trojku, pa se ispisuje kao spisak —
+  // inače bi ekran „niko tačan" ostao bez onoga zbog čega i postoji.
   const correct =
     q?.kind === 'izbor' && host.correctIndex != null
       ? q.options?.[host.correctIndex]?.text
-      : host.correctValue != null
-        ? `${host.correctValue}${q?.unit ? ` ${q.unit}` : ''}`
-        : null;
+      : q?.kind === 'matrica' && q.cells && host.correctCells
+        ? host.correctCells.map((i) => q.cells?.[i]).filter(Boolean).join(' · ')
+        : q?.kind === 'tekst' && host.correctText
+          ? host.correctText
+          : q?.kind === 'redosled' && q.items && host.correctOrder
+            ? host.correctOrder.map((i) => q.items?.[i]).filter(Boolean).join(' → ')
+            : host.correctValue != null
+              ? `${host.correctValue}${q?.unit ? ` ${q.unit}` : ''}`
+              : null;
   return (
     <Objava
       border="rgba(138,145,162,0.55)"
@@ -1281,6 +1296,67 @@ function DuelArena({ host, phase }: { host: BitkaHostData; phase: string }) {
                 })}
               </div>
             )}
+            {q.kind === 'matrica' && q.cells && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <BitkaMatricaGrid
+                  cells={q.cells}
+                  correctCells={host.correctCells}
+                  results={results}
+                  players={host.players}
+                  revealing={revealing}
+                />
+                {revealing && (
+                  <BitkaMatricaScores
+                    results={results}
+                    players={host.players}
+                    pick={q.pick ?? 3}
+                  />
+                )}
+                {revealing && host.explanation && (
+                  <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
+                    {host.explanation}
+                  </div>
+                )}
+                {!revealing && (
+                  <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    Bira se {q.pick ?? 3} pojma koja idu zajedno. Više pogodaka nosi zemlju.
+                  </div>
+                )}
+              </div>
+            )}
+            {q.kind === 'redosled' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <BitkaRedosledList
+                  question={q}
+                  host={host}
+                  results={results}
+                  revealing={revealing}
+                />
+                {revealing && (
+                  <BitkaScoreRow
+                    results={results}
+                    players={host.players}
+                    max={(q.items ?? []).length}
+                  />
+                )}
+              </div>
+            )}
+            {q.kind === 'domino' && (
+              <BitkaDominoBoard
+                question={q}
+                host={host}
+                results={results}
+                revealing={revealing}
+              />
+            )}
+            {q.kind === 'tekst' && (
+              <BitkaTextPanel
+                question={q}
+                host={host}
+                results={results}
+                revealing={revealing}
+              />
+            )}
             {/* Otkrivanje izbornog pitanja koje nije razrešilo duel — bez ove
                 rečenice izgleda kao da posle tačnog odgovora sledi mapa, pa
                 klizač banjne niotkuda. */}
@@ -1500,6 +1576,66 @@ function QuestionPanel({ host, phase }: { host: BitkaHostData; phase: string }) 
                 </span>
               );
             })}
+          </div>
+        )}
+        {q.kind === 'matrica' && q.cells && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <BitkaMatricaGrid
+              cells={q.cells}
+              correctCells={host.correctCells}
+              results={host.results ?? []}
+              players={host.players}
+              revealing={revealing}
+              compact
+            />
+            {revealing && (
+              <BitkaMatricaScores
+                results={host.results ?? []}
+                players={host.players}
+                pick={q.pick ?? 3}
+              />
+            )}
+          </div>
+        )}
+        {q.kind === 'redosled' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.5rem' }}>
+            <BitkaRedosledList
+              question={q}
+              host={host}
+              results={host.results ?? []}
+              revealing={revealing}
+              compact
+            />
+            {revealing && (
+              <BitkaScoreRow
+                results={host.results ?? []}
+                players={host.players}
+                max={(q.items ?? []).length}
+                compact
+              />
+            )}
+          </div>
+        )}
+        {q.kind === 'domino' && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <BitkaDominoBoard
+              question={q}
+              host={host}
+              results={host.results ?? []}
+              revealing={revealing}
+              compact
+            />
+          </div>
+        )}
+        {q.kind === 'tekst' && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <BitkaTextPanel
+              question={q}
+              host={host}
+              results={host.results ?? []}
+              revealing={revealing}
+              compact
+            />
           </div>
         )}
         {q.kind === 'broj' && (

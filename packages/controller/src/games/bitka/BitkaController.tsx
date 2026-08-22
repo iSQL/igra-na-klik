@@ -21,6 +21,19 @@ import { BrojSlider } from '../quiz/components/BrojSlider';
 import { BitkaMapPicker } from './components/BitkaMapPicker';
 import { BitkaHostlessPanel, BitkaMiniStandings } from './components/BitkaHostlessPanel';
 import { BitkaQuestionImage } from './components/BitkaQuestionImage';
+import {
+  BitkaMatricaCells,
+  BitkaMatricaScoreRow,
+  BitkaMatricaScreen,
+} from './components/BitkaMatricaCells';
+import {
+  BitkaDominoScreen,
+  BitkaDominoView,
+  BitkaRedosledScreen,
+  BitkaRedosledView,
+  BitkaTextScreen,
+  BitkaTextView,
+} from './components/BitkaNewTypes';
 
 function act(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -220,8 +233,124 @@ export default function BitkaController() {
   // podredu. Isti kadar koji TV crta kad niko nije pogodio.
   const nikoTacan =
     phase === 'osvajanje-rezultat' &&
-    (host.correctIndex != null || host.correctValue != null) &&
+    (host.correctIndex != null ||
+      host.correctValue != null ||
+      host.correctCells != null ||
+      host.correctOrder != null ||
+      host.correctText != null ||
+      host.dominoChain != null) &&
     !(host.results ?? []).some((r) => r.correct);
+
+  // Svi „novi" tipovi idu po istim pravilima kao matrica: pun ekran dok se
+  // odgovara i u otkrivanju, osim `duel-rezultat` koji pripada mapi.
+  const fullScreenQuestion = answering || (revealing && !duelReveal && !nikoTacan);
+  const questionHeader =
+    phase.startsWith('duel') && host.duel ? (
+      <DuelBanner host={host} me={me} seconds={seconds} />
+    ) : (
+      <Muted>{revealing ? 'Tačan odgovor' : `Osvajanje zemlje · ${seconds}s`}</Muted>
+    );
+  const consequenceLine = revealing ? (
+    <Muted>
+      {phase === 'osvajanje-rezultat'
+        ? (host.results ?? []).some((r) => r.playerId === playerId && r.correct)
+          ? 'Pogodio si — biraš teritoriju.'
+          : 'Nisi pogodio ovaj put.'
+        : host.duel?.tiebreakPending
+          ? 'Nerešeno — sledi broj.'
+          : 'Ishod stiže na mapu…'}
+    </Muted>
+  ) : undefined;
+
+  if (fullScreenQuestion && question?.kind === 'redosled' && iAnswer) {
+    return (
+      <BitkaRedosledScreen
+        question={question}
+        host={host}
+        playerId={playerId}
+        me={me}
+        revealing={revealing}
+        seconds={seconds}
+        onSubmit={(order) => act('bitka:order', { order })}
+        header={questionHeader}
+        footer={consequenceLine}
+      />
+    );
+  }
+
+  if (fullScreenQuestion && question?.kind === 'domino' && iAnswer) {
+    return (
+      <BitkaDominoScreen
+        question={question}
+        host={host}
+        playerId={playerId}
+        me={me}
+        revealing={revealing}
+        onStep={(dir) => act('bitka:domino', { answer: dir })}
+        header={questionHeader}
+        footer={consequenceLine}
+      />
+    );
+  }
+
+  if (fullScreenQuestion && question?.kind === 'tekst' && iAnswer) {
+    return (
+      <BitkaTextScreen
+        question={question}
+        host={host}
+        playerId={playerId}
+        me={me}
+        revealing={revealing}
+        seconds={seconds}
+        onSubmit={(text) => act('bitka:text', { text })}
+        header={questionHeader}
+        footer={consequenceLine}
+      />
+    );
+  }
+
+  // Matrica ide pre izbornog ekrana i po istim pravilima: dok se odgovara i u
+  // otkrivanju (osim `duel-rezultat`, koji pripada mapi i animaciji).
+  if (
+    (answering || (revealing && !duelReveal && !nikoTacan)) &&
+    question?.kind === 'matrica' &&
+    iAnswer
+  ) {
+    return (
+      <BitkaMatricaScreen
+        question={question}
+        host={host}
+        playerId={playerId}
+        answered={!!me?.hasAnswered}
+        mySelection={me?.selectedCells ?? null}
+        revealing={revealing}
+        seconds={seconds}
+        onSubmit={(cells) => act('bitka:matrica', { cells })}
+        header={
+          phase.startsWith('duel') && host.duel ? (
+            <DuelBanner host={host} me={me} seconds={seconds} />
+          ) : (
+            <Muted>{revealing ? 'Tačna trojka' : `Osvajanje zemlje · ${seconds}s`}</Muted>
+          )
+        }
+        footer={
+          revealing ? (
+            <Muted>
+              {phase === 'osvajanje-rezultat'
+                ? (host.results ?? []).some((r) => r.playerId === playerId && r.correct)
+                  ? 'Pogodio si — biraš teritoriju.'
+                  : 'Nisi pogodio ovaj put.'
+                : host.duel?.tiebreakPending
+                  ? 'Nerešeno — sledi broj.'
+                  : 'Ishod stiže na mapu…'}
+            </Muted>
+          ) : me?.hasAnswered ? (
+            <Muted>Poslato — čeka se protivnik.</Muted>
+          ) : undefined
+        }
+      />
+    );
+  }
 
   if ((answering || (revealing && !duelReveal && !nikoTacan)) && question?.kind === 'izbor' && iAnswer) {
     const results = host.results ?? [];
@@ -869,14 +998,36 @@ function StatusCard({
  * je grid sa opcijama za ovaj kadar namerno preskočen.
  */
 function nikoTacanLine(host: BitkaHostData): string | undefined {
-  const q = host.question;
-  const answer =
-    q?.kind === 'izbor' && host.correctIndex != null
-      ? q.options?.[host.correctIndex]?.text
-      : q?.kind === 'broj' && host.correctValue != null
-        ? `${host.correctValue}${q.unit ? ` ${q.unit}` : ''}`
-        : undefined;
+  const answer = correctAnswerText(host);
   return answer ? `Tačno je bilo: ${answer}.` : undefined;
+}
+
+/**
+ * Tačan odgovor kao jedna rečenica, za svaki tip pitanja.
+ *
+ * Stepenovani tipovi nemaju „jedan tačan odgovor" koji bi se pokazao, pa se
+ * ispisuju kao spisak; domino je izuzetak — ceo niz u jednom redu je nečitljiv
+ * na telefonu, pa se tamo oslanjamo na otkrivanje na samom ekranu pitanja.
+ */
+function correctAnswerText(host: BitkaHostData): string | undefined {
+  const q = host.question;
+  if (!q) return undefined;
+  if (q.kind === 'izbor' && host.correctIndex != null) {
+    return q.options?.[host.correctIndex]?.text;
+  }
+  if (q.kind === 'matrica' && q.cells && host.correctCells) {
+    const names = host.correctCells.map((i) => q.cells?.[i]).filter(Boolean);
+    return names.length ? names.join(' · ') : undefined;
+  }
+  if (q.kind === 'redosled' && q.items && host.correctOrder) {
+    const names = host.correctOrder.map((i) => q.items?.[i]).filter(Boolean);
+    return names.length ? names.join(' → ') : undefined;
+  }
+  if (q.kind === 'tekst') return host.correctText;
+  if (q.kind === 'broj' && host.correctValue != null) {
+    return `${host.correctValue}${q.unit ? ` ${q.unit}` : ''}`;
+  }
+  return undefined;
 }
 
 /**
@@ -1801,6 +1952,57 @@ function DuelSpectator({
             );
           })}
         </div>
+      ) : q?.kind === 'matrica' && q.cells ? (
+        // Posmatrač dobija istu mrežu, samo bez dugmadi — u duelu je to jedino
+        // što ima da gleda dok se dvoje bore, a otkrivanje mu je jedina prilika
+        // da vidi šta je bilo tačno.
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem' }}>
+          <BitkaMatricaCells
+            cells={q.cells}
+            correctCells={revealing ? host.correctCells : undefined}
+            results={revealing ? results : undefined}
+            players={host.players}
+            myPlayerId={myPlayerId}
+            revealing={revealing}
+          />
+          {revealing && (
+            <BitkaMatricaScoreRow
+              results={results}
+              players={host.players}
+              pick={q.pick ?? 3}
+              myPlayerId={myPlayerId}
+            />
+          )}
+        </div>
+      ) : q?.kind === 'redosled' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <BitkaRedosledView
+            question={q}
+            host={host}
+            results={revealing ? results : undefined}
+            revealing={revealing}
+            myPlayerId={myPlayerId}
+          />
+        </div>
+      ) : q?.kind === 'domino' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <BitkaDominoView
+            question={q}
+            host={host}
+            results={revealing ? results : undefined}
+            revealing={revealing}
+            myPlayerId={myPlayerId}
+          />
+        </div>
+      ) : q?.kind === 'tekst' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <BitkaTextView
+            question={q}
+            host={host}
+            results={revealing ? results : undefined}
+            revealing={revealing}
+          />
+        </div>
       ) : revealing && q?.kind === 'broj' ? (
         <BrojOtkrivanje host={host} myPlayerId={myPlayerId} />
       ) : (
@@ -1956,14 +2158,12 @@ function Reveal({
 }) {
   const q = host.question;
   if (!q) return null;
-  const line =
-    q.kind === 'izbor' && host.correctIndex != null
-      ? `Tačno: ${q.options?.[host.correctIndex]?.text ?? ''}`
-      : q.kind === 'broj' && host.correctValue != null
-        ? `Tačno: ${host.correctValue}${q.unit ? ` ${q.unit}` : ''}${
-            me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''
-          }`
-        : null;
+  const answer = correctAnswerText(host);
+  const line = !answer
+    ? null
+    : q.kind === 'broj'
+      ? `Tačno: ${answer}${me?.myGuess != null ? ` · ti: ${me.myGuess}` : ''}`
+      : `Tačno: ${answer}`;
   if (!line) return null;
   return <div style={{ textAlign: 'center', fontWeight: 800, color: 'var(--accent)' }}>{line}</div>;
 }

@@ -41,7 +41,13 @@ const RECENT_SHOWN = 6;
  * or a local .json file inlined as customQuestions. The built-in bank arrives
  * as the '__bank__' pseudo-pack from /api/question-packs.
  */
-export function QuizImportButton() {
+/**
+ * `types` sužava spisak ponuđenih tipova na one koje igra ume da postavi.
+ * Bez toga je KvizAtar nudio geo/audio/video čipove koje njegov modul odbacuje,
+ * pa je filter obećavao izbor koji ne postoji.
+ */
+export function QuizImportButton({ types }: { types?: KvizQuestionType[] } = {}) {
+  const offeredTypes = types ?? KVIZ_ALL_TYPES;
   const {
     packs,
     selectedPackIds,
@@ -129,8 +135,14 @@ export function QuizImportButton() {
   };
 
   const checkedIds = effectivePackIds(packs, selectedPackIds);
-  const checkedTypes = selectedTypes ?? KVIZ_ALL_TYPES;
-  const available = availableQuestionCount(packs, selectedPackIds, selectedTypes);
+  const checkedTypes = selectedTypes ?? offeredTypes;
+  const available = availableQuestionCount(
+    packs,
+    selectedPackIds,
+    // Sa suženim spiskom „sve čekirano" znači sve ŠTO IGRA UME — inače bi
+    // brojač obećavao pitanja koja modul odbacuje.
+    selectedTypes ?? (types ?? null)
+  );
   const isFileImport = customQuestions !== null;
 
   const q = normalizeEmojiAnswer(search);
@@ -410,7 +422,13 @@ export function QuizImportButton() {
                 <span style={{ flex: 1, fontSize: '0.72rem', color: 'var(--dim)', fontWeight: 700, textAlign: 'left' }}>
                   {t('quizConfig.types')}
                 </span>
-                <button onClick={(e) => { e.stopPropagation(); setSelectedTypes(null); }} style={bulkBtnStyle}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedTypes(types ? [...types] : null);
+                  }}
+                  style={bulkBtnStyle}
+                >
                   {t('quizConfig.selectAll')}
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); setSelectedTypes([]); }} style={bulkBtnStyle}>
@@ -418,7 +436,7 @@ export function QuizImportButton() {
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                {KVIZ_ALL_TYPES.map((ty) => {
+                {offeredTypes.map((ty) => {
                   const on = checkedTypes.includes(ty);
                   return (
                     <button
