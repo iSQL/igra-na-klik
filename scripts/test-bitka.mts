@@ -23,6 +23,10 @@ import { io, type Socket } from 'socket.io-client';
 import { setupSocket } from '../packages/server/src/socket/setup.js';
 import { initTimingConfig } from '../packages/server/src/game/timing-config.js';
 import {
+  getQuizFeedback,
+  initQuizFeedback,
+} from '../packages/server/src/game/quiz-feedback.js';
+import {
   duelOutcome,
   resolveBrojDuel,
   resolveScoredDuel,
@@ -262,6 +266,38 @@ function revealFieldOf(kind: string): string | null {
   if (kind === 'domino') return 'dominoChain';
   if (kind === 'tekst') return 'correctText';
   return null;
+}
+
+/**
+ * Prijava pitanja iz popupa igrača.
+ *
+ * Prati se poseban slučaj zbog koga i postoji: prijava **prethodnog** pitanja.
+ * Igrač se sporne stvari seti tek kad vidi tačan odgovor, a dotle je ekran
+ * otišao dalje — pa se ovde namerno prijavljuje id koji VIŠE NIJE na ekranu i
+ * proverava da je server to ipak zapisao.
+ */
+const seenQuestionIds: string[] = [];
+let reportedPrevious: string | null = null;
+let missingQuestionIds = 0;
+
+function trackFeedback(state: GameStateLite, report: (questionId: string) => void): void {
+  const host = state.data.host as Record<string, unknown>;
+  const q = host.question as { id?: string } | undefined;
+  if (!q) return;
+  if (!q.id) {
+    // Bez id-ja telefon nema šta da prijavi — pitanje bi bilo neprijavljivo.
+    missingQuestionIds += 1;
+    return;
+  }
+  if (seenQuestionIds[seenQuestionIds.length - 1] === q.id) return;
+  seenQuestionIds.push(q.id);
+
+  // Čim postoji nešto ranije, prijavi baš to — ne tekuće.
+  if (!reportedPrevious && seenQuestionIds.length >= 2) {
+    const previous = seenQuestionIds[seenQuestionIds.length - 2];
+    reportedPrevious = previous;
+    report(previous);
+  }
 }
 
 function trackQuestionKinds(state: GameStateLite): void {
@@ -544,7 +580,11 @@ async function main(): Promise<void> {
   // Pauze se skraćuju na admin minimume (isti put kojim ih i domaćin podešava)
   // — aktivni tajmeri se ionako ne čekaju, jer klijenti odgovaraju odmah pa
   // faza završi ranije.
-  const timingFile = path.join(mkdtempSync(path.join(tmpdir(), 'bitka-')), 'timing.json');
+  const tmpRoot = mkdtempSync(path.join(tmpdir(), 'bitka-'));
+  const timingFile = path.join(tmpRoot, 'timing.json');
+  // Prijave pitanja se upisuju samo kad store zna svoj fajl — bez ovoga je
+  // `recordQuizFeedback` tiho ništa, pa bi test „prošao" i da je pokvareno.
+  const feedbackFile = path.join(tmpRoot, 'quiz-feedback.json');
   writeFileSync(
     timingFile,
     JSON.stringify({
@@ -558,6 +598,7 @@ async function main(): Promise<void> {
     })
   );
   initTimingConfig(timingFile);
+  initQuizFeedback(feedbackFile);
 
   const httpServer = createServer();
   setupSocket(httpServer, '*', {
@@ -605,6 +646,12 @@ async function main(): Promise<void> {
         trackSiege(data.gameState);
         trackTiebreak(data.gameState);
         trackQuestionKinds(data.gameState);
+        trackFeedback(data.gameState, (questionId) => {
+          players[0].emit('game:player-action' as never, {
+            action: 'quiz:feedback',
+            data: { questionId, report: true, rating: 2 },
+          } as never);
+        });
       }
       act(i);
     }) as never);
@@ -989,6 +1036,24 @@ async function main(): Promise<void> {
       if (kind && !sawKind.has(kind)) {
         ruleFailures.push(`filter tipova: tražen je ${ty}, a nijedno takvo pitanje nije postavljeno`);
       }
+    }
+  }
+
+  if (missingQuestionIds > 0) {
+    ruleFailures.push(
+      `prijava pitanja: ${missingQuestionIds} pitanja je stiglo bez id-ja, pa se ne mogu prijaviti`
+    );
+  }
+  if (reportedPrevious) {
+    // Zapis mora da postoji iako pitanje odavno nije na ekranu.
+    const hit = Object.entries(getQuizFeedback()).find(
+      ([, v]) => v.reports > 0 && v.ratingCount > 0
+    );
+    console.log(
+      `prijava prethodnog pitanja: ${hit ? `zapisano pod ${hit[0]}` : 'NIJE zapisano'}`
+    );
+    if (!hit) {
+      ruleFailures.push('prijava pitanja: prijava prethodnog pitanja nije zapisana');
     }
   }
 

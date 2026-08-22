@@ -133,6 +133,12 @@ export interface BitkaPlayerView {
 /** Pitanje kakvo se šalje na ekran — nikad sa tačnim odgovorom. */
 export interface BitkaQuestionView {
   kind: 'izbor' | 'broj' | 'matrica' | 'redosled' | 'domino' | 'tekst';
+  /**
+   * Runtime id pitanja — telefon ga kači uz prijavu „netačno" i uz ocenu.
+   * Nije osetljiv: ne nosi nijedan deo odgovora, a bez njega igrač ne može da
+   * prijavi pitanje koje je već otišlo sa ekrana.
+   */
+  id?: string;
   text: string;
   imageUrl?: string;
   /**

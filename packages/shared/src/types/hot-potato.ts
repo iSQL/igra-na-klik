@@ -21,6 +21,11 @@ export type HotPotatoMode = 'sequential' | 'choose' | 'kviz';
 
 /** Public question slice for kviz mode — never carries the correct answer. */
 export interface HotPotatoQuestion {
+  /**
+   * Runtime id pitanja — telefon ga kači uz prijavu „netačno" i uz ocenu.
+   * Ne nosi nijedan deo odgovora.
+   */
+  id?: string;
   text: string;
   options: { index: number; text: string; color: string }[];
   imageUrl?: string;

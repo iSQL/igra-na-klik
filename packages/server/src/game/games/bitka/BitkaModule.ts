@@ -41,6 +41,7 @@ import {
   territoryValue,
 } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
+import { QuizFeedbackTracker } from '../../quiz-feedback-tracker.js';
 import { getGameTimings } from '../../timing-config.js';
 import { normalizeGuess } from '../quiz/scoring.js';
 import { resolveQuizPack } from '../quiz/quiz-pack-resolver.js';
@@ -193,6 +194,12 @@ export class BitkaModule extends BaseGameModule {
    * broj-pak nemaju ime i namerno ostaju bez natpisa.
    */
   private packNames = new Map<string, string>();
+  /**
+   * Prijave i ocene pitanja — isti knjigovođa kao u Kvizu, jer su i pitanja
+   * ista. Bez ovoga bi pitanje prijavljeno u KvizAtaru ostalo neprijavljeno u
+   * paketu iz koga je došlo.
+   */
+  private feedback = new QuizFeedbackTracker();
 
   constructor(
     private readonly packsDir: string,
@@ -296,6 +303,8 @@ export class BitkaModule extends BaseGameModule {
       ? (cc.quizPackIds.filter((v) => typeof v === 'string') as string[])
       : [];
     // Kao kod Kviza: onStart ne sme biti async, pa uvod čeka na pitanja.
+    this.feedback.reset();
+    this.packNames.clear();
     void this.loadPools(packIds, this.parseTypeFilter(cc.quizTypes));
 
     return this.buildGameState(room);
@@ -310,6 +319,13 @@ export class BitkaModule extends BaseGameModule {
     action: string,
     data: Record<string, unknown>
   ): GameState | null {
+    // Prijava/ocena pitanja ne dira tok igre, pa prolazi u svakoj fazi — i
+    // ispalom igraču, koji i dalje gleda partiju i sme da javi da je pitanje
+    // netačno.
+    if (action === 'quiz:feedback') {
+      this.feedback.handle(playerId, data);
+      return null;
+    }
     if (this.state.eliminated.has(playerId)) return null;
 
     if (action === 'bitka:answer') return this.handleAnswer(room, playerId, data);
@@ -1512,7 +1528,12 @@ export class BitkaModule extends BaseGameModule {
     for (let i = 0; i < packIds.length; i++) {
       const pack = packIds[i] === KVIZ_BANK_PACK_ID ? null : resolved[i];
       const questions = pack ? pack.questions : packIds[i] === KVIZ_BANK_PACK_ID ? QUIZ_QUESTION_BANK : [];
-      if (pack) for (const q of questions) this.packNames.set(q.id, pack.name);
+      if (pack) {
+        for (const q of questions) this.packNames.set(q.id, pack.name);
+        this.feedback.registerPack(pack.id, pack.questions);
+      } else if (packIds[i] === KVIZ_BANK_PACK_ID) {
+        this.feedback.registerBank(QUIZ_QUESTION_BANK);
+      }
       pitanja.push(...questions.filter(isBitkaQuestion));
       broj.push(...questions.filter(isBrojQuestion));
     }
@@ -1538,6 +1559,7 @@ export class BitkaModule extends BaseGameModule {
     // Ugrađena banka nema broj-pitanja, pa je jedina rezerva poseban pak.
     if (broj.length === 0 && this.packsDir) {
       const fallback = await resolveQuizPack(this.packsDir, BROJ_FALLBACK_PACK);
+      if (fallback) this.feedback.registerPack(fallback.id, fallback.questions);
       broj.push(...(fallback?.questions ?? []).filter(isBrojQuestion));
     }
 
@@ -1709,6 +1731,7 @@ export class BitkaModule extends BaseGameModule {
   private brojView(q: KvizBrojQuestionFull): BitkaQuestionView {
     return {
       kind: 'broj',
+      id: q.id,
       text: q.text,
       imageUrl: q.imageUrl,
       min: q.min,
@@ -1754,6 +1777,7 @@ export class BitkaModule extends BaseGameModule {
       // trojka (`q.correct`) i objašnjenje ostaju ovde do otkrivanja.
       return {
         kind: 'matrica',
+        id: q.id,
         text: q.text,
         cells: q.cells,
         pick: q.correct.length,
@@ -1764,6 +1788,7 @@ export class BitkaModule extends BaseGameModule {
       // ujedno i tačan poredak, pa ne sme napolje.
       return {
         kind: 'redosled',
+        id: q.id,
         text: q.text,
         items: this.state.shuffledItems.map((i) => q.items[i]),
       };
@@ -1773,6 +1798,7 @@ export class BitkaModule extends BaseGameModule {
       // `playerData`. Ovde stoje samo natpisi na dugmadima i dužina niza.
       return {
         kind: 'domino',
+        id: q.id,
         text: q.text,
         lowerLabel: q.lowerLabel,
         higherLabel: q.higherLabel,
@@ -1784,6 +1810,7 @@ export class BitkaModule extends BaseGameModule {
     if (isTextQuestion(q)) {
       return {
         kind: 'tekst',
+        id: q.id,
         text: q.text,
         textKind: q.type,
         emojis: q.type === 'emoji' ? q.emojis : undefined,
@@ -1794,6 +1821,7 @@ export class BitkaModule extends BaseGameModule {
     }
     return {
       kind: 'izbor',
+      id: q.id,
       text: q.text,
       imageUrl: q.imageUrl,
       options: q.options,

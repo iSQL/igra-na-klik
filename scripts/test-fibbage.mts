@@ -149,6 +149,39 @@ async function main(): Promise<void> {
   const TWIN_LIE = 'zajednicka-laz';
 
   // --- praćenje procurivanja -------------------------------------------------
+  /**
+   * Svi *tekstualni* delovi broadcast polovine, spojeni u jedan string.
+   *
+   * Skenira se samo tekst, a ne ceo `JSON.stringify`, jer odgovor može da
+   * procuri jedino kao tekst — pitanje, opcija, objašnjenje. Sve ostalo u
+   * blob-u su brojači i identifikatori (`submittedCount`, `totalPlayers`,
+   * UUID-ovi, hex boje avatara), a oni redovno *sadrže* kratak brojčani
+   * odgovor a da ništa nisu odali: „2" se nalazi u `"submittedCount":2`, a
+   * „14" u `#c75146`. Sa njima u skenu svaki pack sa brojevima kao
+   * odgovorima pada na slučajnom poklapanju.
+   */
+  const textOf = (value: unknown): string[] => {
+    if (typeof value === 'string') return [value];
+    if (Array.isArray(value)) return value.flatMap(textOf);
+    if (value && typeof value === 'object') {
+      return Object.values(value as Record<string, unknown>).flatMap(textOf);
+    }
+    return [];
+  };
+
+  /**
+   * Da li se odgovor pojavljuje kao *ceo* pojam, a ne kao deo duže reči.
+   * Granica se proverava preko `\p{L}\p{N}` a ne preko `\b`, jer `\b` ne
+   * razume šđčćž — s njim bi odgovor „živa" ostao neproveren.
+   */
+  const containsAnswer = (haystack: string, answer: string): boolean => {
+    const escaped = answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(
+      `(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`,
+      'u'
+    ).test(haystack);
+  };
+
   // Tačan odgovor sme da se pojavi u broadcast polovini tek od `voting`
   // (tada je jedna od ponuđenih opcija) — nikad ranije.
   let leaks = 0;
@@ -171,8 +204,8 @@ async function main(): Promise<void> {
       currentAnswer &&
       (gs.phase === 'showing-question' || gs.phase === 'writing-answers')
     ) {
-      const blob = JSON.stringify(gs.data).toLowerCase();
-      if (blob.includes(currentAnswer.toLowerCase())) leaks++;
+      const blob = textOf(gs.data).join('\n').toLowerCase();
+      if (containsAnswer(blob, currentAnswer.toLowerCase())) leaks++;
     }
     if (gs.phase === 'voting') sawVoting = true;
   }) as never);

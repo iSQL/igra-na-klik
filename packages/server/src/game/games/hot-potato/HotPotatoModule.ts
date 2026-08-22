@@ -18,6 +18,7 @@ import {
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import { resolveQuizPack } from '../quiz/quiz-pack-resolver.js';
+import { QuizFeedbackTracker } from '../../quiz-feedback-tracker.js';
 import type { HotPotatoInternalState } from './HotPotatoState.js';
 import {
   EXPLODED_DURATION,
@@ -62,6 +63,8 @@ export class HotPotatoModule extends BaseGameModule {
   private timings: Record<string, number> = {};
   /** kviz mode: full pool the working queue refills from. */
   private kvizPool: KvizChoiceQuestionFull[] = [];
+  /** Prijave i ocene pitanja — isti knjigovođa kao Kviz i KvizAtar. */
+  private feedback = new QuizFeedbackTracker();
 
   constructor(private readonly packsDir: string = '') {
     super();
@@ -109,6 +112,7 @@ export class HotPotatoModule extends BaseGameModule {
       const packIds = Array.isArray(cc.quizPackIds)
         ? (cc.quizPackIds.filter((v) => typeof v === 'string') as string[])
         : [];
+      this.feedback.reset();
       // Async like the Kviz module — intro waits until questions land.
       void this.loadKvizPool(packIds);
     }
@@ -128,12 +132,15 @@ export class HotPotatoModule extends BaseGameModule {
     );
     for (let i = 0; i < packIds.length; i++) {
       if (packIds[i] === KVIZ_BANK_PACK_ID) {
+        this.feedback.registerBank(QUIZ_QUESTION_BANK);
         pool.push(...QUIZ_QUESTION_BANK.filter(isKvizModeQuestion));
       } else if (resolved[i]) {
+        this.feedback.registerPack(resolved[i]!.id, resolved[i]!.questions);
         pool.push(...resolved[i]!.questions.filter(isKvizModeQuestion));
       }
     }
     if (pool.length === 0) {
+      this.feedback.registerBank(QUIZ_QUESTION_BANK);
       pool.push(...QUIZ_QUESTION_BANK.filter(isKvizModeQuestion));
     }
     this.kvizPool = pool;
@@ -154,6 +161,13 @@ export class HotPotatoModule extends BaseGameModule {
     action: string,
     data: Record<string, unknown>
   ): GameState | null {
+    // Prijava/ocena pitanja ne dira tok igre — prolazi u svakoj fazi i za
+    // svakog igrača, kao i u Kvizu.
+    if (action === 'quiz:feedback') {
+      this.feedback.handle(playerId, data);
+      return null;
+    }
+
     if (action === 'potato:answer') {
       if (this.state.mode !== 'kviz') return null;
       if (this.state.phase !== 'question') return null;
@@ -433,6 +447,7 @@ export class HotPotatoModule extends BaseGameModule {
         this.state.phase === 'exploded'
       ) {
         hostData.question = {
+          id: question.id,
           text: question.text,
           options: question.options,
           imageUrl: question.imageUrl,
