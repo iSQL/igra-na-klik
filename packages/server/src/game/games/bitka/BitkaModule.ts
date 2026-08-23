@@ -1492,6 +1492,9 @@ export class BitkaModule extends BaseGameModule {
 
   private finishGame(room: Room): void {
     this.recomputeScores(room);
+    // `beginRound` poveća brojač pre nego što utvrdi da je runda prekoračena,
+    // pa bi završni kadar pisao „runda 7/6".
+    this.state.round = Math.min(this.state.round, this.state.totalRounds);
     const standing = room.players
       .filter((p) => !this.state.eliminated.has(p.id))
       .sort((a, b) => b.score - a.score);

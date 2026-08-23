@@ -1,7 +1,7 @@
 /**
  * Headless prolaz kroz partiju igre Osvajanje.
  *
- *   npx tsx scripts/test-bitka.ts [--map <id>] [--rounds <n>] [--players <2-4>]
+ *   npx tsx scripts/test-bitka.ts [--map <id>] [--rounds <n>] [--players <2-4>] [--full]
  *
  * Diže server u procesu (bez Vite-a i bez UI-ja), spaja jednog domaćina i 2–4
  * igrača preko `socket.io-client` i igra celu partiju: uvodno merenje →
@@ -31,7 +31,7 @@ import {
   resolveBrojDuel,
   resolveScoredDuel,
 } from '../packages/server/src/game/games/bitka/duel.js';
-import { BITKA_MAX_IGRACA, BITKA_MIN_IGRACA } from '../packages/shared/src/games/bitka-rules.js';
+import { BITKA_MAX_IGRACA, BITKA_MIN_IGRACA, BITKA_PITANJE_TYPES } from '../packages/shared/src/games/bitka-rules.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -75,6 +75,21 @@ const TYPES = (arg('types') ?? '')
   .split(',')
   .map((v) => v.trim())
   .filter(Boolean);
+/**
+ * Brz prolaz je podrazumevan: tekstualni tipovi (emoji/dopuna/anagram) se ne
+ * traže, jer svaki drugi bot na njima namerno ćuti pa faza ide punih 20 s —
+ * u partiji od dvadesetak pitanja to je i do pet minuta čekanja. `--full`
+ * vraća sve tipove (i time proverava put isteka vremena i anti-leak za
+ * `myText`/`lastWrongText`); eksplicitan `--types` uvek važi kakav jeste.
+ */
+const FULL = process.argv.includes('--full');
+const TEXT_TYPES = new Set(['emoji', 'dopuna', 'anagram']);
+const QUIZ_TYPES: string[] =
+  TYPES.length > 0
+    ? TYPES
+    : FULL
+      ? []
+      : BITKA_PITANJE_TYPES.filter((t) => !TEXT_TYPES.has(t));
 
 /**
  * Odgovori na tekstualna pitanja iz izabranih paketa.
@@ -593,6 +608,9 @@ async function main(): Promise<void> {
         PITANJE_NAJAVA_DURATION: 2,
         REZULTAT_DURATION: 3,
         DUEL_REZULTAT_DURATION: 3,
+        DUEL_OTKRIVANJE_DURATION: 2,
+        DUEL_ISHOD_DURATION: 2,
+        KRAJ_DURATION: 3,
         LEADERBOARD_DURATION: 4,
       },
     })
@@ -925,7 +943,7 @@ async function main(): Promise<void> {
     bitkaMode: MODE,
     bitkaRounds: ROUNDS > 0 ? ROUNDS : undefined,
     quizPackIds: PACK_IDS.length > 0 ? PACK_IDS : undefined,
-    quizTypes: TYPES.length > 0 ? TYPES : undefined,
+    quizTypes: QUIZ_TYPES.length > 0 ? QUIZ_TYPES : undefined,
   } as never);
 
   const startError = new Promise<never>((_, reject) => {
