@@ -17,6 +17,7 @@ import {
   ASOCIJACIJE_COLUMN_LETTERS,
   checkEmojiGuess,
   isKvizCapablePuzzle,
+  normalizeEmojiAnswer,
   parseAsocijacijePack,
   shuffled,
 } from '@igra/shared';
@@ -29,10 +30,19 @@ import {
   FINAL_POINTS,
   KVIZ_FIELD_POINTS,
   LEADERBOARD_DURATION,
+  MAX_GUESS_LENGTH,
+  MAX_WRONG_GUESSES,
   TURN_DURATION,
   UNOPENED_FIELD_BONUS,
   type AsocijacijeInternalState,
 } from './AsocijacijeState.js';
+
+/** Characters of the final solution that the letter hint hides/reveals. */
+const HINT_LETTER_RE = /[\p{L}\p{N}]/u;
+
+function hintLetterIndices(text: string): number[] {
+  return Array.from(text).flatMap((ch, i) => (HINT_LETTER_RE.test(ch) ? [i] : []));
+}
 
 interface StartContent {
   asocijacijeMode?: AsocijacijeMode;
@@ -100,6 +110,10 @@ export class AsocijacijeModule extends BaseGameModule {
       revealed: [],
       colSolved: [],
       finalSolved: false,
+      colWrongGuesses: [],
+      finalWrongGuesses: [],
+      hintOrder: [],
+      hintRevealed: 0,
       turnOrder,
       turnPointer: 0,
       activePlayerId: null,
@@ -130,6 +144,10 @@ export class AsocijacijeModule extends BaseGameModule {
     s.revealed = s.puzzles[index].columns.map((c) => c.fields.map(() => false));
     s.colSolved = s.puzzles[index].columns.map(() => false);
     s.finalSolved = false;
+    s.colWrongGuesses = s.puzzles[index].columns.map(() => []);
+    s.finalWrongGuesses = [];
+    s.hintOrder = shuffled(hintLetterIndices(s.puzzles[index].finalSolution));
+    s.hintRevealed = 0;
     s.boardWinnerId = null;
     s.lastResult = null;
     s.answering = null;
@@ -186,7 +204,31 @@ export class AsocijacijeModule extends BaseGameModule {
   }
 
   private passTurn(room: Room): void {
+    const s = this.state;
+    // Once every field is open only the final answer can end the board, so
+    // each handed-over turn gives away one more letter of it. Revealing the
+    // last letter would just hand the answer to the next player — the board
+    // ends with no winner instead, so a stuck table can't go around forever.
+    if (s.phase === 'playing' && !this.hasClosedFields()) {
+      if (s.hintRevealed >= s.hintOrder.length - 1) {
+        this.endBoard(room);
+        return;
+      }
+      s.hintRevealed++;
+    }
     this.beginTurn(room, this.pointerForNext(room));
+  }
+
+  /** Typed guess as echoed to everyone: trimmed, clamped, board-uppercase. */
+  private guessText(text: string): string {
+    return text.trim().slice(0, MAX_GUESS_LENGTH).toUpperCase();
+  }
+
+  private recordWrongGuess(list: string[], guess: string): void {
+    const norm = normalizeEmojiAnswer(guess);
+    if (!norm || list.some((g) => normalizeEmojiAnswer(g) === norm)) return;
+    list.push(guess);
+    if (list.length > MAX_WRONG_GUESSES) list.shift();
   }
 
   // --- Player actions ----------------------------------------------------
@@ -355,10 +397,13 @@ export class AsocijacijeModule extends BaseGameModule {
       s.turnTimeRemaining = TURN_DURATION;
       return this.buildGameState(room);
     }
+    const guess = this.guessText(text);
+    this.recordWrongGuess(s.colWrongGuesses[col], guess);
     s.lastResult = {
       correct: false,
       text: `Netačno · kolona ${letter}`,
       actorName: this.activeName(room),
+      guess,
     };
     this.passTurn(room);
     return this.buildGameState(room);
@@ -394,10 +439,13 @@ export class AsocijacijeModule extends BaseGameModule {
       this.endBoard(room);
       return this.buildGameState(room);
     }
+    const guess = this.guessText(text);
+    this.recordWrongGuess(s.finalWrongGuesses, guess);
     s.lastResult = {
       correct: false,
       text: 'Netačno konačno rešenje',
       actorName: this.activeName(room),
+      guess,
     };
     this.passTurn(room);
     return this.buildGameState(room);
@@ -518,8 +566,19 @@ export class AsocijacijeModule extends BaseGameModule {
         solved,
         solution: solved ? col.solution : null,
         fields,
+        wrongGuesses: solved ? [] : [...s.colWrongGuesses[ci]],
       };
     });
+  }
+
+  /** Revealed letters of the final solution; hidden ones stay null (anti-leak). */
+  private buildFinalHint(): (string | null)[] | null {
+    const s = this.state;
+    if (s.phase !== 'playing' || s.hintRevealed === 0) return null;
+    const hidden = new Set(s.hintOrder.slice(s.hintRevealed));
+    return Array.from(this.currentPuzzle().finalSolution).map((ch, i) =>
+      hidden.has(i) ? null : ch
+    );
   }
 
   private buildScores(room: Room): AsocijacijeScoreEntry[] {
@@ -565,6 +624,8 @@ export class AsocijacijeModule extends BaseGameModule {
       columns: this.buildColumns(revealAll),
       finalSolved: s.finalSolved || revealAll,
       finalSolution: s.finalSolved || revealAll ? puzzle.finalSolution : null,
+      finalWrongGuesses: s.finalSolved || revealAll ? [] : [...s.finalWrongGuesses],
+      finalHint: this.buildFinalHint(),
       activePlayerId: s.phase === 'playing' ? s.activePlayerId : null,
       activePlayerName: s.phase === 'playing' ? (activePlayer?.name ?? null) : null,
       activePlayerColor:

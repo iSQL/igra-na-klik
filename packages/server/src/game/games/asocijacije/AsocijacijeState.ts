@@ -24,6 +24,12 @@ export const BOARD_RESULTS_DURATION = 10;
 /** Rang lista between boards / at game end (tunable). */
 export const LEADERBOARD_DURATION = 6;
 
+// --- Guesses shown to everyone ---------------------------------------------
+/** Wrong guesses kept per column / for the final (oldest dropped first). */
+export const MAX_WRONG_GUESSES = 5;
+/** Longest typed guess echoed back to clients. */
+export const MAX_GUESS_LENGTH = 40;
+
 /** One field's answering context (kviz mode), server-side. */
 export interface AsocijacijeAnswering {
   col: number;
@@ -50,6 +56,16 @@ export interface AsocijacijeInternalState {
   revealed: boolean[][]; // [col][field]
   colSolved: boolean[];
   finalSolved: boolean;
+  /** Wrong typed guesses per column, [col][n] — public, not secret. */
+  colWrongGuesses: string[][];
+  finalWrongGuesses: string[];
+  /**
+   * Letter hint for the final solution: character indices (into
+   * `Array.from(finalSolution)`) in the order they get revealed, and how many
+   * are revealed so far. Only advances once every field is open.
+   */
+  hintOrder: number[];
+  hintRevealed: number;
 
   // Turn management.
   turnOrder: string[]; // playerIds, round-robin

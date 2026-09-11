@@ -223,6 +223,9 @@ function ResultBanner({
     >
       {r.actorName ? `${r.actorName}: ` : ''}
       {r.text}
+      {r.guess && (
+        <span style={{ marginLeft: '0.5rem', fontWeight: 900 }}>„{r.guess}“</span>
+      )}
     </motion.div>
   );
 }
@@ -286,15 +289,88 @@ function ColumnView({ col }: { col: AsocijacijeColumnView }) {
           {col.solved ? col.solution : '?'}
         </span>
       </div>
+
+      {!col.solved && col.wrongGuesses.length > 0 && (
+        <WrongGuesses guesses={col.wrongGuesses.slice(-3)} />
+      )}
+    </div>
+  );
+}
+
+/** Struck-through list of answers already tried and missed. */
+function WrongGuesses({ guesses }: { guesses: string[] }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: '0.3rem',
+      }}
+    >
+      {guesses.map((g) => (
+        <span
+          key={g}
+          style={{
+            padding: '0.1rem 0.45rem',
+            borderRadius: '8px',
+            background: 'rgba(229,83,60,.12)',
+            color: 'var(--danger, #E5533C)',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            textDecoration: 'line-through',
+          }}
+        >
+          {g}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Final-solution letter hint: revealed letters, blanks for the hidden ones. */
+function HintTiles({ hint }: { hint: (string | null)[] }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'flex-end' }}>
+      {hint.map((ch, i) =>
+        ch === ' ' ? (
+          <span key={i} style={{ width: '0.9rem' }} />
+        ) : (
+          <span
+            key={i}
+            style={{
+              minWidth: '2.1rem',
+              height: '2.4rem',
+              display: 'grid',
+              placeItems: 'center',
+              borderBottom: '3px solid var(--gold, #C29B47)',
+              fontSize: '1.6rem',
+              letterSpacing: 0,
+            }}
+          >
+            {ch !== null && (
+              <motion.span
+                key={ch}
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                {ch}
+              </motion.span>
+            )}
+          </span>
+        )
+      )}
     </div>
   );
 }
 
 function FinalBar({ host }: { host: AsocijacijeHostData }) {
+  const hint = host.finalSolved ? null : host.finalHint;
   return (
     <div
       style={{
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '0.8rem',
@@ -311,9 +387,16 @@ function FinalBar({ host }: { host: AsocijacijeHostData }) {
       <span style={{ color: host.finalSolved ? '#1D2A44' : 'var(--text-secondary)', fontSize: '0.95rem' }}>
         KONAČNO REŠENJE
       </span>
-      <span style={{ fontSize: '1.7rem', letterSpacing: '.04em' }}>
-        {host.finalSolved ? host.finalSolution : '?'}
-      </span>
+      {hint ? (
+        <HintTiles hint={hint} />
+      ) : (
+        <span style={{ fontSize: '1.7rem', letterSpacing: '.04em' }}>
+          {host.finalSolved ? host.finalSolution : '?'}
+        </span>
+      )}
+      {!host.finalSolved && host.finalWrongGuesses.length > 0 && (
+        <WrongGuesses guesses={host.finalWrongGuesses.slice(-4)} />
+      )}
     </div>
   );
 }

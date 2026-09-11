@@ -106,6 +106,8 @@ export interface AsocijacijeColumnView {
   /** Revealed column solution, or null while unsolved. */
   solution: string | null;
   fields: AsocijacijeFieldView[];
+  /** Wrong guesses already tried for this column, oldest first (typed text). */
+  wrongGuesses: string[];
 }
 
 export interface AsocijacijeScoreEntry {
@@ -132,6 +134,11 @@ export interface AsocijacijeResultView {
   text: string;
   /** Who acted (name), for the TV banner. */
   actorName?: string;
+  /**
+   * What the player typed for a column / final guess — shown to everyone,
+   * wrong guesses included, so nobody repeats an answer already tried.
+   */
+  guess?: string;
 }
 
 export type AsocijacijeTurnPhase =
@@ -153,6 +160,14 @@ export interface AsocijacijeHostData {
   columns: AsocijacijeColumnView[];
   finalSolved: boolean;
   finalSolution: string | null;
+  /** Wrong final-solution guesses already tried, oldest first. */
+  finalWrongGuesses: string[];
+  /**
+   * Letter hint for the final solution, present once every field is open and
+   * at least one letter was given away: one entry per character, `null` for a
+   * still-hidden letter (spaces/punctuation are always shown). Null otherwise.
+   */
+  finalHint: (string | null)[] | null;
   activePlayerId: string | null;
   activePlayerName: string | null;
   activePlayerColor: string | null;

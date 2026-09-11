@@ -11,9 +11,11 @@ import type {
   AsocijacijePuzzle,
 } from '../types/asocijacije.js';
 import {
+  ASOCIJACIJE_COLUMN_LETTERS,
   ASOCIJACIJE_COLUMNS,
   ASOCIJACIJE_FIELDS_PER_COLUMN,
 } from '../types/asocijacije.js';
+import { normalizeEmojiAnswer } from './quiz-import.js';
 
 export interface ParseAsocijacijeResult {
   pack: AsocijacijePack | null;
@@ -98,7 +100,34 @@ function parsePuzzle(raw: unknown, where: string): AsocijacijePuzzle | string {
     const acc = r.acceptFinal.map(str).filter(Boolean);
     if (acc.length) puzzle.acceptFinal = acc;
   }
+  const clash = findFinalClash(puzzle);
+  if (clash) return `${where}: konačno rešenje ne sme da bude isto kao ${clash}`;
   return puzzle;
+}
+
+/**
+ * The final solution may not be a word that is already on the board — it would
+ * be accepted as the final answer the moment someone retyped an open field or a
+ * solved column. Compared with the normalization the in-game check uses
+ * (case- and diacritics-insensitive), alternates on both sides included.
+ * Returns a description of the clash, or null.
+ */
+function findFinalClash(puzzle: AsocijacijePuzzle): string | null {
+  const finals = new Set(
+    [puzzle.finalSolution, ...(puzzle.acceptFinal ?? [])]
+      .map(normalizeEmojiAnswer)
+      .filter(Boolean)
+  );
+  const hit = (s: string) => finals.has(normalizeEmojiAnswer(s));
+  for (let ci = 0; ci < puzzle.columns.length; ci++) {
+    const col = puzzle.columns[ci];
+    const letter = ASOCIJACIJE_COLUMN_LETTERS[ci];
+    const sol = [col.solution, ...(col.acceptSolution ?? [])].find(hit);
+    if (sol) return `rešenje kolone ${letter} („${sol}“)`;
+    const fi = col.fields.findIndex((f) => hit(f.word));
+    if (fi >= 0) return `pojam ${letter}${fi + 1} („${col.fields[fi].word}“)`;
+  }
+  return null;
 }
 
 /**

@@ -66,7 +66,7 @@ export const ASOCIJACIJE_BANK: AsocijacijePuzzle[] = [
         solution: 'SO',
         fields: [
           { word: 'KUHINJA', question: 'Gde u kući stoji so?', wrongOptions: ['SPAVAĆA', 'KUPATILO', 'PODRUM'] },
-          { word: 'MORE', question: 'Odakle se dobija morska so?', wrongOptions: ['REKA', 'JEZERO', 'IZVOR'] },
+          { word: 'SOLANA', question: 'Gde se so dobija isparavanjem morske vode?', wrongOptions: ['RAFINERIJA', 'PIVARA', 'VODENICA'] },
           { word: 'ZAČIN', question: 'So je najpoznatiji ___ za jelo?', wrongOptions: ['SASTOJAK', 'DODATAK', 'PRELIV'] },
           { word: 'RUDNIK', question: 'Gde se kopa kamena so?', wrongOptions: ['PEĆINA', 'BUNAR', 'KAMENOLOM'] },
         ],

@@ -1,6 +1,6 @@
 {
   "name": "Opšte",
-  "description": "Opšte asocijacije — proleće, more, zima. Igra se i u klasik i u kviz modu.",
+  "description": "Opšte asocijacije — proleće, more, zima, škola, vatra, leto, muzika, knjiga. Igra se i u klasik i u kviz modu.",
   "puzzles": [
     {
       "finalSolution": "PROLEĆE",
@@ -231,12 +231,12 @@
               ]
             },
             {
-              "word": "MORE",
-              "question": "Odakle se dobija morska so?",
+              "word": "SOLANA",
+              "question": "Gde se so dobija isparavanjem morske vode?",
               "wrongOptions": [
-                "REKA",
-                "JEZERO",
-                "IZVOR"
+                "RAFINERIJA",
+                "PIVARA",
+                "VODENICA"
               ]
             },
             {
@@ -506,6 +506,851 @@
                 "GOVOR",
                 "MOLITVA",
                 "ZAKLETVA"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "ŠKOLA",
+      "columns": [
+        {
+          "solution": "TABLA",
+          "fields": [
+            {
+              "word": "KREDA",
+              "question": "Čime se piše po školskoj tabli?",
+              "wrongOptions": [
+                "OLOVKA",
+                "FLOMASTER",
+                "PERO"
+              ]
+            },
+            {
+              "word": "SUNĐER",
+              "question": "Čime se briše tabla posle časa?",
+              "wrongOptions": [
+                "GUMA",
+                "METLA",
+                "PAPIR"
+              ]
+            },
+            {
+              "word": "ŠAH",
+              "question": "Igra na tabli sa kraljem, kraljicom i pešacima?",
+              "wrongOptions": [
+                "DOMINE",
+                "POKER",
+                "JAMB"
+              ]
+            },
+            {
+              "word": "MNOŽENJA",
+              "question": "Tablica ___: sedam puta osam je pedeset šest?",
+              "wrongOptions": [
+                "DELJENJA",
+                "SABIRANJA",
+                "ODUZIMANJA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "ZVONO",
+          "fields": [
+            {
+              "word": "CRKVA",
+              "question": "Gde zvono zvoni nedeljom ujutru?",
+              "wrongOptions": [
+                "POŠTA",
+                "BANKA",
+                "PIJACA"
+              ]
+            },
+            {
+              "word": "ODMOR",
+              "question": "Šta počinje kad zazvoni zvono na kraju časa?",
+              "wrongOptions": [
+                "DIKTAT",
+                "PISMENI",
+                "KAZNA"
+              ]
+            },
+            {
+              "word": "BICIKL",
+              "question": "Na čemu zvonce upozorava pešake da se sklone?",
+              "wrongOptions": [
+                "KLIZALJKE",
+                "SKIJE",
+                "PADOBRAN"
+              ]
+            },
+            {
+              "word": "VRATA",
+              "question": "Gde zvonimo kad dođemo u goste?",
+              "wrongOptions": [
+                "PROZOR",
+                "TERASA",
+                "KROV"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "UČITELJ",
+          "fields": [
+            {
+              "word": "DNEVNIK",
+              "question": "U šta učitelj upisuje ocene?",
+              "wrongOptions": [
+                "KALENDAR",
+                "ALBUM",
+                "ROKOVNIK"
+              ]
+            },
+            {
+              "word": "OCENA",
+              "question": "Šta je petica u đačkoj knjižici?",
+              "wrongOptions": [
+                "KAZNA",
+                "LEKCIJA",
+                "PREDMET"
+              ]
+            },
+            {
+              "word": "RAZRED",
+              "question": "Grupa đaka koju vodi jedan učitelj?",
+              "wrongOptions": [
+                "TIM",
+                "HOR",
+                "ČOPOR"
+              ]
+            },
+            {
+              "word": "LEKCIJA",
+              "question": "Šta učitelj objašnjava na času?",
+              "wrongOptions": [
+                "ODMOR",
+                "UŽINA",
+                "IGRA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "TORBA",
+          "fields": [
+            {
+              "word": "RANAC",
+              "question": "Torba koja se nosi na leđima?",
+              "wrongOptions": [
+                "KOFER",
+                "NOVČANIK",
+                "KESA"
+              ]
+            },
+            {
+              "word": "SVESKA",
+              "question": "U šta đak piše domaći zadatak?",
+              "wrongOptions": [
+                "ČAŠA",
+                "TANJIR",
+                "JASTUK"
+              ]
+            },
+            {
+              "word": "PERNICA",
+              "question": "U čemu đak čuva olovke i gumicu?",
+              "wrongOptions": [
+                "NOVČANIK",
+                "KOFER",
+                "TEGLA"
+              ]
+            },
+            {
+              "word": "UŽINA",
+              "question": "Šta mama spakuje u torbu za veliki odmor?",
+              "wrongOptions": [
+                "ČEKIĆ",
+                "LOPATA",
+                "ČARAPA"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "VATRA",
+      "columns": [
+        {
+          "solution": "SVEĆA",
+          "fields": [
+            {
+              "word": "VOSAK",
+              "question": "Od čega se pravi sveća?",
+              "wrongOptions": [
+                "STAKLO",
+                "GLINA",
+                "PAPIR"
+              ]
+            },
+            {
+              "word": "FITILJ",
+              "question": "Koji deo sveće gori?",
+              "wrongOptions": [
+                "DRŠKA",
+                "POKLOPAC",
+                "DNO"
+              ]
+            },
+            {
+              "word": "ROĐENDAN",
+              "question": "Kada duvamo svećice na torti i zamišljamo želju?",
+              "wrongOptions": [
+                "SVADBA",
+                "ISPRAĆAJ",
+                "KRŠTENJE"
+              ]
+            },
+            {
+              "word": "SLAVA",
+              "question": "Na kojoj srpskoj porodičnoj proslavi se pali sveća i seče kolač?",
+              "wrongOptions": [
+                "MATURA",
+                "SVADBA",
+                "ISPRAĆAJ"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "KAMIN",
+          "fields": [
+            {
+              "word": "DIMNJAK",
+              "question": "Kuda izlazi dim iz kamina?",
+              "wrongOptions": [
+                "PROZOR",
+                "PODRUM",
+                "OLUK"
+              ]
+            },
+            {
+              "word": "DRVA",
+              "question": "Šta se loži u kaminu?",
+              "wrongOptions": [
+                "KAMEN",
+                "PESAK",
+                "LED"
+              ]
+            },
+            {
+              "word": "ZIMA",
+              "question": "U koje doba godine najviše ložimo kamin?",
+              "wrongOptions": [
+                "LETO",
+                "PROLEĆE",
+                "JESEN"
+              ]
+            },
+            {
+              "word": "ČARAPE",
+              "question": "Šta se kači iznad kamina da Deda Mraz napuni poklonima?",
+              "wrongOptions": [
+                "RUKAVICE",
+                "KAPE",
+                "CIPELE"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "POŽAR",
+          "fields": [
+            {
+              "word": "VATROGASAC",
+              "question": "Ko gasi požar?",
+              "wrongOptions": [
+                "POLICAJAC",
+                "LEKAR",
+                "POŠTAR"
+              ]
+            },
+            {
+              "word": "ŠUMA",
+              "question": "Gde leti često izbije veliki požar?",
+              "wrongOptions": [
+                "MORE",
+                "JEZERO",
+                "PEĆINA"
+              ]
+            },
+            {
+              "word": "ALARM",
+              "question": "Šta zapišti u zgradi kad se pojavi dim?",
+              "wrongOptions": [
+                "TELEFON",
+                "RADIO",
+                "ČAJNIK"
+              ]
+            },
+            {
+              "word": "SIRENA",
+              "question": "Šta zavija na vatrogasnom kamionu?",
+              "wrongOptions": [
+                "HLADNJAK",
+                "RADIO",
+                "BRISAČ"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "ZMAJ",
+          "fields": [
+            {
+              "word": "KRILA",
+              "question": "Čime zmaj leti?",
+              "wrongOptions": [
+                "PERAJA",
+                "TOČKOVI",
+                "JEDRA"
+              ]
+            },
+            {
+              "word": "PAPIR",
+              "question": "Od čega deca prave zmaja koji leti na vetru?",
+              "wrongOptions": [
+                "KAMEN",
+                "GVOŽĐE",
+                "STAKLO"
+              ]
+            },
+            {
+              "word": "JOVAN",
+              "question": "Kako se zvao Zmaj, pesnik dečjih pesama?",
+              "wrongOptions": [
+                "BRANKO",
+                "DUŠAN",
+                "LAZA"
+              ]
+            },
+            {
+              "word": "BAJKA",
+              "question": "U kakvoj priči zmaj čuva zarobljenu princezu?",
+              "wrongOptions": [
+                "VEST",
+                "RECEPT",
+                "ZAKON"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "LETO",
+      "columns": [
+        {
+          "solution": "SLADOLED",
+          "fields": [
+            {
+              "word": "KORNET",
+              "question": "U čemu se služi kugla sladoleda?",
+              "wrongOptions": [
+                "TANJIR",
+                "ČAŠA",
+                "KESA"
+              ]
+            },
+            {
+              "word": "VANILA",
+              "question": "Koji je najklasičniji ukus belog sladoleda?",
+              "wrongOptions": [
+                "KAKAO",
+                "JAGODA",
+                "MALINA"
+              ]
+            },
+            {
+              "word": "KUGLA",
+              "question": "Kako se zove jedna porcija sladoleda u kornetu?",
+              "wrongOptions": [
+                "KOCKA",
+                "ŠOLJA",
+                "TEGLA"
+              ]
+            },
+            {
+              "word": "POSLASTIČARNICA",
+              "question": "Gde kupujemo sladoled i kolače?",
+              "wrongOptions": [
+                "APOTEKA",
+                "MESARA",
+                "KNJIŽARA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "RASPUST",
+          "fields": [
+            {
+              "word": "SVEDOČANSTVO",
+              "question": "Šta đaci dobijaju poslednjeg dana škole?",
+              "wrongOptions": [
+                "UPOZORENJE",
+                "PASOŠ",
+                "RAČUN"
+              ]
+            },
+            {
+              "word": "ODMOR",
+              "question": "Šta imamo kad ne idemo ni u školu ni na posao?",
+              "wrongOptions": [
+                "ISPIT",
+                "TRENING",
+                "SMENA"
+              ]
+            },
+            {
+              "word": "KAMP",
+              "question": "Gde deca spavaju u šatorima tokom raspusta?",
+              "wrongOptions": [
+                "HOTEL",
+                "BOLNICA",
+                "INTERNAT"
+              ]
+            },
+            {
+              "word": "SLOBODA",
+              "question": "Kakav osećaj donosi prvi dan raspusta?",
+              "wrongOptions": [
+                "STRAH",
+                "DOSADA",
+                "TUGA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "PLAŽA",
+          "fields": [
+            {
+              "word": "PEŠKIR",
+              "question": "Na čemu ležimo na pesku?",
+              "wrongOptions": [
+                "JASTUK",
+                "TEPIH",
+                "STOLNJAK"
+              ]
+            },
+            {
+              "word": "SUNCOBRAN",
+              "question": "Šta nas štiti od sunca na plaži?",
+              "wrongOptions": [
+                "KABANICA",
+                "ŠAL",
+                "RUKAVICE"
+              ]
+            },
+            {
+              "word": "KUPAĆI",
+              "question": "___ kostim nosimo na plaži?",
+              "wrongOptions": [
+                "VEČERNJI",
+                "SVEČANI",
+                "ZIMSKI"
+              ]
+            },
+            {
+              "word": "ŠKOLJKA",
+              "question": "Šta skupljamo pored mora za uspomenu?",
+              "wrongOptions": [
+                "KESTEN",
+                "ŽIR",
+                "ŠIŠARKA"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "LUBENICA",
+          "fields": [
+            {
+              "word": "KOŠTICE",
+              "question": "Crne semenke u lubenici?",
+              "wrongOptions": [
+                "LJUSKE",
+                "KORE",
+                "IGLICE"
+              ]
+            },
+            {
+              "word": "ZELENA",
+              "question": "Koje je boje kora lubenice?",
+              "wrongOptions": [
+                "PLAVA",
+                "LJUBIČASTA",
+                "CRNA"
+              ]
+            },
+            {
+              "word": "BOSTAN",
+              "question": "Kako se zove njiva na kojoj rastu lubenice?",
+              "wrongOptions": [
+                "VINOGRAD",
+                "VOĆNJAK",
+                "PAŠNJAK"
+              ]
+            },
+            {
+              "word": "KRIŠKA",
+              "question": "Kako se zove odsečeno parče lubenice?",
+              "wrongOptions": [
+                "KUGLA",
+                "KAP",
+                "MRVICA"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "MUZIKA",
+      "columns": [
+        {
+          "solution": "GITARA",
+          "fields": [
+            {
+              "word": "ŽICE",
+              "question": "Šta se trza na gitari?",
+              "wrongOptions": [
+                "DIRKE",
+                "PALICE",
+                "CEVI"
+              ]
+            },
+            {
+              "word": "AKORD",
+              "question": "Kako se zove više tonova odsviranih zajedno?",
+              "wrongOptions": [
+                "RITAM",
+                "TAKT",
+                "REFREN"
+              ]
+            },
+            {
+              "word": "ROK",
+              "question": "Koji muzički pravac je nezamisliv bez električne gitare?",
+              "wrongOptions": [
+                "VALCER",
+                "OPERA",
+                "POLKA"
+              ]
+            },
+            {
+              "word": "TRZALICA",
+              "question": "Mala pločica kojom se trzaju žice?",
+              "wrongOptions": [
+                "GUDALO",
+                "PALICA",
+                "ČEKIĆ"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "KONCERT",
+          "fields": [
+            {
+              "word": "BINA",
+              "question": "Gde stoje muzičari na koncertu?",
+              "wrongOptions": [
+                "TRIBINA",
+                "KLUPA",
+                "GARDEROBA"
+              ]
+            },
+            {
+              "word": "ULAZNICA",
+              "question": "Šta kupujemo da uđemo na koncert?",
+              "wrongOptions": [
+                "RAČUN",
+                "RECEPT",
+                "VIZA"
+              ]
+            },
+            {
+              "word": "BIS",
+              "question": "Šta publika viče da bi čula još jednu pesmu?",
+              "wrongOptions": [
+                "STOP",
+                "TIŠINA",
+                "KRAJ"
+              ]
+            },
+            {
+              "word": "APLAUZ",
+              "question": "Čime publika nagrađuje izvođače?",
+              "wrongOptions": [
+                "ZVIŽDUK",
+                "ŠAPAT",
+                "ZEVANJE"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "HOR",
+          "fields": [
+            {
+              "word": "DIRIGENT",
+              "question": "Ko vodi hor i orkestar?",
+              "wrongOptions": [
+                "SUDIJA",
+                "KAPETAN",
+                "TRENER"
+              ]
+            },
+            {
+              "word": "GLAS",
+              "question": "Koji „instrument” koristi svaki pevač?",
+              "wrongOptions": [
+                "KLAVIR",
+                "BUBANJ",
+                "VIOLINA"
+              ]
+            },
+            {
+              "word": "SOPRAN",
+              "question": "Najviši ženski glas u horu?",
+              "wrongOptions": [
+                "BAS",
+                "BARITON",
+                "TENOR"
+              ]
+            },
+            {
+              "word": "NOTE",
+              "question": "Šta horista čita dok peva?",
+              "wrongOptions": [
+                "NOVINE",
+                "MAPA",
+                "RECEPT"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "RADIO",
+          "fields": [
+            {
+              "word": "STANICA",
+              "question": "Kako se zove radio-kanal koji slušamo?",
+              "wrongOptions": [
+                "PERON",
+                "LUKA",
+                "KOLOSEK"
+              ]
+            },
+            {
+              "word": "ANTENA",
+              "question": "Šta na radiju hvata signal?",
+              "wrongOptions": [
+                "POKLOPAC",
+                "DUGME",
+                "DRŠKA"
+              ]
+            },
+            {
+              "word": "VODITELJ",
+              "question": "Ko najavljuje pesme na radiju?",
+              "wrongOptions": [
+                "GLUMAC",
+                "SUDIJA",
+                "KONOBAR"
+              ]
+            },
+            {
+              "word": "SLUŠALAC",
+              "question": "Kako se zove onaj ko sluša radio?",
+              "wrongOptions": [
+                "GLEDALAC",
+                "ČITALAC",
+                "POSETILAC"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "finalSolution": "KNJIGA",
+      "columns": [
+        {
+          "solution": "BIBLIOTEKA",
+          "fields": [
+            {
+              "word": "POLICA",
+              "question": "Na čemu stoje knjige?",
+              "wrongOptions": [
+                "PROZOR",
+                "TAVAN",
+                "KREVET"
+              ]
+            },
+            {
+              "word": "ČLANSKA",
+              "question": "___ karta je potrebna za pozajmljivanje knjiga?",
+              "wrongOptions": [
+                "KREDITNA",
+                "AVIONSKA",
+                "ZDRAVSTVENA"
+              ]
+            },
+            {
+              "word": "TIŠINA",
+              "question": "Šta se traži u čitaonici?",
+              "wrongOptions": [
+                "GALAMA",
+                "VIKA",
+                "PESMA"
+              ]
+            },
+            {
+              "word": "POZAJMICA",
+              "question": "Kako se zove uzimanje knjige na čitanje uz obavezu vraćanja?",
+              "wrongOptions": [
+                "KUPOVINA",
+                "KRAĐA",
+                "POKLON"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "PISAC",
+          "fields": [
+            {
+              "word": "ROMAN",
+              "question": "Kakvo je delo „Na Drini ćuprija”?",
+              "wrongOptions": [
+                "PESMA",
+                "BASNA",
+                "ZAGONETKA"
+              ]
+            },
+            {
+              "word": "ANDRIĆ",
+              "question": "Koji pisac sa ovih prostora je dobio Nobelovu nagradu?",
+              "wrongOptions": [
+                "ĆOSIĆ",
+                "PAVIĆ",
+                "SELIMOVIĆ"
+              ]
+            },
+            {
+              "word": "PERO",
+              "question": "Čime se nekad pisalo uz mastilo?",
+              "wrongOptions": [
+                "KREDA",
+                "ČETKICA",
+                "KAMEN"
+              ]
+            },
+            {
+              "word": "RUKOPIS",
+              "question": "Kako se zove tekst koji pisac predaje izdavaču?",
+              "wrongOptions": [
+                "RECEPT",
+                "RAČUN",
+                "PLAKAT"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "STRANICA",
+          "fields": [
+            {
+              "word": "BROJ",
+              "question": "Šta piše u donjem uglu svake stranice?",
+              "wrongOptions": [
+                "DATUM",
+                "POTPIS",
+                "ADRESA"
+              ]
+            },
+            {
+              "word": "LIST",
+              "question": "Kako se zove jedan papir u knjizi, sa dve strane?",
+              "wrongOptions": [
+                "KORICA",
+                "MARGINA",
+                "NASLOV"
+              ]
+            },
+            {
+              "word": "SADRŽAJ",
+              "question": "Spisak poglavlja sa brojevima stranica?",
+              "wrongOptions": [
+                "PREDGOVOR",
+                "NASLOV",
+                "POGOVOR"
+              ]
+            },
+            {
+              "word": "OBELEŽIVAČ",
+              "question": "Šta stavljamo među stranice da znamo dokle smo stigli?",
+              "wrongOptions": [
+                "SPAJALICA",
+                "GUMICA",
+                "LENJIR"
+              ]
+            }
+          ]
+        },
+        {
+          "solution": "ČITANJE",
+          "fields": [
+            {
+              "word": "NAOČARE",
+              "question": "Šta baka stavi kad hoće da čita?",
+              "wrongOptions": [
+                "RUKAVICE",
+                "ŠEŠIR",
+                "MARAMA"
+              ]
+            },
+            {
+              "word": "SLOVA",
+              "question": "Od čega se sastoje reči koje čitamo?",
+              "wrongOptions": [
+                "BOJE",
+                "OBLICI",
+                "ZVEZDE"
+              ]
+            },
+            {
+              "word": "GLASNO",
+              "question": "Kako čitamo kad ostali treba da čuju?",
+              "wrongOptions": [
+                "TIHO",
+                "NAOPAKO",
+                "UNAZAD"
+              ]
+            },
+            {
+              "word": "BUKVAR",
+              "question": "Prva knjiga iz koje deca uče da čitaju?",
+              "wrongOptions": [
+                "ATLAS",
+                "REČNIK",
+                "KUVAR"
               ]
             }
           ]

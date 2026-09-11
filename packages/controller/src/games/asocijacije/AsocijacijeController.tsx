@@ -123,7 +123,13 @@ function PlayingView({
               : 'rgba(229,83,60,.14)',
           }}
         >
+          {host.lastResult.actorName ? `${host.lastResult.actorName}: ` : ''}
           {host.lastResult.text}
+          {host.lastResult.guess && (
+            <span style={{ marginLeft: '0.35rem', fontWeight: 900 }}>
+              „{host.lastResult.guess}“
+            </span>
+          )}
         </div>
       )}
 
@@ -141,6 +147,8 @@ function PlayingView({
               onSelectCol={selectColumn}
             />
           )}
+
+          {(isActive || hostless) && <FinalRow host={host} />}
 
           {isActive && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.2rem' }}>
@@ -173,6 +181,7 @@ function PlayingView({
                   <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>
                     Rešenje · Kolona {host.columns[selectedCol].letter}
                   </span>
+                  <TriedLine guesses={host.columns[selectedCol].wrongGuesses} />
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <input
                       ref={colInputRef}
@@ -233,6 +242,7 @@ function PlayingView({
                   }}
                 >
                   <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>Konačno rešenje</span>
+                  <TriedLine guesses={host.finalWrongGuesses} />
                   <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <input
                       value={finalGuess}
@@ -458,6 +468,91 @@ function ColumnMini({
           {col.solved ? col.solution : '?'}
         </span>
       </button>
+
+      {!col.solved &&
+        col.wrongGuesses.slice(-2).map((g) => (
+          <span
+            key={g}
+            style={{
+              textAlign: 'center',
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: 'var(--danger, #E5533C)',
+              textDecoration: 'line-through',
+              wordBreak: 'break-word',
+            }}
+          >
+            {g}
+          </span>
+        ))}
+    </div>
+  );
+}
+
+/** "Već pokušano: …" — answers already missed, so nobody retypes them. */
+function TriedLine({ guesses }: { guesses: string[] }) {
+  if (guesses.length === 0) return null;
+  return (
+    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+      Već pokušano:{' '}
+      {guesses.map((g, i) => (
+        <span key={g}>
+          {i > 0 && ', '}
+          <span style={{ color: 'var(--danger, #E5533C)', textDecoration: 'line-through' }}>
+            {g}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Final solution strip under the board: letter hint + missed final guesses. */
+function FinalRow({ host }: { host: AsocijacijeHostData }) {
+  const hint = host.finalHint;
+  if (!hint && host.finalWrongGuesses.length === 0) return null;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.3rem',
+        padding: '0.45rem 0.5rem',
+        borderRadius: '10px',
+        border: '1px solid var(--gold, #C29B47)',
+        background: 'rgba(194,155,71,.08)',
+      }}
+    >
+      <span style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '.06em', opacity: 0.85 }}>
+        KONAČNO REŠENJE
+      </span>
+      {hint && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.2rem' }}>
+          {hint.map((ch, i) =>
+            ch === ' ' ? (
+              <span key={i} style={{ width: '0.5rem' }} />
+            ) : (
+              <span
+                key={i}
+                style={{
+                  minWidth: '1.15rem',
+                  height: '1.5rem',
+                  display: 'grid',
+                  placeItems: 'center',
+                  borderBottom: '2px solid var(--gold, #C29B47)',
+                  fontWeight: 800,
+                  fontSize: '1rem',
+                }}
+              >
+                {ch ?? ''}
+              </span>
+            )
+          )}
+        </div>
+      )}
+      <TriedLine guesses={host.finalWrongGuesses} />
     </div>
   );
 }

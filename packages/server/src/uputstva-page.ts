@@ -45,7 +45,8 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
     body: `<p>TV „Slagalica" asocijacije: tabla ima <strong>4 kolone (A, B, C, D)</strong>, svaka sa 4 skrivena polja, i jedno <strong>konačno rešenje</strong> koje povezuje sva četiri rešenja kolona.</p>
 <ul>
 <li>Igrači se smenjuju na potezu. Na svom potezu <strong>otvoriš jedno polje</strong> (otkrije se pojam), pa možeš da <strong>pogodiš rešenje kolone</strong>, <strong>pokušaš konačno rešenje</strong> ili predaš potez.</li>
-<li><strong>Tačno</strong> pogađanje nosi poene i <em>nastavljaš</em> potez; <strong>promašaj</strong> prepušta potez sledećem igraču.</li>
+<li><strong>Tačno</strong> pogađanje nosi poene i <em>nastavljaš</em> potez; <strong>promašaj</strong> prepušta potez sledećem igraču. Svi vide šta je ukucano — i promašene odgovore, da se ne ponavljaju.</li>
+<li>Kad su <strong>sva polja otvorena</strong>, svaki predat potez otkriva <strong>po jedno slovo</strong> konačnog rešenja. Ako bi se otkrilo i poslednje slovo, tabla se završava bez pobednika.</li>
 <li>Poeni: rešenje kolone <strong>+300</strong>, konačno rešenje <strong>+1000</strong>.</li>
 <li><strong>Klasik mod</strong>: polje se otvara tapom. <strong>Kviz mod</strong>: da otvoriš polje moraš tačno da odgovoriš na pitanje (a/b/c/d) — tačan odgovor je ujedno i pojam u polju.</li>
 <li>Tabla se završava kad neko pogodi konačno rešenje; pobednik je igrač sa najviše poena.</li>
