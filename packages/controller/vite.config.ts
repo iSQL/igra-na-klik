@@ -50,6 +50,11 @@ export default defineConfig(() => ({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      // Slika za Puzlu (drži je server u memoriji, po sobi).
+      '/puzla-slika': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 }));

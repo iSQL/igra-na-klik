@@ -21,6 +21,7 @@ import type { HotPotatoMode } from './hot-potato.js';
 import type { SpijunPack } from '../games/spijun-import.js';
 import type { PlayerAward } from '../games/awards.js';
 import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
+import type { PuzlaMode, PuzlaUploadAck } from './puzla.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -174,11 +175,28 @@ export interface ClientToServerEvents {
     // Osvajanje: koliko partija traje — do poslednjeg zamka ili N rundi.
     bitkaMode?: BitkaMode;
     bitkaRounds?: number;
+    // Puzla: the image uploaded earlier through `host:puzla-image` (the server
+    // refuses the start if this id isn't the room's current image), the
+    // nominal piece count (16/36/64/100 — the real grid follows the aspect),
+    // whether pieces start rotated, and deadline vs untimed.
+    puzlaImageId?: string;
+    puzlaPieces?: number;
+    puzlaRotation?: boolean;
+    puzlaMode?: PuzlaMode;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.
     language?: Language;
   }) => void;
+  // Puzla image upload at game-select — the platform's only socket ack. The
+  // client re-encodes to a JPEG under PUZLA_CLIENT_TARGET_BYTES first (see
+  // puzla-rules.ts for why the cap sits well below maxHttpBufferSize). Accepted
+  // from the host or the remote-host holder, in the lobby only; one image per
+  // room, replaced by the next upload, gone when the room is destroyed.
+  'host:puzla-image': (
+    data: { bytes: ArrayBuffer },
+    ack: (res: PuzlaUploadAck) => void
+  ) => void;
   'host:stop-game': () => void;
   // Close/delete the room entirely. Accepted from the host socket or the
   // remote-host holder; kicks all players, host auto-creates a fresh room.

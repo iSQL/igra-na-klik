@@ -8,6 +8,8 @@ import {
   DRAW_GUESS_TIME_OPTIONS,
   SLOZILICA_LETTER_OPTIONS,
   SLOZILICA_LETTER_DEFAULT,
+  PUZLA_PIECE_DEFAULT,
+  PUZLA_PIECE_OPTIONS,
   KVIZ_CATEGORIES,
   kvizCategory,
   normalizeEmojiAnswer,
@@ -31,6 +33,7 @@ import type {
   AsocijacijePackSummary,
   BitkaMapSummary,
   BitkaMode,
+  PuzlaMode,
 } from '@igra/shared';
 import {
   getRecentPackIds,
@@ -47,6 +50,7 @@ import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 import { unpackQuizZip } from '../utils/quizZipImport';
+import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
 
 interface QuestionPackSummary {
   id: string;
@@ -300,6 +304,11 @@ export function GameSelectScreen() {
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it); missing key → GAME_ROUND_CONFIG default.
   const [roundCounts, setRoundCounts] = useState<Record<string, number>>({});
+  // Puzla: the uploaded picture lives in gameStore (survives leaving this
+  // screen); the knobs below are cheap to lose.
+  const [puzlaPieces, setPuzlaPieces] = useState(PUZLA_PIECE_DEFAULT);
+  const [puzlaRotation, setPuzlaRotation] = useState(false);
+  const [puzlaMode, setPuzlaMode] = useState<PuzlaMode>('vreme');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -488,6 +497,17 @@ export function GameSelectScreen() {
     }
     if (game.id === 'slozilica') {
       payload.slozilicaLetters = slozilicaLetters;
+    }
+    if (game.id === 'puzla') {
+      const image = useGameStore.getState().puzlaImage;
+      if (!image || image.roomCode !== room.code) {
+        setErrorMessage(t('puzla.config.needImage'));
+        return;
+      }
+      payload.puzlaImageId = image.imageId;
+      payload.puzlaPieces = puzlaPieces;
+      payload.puzlaRotation = puzlaRotation;
+      payload.puzlaMode = puzlaMode;
     }
     if (game.id === 'quiz') {
       // Inline file import wins; otherwise the pack multi-select travels as
@@ -1344,6 +1364,42 @@ export function GameSelectScreen() {
                       options={[...SLOZILICA_LETTER_OPTIONS]}
                       onSelect={setSlozilicaLetters}
                     />
+                  )}
+                  {game.id === 'puzla' && (
+                    <>
+                      <PuzlaImagePicker roomCode={room.code} />
+                      <RoundsConfig
+                        label={t('puzla.config.pieces')}
+                        value={puzlaPieces}
+                        options={[...PUZLA_PIECE_OPTIONS]}
+                        onSelect={setPuzlaPieces}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {t('puzla.config.mode')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill active={puzlaMode === 'vreme'} onClick={() => setPuzlaMode('vreme')}>
+                            ⏳ {t('puzla.config.modeTimed')}
+                          </Pill>
+                          <Pill active={puzlaMode === 'opusteno'} onClick={() => setPuzlaMode('opusteno')}>
+                            ☕ {t('puzla.config.modeRelaxed')}
+                          </Pill>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill active={puzlaRotation} onClick={() => setPuzlaRotation(!puzlaRotation)}>
+                            🔄 {t('puzla.config.rotation')}
+                          </Pill>
+                        </div>
+                        {puzlaRotation && (
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                            {t('puzla.config.rotationHint')}
+                          </span>
+                        )}
+                      </div>
+                    </>
                   )}
                   {game.id === 'draw-guess' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>

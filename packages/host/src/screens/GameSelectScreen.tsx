@@ -5,6 +5,7 @@ import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
+  PUZLA_PIECE_OPTIONS,
   SLOZILICA_LETTER_OPTIONS,
 } from '@igra/shared';
 import type {
@@ -72,6 +73,7 @@ import {
   fibbageCategoriesOf,
 } from '../store/fibbageConfigStore';
 import { TajniAgentiImportButton } from '../components/TajniAgentiImportButton';
+import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useLanguageStore } from '../store/languageStore';
 import { useT } from '../i18n/useT';
@@ -170,6 +172,7 @@ function tagStyle(category: GameCategory): CSSProperties {
 export function GameSelectScreen() {
   const setStatus = useRoomStore((s) => s.setStatus);
   const players = useRoomStore((s) => s.players);
+  const roomCode = useRoomStore((s) => s.room?.code ?? null);
   const games = Object.values(GAME_DEFINITIONS);
   const selectedRounds = useSlepiConfigStore((s) => s.selectedRounds);
   const setSelectedRounds = useSlepiConfigStore((s) => s.setSelectedRounds);
@@ -394,6 +397,18 @@ export function GameSelectScreen() {
         ? useTajniAgentiImportStore.getState().customPack ?? undefined
         : undefined;
 
+    // Puzla: the picture must already be uploaded — and for THIS room; one
+    // from a previous room (TV reload) is gone from the server.
+    let puzlaImageId: string | undefined;
+    if (gameId === 'puzla') {
+      const image = useGameStore.getState().puzlaImage;
+      if (!image || image.roomCode !== roomCode) {
+        setErrorMessage(t('puzla.config.needImage'));
+        return;
+      }
+      puzlaImageId = image.imageId;
+    }
+
     const payload: HostStartGamePayload = {
       gameId,
       customQuestions,
@@ -477,6 +492,11 @@ export function GameSelectScreen() {
         gameId === 'osvajanje' && newGamesConfig.bitkaMode === 'runde'
           ? newGamesConfig.bitkaRounds
           : undefined,
+      puzlaImageId,
+      puzlaPieces: gameId === 'puzla' ? newGamesConfig.puzlaPieces : undefined,
+      puzlaRotation:
+        gameId === 'puzla' ? newGamesConfig.puzlaRotation : undefined,
+      puzlaMode: gameId === 'puzla' ? newGamesConfig.puzlaMode : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -968,6 +988,47 @@ export function GameSelectScreen() {
           options={[...SLOZILICA_LETTER_OPTIONS]}
           onSelect={newGamesConfig.setSlozilicaLetters}
         />
+      )}
+      {game.id === 'puzla' && (
+        <>
+          <PuzlaImagePicker roomCode={roomCode} />
+          <PillRow
+            label={t('puzla.config.pieces')}
+            value={newGamesConfig.puzlaPieces}
+            options={[...PUZLA_PIECE_OPTIONS]}
+            onSelect={newGamesConfig.setPuzlaPieces}
+          />
+          <TextPillRow
+            label={t('puzla.config.mode')}
+            value={newGamesConfig.puzlaMode}
+            options={[
+              { value: 'vreme', label: `⏳ ${t('puzla.config.modeTimed')}` },
+              { value: 'opusteno', label: `☕ ${t('puzla.config.modeRelaxed')}` },
+            ]}
+            onSelect={(v) =>
+              newGamesConfig.setPuzlaMode(v === 'opusteno' ? 'opusteno' : 'vreme')
+            }
+          />
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <TogglePill
+              label={`🔄 ${t('puzla.config.rotation')}`}
+              checked={newGamesConfig.puzlaRotation}
+              onToggle={newGamesConfig.setPuzlaRotation}
+            />
+          </div>
+          {newGamesConfig.puzlaRotation && (
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                margin: 0,
+              }}
+            >
+              {t('puzla.config.rotationHint')}
+            </p>
+          )}
+        </>
       )}
       {game.id === 'draw-guess' && (
         <TextPillRow

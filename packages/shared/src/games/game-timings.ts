@@ -142,6 +142,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'puzla',
+    gameName: 'Puzla',
+    fields: [
+      { key: 'PREGLED_DURATION', label: 'Pregled slike pre slaganja', min: 3, max: 20, def: 6 },
+      { key: 'KRAJ_DURATION', label: 'Završna slika', min: 4, max: 40, def: 12 },
+    ],
+  },
+  {
     gameId: 'tajni-agenti',
     gameName: 'Tajni agenti',
     fields: [

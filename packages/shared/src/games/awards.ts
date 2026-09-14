@@ -225,6 +225,28 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'positive',
     subtitle: 'Najviše dobijenih rundi',
   },
+  // Puzla
+  spajalica: {
+    id: 'spajalica',
+    title: 'Spajalica',
+    emoji: '🧷',
+    tone: 'positive',
+    subtitle: 'Najviše spojenih komadića',
+  },
+  ramar: {
+    id: 'ramar',
+    title: 'Ramar',
+    emoji: '🖼️',
+    tone: 'positive',
+    subtitle: 'Najviše komadića uglavljenih u ram',
+  },
+  'zavrsni-potez': {
+    id: 'zavrsni-potez',
+    title: 'Završni potez',
+    emoji: '✨',
+    tone: 'positive',
+    subtitle: 'Poslednji komadić je njegov',
+  },
   // Neutral fillers — guarantee everyone gets a diploma
   'dusa-drustva': {
     id: 'dusa-drustva',

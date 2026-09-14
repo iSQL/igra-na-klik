@@ -8,6 +8,11 @@ import type {
 import { GameManager } from '../../game/GameManager.js';
 import { RoomManager } from '../../room/RoomManager.js';
 import { createRateLimiter, createThrottle } from '../rate-limit.js';
+import {
+  puzlaImages,
+  puzlaImageUrl,
+  validatePuzlaJpeg,
+} from '../../game/games/puzla/puzla-image-store.js';
 
 type IoServer = Server<
   ClientToServerEvents,
@@ -34,6 +39,7 @@ export function registerGameHandlers(
   const playerActionLimiter = createRateLimiter(60);
   const hostActionLimiter = createRateLimiter(20);
   const startStopThrottle = createThrottle(500);
+  const puzlaUploadThrottle = createThrottle(2000);
 
   const canControl = (): boolean => {
     const { roomCode, isHost, playerId } = socket.data;
@@ -88,11 +94,57 @@ export function registerGameHandlers(
       bitkaMapId: data.bitkaMapId,
       bitkaMode: data.bitkaMode,
       bitkaRounds: data.bitkaRounds,
+      slozilicaLetters: data.slozilicaLetters,
+      puzlaImageId: data.puzlaImageId,
+      puzlaPieces: data.puzlaPieces,
+      puzlaRotation: data.puzlaRotation,
+      puzlaMode: data.puzlaMode,
       language: data.language,
     });
     if (result.error) {
       socket.emit('error', { code: 'START_ERROR', message: result.error });
     }
+  });
+
+  // Puzla picture. Every refusal is answered through the ack — a silent drop
+  // would leave the picker spinning until its client-side timeout.
+  socket.on('host:puzla-image', (data, ack) => {
+    if (typeof ack !== 'function') return;
+    const { roomCode } = socket.data;
+    if (!roomCode || !canControl()) {
+      ack({ ok: false, error: 'Sliku bira domaćin.' });
+      return;
+    }
+    const room = roomManager.getRoom(roomCode);
+    if (!room || room.status !== 'lobby') {
+      // A mid-game re-upload would swap the id under a running puzzle.
+      ack({ ok: false, error: 'Slika se bira pre početka igre.' });
+      return;
+    }
+    const bytes = (data as { bytes?: unknown } | undefined)?.bytes;
+    const checked = validatePuzlaJpeg(bytes);
+    if ('error' in checked) {
+      ack({ ok: false, error: checked.error });
+      return;
+    }
+    if (!puzlaUploadThrottle()) {
+      ack({ ok: false, error: 'Sačekaj trenutak pa pokušaj ponovo.' });
+      return;
+    }
+    const image = puzlaImages.put(
+      roomCode,
+      bytes as Buffer,
+      checked.width,
+      checked.height,
+      (code) => roomManager.getRoom(code)?.status === 'in-game'
+    );
+    ack({
+      ok: true,
+      imageId: image.id,
+      url: puzlaImageUrl(roomCode, image.id),
+      width: image.width,
+      height: image.height,
+    });
   });
 
   socket.on('host:stop-game', () => {

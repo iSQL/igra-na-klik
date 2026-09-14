@@ -366,6 +366,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.splav.name': 'Splav',
     'game.splav.description':
       'Sumo na splavu koji se smanjuje. Vozi džojstikom, čuvaj nalet za pravi trenutak i izguraj ostale u vodu — poslednji na splavu nosi rundu!',
+    'game.puzla.name': 'Puzla',
+    'game.puzla.description':
+      'Izaberi svoju sliku, igra je iseče na komadiće — složite je zajedno, svako sa svog telefona, pre nego što istekne vreme!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'Kako se igra →',
     'gameSelect.howToPlayLabel': 'Kako se igra',
@@ -483,6 +486,24 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Telefon je džojstik: levo voziš, desno je nalet. Samo nalet nekoga stvarno izbacuje, a puni se oko 2 sekunde.',
     'game.splav.rule3':
       'Poeni idu i za plasman i za guranje — svako koga izguraš vredi 120. Poslednji na splavu nosi rundu.',
+    'game.puzla.blurb': 'Složite svoju sliku zajedno.',
+    'game.puzla.rule1':
+      'Domaćin izabere sliku sa svog uređaja, a igra je iseče na 16, 36, 64 ili 100 komadića.',
+    'game.puzla.rule2':
+      'Svako na svom telefonu vidi ceo sto: prstom vuci komadić, dva prsta zumiraju. Komadići koji se uklope sami se spoje.',
+    'game.puzla.rule3':
+      'Igra se zajedno protiv sata (ili opušteno, bez vremena) — ali svako spajanje nosi poene onome ko ga je napravio.',
+    'puzla.config.image': 'Slika',
+    'puzla.config.pickImage': 'Izaberi sliku',
+    'puzla.config.changeImage': 'Promeni sliku',
+    'puzla.config.uploading': 'Otpremam…',
+    'puzla.config.needImage': 'Prvo izaberi sliku za slagalicu.',
+    'puzla.config.pieces': 'Broj komadića',
+    'puzla.config.rotation': 'Okrenuti komadići',
+    'puzla.config.rotationHint': 'Komadići kreću okrenuti — tapni komadić da ga zarotiraš.',
+    'puzla.config.mode': 'Vreme',
+    'puzla.config.modeTimed': 'Na vreme',
+    'puzla.config.modeRelaxed': 'Opušteno',
   },
 
   en: {
@@ -838,6 +859,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.splav.name': 'The Raft',
     'game.splav.description':
       'Sumo on a shrinking raft. Steer with the stick, save your dash for the right moment and shove everyone else into the water — last one aboard takes the round!',
+    'game.puzla.name': 'Jigsaw',
+    'game.puzla.description':
+      'Pick your own picture, the game cuts it into pieces — put it back together as a team, each from your own phone, before time runs out!',
     // --- game-select cards: tags, short blurbs, "how to play" -------------
     'gameSelect.howToPlay': 'How to play →',
     'gameSelect.howToPlayLabel': 'How to play',
@@ -959,6 +983,24 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'The phone is a joystick: steer on the left, dash on the right. Only a dash really ejects someone, and it recharges in about 2 seconds.',
     'game.splav.rule3':
       'Points come from placing and from shoving — every player you push in is worth 120. Last one aboard takes the round.',
+    'game.puzla.blurb': 'Assemble your own picture together.',
+    'game.puzla.rule1':
+      'The host picks a picture from their device and the game cuts it into 16, 36, 64 or 100 pieces.',
+    'game.puzla.rule2':
+      'Everyone sees the whole table on their phone: drag a piece with a finger, pinch to zoom. Pieces that fit snap together.',
+    'game.puzla.rule3':
+      'You play as a team against the clock (or relaxed, untimed) — but every join scores for whoever made it.',
+    'puzla.config.image': 'Picture',
+    'puzla.config.pickImage': 'Pick a picture',
+    'puzla.config.changeImage': 'Change picture',
+    'puzla.config.uploading': 'Uploading…',
+    'puzla.config.needImage': 'Pick a picture for the puzzle first.',
+    'puzla.config.pieces': 'Pieces',
+    'puzla.config.rotation': 'Rotated pieces',
+    'puzla.config.rotationHint': 'Pieces start rotated — tap a piece to turn it.',
+    'puzla.config.mode': 'Clock',
+    'puzla.config.modeTimed': 'Timed',
+    'puzla.config.modeRelaxed': 'Relaxed',
   },
 };
 

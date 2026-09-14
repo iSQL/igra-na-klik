@@ -257,6 +257,23 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // version would be a joystick pointed at nothing.
     supportsHostless: false,
   },
+  puzla: {
+    id: 'puzla',
+    name: 'Puzla',
+    // Co-op, so one player is a legitimate (if lonely) game. Above eight the
+    // table is more hands than pieces; validateStart enforces the cap, since
+    // the platform only checks the minimum.
+    minPlayers: 1,
+    maxPlayers: 8,
+    description:
+      'Izaberi svoju sliku, igra je iseče na komadiće — složite je zajedno, svako sa svog telefona, pre nego što istekne vreme!',
+    icon: '🖼️',
+    accent: 'lime',
+    category: 'team',
+    estimatedMinutes: 10,
+    // Every phone renders the whole table anyway — the TV only mirrors it.
+    supportsHostless: true,
+  },
   osvajanje: {
     id: 'osvajanje',
     // Ime igre je „KvizAtar"; id ostaje `osvajanje` jer po njemu idu

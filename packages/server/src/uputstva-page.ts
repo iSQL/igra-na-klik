@@ -245,6 +245,21 @@ const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>
 <p class="tip">Broj rundi se bira pre početka. Igra traži TV — arena je na velikom ekranu, telefon je samo kontroler.</p>`,
   },
+  puzla: {
+    emoji: '🖼️',
+    body: `<p>Slagalica od vaše slike: domaćin izabere fotografiju, igra je iseče na komadiće, a svi zajedno je slažete — svako sa svog telefona, istovremeno.</p>
+<ul>
+<li><strong>Slika:</strong> bira se pre početka, sa uređaja domaćina (TV-a ili telefona). Ne čuva se nigde — živi samo dok postoji soba.</li>
+<li><strong>Komadići:</strong> 16, 36, 64 ili 100 (tačan broj zavisi od oblika slike). Na početku se nekoliko sekundi vidi cela slika, pa se komadići rasture po stolu oko rama.</li>
+<li><strong>Na telefonu je ceo sto:</strong> prstom povuci komadić, jednim prstom po praznom stolu pomeraš pogled, a sa dva prsta zumiraš. Komadić koji neko drugi drži vidiš uokviren njegovom bojom i ne možeš ga uzeti.</li>
+<li><strong>Spajanje:</strong> pusti komadić blizu njegovog suseda i sam će se zalepiti — grupa se dalje vuče kao celina. Ivični komadići (i sve što ih dodiruje) uglavljuju se u ram i više se ne pomeraju.</li>
+<li><strong>Okrenuti komadići</strong> (ako ih domaćin uključi): komadići kreću okrenuti, a <strong>tap</strong> na komadić ga okreće za četvrt kruga. Spajaju se samo komadići okrenuti na istu stranu.</li>
+<li><strong>Vreme:</strong> <em>na vreme</em> — sat odbrojava (od 4 minuta za 16 do 18 minuta za 100 komadića, duže sa okretanjem); <em>opušteno</em> — bez roka, sat samo meri koliko vam treba.</li>
+<li><strong>Poeni:</strong> igra je timska, ali svaki spoj nosi poene onome ko ga je napravio — 5 po spojenoj ivici i još 10 za uglavljivanje u ram. Kad je slika gotova, svi dobijaju 100, a na vreme i do 200 za preostalo vreme.</li>
+<li>Komadić koji niko ne pomera 10 sekundi, ili ga drži igrač kome se ugasio telefon, sam se spušta na sto.</li>
+</ul>
+<p class="tip">Radi i bez TV-a — ceo sto je ionako na svakom telefonu. Za 64 i 100 komadića zumirajte slobodno.</p>`,
+  },
   osvajanje: {
     emoji: '🏰',
     body: `<p>Od dvoje do četvoro igrača, jedna mapa (za četvoro treba veća — bar dvanaest teritorija). Kroz pitanja se širi atar, a onda se navaljuje na susedne zamkove — dok ne ostane samo jedan.</p>

@@ -34,6 +34,8 @@ import { PenaliModule } from '../game/games/penali/PenaliModule.js';
 import { SlozilicaModule } from '../game/games/slozilica/SlozilicaModule.js';
 import { BitkaModule } from '../game/games/bitka/BitkaModule.js';
 import { SplavModule } from '../game/games/splav/SplavModule.js';
+import { PuzlaModule } from '../game/games/puzla/PuzlaModule.js';
+import { puzlaImages } from '../game/games/puzla/puzla-image-store.js';
 import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
@@ -102,6 +104,7 @@ export function setupSocket(
   gameRegistry.register(() => new SlozilicaModule());
   gameRegistry.register(() => new BitkaModule(questionPacksDir, bitkaMapsDir));
   gameRegistry.register(() => new SplavModule());
+  gameRegistry.register(() => new PuzlaModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
 
@@ -159,6 +162,9 @@ export function setupSocket(
       }
     }
 
+    // Every teardown path funnels through here, so this is the Puzla picture's
+    // only cleanup — it lives in memory exactly as long as its room.
+    puzlaImages.deleteRoom(roomCode);
     roomManager.deleteRoom(roomCode);
   };
 

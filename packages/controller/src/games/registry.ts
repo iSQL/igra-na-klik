@@ -23,6 +23,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   slozilica: () => import('./slozilica/SlozilicaController'),
   osvajanje: () => import('./bitka/BitkaController'),
   splav: () => import('./splav/SplavController'),
+  puzla: () => import('./puzla/PuzlaController'),
 };
 
 let prefetchStarted = false;

@@ -1,4 +1,8 @@
-import { BITKA_RUNDE_DEF, SLOZILICA_LETTER_DEFAULT } from '@igra/shared';
+import {
+  BITKA_RUNDE_DEF,
+  PUZLA_PIECE_DEFAULT,
+  SLOZILICA_LETTER_DEFAULT,
+} from '@igra/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
@@ -6,6 +10,7 @@ import type {
   BitkaMode,
   GluvoDobaDeathReveal,
   HotPotatoMode,
+  PuzlaMode,
   TajniAgentiMode,
 } from '@igra/shared';
 
@@ -48,6 +53,11 @@ interface NewGamesConfigStore {
   bitkaMapId: string;
   bitkaMode: BitkaMode;
   bitkaRounds: number;
+  // Puzla: nominal piece count, rotated pieces, deadline vs untimed. The
+  // uploaded picture itself is NOT here — it belongs to one room (gameStore).
+  puzlaPieces: number;
+  puzlaRotation: boolean;
+  puzlaMode: PuzlaMode;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -74,6 +84,9 @@ interface NewGamesConfigStore {
   setBitkaMapId: (id: string) => void;
   setBitkaMode: (m: BitkaMode) => void;
   setBitkaRounds: (n: number) => void;
+  setPuzlaPieces: (n: number) => void;
+  setPuzlaRotation: (v: boolean) => void;
+  setPuzlaMode: (m: PuzlaMode) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -105,6 +118,9 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       bitkaMapId: '',
       bitkaMode: 'zamkovi',
       bitkaRounds: BITKA_RUNDE_DEF,
+      puzlaPieces: PUZLA_PIECE_DEFAULT,
+      puzlaRotation: false,
+      puzlaMode: 'vreme',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -131,6 +147,9 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setBitkaMapId: (id) => set({ bitkaMapId: id }),
       setBitkaMode: (m) => set({ bitkaMode: m }),
       setBitkaRounds: (n) => set({ bitkaRounds: n }),
+      setPuzlaPieces: (n) => set({ puzlaPieces: n }),
+      setPuzlaRotation: (v) => set({ puzlaRotation: v }),
+      setPuzlaMode: (m) => set({ puzlaMode: m }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

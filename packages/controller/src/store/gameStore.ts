@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import type { GameState, HostStartGamePayload } from '@igra/shared';
 
+/** The Puzla picture uploaded for one room — invalid in any other room. */
+export interface PuzlaUploadedImage {
+  roomCode: string;
+  imageId: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
 interface ControllerGameStore {
   gameId: string | null;
   gameState: GameState | null;
@@ -9,6 +18,11 @@ interface ControllerGameStore {
   // powers the one-tap "Igraj ponovo" rematch with identical settings.
   // Survives resetGame on purpose (that's when a rematch is offered).
   lastStartPayload: HostStartGamePayload | null;
+  // Kept here rather than in GameSelectScreen's local state, which is lost
+  // every time the player backs out of the screen. Survives resetGame (the
+  // rematch reuses it); readers must check `roomCode`.
+  puzlaImage: PuzlaUploadedImage | null;
+  setPuzlaImage: (image: PuzlaUploadedImage | null) => void;
   setGameState: (state: GameState) => void;
   setPlayerData: (data: Record<string, unknown>) => void;
   setLastStartPayload: (payload: HostStartGamePayload) => void;
@@ -20,6 +34,8 @@ export const useGameStore = create<ControllerGameStore>((set) => ({
   gameState: null,
   playerData: null,
   lastStartPayload: null,
+  puzlaImage: null,
+  setPuzlaImage: (puzlaImage) => set({ puzlaImage }),
   setGameState: (gameState) => set({ gameState, gameId: gameState.gameId }),
   setPlayerData: (playerData) => set({ playerData }),
   setLastStartPayload: (lastStartPayload) => set({ lastStartPayload }),

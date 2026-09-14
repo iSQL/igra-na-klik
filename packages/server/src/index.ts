@@ -30,6 +30,7 @@ import {
 } from '@igra/shared';
 import { listAsocijacijePackSummaries } from './game/games/asocijacije/asocijacije-pack-resolver.js';
 import { listBitkaMapSummaries } from './game/games/bitka/bitka-map-resolver.js';
+import { puzlaImages, PUZLA_IMAGE_ROUTE } from './game/games/puzla/puzla-image-store.js';
 import type { KoSamJaImportQuestion, KvizQuestionType } from '@igra/shared';
 import { setupSocket } from './socket/setup.js';
 import { GLUVO_DOBA_PAGE_HTML } from './gluvo-doba-page.js';
@@ -437,6 +438,24 @@ app.use(
   },
   express.static(BITKA_MAPS_DIR, { maxAge: '7d', etag: true })
 );
+
+// Puzla: the picture a host uploaded for their room, straight from memory
+// (see puzla-image-store.ts). 404 unless the id is the room's current one —
+// the id is a UUID, the room code alone is guessable. The id changes with
+// every upload, so the response can be cached as immutable.
+app.get(`${PUZLA_IMAGE_ROUTE}/:room/:id`, cors({ origin: corsOrigins }), (req, res) => {
+  const image = puzlaImages.get(req.params.room);
+  if (!image || image.id !== req.params.id) {
+    res.status(404).end();
+    return;
+  }
+  res.set({
+    'Content-Type': 'image/jpeg',
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'private, max-age=86400, immutable',
+  });
+  res.send(image.buf);
+});
 
 // ---- Admin editors ----------------------------------------------------------
 // Token-protected CRUD APIs + standalone editor pages for every content type
