@@ -1,0 +1,13 @@
+---
+paths:
+  - "packages/server/src/game/games/splav/**"
+  - "packages/host/src/games/splav/**"
+  - "packages/controller/src/games/splav/**"
+  - "packages/shared/src/games/splav-rules.ts"
+  - "packages/shared/src/types/splav.ts"
+  - "scripts/test-splav.mts"
+---
+
+# Splav
+
+**Splav** — sumo on a shrinking raft, and the **first continuous-input game**: 2–8 players steer with a thumb stick and have one dash on a ~2s cooldown. Everything about it follows from two decisions. First, the **dash is the only way to eject anyone** — plain bumps use a low restitution and can't push someone off, while a dash multiplies what the victim takes (`SPLAV_DASH_PUSH`), locks the attacker's heading for its duration and is spent the moment it connects; that's what makes *when* to spend it the whole game. Second, **camping is designed out**: the raft shrinks (`splavArenaRadius`) *and* drifts (`splavArenaCenter`, a pure function of round time, so the safe spot keeps moving), and a shove is worth `SPLAV_ELIM_POINTS` (120) against 40 per place survived — hiding pays, pushing pays better. Credit is last-touch inside `SPLAV_CREDIT_WINDOW_MS`, so the shrinking edge finishing someone off still pays whoever hit them. Physics is a **pure step function** ([physics.ts](../../packages/server/src/game/games/splav/physics.ts)) in **arena units** (the raft starts as a unit disc at the origin) — naive O(n²) collisions, since 8 circles is a few dozen distance checks. Wire shape: the module returns `null` from `onPlayerAction` and from most `onTick`s and instead emits `SplavFrame` snapshots (~15/s, `SPLAV_FRAME_INTERVAL_MS`, counted in **accumulated ms not ticks** because a 25ms `setInterval` drifts); a full `GameState` goes out only on a phase change or an elimination. The TV renders `SPLAV_RENDER_DELAY_MS` behind live and **interpolates** between frames — showing the newest one directly stutters at 15fps. Eliminations travel as a **round-long array** with monotonic `seq`, not a "latest" field: two players can fall on the same tick, and the shove that ends a round arrives together with the round result (which is why the array is also kept through `runda-gotova`). The arena is plain **canvas 2D** ([SplavArena.ts](../../packages/host/src/games/splav/SplavArena.ts)) — everything is on one plane, so an angled top-down projection (squash Y, extrude the raft into a slab) reads as 3D without three.js in the bundle; the host component subscribes to `game:frame` **directly, never through the zustand store**, or React would re-render 15×/s. Not hostless: the arena *is* the game. Headless end-to-end + traffic run: `npx tsx scripts/test-splav.mts` (bots steer off the same frames a phone does).

@@ -6,7 +6,8 @@ dist/
 timing-config.json
 quiz-feedback.json
 storage/
-.claude/
+.claude/*
+!.claude/rules/
 # Keširani izvori za scripts/build-recnik.ts (~28 MB, preuzimaju se po potrebi)
 .recnik-cache/
 Agent tool input*
