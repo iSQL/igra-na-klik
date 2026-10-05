@@ -49,6 +49,8 @@ interface ActiveGame {
 
 export class GameManager {
   private activeGames = new Map<string, ActiveGame>();
+  /** Called once a room is back in the lobby after a game (knock seating). */
+  onGameEnded: ((roomCode: string) => void) | null = null;
 
   constructor(
     private io: IoServer,
@@ -387,6 +389,7 @@ export class GameManager {
     room.status = 'lobby';
     room.currentGameId = null;
     this.activeGames.delete(roomCode);
+    this.onGameEnded?.(roomCode);
   }
 
   private emitGameState(roomCode: string, gameState: GameState): void {
@@ -416,6 +419,11 @@ export class GameManager {
         playerData: { [player.id]: gameState.playerData[player.id] || {} },
       });
     }
+  }
+
+  /** Current full state (with playerData) — server-side use only. */
+  getGameState(roomCode: string): GameState | undefined {
+    return this.activeGames.get(roomCode)?.gameState;
   }
 
   isGameActive(roomCode: string): boolean {

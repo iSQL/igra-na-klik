@@ -40,6 +40,8 @@ import { registerRoomHandlers } from './handlers/room.js';
 import { registerGameHandlers } from './handlers/game.js';
 import { authMiddleware, getReconnectToken } from './middleware/auth.js';
 import { hostRoom, playerRoom } from './rooms.js';
+import { KnockManager } from './knocks.js';
+import { createThrottle } from './rate-limit.js';
 
 export function setupSocket(
   httpServer: HttpServer,
@@ -107,6 +109,8 @@ export function setupSocket(
   gameRegistry.register(() => new PuzlaModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);
+  const knockManager = new KnockManager(io, roomManager, gameManager);
+  gameManager.onGameEnded = (code) => knockManager.onGameEnded(code);
 
   // Grace period timers: playerId -> timeout handle
   const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -165,6 +169,7 @@ export function setupSocket(
     // Every teardown path funnels through here, so this is the Puzla picture's
     // only cleanup — it lives in memory exactly as long as its room.
     puzlaImages.deleteRoom(roomCode);
+    knockManager.onRoomDestroyed(roomCode);
     roomManager.deleteRoom(roomCode);
   };
 
@@ -229,11 +234,34 @@ export function setupSocket(
           );
         }
 
+        // A returning holder (phone screen woke up) needs the door list back.
+        if (room.remoteHostPlayerId === found.playerId) {
+          knockManager.syncHolder(found.roomCode);
+        }
+
         console.log(`Player ${found.playerId} reconnected to room ${found.roomCode}`);
       }
     }
 
-    registerRoomHandlers(io, socket, roomManager, cancelGraceTimer, destroyRoom);
+    registerRoomHandlers(
+      io,
+      socket,
+      roomManager,
+      cancelGraceTimer,
+      destroyRoom,
+      (code) => knockManager.syncHolder(code)
+    );
+
+    // Pokucaj — knocking on a running game (see knocks.ts).
+    const knockThrottle = createThrottle(1000);
+    socket.on('player:knock', (data) => {
+      if (!knockThrottle()) return;
+      knockManager.knock(socket, data?.roomCode, data?.playerName);
+    });
+    socket.on('player:cancel-knock', () => knockManager.cancel(socket));
+    socket.on('host:answer-knock', (data) => {
+      knockManager.answer(socket, data?.knockId, !!data?.admit);
+    });
     registerGameHandlers(io, socket, gameManager, roomManager);
 
     socket.on('host:kick-player', ({ playerId }) => {
@@ -279,6 +307,7 @@ export function setupSocket(
         io.to(roomCode).emit('room:remote-host-changed', {
           remoteHostPlayerId: null,
         });
+        knockManager.syncHolder(roomCode);
       }
       console.log(`Player ${playerId} kicked from room ${roomCode}`);
     });
@@ -340,12 +369,14 @@ export function setupSocket(
           io.to(roomCode).emit('room:remote-host-changed', {
             remoteHostPlayerId: nextHolder,
           });
+          knockManager.syncHolder(roomCode);
         }
       }
       console.log(`Player ${playerId} left room ${roomCode}`);
     });
 
     socket.on('disconnect', () => {
+      knockManager.onSocketDisconnect(socket.id);
       const { roomCode, playerId, isHost } = socket.data;
       if (!roomCode) return;
 
@@ -377,6 +408,7 @@ export function setupSocket(
             io.to(roomCode).emit('room:remote-host-changed', {
               remoteHostPlayerId: nextHolder,
             });
+            knockManager.syncHolder(roomCode);
           }
           roomManager.removePlayer(roomCode, playerId);
           io.to(roomCode).emit('room:player-removed', { playerId });

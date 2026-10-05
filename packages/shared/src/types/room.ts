@@ -70,6 +70,8 @@ export interface RoomSummary {
   status: RoomStatus;
   /** Game being played, while status isn't 'lobby'. */
   gameId?: string;
+  /** A game is running and someone holds control — the room takes knocks. */
+  knockable?: boolean;
   avatars: RoomSummaryAvatar[];
 }
 

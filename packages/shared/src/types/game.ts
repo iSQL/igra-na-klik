@@ -44,6 +44,11 @@ export interface GameDefinition {
   // Score semantics: fewer points = better placement (e.g. Zavet's "uroci").
   // Clients that rank finalScores must sort ASCENDING for these games.
   lowerScoreWins?: boolean;
+  // A guest who knocks mid-game and is let in joins the running game right
+  // away (from the next question). Only for modules verified to cope with a
+  // player who wasn't there at onStart — the rest seat admitted guests when
+  // the game ends.
+  lateJoin?: boolean;
 }
 
 export type GamePhase = string;

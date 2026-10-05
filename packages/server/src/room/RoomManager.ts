@@ -94,11 +94,19 @@ export class RoomManager {
 
   joinRoom(
     roomCode: string,
-    playerName: string
+    playerName: string,
+    opts?: {
+      /** A knock the remote-host holder let in — the only way into a running game. */
+      admittedKnock?: boolean;
+      /** Keep the avatar the guest was shown while knocking. */
+      avatar?: { color: string; emoji: string };
+    }
   ): { player: Player; room: Room; reclaimed?: boolean } | { error: string } {
     const room = this.rooms.get(roomCode.toUpperCase());
     if (!room) return { error: 'Room not found' };
-    if (room.status !== 'lobby') return { error: 'Game already in progress' };
+    if (room.status !== 'lobby' && !opts?.admittedKnock) {
+      return { error: 'Game already in progress' };
+    }
 
     // Clamp the name server-side — the client's maxLength is advisory and
     // a hand-rolled client can send anything up to the socket message cap.
@@ -127,11 +135,12 @@ export class RoomManager {
     if (room.players.length >= room.settings.maxPlayers)
       return { error: 'Room is full' };
 
+    const fallback = this.nextAvatar(room);
     const player: Player = {
       id: generateId(),
       name: playerName,
-      avatarColor: AVATAR_COLORS[room.players.length % AVATAR_COLORS.length],
-      avatarEmoji: AVATAR_EMOJIS[room.players.length % AVATAR_EMOJIS.length],
+      avatarColor: opts?.avatar?.color ?? fallback.color,
+      avatarEmoji: opts?.avatar?.emoji ?? fallback.emoji,
       isConnected: true,
       score: 0,
       reconnectToken: generateReconnectToken(),
@@ -145,6 +154,14 @@ export class RoomManager {
       reclaimed: false,
     });
     return { player, room };
+  }
+
+  /** The avatar the next newcomer to this room would get. */
+  nextAvatar(room: Room): { color: string; emoji: string } {
+    return {
+      color: AVATAR_COLORS[room.players.length % AVATAR_COLORS.length],
+      emoji: AVATAR_EMOJIS[room.players.length % AVATAR_EMOJIS.length],
+    };
   }
 
   removePlayer(roomCode: string, playerId: string): boolean {
@@ -318,6 +335,11 @@ export class RoomManager {
         ...(room.status !== 'lobby' && room.currentGameId
           ? { gameId: room.currentGameId }
           : {}),
+        // Knocking needs someone to answer the door: a running game and a
+        // connected remote-host holder.
+        knockable:
+          room.status !== 'lobby' &&
+          room.players.some((p) => p.id === room.remoteHostPlayerId && p.isConnected),
         // Faces only — never names or ids; the list is public.
         avatars: connected.map((p) => ({
           color: p.avatarColor,

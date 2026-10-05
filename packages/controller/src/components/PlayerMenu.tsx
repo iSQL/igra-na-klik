@@ -7,6 +7,8 @@ import { AvatarPickerModal } from './AvatarPickerModal';
 import { LanguageSwitch } from './LanguageSwitch';
 import { QuizFeedbackMenu } from './QuizFeedbackMenu';
 import { BitkaBoardMenu } from './BitkaBoardMenu';
+import { KnockButtons, KnockFace } from './KnockBanner';
+import { useKnockStore } from '../store/knockStore';
 
 type ConfirmKind = 'leave' | 'close' | 'stop' | null;
 
@@ -30,6 +32,8 @@ export function PlayerMenu({
   const [open, setOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
+  const knocks = useKnockStore((s) => s.requests);
+  const answerKnock = useKnockStore((s) => s.answer);
 
   if (!player || !room) return null;
 
@@ -88,23 +92,48 @@ export function PlayerMenu({
         }}
       >
         {player.avatarEmoji}
-        <span
-          style={{
-            position: 'absolute',
-            right: '-3px',
-            bottom: '-3px',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--line2)',
-            fontSize: '0.7rem',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
-          ⚙
-        </span>
+        {knocks.length > 0 ? (
+          // Guests at the door whose banner was folded away: ✊ N.
+          <span
+            aria-label={t('knock.atTheDoor')}
+            style={{
+              position: 'absolute',
+              right: '-6px',
+              bottom: '-5px',
+              height: '20px',
+              padding: '0 5px',
+              borderRadius: '10px',
+              background: 'var(--accent)',
+              color: 'var(--bg-primary)',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              animation: 'igra-pop .3s',
+            }}
+          >
+            ✊{knocks.length}
+          </span>
+        ) : (
+          <span
+            style={{
+              position: 'absolute',
+              right: '-3px',
+              bottom: '-3px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--line2)',
+              fontSize: '0.7rem',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            ⚙
+          </span>
+        )}
       </button>
 
       {open && (
@@ -202,6 +231,55 @@ export function PlayerMenu({
             {/* Osvajanje: spisak teritorija + tabla (renderuje se samo u toj
                 igri). Izbor sa spiska zatvara popup da bi se videla mapa. */}
             <BitkaBoardMenu onPicked={() => setOpen(false)} />
+
+            {/* Pokucaj: guests waiting for the holder's answer. */}
+            {knocks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'var(--amber)',
+                  }}
+                >
+                  {t('knock.atTheDoor')}
+                </span>
+                {knocks.map((k) => (
+                  <div
+                    key={k.knockId}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      padding: '0.5rem 0.5rem 0.5rem 0.6rem',
+                      borderRadius: '14px',
+                      background: 'var(--bg-primary)',
+                    }}
+                  >
+                    <KnockFace request={k} />
+                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                      <span
+                        style={{
+                          fontWeight: 800,
+                          fontSize: '0.92rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {k.name}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                        {t(k.entry === 'next-round' ? 'knock.entryNext' : 'knock.entryAfter')}
+                      </span>
+                    </span>
+                    <KnockButtons request={k} onAnswer={answerKnock} onDark />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ height: '1px', background: 'var(--line2)', margin: '0.15rem 0' }} />
 

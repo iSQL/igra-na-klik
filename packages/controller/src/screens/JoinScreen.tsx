@@ -3,6 +3,8 @@ import { ROOM_CODE_LENGTH, type RoomSummary } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { StartMenu } from '../components/StartMenu';
+import { KnockWaitingSheet } from '../components/KnockWaitingSheet';
+import { useKnockStore } from '../store/knockStore';
 import { useT } from '../i18n/useT';
 
 const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
@@ -49,6 +51,20 @@ export function JoinScreen() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const knock = useKnockStore((s) => s.knock);
+  const knockStatus = useKnockStore((s) => s.status);
+  const knockClosed = useKnockStore((s) => s.closed);
+  const knockRetryAt = useKnockStore((s) => s.retryAt);
+  // Ticks once a second while a "Pokucaj (59s)" countdown is showing.
+  const [now, setNow] = useState(() => Date.now());
+  const cooling = Object.values(knockRetryAt).some((t) => t > now);
+  useEffect(() => {
+    if (!cooling) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [cooling]);
+  // A fresh decline arrives with a new retryAt — sync the clock to it.
+  useEffect(() => setNow(Date.now()), [knockRetryAt]);
   // Read the latch during render (autoFocus applies at initial render), but
   // only SET it in an effect — keeps render pure so StrictMode's double
   // render can't consume the first-mount slot before the real paint.
@@ -175,6 +191,30 @@ export function JoinScreen() {
     if (playerName.trim()) handleJoin(code);
     else nameInputRef.current?.focus();
   };
+
+  // Pokucaj on a room whose game is running. Needs the name first, like a
+  // normal join; the seat comes later, on the holder's yes.
+  const knockOn = (code: string) => {
+    const name = playerName.trim();
+    if (!name) {
+      setError(t('join.enterName'));
+      nameInputRef.current?.focus();
+      return;
+    }
+    setError('');
+    localStorage.setItem(LAST_NAME_KEY, name);
+    knock(code, name);
+  };
+
+  // How the last knock ended, as the screen's one-line notice.
+  const knockNotice = knockClosed
+    ? {
+        declined: t('knock.declined'),
+        'room-gone': t('knock.roomGone'),
+        full: t('join.roomFull'),
+        'name-taken': t('join.nameTaken'),
+      }[knockClosed.reason]
+    : '';
 
   const errorKey = SERVER_ERROR_KEYS[error];
   const displayError = errorKey ? t(errorKey) : error;
@@ -430,6 +470,19 @@ export function JoinScreen() {
           {displayError}
         </p>
       )}
+      {!error && knockNotice && (
+        <p
+          role="status"
+          style={{
+            color: 'var(--amber)',
+            textAlign: 'center',
+            fontWeight: 700,
+            margin: '0.9rem 0 0',
+          }}
+        >
+          {knockNotice}
+        </p>
+      )}
 
       {/* Single-room mode has no auto-join keystroke, so keep the button there
           (and as the manual fallback while a code is complete but unsent). */}
@@ -491,6 +544,30 @@ export function JoinScreen() {
                           : t('join.inRoom', { n: r.playerCount })}
                       </span>
                     </span>
+                    {/* Pokucaj: only when someone holds control to answer. */}
+                    {r.knockable && (() => {
+                      const wait = Math.ceil(((knockRetryAt[r.code] ?? 0) - now) / 1000);
+                      return (
+                        <button
+                          onClick={() => knockOn(r.code)}
+                          disabled={wait > 0 || busy}
+                          style={{
+                            height: 40,
+                            minHeight: 40,
+                            padding: '0 14px',
+                            borderRadius: 999,
+                            border: '1.5px solid var(--line2)',
+                            background: 'transparent',
+                            color: wait > 0 ? 'var(--dim)' : 'var(--text-primary)',
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {wait > 0 ? t('knock.retryIn', { n: wait }) : t('knock.button')}
+                        </button>
+                      );
+                    })()}
                   </div>
                 );
               }
@@ -639,6 +716,7 @@ export function JoinScreen() {
       )}
 
       {/* No "← Početna" link any more: `/` now redirects here. */}
+      {knockStatus && <KnockWaitingSheet status={knockStatus} />}
       {menuOpen && (
         <StartMenu
           onClose={() => setMenuOpen(false)}

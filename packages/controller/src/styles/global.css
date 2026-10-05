@@ -252,6 +252,16 @@ textarea {
   }
 }
 
+/* Knock banner sliding down over the header (centered with translateX). */
+@keyframes igra-banner-in {
+  from {
+    transform: translate(-50%, -140%);
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+
 @keyframes igra-pop {
   0% {
     transform: scale(0.6);

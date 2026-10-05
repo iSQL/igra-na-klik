@@ -22,6 +22,7 @@ import type { SpijunPack } from '../games/spijun-import.js';
 import type { PlayerAward } from '../games/awards.js';
 import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
 import type { PuzlaMode, PuzlaUploadAck } from './puzla.js';
+import type { KnockRequest, KnockStatus } from './knock.js';
 
 export interface ServerToClientEvents {
   'host:room-created': (data: { roomCode: string; room: PublicRoom }) => void;
@@ -74,6 +75,20 @@ export interface ServerToClientEvents {
   'room:kicked': (data: { reason?: string }) => void;
   'room:destroyed': (data: { reason?: string }) => void;
   error: (data: { code: string; message: string }) => void;
+  // --- Pokucaj (knock to join a running game) ---
+  // To the guest: where their knock stands. Re-sent whenever it changes.
+  'knock:status': (data: KnockStatus) => void;
+  // To the guest: the knock is over without a seat — declined ("Ne sad"),
+  // the room closed, or the guest can't be seated. `retryAt` is the epoch ms
+  // after which the same room may be knocked again (declines only).
+  'knock:closed': (data: {
+    roomCode: string;
+    reason: 'declined' | 'room-gone' | 'full' | 'name-taken';
+    retryAt?: number;
+  }) => void;
+  // To the remote-host holder: the full list of guests at the door, re-sent
+  // on every change (and on claiming control). Empty list = nobody waiting.
+  'room:knocks': (data: { knocks: KnockRequest[] }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -87,6 +102,12 @@ export interface ClientToServerEvents {
   // player and automatically receives the remote-host claim. Responds with
   // player:joined like a normal join.
   'player:create-room': (data: { playerName: string }) => void;
+  // Ask to join a room whose game is running. Answered with knock:status /
+  // knock:closed (or error). One knock per socket at a time.
+  'player:knock': (data: { roomCode: string; playerName: string }) => void;
+  'player:cancel-knock': () => void;
+  // The remote-host holder answers a knock: admit ("Pusti") or not ("Ne sad").
+  'host:answer-knock': (data: { knockId: string; admit: boolean }) => void;
   'host:start-game': (data: {
     gameId: string;
     customQuestions?: KvizImportQuestion[];

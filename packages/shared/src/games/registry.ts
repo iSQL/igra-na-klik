@@ -13,6 +13,9 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     category: 'quiz',
     estimatedMinutes: 10,
     supportsHostless: true,
+    // Expected answerers are re-snapshotted per question and stats/leaderboard
+    // default a missing player, so a late guest just plays from the next one.
+    lateJoin: true,
   },
   'draw-guess': {
     id: 'draw-guess',

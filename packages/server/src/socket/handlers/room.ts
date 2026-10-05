@@ -32,7 +32,9 @@ export function registerRoomHandlers(
     roomCode: string,
     reason: string,
     silentHostSocketId?: string
-  ) => void
+  ) => void,
+  /** The remote-host claim moved — re-send the knock list to the new holder. */
+  onHolderChanged: (roomCode: string) => void
 ) {
   // Per-socket chat throttle timestamp.
   let lastChatAt = 0;
@@ -157,6 +159,7 @@ export function registerRoomHandlers(
         if (room.status === 'lobby' && room.chatMessages.length > 0) {
           socket.emit('room:chat-history', { messages: room.chatMessages });
         }
+        if (room.remoteHostPlayerId === found.playerId) onHolderChanged(found.roomCode);
         return;
       }
     }
@@ -226,6 +229,7 @@ export function registerRoomHandlers(
     io.to(roomCode).emit('room:remote-host-changed', {
       remoteHostPlayerId: playerId,
     });
+    onHolderChanged(roomCode);
   });
 
   socket.on('player:release-remote-host', () => {
@@ -235,6 +239,7 @@ export function registerRoomHandlers(
       io.to(roomCode).emit('room:remote-host-changed', {
         remoteHostPlayerId: null,
       });
+      onHolderChanged(roomCode);
     }
   });
 

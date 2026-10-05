@@ -13,6 +13,8 @@ import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
 import { BackButtonGuard } from './components/BackButtonGuard';
 import { ChatHead } from './components/ChatHead';
+import { KnockBanner } from './components/KnockBanner';
+import { bindKnockSocket } from './store/knockStore';
 import { useT } from './i18n/useT';
 
 function ReconnectingOverlay() {
@@ -359,6 +361,7 @@ export function App() {
 
   useEffect(() => {
     socket.connect();
+    const unbindKnocks = bindKnockSocket();
 
     socket.on('connect', () => {
       setConnected(true);
@@ -614,6 +617,7 @@ export function App() {
     });
 
     return () => {
+      unbindKnocks();
       socket.off('connect');
       socket.off('disconnect');
       socket.off('player:joined');
@@ -660,6 +664,8 @@ export function App() {
           the head floats over the lobby + game-select screens and unmounts
           during games. */}
       {player && !gameId && <ChatHead showBubble={screen !== 'lobby'} />}
+      {/* Pokucaj — only the remote-host holder ever has guests at the door. */}
+      {player && <KnockBanner />}
       {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
       {kickNotice && (
         <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />
