@@ -659,7 +659,7 @@ export function App() {
       {/* Chat only works while the room is in the lobby (server-enforced), so
           the head floats over the lobby + game-select screens and unmounts
           during games. */}
-      {player && !gameId && <ChatHead />}
+      {player && !gameId && <ChatHead showBubble={screen !== 'lobby'} />}
       {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
       {kickNotice && (
         <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />

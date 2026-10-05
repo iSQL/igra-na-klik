@@ -44,10 +44,6 @@ import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
 import { useLanguageStore } from '../store/languageStore';
-import { LeaveRoomButton } from '../components/LeaveRoomButton';
-import { CloseRoomButton } from '../components/CloseRoomButton';
-import { CopyRoomLinkButton } from '../components/CopyRoomLinkButton';
-import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useT } from '../i18n/useT';
 import { unpackQuizZip } from '../utils/quizZipImport';
 import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
@@ -238,6 +234,7 @@ function tagStyle(category: GameCategory): CSSProperties {
 export function GameSelectScreen() {
   const room = usePlayerStore((s) => s.room);
   const setScreen = useNavStore((s) => s.setScreen);
+  const lastStartPayload = useGameStore((s) => s.lastStartPayload);
   const t = useT();
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
@@ -402,6 +399,18 @@ export function GameSelectScreen() {
       : games.filter((g) => gameInCategory(g, activeCat));
   const selectedGame = games.find((g) => g.id === selectedGameId) ?? null;
   const rulesGame = games.find((g) => g.id === rulesGameId) ?? null;
+  // Group by what the crew can do right now, not a grid of half-faded cards.
+  const needsTv = (g: GameDefinition) => !!room.hostless && !g.supportsHostless;
+  const tvOnlyGames = visibleGames.filter(needsTv);
+  const needMoreGames = visibleGames.filter(
+    (g) => !needsTv(g) && connectedCount < effMinPlayers(g)
+  );
+  const readyGames = visibleGames.filter(
+    (g) => !needsTv(g) && connectedCount >= effMinPlayers(g)
+  );
+  const lastGame = lastStartPayload
+    ? (games.find((g) => g.id === lastStartPayload.gameId) ?? null)
+    : null;
   // Tajni agenti: classic needs 4+ players — with fewer, silently fall
   // back to duet so start can't fire a server-side validation error.
   const effectiveTajniMode: TajniAgentiMode =
@@ -547,8 +556,7 @@ export function GameSelectScreen() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '1rem',
-        padding: '1rem',
+        padding: '1rem 0 2rem',
         width: '100%',
         maxWidth: '480px',
         height: '100%',
@@ -559,104 +567,62 @@ export function GameSelectScreen() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: 10,
+          padding: '0 20px',
         }}
       >
         <button
           onClick={() => setScreen('lobby')}
+          aria-label={t('gameSelect.backToLobby')}
           style={{
-            padding: '0.5rem 0.9rem',
-            fontSize: '0.85rem',
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
+            padding: 0,
+            borderRadius: 14,
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--line)',
+            color: 'var(--text-primary)',
+            fontSize: '1.4rem',
             fontWeight: 800,
-            borderRadius: '12px',
-            background: 'transparent',
-            color: 'var(--text-secondary)',
-            border: '1px solid var(--line2)',
-            minHeight: '42px',
           }}
         >
-          {t('gameSelect.backArrow')}
+          ‹
         </button>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-          }}
+        <h1
+          className="display"
+          style={{ flex: 1, margin: 0, fontSize: '1.5rem', lineHeight: 1.1 }}
         >
-          <LanguageSwitch />
-          <LeaveRoomButton />
-          <CloseRoomButton />
-        </div>
-      </div>
-
-      <div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.3rem',
-          }}
-        >
-          <span
-            style={{
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              color: 'var(--pink)',
-              background: 'rgba(217,123,108,.14)',
-              padding: '4px 9px',
-              borderRadius: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
-            🎮 {t('lobby.canStartFromPhone')}
-          </span>
-        </div>
-        <h1 className="display" style={{ fontSize: '1.6rem', margin: 0 }}>
           {t('gameSelect.title')}
         </h1>
-      </div>
-
-      {room.hostless && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              color: 'var(--text-secondary)',
-            }}
-          >
-            {t('lobby.room')}{' '}
-            <strong
-              className="display"
+        <span style={{ display: 'flex', alignItems: 'center' }} aria-hidden>
+          {room.players.slice(0, 5).map((p, i) => (
+            <span
+              key={p.id}
               style={{
-                color: 'var(--text-primary)',
-                fontSize: '1.2rem',
-                letterSpacing: '0.15rem',
+                width: 28,
+                height: 28,
+                marginLeft: i === 0 ? 0 : -8,
+                borderRadius: '50%',
+                background: p.avatarColor,
+                border: '2px solid var(--bg-primary)',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '0.85rem',
               }}
             >
-              {room.code}
-            </strong>
-          </p>
-          <CopyRoomLinkButton code={room.code} />
-        </div>
-      )}
+              {p.avatarEmoji}
+            </span>
+          ))}
+        </span>
+      </div>
 
       {errorMessage && (
         <div
           role="alert"
           style={{
+            margin: '12px 20px 0',
             padding: '0.6rem 0.9rem',
             background: 'rgba(255, 77, 94, 0.14)',
             border: '1px solid rgba(255, 77, 94, 0.45)',
@@ -671,17 +637,19 @@ export function GameSelectScreen() {
         </div>
       )}
 
+      {/* One row that scrolls sideways instead of wrapping to three lines. */}
       <div
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.4rem',
+          gap: 8,
+          overflowX: 'auto',
+          padding: '16px 20px 4px',
+          scrollbarWidth: 'none',
         }}
       >
         <FilterChip
           label={t('gameSelect.filterAll')}
           active={activeCat === null}
-          color="#c29b47"
           onClick={() => setActiveCat(null)}
         />
         {FILTER_CATEGORIES.map((cat) => (
@@ -689,13 +657,63 @@ export function GameSelectScreen() {
             key={cat}
             label={t(`gameTag.${cat}`)}
             active={activeCat === cat}
-            color={CATEGORY_COLOR[cat]}
             onClick={() => setActiveCat(cat)}
           />
         ))}
       </div>
 
-      {visibleGames.length === 0 ? (
+      {lastGame && activeCat === null && (
+        <div
+          style={{
+            margin: '14px 20px 0',
+            padding: '12px 12px 12px 14px',
+            borderRadius: 18,
+            background: 'var(--bg-secondary)',
+            border: '1.5px solid var(--accent)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={tileStyle(lastGame.accent, 44)}>{lastGame.icon}</span>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                letterSpacing: '.08em',
+                textTransform: 'uppercase',
+                color: 'var(--amber)',
+              }}
+            >
+              {t('gameSelect.lastGame')}
+            </span>
+            <span style={{ fontWeight: 800, fontSize: '1rem' }}>
+              {t(`game.${lastGame.id}.name`)}
+            </span>
+          </span>
+          <button
+            onClick={() => {
+              if (lastStartPayload) socket.emit('host:start-game', lastStartPayload);
+            }}
+            style={{
+              height: 40,
+              minHeight: 40,
+              padding: '0 14px',
+              borderRadius: 12,
+              background: 'var(--accent)',
+              color: 'var(--bg-primary)',
+              fontWeight: 800,
+              fontSize: '0.9rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t('gameSelect.again')}
+          </button>
+        </div>
+      )}
+
+      {visibleGames.length === 0 && (
         <p
           style={{
             fontSize: '0.85rem',
@@ -706,24 +724,91 @@ export function GameSelectScreen() {
         >
           {t('gameSelect.noGamesForFilter')}
         </p>
-      ) : (
+      )}
+
+      {readyGames.length > 0 && (
+        <>
+          <SectionLabel>
+            {t('gameSelect.readyCount', { n: readyGames.length })}
+          </SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
+            {readyGames.map((game) => (
+              <GameRow
+                key={game.id}
+                game={game}
+                connectedCount={connectedCount}
+                onOpen={() => setSelectedGameId(game.id)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {needMoreGames.length > 0 && (
+        <>
+          <SectionLabel>{t('gameSelect.needMoreSection')}</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
+            {needMoreGames.map((game) => (
+              <GameRow
+                key={game.id}
+                game={game}
+                connectedCount={connectedCount}
+                muted
+                onOpen={() => {}}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {tvOnlyGames.length > 0 && (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '0.65rem',
+            margin: '18px 20px 0',
+            padding: 16,
+            borderRadius: 18,
+            background: 'rgba(245,235,224,.05)',
+            border: '1px dashed var(--line2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
           }}
         >
-          {visibleGames.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              connectedCount={connectedCount}
-              hostless={!!room.hostless}
-              onOpen={() => setSelectedGameId(game.id)}
-              onRules={() => setRulesGameId(game.id)}
-            />
-          ))}
+          <span
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              letterSpacing: '.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {t('gameSelect.tvOnlySection')}
+          </span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {tvOnlyGames.map((game) => (
+              <span
+                key={game.id}
+                style={{
+                  height: 36,
+                  padding: '0 12px',
+                  borderRadius: 12,
+                  background: 'var(--bg-secondary)',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {game.icon} {t(`game.${game.id}.name`)}
+              </span>
+            ))}
+          </div>
+          <span style={{ fontSize: '0.82rem', lineHeight: 1.4, color: 'var(--text-secondary)' }}>
+            {t('gameSelect.tvOnlyHint')}
+          </span>
         </div>
       )}
 
@@ -777,57 +862,52 @@ export function GameSelectScreen() {
             </div>
             <div
               style={{
-                padding: '4px 18px 14px',
-                borderBottom: '1px solid var(--line)',
+                padding: '8px 20px 4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={tileStyle(selectedGame.accent, 46)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ ...tileStyle(selectedGame.accent, 60), borderRadius: 18 }}>
                   {selectedGame.icon}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div
-                    style={{
-                      fontSize: '1.25rem',
-                      fontWeight: 800,
-                      lineHeight: 1.05,
-                    }}
+                    className="display"
+                    style={{ fontSize: '1.6rem', fontWeight: 700, lineHeight: 1 }}
                   >
                     {t(`game.${selectedGame.id}.name`)}
                   </div>
                   <div
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: 'var(--dim)',
-                      marginTop: '3px',
+                      gap: 8,
                       flexWrap: 'wrap',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
                     }}
                   >
-                    <span style={tagStyle(selectedGame.category)}>
+                    <span style={{ color: CATEGORY_COLOR[selectedGame.category] }}>
                       {t(`gameTag.${selectedGame.category}`)}
                     </span>
                     <span>
-                      👥 {selectedGame.minPlayers}–{selectedGame.maxPlayers}
+                      {selectedGame.minPlayers}–{selectedGame.maxPlayers}{' '}
+                      {t('gameSelect.players')}
                     </span>
                     <span>
-                      ⏱{' '}
-                      {t('config.minutes', {
-                        n: String(selectedGame.estimatedMinutes),
-                      })}
+                      ~{t('config.minutes', { n: String(selectedGame.estimatedMinutes) })}
                     </span>
                   </div>
                 </div>
               </div>
               <p
                 style={{
-                  margin: '11px 0 0',
-                  fontSize: '0.82rem',
+                  margin: 0,
+                  fontSize: '0.9rem',
                   color: 'var(--text-secondary)',
-                  lineHeight: 1.4,
+                  lineHeight: 1.45,
                 }}
               >
                 {t(`game.${selectedGame.id}.description`)}
@@ -835,23 +915,24 @@ export function GameSelectScreen() {
               <button
                 onClick={() => setRulesGameId(selectedGame.id)}
                 style={{
-                  marginTop: '9px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: 0,
-                  background: 'none',
+                  height: 48,
+                  padding: '0 14px',
+                  borderRadius: 14,
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
                   border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
                   fontFamily: 'inherit',
-                  fontSize: '0.78rem',
                   fontWeight: 800,
-                  color: 'var(--cyan)',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '3px',
+                  fontSize: '0.95rem',
+                  textAlign: 'left',
                 }}
               >
-                {t('gameSelect.howToPlay')}
+                <span>📖</span>
+                <span style={{ flex: 1 }}>{t('gameSelect.howToPlayLabel')}</span>
+                <span style={{ color: 'var(--dim)', fontSize: '1.3rem' }}>›</span>
               </button>
             </div>
             <div
@@ -1437,16 +1518,33 @@ export function GameSelectScreen() {
             <div
               style={{
                 padding:
-                  '12px 18px calc(16px + env(safe-area-inset-bottom))',
+                  '12px 20px calc(16px + env(safe-area-inset-bottom))',
                 borderTop: '1px solid var(--line)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
               }}
             >
+              {/* Confirms what is about to be played. */}
+              <span
+                style={{
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {connectedCount}{' '}
+                {t(connectedCount === 1 ? 'common.player.one' : 'common.player.many')}
+                {' · ~'}
+                {t('config.minutes', { n: String(selectedGame.estimatedMinutes) })}
+              </span>
               <button
                 className="btn-primary"
                 onClick={() => handleStart(selectedGame)}
                 style={{ display: 'block', width: '100%' }}
               >
-                ▶ {t('gameSelect.start')} {t(`game.${selectedGame.id}.name`)}
+                ▶ {t('gameSelect.start')}
               </button>
             </div>
           </div>
@@ -1463,29 +1561,29 @@ export function GameSelectScreen() {
 function FilterChip({
   label,
   active,
-  color,
   onClick,
 }: {
   label: string;
   active: boolean;
-  color: string;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       style={{
-        padding: '6px 12px',
-        fontSize: '0.72rem',
-        fontWeight: 800,
+        flexShrink: 0,
+        height: 40,
+        minHeight: 40,
+        padding: '0 16px',
+        fontSize: '0.88rem',
+        fontWeight: active ? 800 : 700,
         fontFamily: 'inherit',
         borderRadius: 999,
-        cursor: 'pointer',
-        textTransform: 'uppercase',
-        letterSpacing: '.03em',
-        color: active ? color : 'var(--dim)',
-        background: active ? color + '22' : 'transparent',
-        border: '1px solid ' + (active ? color + '77' : 'var(--line2)'),
+        whiteSpace: 'nowrap',
+        color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
+        background: active ? 'var(--text-primary)' : 'transparent',
+        border: active ? '1px solid transparent' : '1px solid var(--line2)',
       }}
     >
       {label}
@@ -1493,153 +1591,151 @@ function FilterChip({
   );
 }
 
-function GameCard({
-  game,
-  connectedCount,
-  hostless,
-  onOpen,
-  onRules,
-}: {
-  game: GameDefinition;
-  connectedCount: number;
-  hostless: boolean;
-  onOpen: () => void;
-  onRules: () => void;
-}) {
-  const t = useT();
-  const needsTv = hostless && !game.supportsHostless;
-  const lacking = connectedCount < effMinPlayers(game);
-  const disabled = lacking || needsTv;
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        position: 'relative',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--line)',
-        borderRadius: 18,
-        padding: 13,
-        opacity: disabled ? 0.5 : 1,
-        boxShadow: '0 2px 10px rgba(0,0,0,.14)',
+        padding: '22px 20px 8px',
+        fontSize: '0.75rem',
+        fontWeight: 800,
+        letterSpacing: '.1em',
+        textTransform: 'uppercase',
+        color: 'var(--text-secondary)',
       }}
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRules();
-        }}
-        title="Pravila"
+      {children}
+    </div>
+  );
+}
+
+// One 72px-tall list row: icon tile, name, full blurb, colored category text.
+// Games the group can't start yet render as `muted` rows with a reason chip.
+function GameRow({
+  game,
+  connectedCount,
+  muted,
+  onOpen,
+}: {
+  game: GameDefinition;
+  connectedCount: number;
+  muted?: boolean;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  const missing = effMinPlayers(game) - connectedCount;
+  const inner = (
+    <>
+      <span
         style={{
-          position: 'absolute',
-          top: 9,
-          right: 9,
-          width: 24,
-          height: 24,
-          borderRadius: '50%',
-          border: '1px solid var(--line2)',
-          background: 'rgba(22,46,78,.5)',
-          color: 'var(--text-secondary)',
-          fontSize: 12,
-          fontWeight: 800,
-          fontFamily: 'inherit',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 2,
+          ...tileStyle(game.accent, 52),
+          borderRadius: 16,
+          ...(muted
+            ? {
+                background: 'rgba(245,235,224,.06)',
+                border: '1px solid transparent',
+                filter: 'grayscale(.7)',
+              }
+            : {}),
         }}
       >
-        ?
-      </button>
-      <button
-        onClick={() => {
-          if (!disabled) onOpen();
-        }}
-        disabled={disabled}
+        {game.icon}
+      </span>
+      <span
         style={{
+          flex: 1,
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 8,
-          width: '100%',
-          height: '100%',
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
+          gap: 2,
           textAlign: 'left',
-          color: 'var(--text-primary)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >
-        <div style={tileStyle(game.accent, 44)}>{game.icon}</div>
-        <div
+        <span
           style={{
-            fontSize: '0.97rem',
             fontWeight: 800,
-            lineHeight: 1.1,
-            paddingRight: 22,
+            fontSize: '1rem',
+            lineHeight: 1.15,
+            color: muted ? 'var(--text-secondary)' : 'var(--text-primary)',
           }}
         >
           {t(`game.${game.id}.name`)}
-        </div>
-        <div
-          style={{
-            fontSize: '0.72rem',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.3,
-            flex: 1,
-          }}
-        >
-          {t(`game.${game.id}.blurb`)}
-        </div>
-        <div>
-          <span style={tagStyle(game.category)}>
-            {t(`gameTag.${game.category}`)}
-          </span>
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 9,
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            color: 'var(--dim)',
-          }}
-        >
-          <span>
-            👥 {game.minPlayers}–{game.maxPlayers}
-          </span>
-          <span>·</span>
-          <span>
-            ⏱ {t('config.minutes', { n: String(game.estimatedMinutes) })}
-          </span>
-        </div>
-        {needsTv && (
-          <div
-            style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--amber)' }}
-          >
-            🔒 {t('gameSelect.needsTv')}
-          </div>
-        )}
-        {!needsTv && lacking && (
-          <div
+        </span>
+        {!muted && (
+          <span
             style={{
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              color: 'var(--danger)',
+              fontSize: '0.82rem',
+              lineHeight: 1.3,
+              color: 'var(--text-secondary)',
             }}
           >
-            {t('gameSelect.needMore', {
-              n: effMinPlayers(game) - connectedCount,
-              noun: t(
-                effMinPlayers(game) - connectedCount === 1
-                  ? 'common.player.one'
-                  : 'common.player.many'
-              ),
-            })}
-          </div>
+            {t(`game.${game.id}.blurb`)}
+          </span>
         )}
-      </button>
-    </div>
+        <span
+          style={{
+            display: 'flex',
+            gap: 8,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: 'var(--dim)',
+            marginTop: 2,
+          }}
+        >
+          {!muted && (
+            <span style={{ color: CATEGORY_COLOR[game.category] }}>
+              {t(`gameTag.${game.category}`)}
+            </span>
+          )}
+          <span>
+            {game.minPlayers}–{game.maxPlayers} {t('gameSelect.players')}
+          </span>
+          <span>{t('config.minutes', { n: String(game.estimatedMinutes) })}</span>
+        </span>
+      </span>
+      {muted ? (
+        <span
+          style={{
+            height: 36,
+            padding: '0 12px',
+            borderRadius: 999,
+            background: 'rgba(227,180,94,.14)',
+            color: 'var(--amber)',
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {t('gameSelect.needMore', {
+            n: missing,
+            noun: t(missing === 1 ? 'common.player.one' : 'common.player.many'),
+          })}
+        </span>
+      ) : (
+        <span style={{ fontSize: '1.4rem', color: 'var(--dim)' }}>›</span>
+      )}
+    </>
+  );
+  const rowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    width: '100%',
+    minHeight: 72,
+    padding: '10px 8px',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid var(--line)',
+    color: 'var(--text-primary)',
+    fontFamily: 'inherit',
+  };
+  return muted ? (
+    <div style={rowStyle}>{inner}</div>
+  ) : (
+    <button onClick={onOpen} style={rowStyle}>
+      {inner}
+    </button>
   );
 }
 
@@ -2443,8 +2539,8 @@ function ModeButton({
         fontSize: '0.85rem',
         fontWeight: 800,
         borderRadius: '10px',
-        background: active ? 'var(--grad)' : 'var(--bg-primary)',
-        color: active ? '#fff' : 'var(--text-secondary)',
+        background: active ? 'var(--accent)' : 'var(--bg-primary)',
+        color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
         border: active ? '1px solid transparent' : '1px solid var(--line2)',
       }}
     >
@@ -2476,8 +2572,8 @@ function PackTag({
         fontWeight: 700,
         lineHeight: 1.25,
         borderRadius: '999px',
-        background: active ? 'var(--grad)' : 'var(--bg-primary)',
-        color: active ? '#fff' : 'var(--text-secondary)',
+        background: active ? 'var(--accent)' : 'var(--bg-primary)',
+        color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
         border: active ? '1px solid transparent' : '1px solid var(--line2)',
         whiteSpace: 'nowrap',
       }}
@@ -2502,11 +2598,13 @@ function Pill({
       style={{
         flex: 1,
         padding: '0.35rem 0.7rem',
-        fontSize: '0.95rem',
-        fontWeight: 800,
+        minHeight: '44px',
+        fontFamily: 'var(--font-display)',
+        fontSize: '1.15rem',
+        fontWeight: 700,
         borderRadius: '10px',
-        background: active ? 'var(--grad)' : 'var(--bg-primary)',
-        color: active ? '#fff' : 'var(--text-secondary)',
+        background: active ? 'var(--accent)' : 'var(--bg-primary)',
+        color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
         border: active ? '1px solid transparent' : '1px solid var(--line2)',
         minWidth: '42px',
       }}

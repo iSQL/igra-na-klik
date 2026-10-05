@@ -44,6 +44,7 @@ export function JoinScreen() {
   const [joining, setJoining] = useState(false);
   const [creating, setCreating] = useState(false);
   const [fetchingCode, setFetchingCode] = useState(false);
+  const [codeFocused, setCodeFocused] = useState(false);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const nameInputRef = useRef<HTMLInputElement>(null);
   // Read the latch during render (autoFocus applies at initial render), but
@@ -175,9 +176,10 @@ export function JoinScreen() {
 
   const errorKey = SERVER_ERROR_KEYS[error];
   const displayError = errorKey ? t(errorKey) : error;
+  const busy = joining || creating;
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.72rem',
+    fontSize: '0.75rem',
     color: 'var(--text-secondary)',
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -185,8 +187,8 @@ export function JoinScreen() {
   };
 
   const roomFaceStyle: React.CSSProperties = {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     flexShrink: 0,
     borderRadius: '50%',
     // Cut out of the row background so overlapping faces stay separable.
@@ -194,7 +196,7 @@ export function JoinScreen() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '0.75rem',
+    fontSize: '0.8rem',
   };
 
   const roomBadgeStyle: React.CSSProperties = {
@@ -209,14 +211,25 @@ export function JoinScreen() {
     whiteSpace: 'nowrap',
   };
 
+  // Joinable rooms first — one tap beats typing, so they lead the list.
+  const isJoinable = (r: RoomSummary) =>
+    r.status === 'lobby' && r.playerCount < r.maxPlayers;
+  const sortedRooms = [...rooms].sort(
+    (a, b) => Number(isJoinable(b)) - Number(isJoinable(a))
+  );
+
+  const codeSlots = Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => i);
+  const nextSlot = Math.min(roomCode.length, ROOM_CODE_LENGTH - 1);
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.1rem',
         width: '100%',
         maxWidth: '400px',
+        alignSelf: 'stretch',
+        padding: '1rem 0.2rem 1.1rem',
       }}
     >
       <div
@@ -233,94 +246,38 @@ export function JoinScreen() {
             alignItems: 'center',
             gap: '0.55rem',
             fontWeight: 700,
-            fontSize: '1.4rem',
+            fontSize: '1.3rem',
           }}
         >
           {/* Reverse cut — the join screen canvas is navy. */}
           <img
             src={`${import.meta.env.BASE_URL}ink-mark-reverse.svg`}
             alt=""
-            width={34}
-            height={34}
+            width={32}
+            height={32}
           />
           {/* One flex item, or the row gap would open up inside the wordmark. */}
           <span>
-            igra na <span className="text-grad">KLIK</span>
+            igra na <span style={{ color: 'var(--amber)' }}>KLIK</span>
           </span>
         </span>
         <LanguageSwitch />
       </div>
 
-      <div>
-        <h2
-          className="display"
-          style={{ fontSize: '1.9rem', lineHeight: 1, margin: '0 0 0.3rem' }}
-        >
-          {t('join.enterGame')}
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-          {t('join.createRoomHint')}
-        </p>
-      </div>
+      <h2
+        className="display"
+        style={{ fontSize: '2.1rem', lineHeight: 1, margin: '2rem 0 0' }}
+      >
+        {t('join.enterGame')}
+      </h2>
 
-      {!SINGLE_ROOM_MODE && (
-        <div>
-          <label style={labelStyle}>{t('join.roomCode')}</label>
-          <input
-            type="text"
-            maxLength={ROOM_CODE_LENGTH}
-            autoFocus={allowAutoFocus && !roomCode}
-            value={roomCode}
-            onChange={(e) => handleCodeChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-            style={{
-              marginTop: '0.5rem',
-              width: '100%',
-              height: '70px',
-              fontSize: '2.3rem',
-              textAlign: 'center',
-              letterSpacing: '0.6rem',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              border: roomCode.length === ROOM_CODE_LENGTH ? '2px solid var(--pink)' : '2px solid var(--line2)',
-              boxShadow: roomCode.length === ROOM_CODE_LENGTH ? '0 0 0 4px rgba(217,123,108,.15)' : 'none',
-              borderRadius: '16px',
-            }}
-          />
-        </div>
-      )}
-
-      {SINGLE_ROOM_MODE && (
-        <div>
-          <label style={labelStyle}>{t('join.roomCode')}</label>
-          <div
-            style={{
-              marginTop: '0.5rem',
-              textAlign: 'center',
-              fontSize: '2.3rem',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              letterSpacing: '0.6rem',
-              color: fetchingCode ? 'var(--text-secondary)' : 'var(--text-primary)',
-              height: '70px',
-              background: 'var(--bg-secondary)',
-              border: '2px solid var(--line2)',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {fetchingCode ? '...' : roomCode || '—'}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label style={labelStyle}>{t('join.yourName')}</label>
+      {/* Name first: it's needed for every path (code, room list, new room). */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.5rem' }}>
+        <label htmlFor="join-name" style={labelStyle}>
+          {t('join.nameQuestion')}
+        </label>
         <input
+          id="join-name"
           ref={nameInputRef}
           type="text"
           placeholder={t('join.yourName')}
@@ -330,183 +287,286 @@ export function JoinScreen() {
           onChange={(e) => setPlayerName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
           style={{
-            marginTop: '0.5rem',
             width: '100%',
-            height: '54px',
-            padding: '0 1rem',
-            fontWeight: 700,
+            height: '64px',
+            padding: '0 1.1rem',
+            fontSize: '1.1rem',
+            fontWeight: 800,
             background: 'var(--bg-secondary)',
             color: 'var(--text-primary)',
             border: '1.5px solid var(--line2)',
-            borderRadius: '14px',
+            borderRadius: '18px',
           }}
         />
       </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.25rem' }}>
+        <label htmlFor="join-code" style={labelStyle}>
+          {t('join.roomCode')}
+        </label>
+        {/* Three letter boxes over one transparent input: the real input
+            keeps native typing/paste/IME behaviour, the boxes are display. */}
+        <div style={{ position: 'relative' }}>
+          <div
+            aria-hidden
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${ROOM_CODE_LENGTH}, 1fr)`,
+              gap: '0.6rem',
+            }}
+          >
+            {codeSlots.map((i) => {
+              const ch = SINGLE_ROOM_MODE && fetchingCode ? '' : roomCode[i];
+              const isNext = !SINGLE_ROOM_MODE && codeFocused && i === nextSlot;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    height: '80px',
+                    borderRadius: '18px',
+                    background: 'var(--bg-secondary)',
+                    border: isNext
+                      ? '2px solid var(--accent)'
+                      : ch
+                        ? '2px solid var(--line2)'
+                        : '2px dashed var(--line2)',
+                    boxShadow: isNext ? '0 0 0 4px rgba(194,155,71,.18)' : 'none',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: '2.5rem',
+                    color: SINGLE_ROOM_MODE && fetchingCode ? 'var(--text-secondary)' : 'var(--text-primary)',
+                  }}
+                >
+                  {ch ? (
+                    ch
+                  ) : isNext ? (
+                    <span style={{ width: 2, height: 34, background: 'var(--amber)' }} />
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          {!SINGLE_ROOM_MODE && (
+            <input
+              id="join-code"
+              type="text"
+              maxLength={ROOM_CODE_LENGTH}
+              autoFocus={allowAutoFocus && !roomCode}
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label={t('join.roomCode')}
+              value={roomCode}
+              onChange={(e) => handleCodeChange(e.target.value)}
+              onFocus={() => setCodeFocused(true)}
+              onBlur={() => setCodeFocused(false)}
+              onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                opacity: 0,
+                // 16px+ so iOS Safari doesn't zoom the page on focus.
+                fontSize: '16px',
+                cursor: 'text',
+              }}
+            />
+          )}
+        </div>
+        {!SINGLE_ROOM_MODE && (
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {t('join.autoJoinHint')}
+          </span>
+        )}
+      </div>
+
       {error && (
-        <p style={{ color: 'var(--danger)', textAlign: 'center', fontWeight: 700 }}>
+        <p
+          role="alert"
+          style={{
+            color: 'var(--danger)',
+            textAlign: 'center',
+            fontWeight: 700,
+            margin: '0.9rem 0 0',
+          }}
+        >
           {displayError}
         </p>
       )}
 
-      <button
-        className="btn-primary"
-        onClick={() => handleJoin()}
-        disabled={joining || creating || fetchingCode}
-      >
-        {joining ? t('join.joining') : t('join.enterGame')}
-      </button>
+      {/* Single-room mode has no auto-join keystroke, so keep the button there
+          (and as the manual fallback while a code is complete but unsent). */}
+      {(SINGLE_ROOM_MODE || roomCode.length === ROOM_CODE_LENGTH) && (
+        <button
+          className="btn-primary"
+          onClick={() => handleJoin()}
+          disabled={busy || fetchingCode}
+          style={{ marginTop: '1.25rem' }}
+        >
+          {joining ? t('join.joining') : t('join.enterGame')}
+        </button>
+      )}
 
-      {!SINGLE_ROOM_MODE && (
-        <>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              color: 'var(--dim)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-            {t('join.or')}
-            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-          </div>
-
-          <button
-            className="btn-ghost"
-            onClick={handleCreate}
-            disabled={joining || creating}
-          >
-            ＋ {creating ? t('join.creating') : t('join.createRoom')}
-          </button>
-
-          {rooms.length > 0 && (
-            <div>
-              <label style={labelStyle}>{t('join.activeRooms')}</label>
-              <div
-                style={{
-                  marginTop: '0.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.4rem',
-                }}
-              >
-                {rooms.map((r) => {
-                  const joinable =
-                    r.status === 'lobby' && r.playerCount < r.maxPlayers;
-                  return (
-                    <button
-                      key={r.code}
-                      onClick={() => pickRoom(r.code)}
-                      disabled={!joinable || joining || creating}
+      {!SINGLE_ROOM_MODE && sortedRooms.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.25rem' }}>
+          <span style={labelStyle}>{t('join.tapRoom')}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {sortedRooms.map((r) => {
+              const joinable = isJoinable(r);
+              return (
+                <button
+                  key={r.code}
+                  onClick={() => pickRoom(r.code)}
+                  disabled={!joinable || busy}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    minHeight: '60px',
+                    padding: '0 0.65rem 0 0.9rem',
+                    borderRadius: '16px',
+                    background: 'var(--bg-secondary)',
+                    // A joinable room is the one thing on this screen you
+                    // can act on without typing — give it the gold edge.
+                    border: joinable
+                      ? '1.5px solid var(--accent)'
+                      : '1px solid var(--line2)',
+                    opacity: joinable ? 1 : 0.55,
+                    textAlign: 'left',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <span
+                    className="display"
+                    style={{
+                      fontSize: '1.4rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      color: joinable ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      minWidth: `${ROOM_CODE_LENGTH + 1}ch`,
+                    }}
+                  >
+                    {r.code}
+                  </span>
+                  <span style={{ flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    {r.avatars.slice(0, MAX_ROOM_FACES).map((a, i) => (
+                      <span
+                        key={i}
+                        aria-hidden
+                        style={{ ...roomFaceStyle, background: a.color, marginLeft: i === 0 ? 0 : '-8px' }}
+                      >
+                        {a.emoji}
+                      </span>
+                    ))}
+                    {r.playerCount > MAX_ROOM_FACES && (
+                      <span
+                        aria-hidden
+                        style={{
+                          ...roomFaceStyle,
+                          marginLeft: '-8px',
+                          background: 'var(--bg-card)',
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
+                        +{r.playerCount - MAX_ROOM_FACES}
+                      </span>
+                    )}
+                    <span
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.7rem',
-                        width: '100%',
-                        padding: '0.65rem 0.7rem 0.65rem 0.8rem',
-                        borderRadius: '14px',
-                        background: 'var(--bg-secondary)',
-                        // A joinable room is the one thing on this screen you
-                        // can act on without typing — give it the gold edge.
-                        border: joinable
-                          ? '1.5px solid var(--accent)'
-                          : '1px solid var(--line2)',
-                        boxShadow: joinable
-                          ? '0 6px 18px rgba(194,155,71,.18)'
-                          : 'none',
-                        opacity: joinable ? 1 : 0.55,
-                        textAlign: 'left',
+                        marginLeft: r.avatars.length ? '0.5rem' : 0,
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      <span
-                        className="display"
-                        style={{
-                          fontSize: '1.3rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.15em',
-                          color: joinable ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          minWidth: `${ROOM_CODE_LENGTH + 1}ch`,
-                        }}
-                      >
-                        {r.code}
-                      </span>
-                      <span
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          minWidth: 0,
-                        }}
-                      >
-                        {r.avatars.slice(0, MAX_ROOM_FACES).map((a, i) => (
-                          <span
-                            key={i}
-                            aria-hidden
-                            style={{ ...roomFaceStyle, background: a.color, marginLeft: i === 0 ? 0 : '-7px' }}
-                          >
-                            {a.emoji}
-                          </span>
-                        ))}
-                        {r.playerCount > MAX_ROOM_FACES && (
-                          <span
-                            aria-hidden
-                            style={{
-                              ...roomFaceStyle,
-                              marginLeft: '-7px',
-                              background: 'var(--bg-card)',
-                              fontSize: '0.62rem',
-                              fontWeight: 800,
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            +{r.playerCount - MAX_ROOM_FACES}
-                          </span>
-                        )}
-                        <span
-                          style={{
-                            marginLeft: r.avatars.length ? '0.5rem' : 0,
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {r.playerCount}/{r.maxPlayers}
-                        </span>
-                      </span>
-                      {r.status !== 'lobby' ? (
-                        <span style={roomBadgeStyle}>{t('join.inGame')}</span>
-                      ) : joinable ? (
-                        <span
-                          style={{
-                            padding: '0.35rem 0.7rem',
-                            borderRadius: '999px',
-                            background: 'var(--accent)',
-                            color: 'var(--bg-primary)',
-                            fontSize: '0.8rem',
-                            fontWeight: 800,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {t('join.enterShort')}
-                        </span>
-                      ) : (
-                        <span style={roomBadgeStyle}>{t('join.full')}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
+                      {t('join.inRoom', { n: r.playerCount })}
+                    </span>
+                  </span>
+                  {r.status !== 'lobby' ? (
+                    <span style={roomBadgeStyle}>{t('join.inGame')}</span>
+                  ) : joinable ? (
+                    <span
+                      style={{
+                        height: '40px',
+                        padding: '0 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '999px',
+                        background: 'var(--accent)',
+                        color: 'var(--bg-primary)',
+                        fontSize: '0.9rem',
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {t('join.enterShort')}
+                    </span>
+                  ) : (
+                    <span style={roomBadgeStyle}>{t('join.full')}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1, minHeight: '1.25rem' }} />
+
+      {/* Thumb zone: creating a room is its own card, not a ghost button
+          squeezed between the form and the room list. */}
+      {!SINGLE_ROOM_MODE && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.9rem',
+            padding: '1rem',
+            borderRadius: '20px',
+            background: 'rgba(245,235,224,.06)',
+            border: '1px solid var(--line)',
+          }}
+        >
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <span className="display" style={{ fontWeight: 700, fontSize: '1.15rem', lineHeight: 1.1 }}>
+              {t('join.newRoom')}
+            </span>
+            <span style={{ fontSize: '0.82rem', lineHeight: 1.35, color: 'var(--text-secondary)' }}>
+              {t('join.createRoomHint')}
+            </span>
+          </div>
+          <button
+            onClick={handleCreate}
+            disabled={busy}
+            style={{
+              height: '48px',
+              padding: '0 1.1rem',
+              borderRadius: '14px',
+              border: '1.5px solid var(--accent)',
+              background: 'transparent',
+              color: 'var(--amber)',
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ＋ {creating ? t('join.creating') : t('join.createShort')}
+          </button>
+        </div>
       )}
 
       <a
         href="/"
         style={{
+          marginTop: '0.9rem',
           fontSize: '0.85rem',
           color: 'var(--text-secondary)',
           fontWeight: 700,

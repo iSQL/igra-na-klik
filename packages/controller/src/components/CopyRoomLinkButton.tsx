@@ -5,37 +5,42 @@ import { useT } from '../i18n/useT';
 // paste it to friends. navigator.clipboard is unavailable on plain-http
 // LAN origins (not a secure context), so fall back to the legacy
 // textarea + execCommand path there.
+export function roomJoinUrl(code: string): string {
+  return `${window.location.origin}/play/?code=${code}`;
+}
+
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  document.body.removeChild(ta);
+  return ok;
+}
+
 export function CopyRoomLinkButton({ code }: { code: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    const url = `${window.location.origin}/play/?code=${code}`;
-    let ok = false;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        ok = true;
-      }
-    } catch {
-      // fall through to the legacy path
-    }
-    if (!ok) {
-      const ta = document.createElement('textarea');
-      ta.value = url;
-      ta.setAttribute('readonly', '');
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        ok = document.execCommand('copy');
-      } catch {
-        ok = false;
-      }
-      document.body.removeChild(ta);
-    }
-    if (ok) {
+    if (await copyText(roomJoinUrl(code))) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

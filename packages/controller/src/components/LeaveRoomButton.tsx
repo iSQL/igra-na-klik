@@ -4,7 +4,7 @@ import { useT } from '../i18n/useT';
 import { LeaveRoomDialog } from './LeaveRoomDialog';
 
 interface Props {
-  variant?: 'inline' | 'overlay';
+  variant?: 'inline' | 'overlay' | 'menu';
 }
 
 export function LeaveRoomButton({ variant = 'inline' }: Props) {
@@ -16,8 +16,23 @@ export function LeaveRoomButton({ variant = 'inline' }: Props) {
     setConfirming(false);
   };
 
+  const menuStyle: React.CSSProperties = {
+    width: '100%',
+    minHeight: '52px',
+    padding: '0 1rem',
+    textAlign: 'left',
+    fontSize: '0.95rem',
+    fontWeight: 800,
+    borderRadius: '14px',
+    background: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--line)',
+  };
+
   const triggerStyle: React.CSSProperties =
-    variant === 'overlay'
+    variant === 'menu'
+      ? menuStyle
+      : variant === 'overlay'
       ? {
           padding: '0.4rem 0.7rem',
           fontSize: '0.8rem',

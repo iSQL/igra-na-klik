@@ -6,7 +6,7 @@ import { useT } from '../i18n/useT';
 // everyone (the TV then auto-creates a fresh room). Only render this for
 // the player currently holding the remote-host claim — the server rejects
 // the event from anyone else.
-export function CloseRoomButton() {
+export function CloseRoomButton({ variant = 'inline' }: { variant?: 'inline' | 'menu' }) {
   const [confirming, setConfirming] = useState(false);
   const t = useT();
 
@@ -15,14 +15,17 @@ export function CloseRoomButton() {
       <button
         onClick={() => setConfirming(true)}
         style={{
-          padding: '0.4rem 0.9rem',
-          fontSize: '0.8rem',
+          padding: variant === 'menu' ? '0 1rem' : '0.4rem 0.9rem',
+          fontSize: variant === 'menu' ? '0.95rem' : '0.8rem',
           fontWeight: 800,
-          borderRadius: '12px',
+          borderRadius: variant === 'menu' ? '14px' : '12px',
           background: 'rgba(255, 77, 94, 0.14)',
           color: 'var(--danger)',
           border: '1px solid rgba(255, 77, 94, 0.5)',
-          minHeight: '40px',
+          minHeight: variant === 'menu' ? '52px' : '40px',
+          ...(variant === 'menu'
+            ? { width: '100%', textAlign: 'left' as const }
+            : {}),
         }}
       >
         {t('closeRoom.button')}

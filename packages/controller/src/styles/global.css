@@ -114,9 +114,10 @@ textarea {
   min-height: 56px;
   border: 0;
   border-radius: 16px;
-  background: var(--grad);
-  color: #fff;
-  font-weight: 700;
+  background: var(--accent);
+  /* Navy on solid gold: 5.3:1 (white on the old gradient was ~2.6:1). */
+  color: #162e4e;
+  font-weight: 800;
   font-size: 1.06rem;
   box-shadow: var(--shadow-cta);
 }

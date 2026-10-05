@@ -2,23 +2,111 @@ import { useEffect, useRef, useState } from 'react';
 import { CHAT_MAX_LENGTH } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
+import { create } from 'zustand';
 import { useT } from '../i18n/useT';
 
-// Floating pre-game chat "head": a collapsed 💬 bubble (bottom-right) with an
-// unread badge that expands into a chat panel on tap and collapses back on
-// tap/X. The server only accepts chat while the room is in the lobby, so this
-// mounts on the lobby AND game-select screens (both are lobby room-state) and
-// unmounts once a game starts.
-export function ChatHead() {
+// Open/seen state lives in a store so a button elsewhere (the lobby top bar)
+// can toggle the same panel as the floating bubble.
+interface ChatUiStore {
+  open: boolean;
+  seenCount: number;
+  setOpen: (open: boolean) => void;
+  setSeenCount: (n: number) => void;
+}
+
+const useChatUi = create<ChatUiStore>((set) => ({
+  open: false,
+  seenCount: 0,
+  setOpen: (open) => set({ open }),
+  setSeenCount: (seenCount) => set({ seenCount }),
+}));
+
+function useChatUnread(): number {
   const chatMessages = usePlayerStore((s) => s.chatMessages);
   const myId = usePlayerStore((s) => s.player?.id);
-  const [open, setOpen] = useState(false);
+  const open = useChatUi((s) => s.open);
+  const seenCount = useChatUi((s) => s.seenCount);
+  // Badge counts only OTHER players' messages arrived since the panel was
+  // last open — your own can't be "unread" (you can only send while open).
+  return open
+    ? 0
+    : chatMessages.slice(seenCount).filter((m) => m.playerId !== myId).length;
+}
+
+function toggleChat() {
+  const { open, setOpen, setSeenCount } = useChatUi.getState();
+  // No auto-focus on open — the keyboard should only pop once the player
+  // taps the input, so the message list stays readable first.
+  if (!open) setSeenCount(usePlayerStore.getState().chatMessages.length);
+  setOpen(!open);
+}
+
+/** Square 💬 button with unread badge, for a screen's own top bar. */
+export function ChatToggleButton() {
+  const open = useChatUi((s) => s.open);
+  const unread = useChatUnread();
+  const t = useT();
+  return (
+    <button
+      onClick={toggleChat}
+      aria-label={t('chat.title')}
+      aria-expanded={open}
+      style={{
+        position: 'relative',
+        width: 44,
+        height: 44,
+        minWidth: 44,
+        minHeight: 44,
+        padding: 0,
+        borderRadius: 14,
+        background: open ? 'var(--accent)' : 'var(--bg-secondary)',
+        border: '1px solid var(--line)',
+        fontSize: '1.2rem',
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      💬
+      {unread > 0 && (
+        <span
+          style={{
+            position: 'absolute',
+            top: -5,
+            right: -5,
+            minWidth: 20,
+            height: 20,
+            padding: '0 5px',
+            borderRadius: 10,
+            background: 'var(--danger)',
+            color: '#fff',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Pre-game chat panel, plus (unless `showBubble` is false) a floating 💬
+// bubble bottom-right. The server only accepts chat while the room is in the
+// lobby, so this mounts on the lobby AND game-select screens (both are lobby
+// room-state) and unmounts once a game starts. The lobby hides the bubble —
+// it has its own toggle in the top bar and the bubble would cover the CTA.
+export function ChatHead({ showBubble = true }: { showBubble?: boolean }) {
+  const chatMessages = usePlayerStore((s) => s.chatMessages);
+  const myId = usePlayerStore((s) => s.player?.id);
+  const open = useChatUi((s) => s.open);
+  const setOpen = useChatUi((s) => s.setOpen);
+  const setSeenCount = useChatUi((s) => s.setSeenCount);
   const [text, setText] = useState('');
-  // How many messages the player had seen when the panel was last open —
-  // the badge shows the difference while collapsed.
-  const [seenCount, setSeenCount] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const t = useT();
+  const unread = useChatUnread();
 
   // Keep the list pinned to the newest message while open.
   useEffect(() => {
@@ -26,13 +114,7 @@ export function ChatHead() {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
     setSeenCount(chatMessages.length);
-  }, [chatMessages, open]);
-
-  // Badge counts only OTHER players' messages arrived since the panel was
-  // last open — your own can't be "unread" (you can only send while open).
-  const unread = chatMessages
-    .slice(seenCount)
-    .filter((m) => m.playerId !== myId).length;
+  }, [chatMessages, open, setSeenCount]);
 
   const send = () => {
     const trimmed = text.trim();
@@ -192,16 +274,9 @@ export function ChatHead() {
         </div>
       )}
 
+      {showBubble && (
       <button
-        onClick={() => {
-          // No auto-focus on open — the keyboard should only pop once the
-          // player taps the input, so the message list stays readable first.
-          setOpen((o) => {
-            const next = !o;
-            if (next) setSeenCount(usePlayerStore.getState().chatMessages.length);
-            return next;
-          });
-        }}
+        onClick={toggleChat}
         aria-label={t('chat.title')}
         aria-expanded={open}
         style={{
@@ -225,7 +300,7 @@ export function ChatHead() {
         }}
       >
         💬
-        {!open && unread > 0 && (
+        {unread > 0 && (
           <span
             style={{
               position: 'absolute',
@@ -248,6 +323,7 @@ export function ChatHead() {
           </span>
         )}
       </button>
+      )}
     </>
   );
 }

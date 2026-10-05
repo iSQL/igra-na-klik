@@ -37,8 +37,8 @@ export function LanguageSwitch() {
               borderRadius: '7px',
               border: 'none',
               cursor: 'pointer',
-              background: active ? 'var(--grad)' : 'transparent',
-              color: active ? '#fff' : 'var(--text-secondary)',
+              background: active ? 'var(--text-primary)' : 'transparent',
+              color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
               minHeight: 'unset',
               minWidth: 'unset',
             }}
