@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ROOM_CODE_LENGTH, type RoomSummary } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
-import { LanguageSwitch } from '../components/LanguageSwitch';
+import { StartMenu } from '../components/StartMenu';
 import { useT } from '../i18n/useT';
 
 const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
@@ -47,6 +47,8 @@ export function JoinScreen() {
   const [codeFocused, setCodeFocused] = useState(false);
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Read the latch during render (autoFocus applies at initial render), but
   // only SET it in an effect — keeps render pure so StrictMode's double
   // render can't consume the first-mount slot before the real paint.
@@ -261,7 +263,27 @@ export function JoinScreen() {
             igra na <span style={{ color: 'var(--amber)' }}>KLIK</span>
           </span>
         </span>
-        <LanguageSwitch />
+        {/* Language, TV play, rules and zabari.net live in the ⋯ menu so the
+            header carries only the brand. */}
+        <button
+          onClick={() => setMenuOpen(true)}
+          aria-label={t('start.menu')}
+          style={{
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
+            padding: 0,
+            borderRadius: 14,
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--line)',
+            color: 'var(--text-secondary)',
+            fontSize: '1.3rem',
+            fontWeight: 800,
+          }}
+        >
+          ⋯
+        </button>
       </div>
 
       <h2
@@ -270,6 +292,16 @@ export function JoinScreen() {
       >
         {t('join.enterGame')}
       </h2>
+      <p
+        style={{
+          margin: '0.4rem 0 0',
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
+        }}
+      >
+        {t('join.tagline')}
+      </p>
 
       {/* Name first: it's needed for every path (code, room list, new room). */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.5rem' }}>
@@ -351,6 +383,7 @@ export function JoinScreen() {
           {!SINGLE_ROOM_MODE && (
             <input
               id="join-code"
+              ref={codeInputRef}
               type="text"
               maxLength={ROOM_CODE_LENGTH}
               autoFocus={allowAutoFocus && !roomCode}
@@ -413,10 +446,54 @@ export function JoinScreen() {
 
       {!SINGLE_ROOM_MODE && sortedRooms.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.25rem' }}>
-          <span style={labelStyle}>{t('join.tapRoom')}</span>
+          <span style={labelStyle}>{t('join.activeRooms')}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
             {sortedRooms.map((r) => {
               const joinable = isJoinable(r);
+              // A game in progress: shown so you know the room exists and how
+              // far along it is, but it can't be joined from here.
+              if (r.status !== 'lobby') {
+                return (
+                  <div
+                    key={r.code}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      minHeight: '52px',
+                      padding: '0 0.9rem',
+                      borderRadius: '16px',
+                      border: '1px solid var(--line)',
+                    }}
+                  >
+                    <span
+                      className="display"
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-secondary)',
+                        minWidth: `${ROOM_CODE_LENGTH + 1}ch`,
+                      }}
+                    >
+                      {r.code}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--amber)' }}>
+                        {t('join.inGame')}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--dim)' }}>
+                        {r.gameId
+                          ? t('join.inGameSummary', {
+                              game: t(`game.${r.gameId}.name`),
+                              n: r.playerCount,
+                            })
+                          : t('join.inRoom', { n: r.playerCount })}
+                      </span>
+                    </span>
+                  </div>
+                );
+              }
               return (
                 <button
                   key={r.code}
@@ -490,9 +567,7 @@ export function JoinScreen() {
                       {t('join.inRoom', { n: r.playerCount })}
                     </span>
                   </span>
-                  {r.status !== 'lobby' ? (
-                    <span style={roomBadgeStyle}>{t('join.inGame')}</span>
-                  ) : joinable ? (
+                  {joinable ? (
                     <span
                       style={{
                         height: '40px',
@@ -563,20 +638,18 @@ export function JoinScreen() {
         </div>
       )}
 
-      <a
-        href="/"
-        style={{
-          marginTop: '0.9rem',
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)',
-          fontWeight: 700,
-          textDecoration: 'none',
-          textAlign: 'center',
-          opacity: 0.8,
-        }}
-      >
-        {t('join.home')}
-      </a>
+      {/* No "← Početna" link any more: `/` now redirects here. */}
+      {menuOpen && (
+        <StartMenu
+          onClose={() => setMenuOpen(false)}
+          onEnterCode={() => {
+            setMenuOpen(false);
+            // Focus inside the tap's handler, or mobile browsers won't open
+            // the keyboard.
+            codeInputRef.current?.focus();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -68,6 +68,8 @@ export interface RoomSummary {
   playerCount: number;
   maxPlayers: number;
   status: RoomStatus;
+  /** Game being played, while status isn't 'lobby'. */
+  gameId?: string;
   avatars: RoomSummaryAvatar[];
 }
 

@@ -2,9 +2,14 @@ import { LANGUAGES, type Language } from '@igra/shared';
 import { useLanguageStore } from '../store/languageStore';
 
 const LABELS: Record<Language, string> = { sr: 'SR', en: 'EN' };
+// Each language named in itself, so the switch reads right from either side.
+const FULL_LABELS: Record<Language, string> = { sr: 'Srpski', en: 'English' };
 
-/** Compact SR | EN segmented toggle for the per-device UI language. */
-export function LanguageSwitch() {
+/**
+ * SR | EN segmented toggle for the per-device UI language. `large` is the
+ * menu-row size with full names (Srpski / English, 40px targets).
+ */
+export function LanguageSwitch({ large = false }: { large?: boolean }) {
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
 
@@ -14,10 +19,10 @@ export function LanguageSwitch() {
       aria-label="Language"
       style={{
         display: 'inline-flex',
-        padding: '3px',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--line)',
-        borderRadius: '10px',
+        padding: large ? '4px' : '3px',
+        background: large ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+        border: large ? 'none' : '1px solid var(--line)',
+        borderRadius: large ? '12px' : '10px',
       }}
     >
       {LANGUAGES.map((lang) => {
@@ -31,10 +36,11 @@ export function LanguageSwitch() {
             }}
             aria-pressed={active}
             style={{
-              padding: '0.35rem 0.7rem',
-              fontSize: '0.75rem',
+              padding: large ? '0 18px' : '0.35rem 0.7rem',
+              height: large ? 40 : undefined,
+              fontSize: large ? '0.88rem' : '0.75rem',
               fontWeight: 800,
-              borderRadius: '7px',
+              borderRadius: large ? '9px' : '7px',
               border: 'none',
               cursor: 'pointer',
               background: active ? 'var(--text-primary)' : 'transparent',
@@ -43,7 +49,7 @@ export function LanguageSwitch() {
               minWidth: 'unset',
             }}
           >
-            {LABELS[lang]}
+            {large ? FULL_LABELS[lang] : LABELS[lang]}
           </button>
         );
       })}

@@ -304,7 +304,7 @@ export class RoomManager {
     };
   }
 
-  /** Safe per-room summaries for the public landing-page list. */
+  /** Safe per-room summaries for the public room list on the join screen. */
   listRoomSummaries(): RoomSummary[] {
     return [...this.rooms.values()].map((room) => {
       const connected = room.players.filter((p) => p.isConnected);
@@ -313,6 +313,11 @@ export class RoomManager {
         playerCount: connected.length,
         maxPlayers: room.settings.maxPlayers,
         status: room.status,
+        // Which game is running, so the join screen can say "Kviz · 6 u
+        // sobi". The id only — no game state rides along.
+        ...(room.status !== 'lobby' && room.currentGameId
+          ? { gameId: room.currentGameId }
+          : {}),
         // Faces only — never names or ids; the list is public.
         avatars: connected.map((p) => ({
           color: p.avatarColor,

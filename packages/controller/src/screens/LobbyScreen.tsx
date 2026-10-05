@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { MAX_PLAYERS_DEFAULT, ROOM_CODE_LENGTH } from '@igra/shared';
+import { GAME_DEFINITIONS, MAX_PLAYERS_DEFAULT, ROOM_CODE_LENGTH } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
@@ -10,6 +10,7 @@ import { CloseRoomButton } from '../components/CloseRoomButton';
 import { copyText, roomJoinUrl } from '../components/CopyRoomLinkButton';
 import { ChatToggleButton } from '../components/ChatHead';
 import { LanguageSwitch } from '../components/LanguageSwitch';
+import { BottomSheet, SheetRow } from '../components/BottomSheet';
 import { AvatarPickerModal } from '../components/AvatarPickerModal';
 import { useT } from '../i18n/useT';
 
@@ -475,48 +476,26 @@ export function LobbyScreen() {
       </div>
 
       {menuOpen && (
-        <div
-          onClick={() => setMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(11,22,40,.62)',
-            zIndex: 900,
-            animation: 'igra-fade .18s ease',
-          }}
-        >
-          <div
-            role="dialog"
-            aria-label={t('lobby.menu')}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              bottom: 0,
-              transform: 'translateX(-50%)',
-              width: '100%',
-              maxWidth: 480,
-              padding: '10px 20px calc(20px + env(safe-area-inset-bottom, 0px))',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.6rem',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--line2)',
-              borderBottom: 'none',
-              borderRadius: '28px 28px 0 0',
-              animation: 'igra-sheet-up .26s cubic-bezier(.22,1,.36,1)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 6 }}>
-              <div style={{ width: 40, height: 5, borderRadius: 99, background: 'var(--line2)' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <LanguageSwitch />
+        <BottomSheet label={t('lobby.menu')} onClose={() => setMenuOpen(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <SheetRow
+              icon="📖"
+              tint="#a9c46c"
+              title={t('start.rulesTitle')}
+              hint={t('start.rulesHint', { n: Object.keys(GAME_DEFINITIONS).length })}
+              href="/uputstva"
+              newTab
+            />
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 14, minHeight: 64, padding: '0 10px' }}
+            >
+              <span style={{ flex: 1, fontWeight: 800, fontSize: '1rem' }}>{t('start.language')}</span>
+              <LanguageSwitch large />
             </div>
             <LeaveRoomButton variant="menu" />
             {iAmRemoteHost && <CloseRoomButton variant="menu" />}
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {qrOpen && (
