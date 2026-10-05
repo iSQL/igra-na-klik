@@ -5,6 +5,9 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useHaptics } from '../../hooks/useHaptics';
 import { socket } from '../../socket';
+import { GameFrame, useHideFloatingMenu } from '../../components/kit/GameFrame';
+import { PlayerMenu } from '../../components/PlayerMenu';
+import { RoundVerdict, verdictWash } from '../../components/kit/RoundVerdict';
 
 /**
  * Splav on the phone: a thumb stick and one dash button.
@@ -47,15 +50,34 @@ export default function SplavController() {
   }
 
   if (phase === 'borba') {
-    return <Pad playerId={playerId} alive={my?.alive ?? false} my={my} />;
+    const me = host.roster.find((p) => p.playerId === playerId);
+    return (
+      <Pad
+        playerId={playerId}
+        alive={my?.alive ?? false}
+        my={my}
+        aliveCount={host.roster.filter((p) => p.alive).length}
+        total={host.roster.length}
+        avatar={me}
+      />
+    );
   }
+
+  return (
+    <GameFrame
+      gameId="splav"
+      subtitle={phase === 'ended' ? 'Kraj igre' : `Runda ${host.round}/${host.totalRounds}`}
+    >
+      <Between phase={phase} my={my} />
+    </GameFrame>
+  );
+}
+
+function Between({ phase, my }: { phase: string; my?: SplavControllerData }) {
 
   if (phase === 'intro') {
     return (
       <Centered>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Runda {host.round}/{host.totalRounds}
-        </p>
         <p style={{ fontSize: '3rem' }}>🛶</p>
         <p style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
           Spremi palčeve!
@@ -70,19 +92,18 @@ export default function SplavController() {
 
   if (phase === 'runda-gotova') {
     const rank = my?.roundRank ?? 0;
+    // Place and points arrive here, at the end of the round — not while the
+    // player is still dripping on "U vodi si!".
     return (
-      <Centered>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Kraj runde {host.round}
-        </p>
-        <p style={{ fontSize: '3rem' }}>{rank === 1 ? '🏆' : rank === 2 ? '🥈' : '💧'}</p>
-        <p style={{ fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-          {rank === 1 ? 'Ostao si na splavu!' : `${rank}. mesto`}
-        </p>
-        <p style={{ fontSize: '1.4rem', color: 'var(--accent)', fontWeight: 800 }}>
-          +{my?.roundPoints ?? 0}
-        </p>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>Gledaj TV</p>
+      <Centered wash={verdictWash(rank === 1 ? 'correct' : 'neutral')}>
+        <RoundVerdict
+          kind={rank === 1 ? 'correct' : 'neutral'}
+          icon={rank === 1 ? '🏆' : rank === 2 ? '🥈' : '💧'}
+          title={rank === 1 ? 'Ostao si na splavu!' : `${rank}. mesto`}
+          points={my?.roundPoints ?? 0}
+          total={my?.score ?? 0}
+        />
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>Gledaj TV</p>
       </Centered>
     );
   }
@@ -103,10 +124,12 @@ export default function SplavController() {
   );
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
+function Centered({ children, wash }: { children: React.ReactNode; wash?: string }) {
   return (
     <div
       style={{
+        position: 'relative',
+        background: wash,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -129,12 +152,21 @@ function Pad({
   playerId,
   alive,
   my,
+  aliveCount,
+  total,
+  avatar,
 }: {
   playerId: string;
   alive: boolean;
   my?: SplavControllerData;
+  aliveCount: number;
+  total: number;
+  avatar?: { avatarColor: string; avatarEmoji: string };
 }) {
   const haptics = useHaptics();
+  // No GameFrame mid-fight (both halves are input) — the menu sits in the
+  // top-right corner instead of floating over NALET.
+  useHideFloatingMenu();
   const stickRef = useRef<HTMLDivElement>(null);
 
   // Live input lives in refs — re-rendering React on every thumb move would
@@ -253,20 +285,29 @@ function Pad({
     socket.emit('game:player-action', { action: 'splav:dash', data: {} });
   };
 
+  const menu = (
+    <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+      <PlayerMenu inGame variant="header" />
+    </div>
+  );
+
   if (outNow) {
     return (
-      <Centered>
-        <p style={{ fontSize: '3.4rem' }}>💧</p>
-        <p style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+      <Centered wash="radial-gradient(600px 360px at 50% 0%, rgba(109,155,209,.22), transparent)">
+        {menu}
+        <p style={{ fontSize: '3.4rem', margin: 0 }}>💧</p>
+        <p className="display" style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
           U vodi si!
         </p>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          {my?.eliminatedBy ? 'Neko te je izgurao.' : 'Splav se povukao ispod tebe.'} Gledaj TV
-          dok se runda ne završi.
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+          {my?.eliminatedBy ? 'Neko te je izgurao.' : 'Splav se povukao ispod tebe.'} Mesto i
+          poeni stižu na kraju runde.
         </p>
       </Centered>
     );
   }
+
+  const full = ready >= 1;
 
   return (
     <div
@@ -274,16 +315,14 @@ function Pad({
         position: 'relative',
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        alignItems: 'center',
         height: '100%',
         width: '100%',
-        padding: '0.6rem',
-        gap: '0.6rem',
         touchAction: 'none',
         userSelect: 'none',
       }}
     >
-      {/* Stick */}
+      {menu}
+      {/* Stick — the thumb can start anywhere in the left half. */}
       <div
         ref={stickRef}
         onPointerDown={onStickDown}
@@ -293,67 +332,94 @@ function Pad({
         style={{
           position: 'relative',
           height: '100%',
-          borderRadius: '1rem',
-          border: '2px dashed var(--line2)',
-          background: 'rgba(22, 46, 78, 0.35)',
+          borderRight: '1px solid var(--line)',
           display: 'grid',
           placeItems: 'center',
           touchAction: 'none',
         }}
       >
+        <span
+          style={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            pointerEvents: 'none',
+          }}
+        >
+          {avatar && (
+            <span
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '30%',
+                background: avatar.avatarColor,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '1.05rem',
+              }}
+            >
+              {avatar.avatarEmoji}
+            </span>
+          )}
+          <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>
+            Na splavu · {aliveCount} od {total}
+          </span>
+        </span>
         <div
           style={{
             position: 'relative',
-            width: `${STICK_RADIUS * 2}px`,
-            height: `${STICK_RADIUS * 2}px`,
+            width: `${STICK_RADIUS * 2 + 56}px`,
+            height: `${STICK_RADIUS * 2 + 56}px`,
             borderRadius: '50%',
             border: '2px solid var(--line2)',
-            background: 'rgba(11, 28, 51, 0.5)',
+            background: 'rgba(245,235,224,.05)',
             display: 'grid',
             placeItems: 'center',
+            pointerEvents: 'none',
           }}
         >
           <div
             style={{
-              width: '4.4rem',
-              height: '4.4rem',
+              width: 72,
+              height: 72,
               borderRadius: '50%',
-              background: 'var(--accent)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+              background: 'var(--text-primary)',
+              boxShadow: '0 8px 20px rgba(0,0,0,.35)',
               transform: `translate(${knob.x}px, ${knob.y}px)`,
               transition: stickPointer.current === null ? 'transform 140ms ease-out' : 'none',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: '1.5rem',
             }}
-          >
-            🛶
-          </div>
+          />
         </div>
         <span
           style={{
             position: 'absolute',
-            bottom: '0.5rem',
-            fontSize: '0.72rem',
+            bottom: 14,
+            fontSize: '0.8rem',
+            fontWeight: 700,
             color: 'var(--text-secondary)',
-            letterSpacing: '0.1em',
+            pointerEvents: 'none',
           }}
         >
-          VOŽNJA
+          Palac bilo gde na levoj strani
         </span>
       </div>
 
-      {/* Dash */}
+      {/* Dash — the ring fills while it recharges; gold with a glow when full. */}
       <button
         onPointerDown={(e) => {
           e.preventDefault();
           dash();
         }}
+        aria-label="Nalet"
         style={{
           position: 'relative',
           height: '100%',
-          borderRadius: '1rem',
+          minHeight: 0,
           border: 'none',
+          borderRadius: 0,
           padding: 0,
           background: 'transparent',
           display: 'grid',
@@ -364,40 +430,47 @@ function Pad({
       >
         <div
           style={{
-            position: 'relative',
-            width: 'min(11rem, 42vw)',
-            height: 'min(11rem, 42vw)',
+            width: 'min(12.5rem, 40vw, 62vh)',
+            height: 'min(12.5rem, 40vw, 62vh)',
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
-            // Conic sweep = the cooldown ring; full circle means "go".
-            background: `conic-gradient(var(--accent) ${ready * 360}deg, rgba(245,235,224,0.12) 0deg)`,
-            transition: 'filter 120ms ease',
-            filter: ready >= 1 ? 'drop-shadow(0 0 14px rgba(194,155,71,0.55))' : 'none',
+            background: `conic-gradient(var(--amber) ${ready * 360}deg, rgba(245,235,224,0.1) 0deg)`,
+            filter: full ? 'drop-shadow(0 0 18px rgba(227,180,94,0.6))' : 'none',
+            transition: 'filter 160ms ease',
           }}
         >
           <div
+            className="display"
             style={{
-              width: '84%',
-              height: '84%',
+              width: '89%',
+              height: '89%',
               borderRadius: '50%',
-              background: ready >= 1 ? 'var(--danger)' : 'var(--bg-card)',
-              border: '2px solid var(--line2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.15rem',
-              color: 'var(--text-primary)',
-              transition: 'background 160ms ease',
+              background: full ? 'var(--accent)' : 'var(--bg-card)',
+              color: full ? 'var(--bg-primary)' : 'var(--dim)',
+              boxShadow: full ? 'inset 0 -8px 0 rgba(22,46,78,.18)' : 'none',
+              display: 'grid',
+              placeItems: 'center',
+              fontWeight: 800,
+              fontSize: '1.9rem',
+              letterSpacing: '0.06em',
+              transition: 'background 160ms ease, color 160ms ease',
             }}
           >
-            <span style={{ fontSize: '2.2rem' }}>💥</span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, letterSpacing: '0.08em' }}>
-              NALET
-            </span>
+            NALET
           </div>
         </div>
+        <span
+          style={{
+            position: 'absolute',
+            bottom: 14,
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          Puni se ~2 s
+        </span>
       </button>
     </div>
   );

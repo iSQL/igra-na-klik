@@ -8,7 +8,8 @@ interface HostlessGuessingProps {
   operations: DrawOp[];
   guesses: DrawGuessGuess[];
   hint: string;
-  timeRemaining: number;
+  /** Omit when the GameFrame header already shows the clock. */
+  timeRemaining?: number;
   hasGuessedCorrectly: boolean;
 }
 
@@ -63,16 +64,18 @@ export function HostlessGuessing({
         >
           {hint}
         </span>
-        <span
-          className="display"
-          style={{
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
-          }}
-        >
-          {timeRemaining}
-        </span>
+        {timeRemaining !== undefined && (
+          <span
+            className="display"
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 700,
+              color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
+            }}
+          >
+            {timeRemaining}
+          </span>
+        )}
       </div>
 
       {hasGuessedCorrectly ? (

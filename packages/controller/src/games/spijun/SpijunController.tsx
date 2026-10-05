@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
+import { GameFrame } from '../../components/kit/GameFrame';
+import { RoundVerdict, verdictWash } from '../../components/kit/RoundVerdict';
 import {
   SPIJUN_QUESTION_TEMPLATES,
   SPIJUN_SHARP_QUESTION_TEMPLATES,
@@ -27,35 +29,35 @@ const wrap: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  height: '100%',
-  gap: '1rem',
+  flex: 1,
+  gap: '0.8rem',
   textAlign: 'center',
-  padding: '1rem',
+  padding: '1rem 0',
 };
 
-const column: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-  width: '100%',
-  padding: '0.75rem',
-  gap: '0.6rem',
-  overflowY: 'auto',
+const eyebrow: React.CSSProperties = {
+  fontSize: '0.72rem',
+  fontWeight: 800,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
 };
 
-function formatClock(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, '0')}`;
-}
+const darkBtn: React.CSSProperties = {
+  minHeight: 48,
+  borderRadius: 14,
+  border: '1.5px solid transparent',
+  background: 'var(--bg-secondary)',
+  color: 'var(--text-primary)',
+  fontSize: '0.9rem',
+  fontWeight: 800,
+};
 
 export default function SpijunController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
-  const isRemoteHost = usePlayerStore(
-    (s) => s.room?.remoteHostPlayerId === s.player?.id
-  );
+  const isRemoteHost = usePlayerStore((s) => s.room?.remoteHostPlayerId === s.player?.id);
+  const roster = usePlayerStore((s) => s.room?.players ?? []);
 
   // "Špijunov pomoćnik": locally crossed-out locations (silent — nothing is
   // sent over the wire). Everyone gets the same crossable list, so staring
@@ -66,6 +68,8 @@ export default function SpijunController() {
   const [accusePickerOpen, setAccusePickerOpen] = useState(false);
   // "Znam lokaciju!" is irreversible and public — it asks twice.
   const [declareArmed, setDeclareArmed] = useState(false);
+  // "sakrij" folds the secret strip away when someone looks over.
+  const [secretHidden, setSecretHidden] = useState(false);
 
   const round = gameState?.round ?? 0;
   useEffect(() => {
@@ -73,6 +77,7 @@ export default function SpijunController() {
     setSuggestion(null);
     setAccusePickerOpen(false);
     setDeclareArmed(false);
+    setSecretHidden(false);
   }, [round]);
 
   if (!gameState || !playerId) return null;
@@ -82,10 +87,9 @@ export default function SpijunController() {
   const tutorial = data.tutorialMode === true;
   const my = playerData[playerId] as unknown as SpijunControllerData | undefined;
   const role: SpijunRole = my?.role ?? 'spectator';
+  const timed = ['discussion', 'defense', 'voting', 'spy-guess'].includes(phase);
 
-  const tutorialHint = tutorial
-    ? spijunTutorialControllerHint(phase as SpijunPhase, role)
-    : null;
+  const tutorialHint = tutorial ? spijunTutorialControllerHint(phase as SpijunPhase, role) : null;
   const hintBanner = tutorialHint ? (
     <p
       style={{
@@ -93,10 +97,11 @@ export default function SpijunController() {
         color: 'var(--text-secondary)',
         background: 'var(--bg-card)',
         border: '1px solid var(--accent)',
-        borderRadius: '10px',
+        borderRadius: 12,
         padding: '0.5rem 0.75rem',
         margin: 0,
         textAlign: 'center',
+        flexShrink: 0,
       }}
     >
       🎓 {tutorialHint}
@@ -105,18 +110,7 @@ export default function SpijunController() {
 
   const nextPhaseButton =
     tutorial && isRemoteHost && phase !== 'ended' ? (
-      <button
-        onClick={() => hostAction('spijun:next-phase')}
-        style={{
-          padding: '0.6rem 1rem',
-          borderRadius: '10px',
-          border: '1px solid var(--accent)',
-          background: 'var(--bg-card)',
-          color: 'var(--text-primary)',
-          fontWeight: 700,
-          fontSize: '0.9rem',
-        }}
-      >
+      <button onClick={() => hostAction('spijun:next-phase')} style={{ ...darkBtn, borderColor: 'var(--accent)' }}>
         Sledeća faza ▸
       </button>
     ) : null;
@@ -132,8 +126,6 @@ export default function SpijunController() {
 
   // Crossed-out names sink to the bottom (stable within each group), so the
   // shortlist the spy actually still considers stays at the top of the phone.
-  // Plain consts, not useMemo — we are past an early return, so a hook here
-  // would be conditional.
   const sortedLocations = [
     ...host.locationNames.filter((n) => !crossed.has(n)),
     ...host.locationNames.filter((n) => crossed.has(n)),
@@ -144,199 +136,204 @@ export default function SpijunController() {
   const newSuggestion = (sharp: boolean) => {
     const others = host.players.filter((p) => p.playerId !== playerId);
     if (others.length === 0) return;
-    const deck = sharp
-      ? SPIJUN_SHARP_QUESTION_TEMPLATES
-      : SPIJUN_QUESTION_TEMPLATES;
+    const deck = sharp ? SPIJUN_SHARP_QUESTION_TEMPLATES : SPIJUN_QUESTION_TEMPLATES;
     setSuggestion((prev) => {
       // Reroll rather than repeat the line that is already on screen.
       for (let attempt = 0; attempt < 8; attempt++) {
         const who = others[Math.floor(Math.random() * others.length)];
-        const line = deck[Math.floor(Math.random() * deck.length)].replace(
-          '{ime}',
-          who.name
-        );
+        const line = deck[Math.floor(Math.random() * deck.length)].replace('{ime}', who.name);
         if (line !== prev) return line;
       }
       return prev;
     });
   };
 
-  // My secret line, shown on every active-phase screen (private playerData).
-  const secretLine =
-    role === 'spy' ? (
-      <div
+  // No separate secret card: location + role ride a cream strip at the top
+  // of every active screen (private playerData only).
+  const secretStrip =
+    role === 'spectator' || phase === 'results' || phase === 'ended' ? null : secretHidden ? (
+      <button
+        onClick={() => setSecretHidden(false)}
         style={{
-          background: 'var(--bg-card)',
-          borderRadius: '10px',
-          padding: '0.5rem 0.75rem',
-          textAlign: 'center',
+          ...darkBtn,
+          minHeight: 40,
+          border: '1.5px dashed var(--line2)',
+          background: 'transparent',
+          color: 'var(--text-secondary)',
+          flexShrink: 0,
         }}
       >
-        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--danger)' }}>
-          🕵️ Ti si ŠPIJUN
-        </p>
-        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          Ne znaš lokaciju — blefiraj i eliminiši!
-        </p>
-      </div>
-    ) : role === 'player' ? (
+        🔒 Tajna je sakrivena · prikaži
+      </button>
+    ) : (
       <div
         style={{
-          background: 'var(--bg-card)',
-          borderRadius: '10px',
-          padding: '0.5rem 0.75rem',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 14px',
+          borderRadius: 18,
+          background: 'var(--text-primary)',
+          color: '#1D3557',
+          flexShrink: 0,
+          animation: 'igra-flip-in .4s ease-out',
         }}
       >
-        <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--accent)' }}>
-          📍 {my?.location}
-        </p>
-        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          Tvoja uloga: <strong>{my?.roleInLocation}</strong>
-        </p>
-      </div>
-    ) : null;
-
-  // --- reveal-role ------------------------------------------------------
-  if (phase === 'reveal-role') {
-    if (role === 'spy') {
-      return (
-        <div style={wrap}>
-          <p style={{ fontSize: '2.4rem' }}>🕵️</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--danger)' }}>
-            Ti si ŠPIJUN
-          </p>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-            Ne znaš lokaciju! Slušaj odgovore, blefiraj i pokušaj da je pogodiš.
-          </p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Nikome ne pokazuj ekran!
-          </p>
-          {hintBanner}
-          {nextPhaseButton}
-        </div>
-      );
-    }
-    if (role === 'player') {
-      return (
-        <div style={wrap}>
-          <p style={{ fontSize: '2.4rem' }}>📍</p>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Lokacija:
-          </p>
-          <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
-            {my?.location}
-          </p>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-            Tvoja uloga:
-          </p>
-          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            {my?.roleInLocation}
-          </p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Jedan igrač je špijun i ne zna gde ste. Nikome ne pokazuj ekran!
-          </p>
-          {hintBanner}
-          {nextPhaseButton}
-        </div>
-      );
-    }
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '1.2rem' }}>Gledaj rundu — uključuješ se sledeće!</p>
+        <span style={{ fontSize: '1.6rem' }}>{role === 'spy' ? '🕵️' : '📍'}</span>
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <span
+            className="display"
+            style={{
+              fontWeight: 800,
+              fontSize: '1.35rem',
+              lineHeight: 1.05,
+              color: role === 'spy' ? '#b8483d' : undefined,
+            }}
+          >
+            {role === 'spy' ? 'Ti si ŠPIJUN' : my?.location}
+          </span>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6b6458' }}>
+            {role === 'spy' ? 'Ne znaš lokaciju — slušaj i blefiraj' : `Tvoja uloga: ${my?.roleInLocation}`}
+          </span>
+        </span>
+        <button
+          onClick={() => setSecretHidden(true)}
+          style={{
+            minHeight: 36,
+            padding: '0 4px',
+            border: 'none',
+            background: 'transparent',
+            color: '#8a8072',
+            fontSize: '0.75rem',
+            fontWeight: 800,
+          }}
+        >
+          sakrij
+        </button>
       </div>
     );
-  }
 
-  // --- discussion -------------------------------------------------------
-  if (phase === 'discussion') {
+  let body: ReactNode = null;
+
+  if (phase === 'reveal-role') {
+    body =
+      role === 'spectator' ? (
+        <div style={wrap}>
+          <span style={{ fontSize: '2.6rem' }}>👀</span>
+          <p className="display" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>
+            Gledaj rundu — uključuješ se sledeće!
+          </p>
+        </div>
+      ) : (
+        <div style={wrap}>
+          <p className="display" style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+            {role === 'spy'
+              ? 'Ne znaš lokaciju! Slušaj odgovore i pokušaj da je pogodiš.'
+              : 'Jedan igrač je špijun i ne zna gde ste.'}
+          </p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Nikome ne pokazuj ekran — „sakrij" ga sklanja.
+          </p>
+        </div>
+      );
+  } else if (phase === 'discussion') {
     const others = host.players.filter((p) => p.playerId !== playerId);
     const myAccused = my?.accusedTargetId ?? null;
-    return (
-      <div style={column}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-            {formatClock(timeRemaining)}
-          </span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Runda {host.round}/{host.totalRounds}
-          </span>
-        </div>
-        {secretLine}
-        {hintBanner}
-
-        {/* Question generator — two decks, both purely local */}
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          <button
-            onClick={() => newSuggestion(false)}
-            style={{
-              flex: 1,
-              padding: '0.55rem 0.6rem',
-              borderRadius: '10px',
-              border: 'none',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-            }}
-          >
+    body = (
+      <>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flexShrink: 0 }}>
+          <button onClick={() => newSuggestion(false)} style={darkBtn}>
             💡 Pitanje
           </button>
-          <button
-            onClick={() => newSuggestion(true)}
-            style={{
-              flex: 1,
-              padding: '0.55rem 0.6rem',
-              borderRadius: '10px',
-              border: '1px solid var(--accent)',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-            }}
-          >
+          <button onClick={() => newSuggestion(true)} style={{ ...darkBtn, borderColor: 'var(--accent)' }}>
             🔪 Oštro pitanje
           </button>
         </div>
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          <button
-            onClick={() => setAccusePickerOpen((v) => !v)}
-            disabled={my?.canAccuse === false}
-            style={{
-              flex: 1,
-              padding: '0.55rem 0.6rem',
-              borderRadius: '10px',
-              border: 'none',
-              background: accusePickerOpen ? 'var(--danger)' : 'var(--bg-card)',
-              color: accusePickerOpen ? '#fff' : 'var(--text-primary)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              opacity: my?.canAccuse === false ? 0.5 : 1,
-            }}
-          >
-            😠 Sumnjiv mi je…
-          </button>
-        </div>
         {suggestion && (
-          <p
+          <div
             style={{
-              margin: 0,
-              fontSize: '0.85rem',
-              background: 'var(--bg-card)',
-              borderRadius: '10px',
-              padding: '0.5rem 0.75rem',
-              textAlign: 'center',
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'rgba(194,155,71,.12)',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              lineHeight: 1.35,
+              flexShrink: 0,
             }}
           >
             {suggestion}
-          </p>
+          </div>
         )}
 
-        {/* Accusation picker */}
+        {/* Location checklist — same for everyone (anti-tell). Taps are local:
+            nothing is emitted, so scoring can never depend on them. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <span style={eyebrow}>Lokacije · tapni da precrtaš</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--amber)' }}>
+            preostalo {locationsLeft}
+            {crossed.size > 0 && (
+              <button
+                onClick={() => setCrossed(new Set())}
+                style={{
+                  marginLeft: 8,
+                  minHeight: 0,
+                  padding: 0,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  textDecoration: 'underline',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                }}
+              >
+                poništi
+              </button>
+            )}
+          </span>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 6,
+            overflowY: 'auto',
+            minHeight: 0,
+            flex: 1,
+            alignContent: 'start',
+          }}
+        >
+          {sortedLocations.map((n) => {
+            const off = crossed.has(n);
+            return (
+              <button
+                key={n}
+                onClick={() => toggleCross(n)}
+                style={{
+                  minHeight: 38,
+                  padding: '4px 12px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: off ? 'rgba(245,235,224,.03)' : 'rgba(245,235,224,.07)',
+                  color: 'var(--text-primary)',
+                  textDecoration: off ? 'line-through' : 'none',
+                  opacity: off ? 0.4 : 1,
+                  fontSize: '0.88rem',
+                  lineHeight: 1.2,
+                  fontWeight: 700,
+                  textAlign: 'left',
+                }}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+
         {accusePickerOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flexShrink: 0 }}>
             {others.map((p) => {
               const active = myAccused === p.playerId;
+              const emoji = roster.find((r) => r.id === p.playerId)?.avatarEmoji;
               return (
                 <button
                   key={p.playerId}
@@ -345,30 +342,43 @@ export default function SpijunController() {
                     setAccusePickerOpen(false);
                   }}
                   style={{
+                    ...darkBtn,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.6rem',
-                    padding: '0.65rem 0.9rem',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: active ? 'var(--danger)' : 'var(--bg-card)',
+                    gap: 8,
+                    padding: '0 10px',
+                    background: active ? 'var(--danger)' : 'var(--bg-secondary)',
                     color: active ? '#fff' : 'var(--text-primary)',
-                    fontWeight: 700,
-                    fontSize: '0.95rem',
-                    borderLeft: `6px solid ${p.avatarColor}`,
+                    textAlign: 'left',
                   }}
                 >
-                  {p.name}
-                  {active ? ' ✓' : ''}
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '30%',
+                      background: p.avatarColor,
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: '0.95rem',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {emoji}
+                  </span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.name}
+                    {active ? ' ✓' : ''}
+                  </span>
                 </button>
               );
             })}
           </div>
         )}
         {myAccused && !accusePickerOpen && (
-          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-            Sumnjaš na: {host.players.find((p) => p.playerId === myAccused)?.name}
-            {' '}({host.accuseThreshold} glasa pokreće suđenje)
+          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center', flexShrink: 0 }}>
+            Sumnjaš na: {host.players.find((p) => p.playerId === myAccused)?.name} ({host.accuseThreshold}{' '}
+            glasa pokreće suđenje)
           </p>
         )}
 
@@ -382,228 +392,155 @@ export default function SpijunController() {
               else setDeclareArmed(true);
             }}
             style={{
-              padding: '0.7rem 0.75rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: declareArmed ? 'var(--danger)' : 'var(--bg-card)',
-              color: declareArmed ? '#fff' : 'var(--danger)',
-              fontWeight: 800,
-              fontSize: '0.95rem',
+              ...darkBtn,
+              minHeight: 52,
+              background: declareArmed ? 'var(--danger)' : 'var(--bg-secondary)',
+              color: declareArmed ? '#fff' : 'var(--amber)',
+              borderColor: 'var(--amber)',
+              flexShrink: 0,
             }}
           >
             {declareArmed
               ? 'Sigurno? Tapni ponovo — otkrivaš se!'
-              : '🎯 Znam lokaciju! (prekini razgovor)'}
+              : `🎯 Znam lokaciju!${earlyBonus > 0 ? ` (+${earlyBonus})` : ''}`}
           </button>
         )}
-        {my?.canDeclare && (
-          <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-            Što ranije prekineš, to više vredi tačan pogodak — ali promašaj
-            nagrađuje ceo sto.
-          </p>
-        )}
-
-        {/* Location checklist — same for everyone (anti-tell). Taps are local:
-            nothing is emitted, so scoring can never depend on them. Crossed
-            names sink to the bottom so the live shortlist stays on top. */}
-        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-          Lokacije — tapni da precrtaš (vidi samo tvoj telefon) ·{' '}
-          <strong>preostalo {locationsLeft}</strong>
-          {crossed.size > 0 ? (
-            <>
-              {' · '}
-              <span
-                onClick={() => setCrossed(new Set())}
-                style={{ textDecoration: 'underline', cursor: 'pointer' }}
-              >
-                poništi
-              </span>
-            </>
-          ) : null}
-        </p>
-        <div
+        <button
+          onClick={() => setAccusePickerOpen((v) => !v)}
+          disabled={my?.canAccuse === false}
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '0.25rem',
+            minHeight: 56,
+            borderRadius: 16,
+            border: '1.5px solid var(--danger)',
+            background: accusePickerOpen ? 'rgba(224,106,94,.18)' : 'transparent',
+            color: '#f09a8f',
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            opacity: my?.canAccuse === false ? 0.45 : 1,
+            flexShrink: 0,
           }}
         >
-          {sortedLocations.map((n) => {
-            const off = crossed.has(n);
-            return (
-              <button
-                key={n}
-                onClick={() => toggleCross(n)}
-                style={{
-                  padding: '0.5rem 0.55rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'var(--bg-card)',
-                  color: off ? 'var(--text-secondary)' : 'var(--text-primary)',
-                  textDecoration: off ? 'line-through' : 'none',
-                  opacity: off ? 0.4 : 1,
-                  fontSize: '0.78rem',
-                  lineHeight: 1.2,
-                  fontWeight: 600,
-                  textAlign: 'left',
-                }}
-              >
-                {n}
-              </button>
-            );
-          })}
-        </div>
-
+          😠 Sumnjiv mi je…
+        </button>
         {isRemoteHost && !tutorial && (
           <button
             onClick={() => hostAction('spijun:skip-discussion')}
-            style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: '10px',
-              border: '1px solid var(--bg-card)',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-            }}
+            style={{ ...darkBtn, minHeight: 40, background: 'transparent', color: 'var(--text-secondary)', flexShrink: 0 }}
           >
             ⏭ Završi razgovor (špijun pogađa)
           </button>
         )}
-        {nextPhaseButton}
-      </div>
+      </>
     );
-  }
-
-  // --- defense ----------------------------------------------------------
-  if (phase === 'defense') {
-    return (
+  } else if (phase === 'defense') {
+    body = (
       <div style={wrap}>
+        <span style={{ fontSize: '2.6rem' }}>⚖️</span>
         {my?.isAccused ? (
           <>
-            <p style={{ fontSize: '2rem' }}>⚖️</p>
-            <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--danger)' }}>
+            <p className="display" style={{ fontSize: '1.7rem', fontWeight: 700, color: 'var(--danger)', margin: 0 }}>
               Optužen si — brani se!
             </p>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-              Imaš {timeRemaining}s da ubediš ostale da nisi špijun.
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+              Ubedi ostale da nisi špijun.
             </p>
           </>
         ) : (
           <>
-            <p style={{ fontSize: '2rem' }}>⚖️</p>
-            <p style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-              {host.accusedName} se brani ({timeRemaining}s)
+            <p className="display" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+              {host.accusedName} se brani
             </p>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
               Slušaj pažljivo — glasanje sledi!
             </p>
           </>
         )}
-        {secretLine}
-        {hintBanner}
-        {nextPhaseButton}
       </div>
     );
-  }
-
-  // --- voting -----------------------------------------------------------
-  if (phase === 'voting') {
+  } else if (phase === 'voting') {
     if (my?.isAccused) {
-      return (
+      body = (
         <div style={wrap}>
-          <p style={{ fontSize: '2rem' }}>🗳️</p>
-          <p style={{ fontSize: '1.2rem', fontWeight: 800 }}>O tebi se glasa…</p>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: '2.6rem' }}>🗳️</span>
+          <p className="display" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            O tebi se glasa…
+          </p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
             {host.votedCount}/{host.totalVoters} glasalo
           </p>
-          {hintBanner}
         </div>
       );
-    }
-    if (!my?.canVote) {
-      return (
+    } else if (!my?.canVote) {
+      body = (
         <div style={wrap}>
-          <p style={{ fontSize: '1.2rem' }}>Glasanje u toku…</p>
+          <p className="display" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>
+            Glasanje u toku…
+          </p>
         </div>
       );
-    }
-    if (my.hasVoted) {
-      return (
+    } else if (my.hasVoted) {
+      body = (
         <div style={wrap}>
-          <p style={{ fontSize: '1.2rem' }}>Glas je zabeležen ✓</p>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <p className="display" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Glas je zabeležen ✓
+          </p>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
             {host.votedCount}/{host.totalVoters} glasalo
           </p>
-          {nextPhaseButton}
         </div>
       );
-    }
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '1.2rem', fontWeight: 800 }}>
-          Da li je {host.accusedName} špijun?
-        </p>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Tajno glasanje · {timeRemaining}s
-        </p>
-        <div style={{ display: 'flex', gap: '0.75rem', width: '100%', maxWidth: '320px' }}>
-          <button
-            onClick={() => emit('spijun:vote', { vote: 'da' })}
-            style={{
-              flex: 1,
-              padding: '1.2rem 0.5rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'var(--danger)',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: '1.2rem',
-            }}
-          >
-            DA 🕵️
-          </button>
-          <button
-            onClick={() => emit('spijun:vote', { vote: 'ne' })}
-            style={{
-              flex: 1,
-              padding: '1.2rem 0.5rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontWeight: 800,
-              fontSize: '1.2rem',
-            }}
-          >
-            NE 🙅
-          </button>
-        </div>
-        {hintBanner}
-      </div>
-    );
-  }
-
-  // --- spy-guess --------------------------------------------------------
-  if (phase === 'spy-guess') {
-    if (role === 'spy' && my?.canGuess) {
-      if (my.hasGuessed) {
-        return (
-          <div style={wrap}>
-            <p style={{ fontSize: '1.2rem' }}>Pogodak poslat — čekamo…</p>
+    } else {
+      body = (
+        <div style={{ ...wrap, justifyContent: 'flex-start', paddingTop: 20 }}>
+          <span style={eyebrow}>Tajno glasanje</span>
+          <p className="display" style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, lineHeight: 1.1 }}>
+            Da li je {host.accusedName} špijun?
+          </p>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
+            <button
+              onClick={() => emit('spijun:vote', { vote: 'da' })}
+              style={{ ...darkBtn, minHeight: 88, background: 'var(--danger)', color: '#fff', fontSize: '1.3rem' }}
+            >
+              DA 🕵️
+            </button>
+            <button onClick={() => emit('spijun:vote', { vote: 'ne' })} style={{ ...darkBtn, minHeight: 88, fontSize: '1.3rem' }}>
+              NE 🙅
+            </button>
           </div>
-        );
-      }
-      return (
-        <div style={column}>
-          <p style={{ fontSize: '1.15rem', fontWeight: 800, textAlign: 'center', margin: 0 }}>
-            🕵️ Sad ili nikad — koja je lokacija?
+        </div>
+      );
+    }
+  } else if (phase === 'spy-guess') {
+    if (role === 'spy' && my?.canGuess) {
+      body = my.hasGuessed ? (
+        <div style={wrap}>
+          <p className="display" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>
+            Pogodak poslat — čekamo…
           </p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
-            {timeRemaining}s · tačan pogodak +{300 + earlyBonus}
-            {earlyBonus > 0 ? ` (300 + ${earlyBonus} za rano prekidanje)` : ''}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+        </div>
+      ) : (
+        <>
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <p className="display" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>
+              Sad ili nikad — koja je lokacija?
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+              tačan pogodak +{300 + earlyBonus}
+              {earlyBonus > 0 ? ` (300 + ${earlyBonus} za rano prekidanje)` : ''}
+            </p>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 6,
+              overflowY: 'auto',
+              minHeight: 0,
+              flex: 1,
+              alignContent: 'start',
+            }}
+          >
             {sortedLocations.map((n) => {
               const off = crossed.has(n);
               return (
@@ -611,12 +548,13 @@ export default function SpijunController() {
                   key={n}
                   onClick={() => emit('spijun:spy-guess', { location: n })}
                   style={{
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '10px',
+                    minHeight: 48,
+                    padding: '4px 12px',
+                    borderRadius: 12,
                     border: 'none',
-                    background: 'var(--accent)',
-                    color: '#fff',
-                    fontWeight: 700,
+                    background: 'var(--text-primary)',
+                    color: 'var(--bg-primary)',
+                    fontWeight: 800,
                     fontSize: '0.9rem',
                     textAlign: 'left',
                     textDecoration: off ? 'line-through' : 'none',
@@ -628,26 +566,22 @@ export default function SpijunController() {
               );
             })}
           </div>
+        </>
+      );
+    } else {
+      body = (
+        <div style={wrap}>
+          <span style={{ fontSize: '2.6rem' }}>🕵️</span>
+          <p className="display" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Špijun je bio {host.spyName}!
+          </p>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
+            Sada pogađa lokaciju… drž' palčeve da promaši 🤞
+          </p>
         </div>
       );
     }
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '2rem' }}>🕵️</p>
-        <p style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-          Špijun je bio {host.spyName}!
-        </p>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Sada pogađa lokaciju… drž' palčeve da promaši 🤞
-        </p>
-        {hintBanner}
-        {nextPhaseButton}
-      </div>
-    );
-  }
-
-  // --- results ----------------------------------------------------------
-  if (phase === 'results') {
+  } else if (phase === 'results') {
     const roundScore = my?.ownRoundScore ?? 0;
     const outcomeText =
       host.outcome === 'spy-guessed'
@@ -657,55 +591,46 @@ export default function SpijunController() {
           : host.outcome === 'spy-caught'
             ? 'Špijun je razotkriven!'
             : 'Pogrešna optužba — špijun dobija poene!';
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Lokacija je bila
+    const won = roundScore > 0;
+    body = (
+      <div style={{ ...wrap, background: verdictWash(won ? 'correct' : 'wrong') }}>
+        <RoundVerdict kind={won ? 'correct' : 'wrong'} icon="🕵️" title={outcomeText} points={roundScore} />
+        <p style={{ fontSize: '1rem', margin: 0 }}>
+          📍 <strong style={{ color: 'var(--amber)' }}>{host.location}</strong> · špijun:{' '}
+          <strong>{host.spyName}</strong>
         </p>
-        <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
-          📍 {host.location}
-        </p>
-        <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
-          Špijun: 🕵️ {host.spyName}
-        </p>
-        <p style={{ fontSize: '0.95rem', fontWeight: 700 }}>{outcomeText}</p>
-        <p
-          style={{
-            fontSize: '1.3rem',
-            fontWeight: 800,
-            color: roundScore > 0 ? 'var(--success)' : 'var(--text-secondary)',
-          }}
-        >
-          {role === 'spy' ? '🕵️ ' : ''}
-          {roundScore > 0 ? `+${roundScore}` : '+0'} poena
-        </p>
-        {hintBanner}
-        {nextPhaseButton}
       </div>
     );
-  }
-
-  // --- ended ------------------------------------------------------------
-  if (phase === 'ended') {
+  } else if (phase === 'ended') {
     const entry = host.leaderboard?.find((e) => e.playerId === playerId);
-    return (
+    body = (
       <div style={wrap}>
-        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-          Konačni plasman
-        </p>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>Konačni plasman</p>
         {entry && (
           <>
-            <p style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--accent)' }}>
+            <p className="display" style={{ fontSize: '3.4rem', fontWeight: 800, color: 'var(--amber)', margin: 0 }}>
               #{entry.rank}
             </p>
-            <p style={{ fontSize: '1.4rem', fontWeight: 600 }}>
-              {entry.score.toLocaleString()} poena
-            </p>
+            <p style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>{entry.score.toLocaleString()} poena</p>
           </>
         )}
       </div>
     );
   }
 
-  return null;
+  return (
+    <GameFrame
+      gameId="spijun"
+      subtitle={phase === 'ended' ? 'Kraj igre' : `Runda ${host.round}/${host.totalRounds}`}
+      timeRemaining={timed ? timeRemaining : undefined}
+      roundKey={phase === 'reveal-role' ? host.round : undefined}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12, paddingTop: 12 }}>
+        {secretStrip}
+        {hintBanner}
+        {body}
+        {nextPhaseButton}
+      </div>
+    </GameFrame>
+  );
 }

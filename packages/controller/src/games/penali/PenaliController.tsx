@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
   PenaliControllerData,
   PenaliHostData,
@@ -10,16 +10,27 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useHaptics } from '../../hooks/useHaptics';
 import { socket } from '../../socket';
+import { GameFrame } from '../../components/kit/GameFrame';
+import { RoundVerdict } from '../../components/kit/RoundVerdict';
 
 /** Full sweep of the power meter, ms. Slow enough to hit deliberately. */
 const POWER_CYCLE_MS = 1150;
+/** Mirrors AIMING_DURATION on the server — drives the drain bar only. */
+const AIMING_SECONDS = 12;
+/** Above this the bar turns rust: the strongest shots can sail over the bar. */
+const POWER_RISKY = 0.85;
+/** Where the sight rests before the first drag (slightly below centre). */
+const AIM_START: PenaliPoint = { x: 0, y: 0.4 };
+
+const PITCH_BG =
+  'repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 60px, transparent 60px 120px), #1f4a34';
 
 const wrap: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
   width: '100%',
-  padding: '0.9rem',
+  padding: '1rem 0',
   gap: '0.7rem',
   alignItems: 'center',
   justifyContent: 'center',
@@ -36,69 +47,102 @@ export default function PenaliController() {
   const host = data.host as PenaliHostData;
   const my = playerData[playerId] as unknown as PenaliControllerData | undefined;
   const role = my?.role ?? 'spectator';
+  const aiming = phase === 'aiming';
 
+  let subtitle = phase === 'ended' ? 'Kraj igre' : `Runda ${host.round}/${host.totalRounds}`;
+  if (aiming && role === 'shooter')
+    subtitle = `Ti šutiraš · golman: ${host.keeper.name} ${host.keeper.avatarEmoji}`;
+  if (aiming && role === 'keeper')
+    subtitle = `Ti braniš · šuter: ${host.shooter.name} ${host.shooter.avatarEmoji}`;
+
+  let body: ReactNode;
   if (phase === 'intro') {
-    return (
+    body = (
       <div style={wrap}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Runda {host.round}/{host.totalRounds}
+        <span style={{ fontSize: '3.2rem', lineHeight: 1 }}>
+          {role === 'shooter' ? '⚽' : role === 'keeper' ? '🧤' : '👀'}
+        </span>
+        <p className="display" style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
+          {role === 'shooter' ? 'Ti šutiraš!' : role === 'keeper' ? 'Ti braniš!' : 'Gledaj TV'}
         </p>
-        <p style={{ fontSize: '1.9rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-          {role === 'shooter' ? '⚽ Ti šutiraš!' : role === 'keeper' ? '🧤 Ti braniš!' : 'Gledaj TV'}
+        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+          {host.shooter.avatarEmoji} {host.shooter.name}{' '}
+          <span style={{ color: 'var(--amber)' }}>vs</span> {host.keeper.avatarEmoji}{' '}
+          {host.keeper.name}
         </p>
-        <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary)' }}>
-          {host.shooter.name} <span style={{ color: 'var(--accent)' }}>vs</span> {host.keeper.name}
+      </div>
+    );
+  } else if (aiming) {
+    if (role === 'shooter') body = <ShooterPad committed={my?.committed} />;
+    else if (role === 'keeper') body = <KeeperPad committed={my?.committed} chosen={my?.ownZone} />;
+    else
+      body = (
+        <div style={wrap}>
+          <span style={{ fontSize: '2.6rem' }}>👀</span>
+          <p className="display" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>
+            {host.shooter.name} šutira, {host.keeper.name} brani
+          </p>
+          <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
+            Gledaj TV — ti si na redu kasnije.
+          </p>
+        </div>
+      );
+  } else if (phase === 'shot') {
+    body = <ShotVerdict host={host} my={my} role={role} />;
+  } else {
+    // leaderboard / ended — the table itself is on the TV.
+    body = (
+      <div style={wrap}>
+        <span className="display" style={{ fontSize: '3rem', fontWeight: 800, lineHeight: 1 }}>
+          {my?.score ?? 0}
+        </span>
+        <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
+          tvojih poena · tabela je na TV-u
         </p>
       </div>
     );
   }
 
-  if (phase === 'aiming') {
-    if (role === 'shooter') return <ShooterPad committed={my?.committed} seconds={timeRemaining} />;
-    if (role === 'keeper')
-      return <KeeperPad committed={my?.committed} chosen={my?.ownZone} seconds={timeRemaining} />;
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '1.3rem', fontWeight: 700 }}>
-          {host.shooter.name} šutira, {host.keeper.name} brani
-        </p>
-        <p style={{ fontSize: '2.4rem' }}>👀</p>
-        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
-          Gledaj TV — ti si na redu kasnije.
-        </p>
-      </div>
-    );
-  }
-
-  if (phase === 'shot') {
-    return <ShotVerdict host={host} my={my} role={role} />;
-  }
-
-  // leaderboard / ended — the table itself is on the TV.
   return (
-    <div style={wrap}>
-      <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-        {phase === 'ended' ? 'Kraj!' : `Kraj runde ${host.round}`}
-      </p>
-      <p style={{ fontSize: '2.6rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
-        {my?.score ?? 0}
-      </p>
-      <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>tvojih poena</p>
-    </div>
+    <>
+      {/* The pitch covers the whole phone, header included. */}
+      <div
+        aria-hidden
+        style={{ position: 'fixed', inset: 0, background: PITCH_BG, pointerEvents: 'none' }}
+      />
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
+        <GameFrame
+          gameId="penali"
+          subtitle={subtitle}
+          timeRemaining={aiming && role !== 'spectator' ? timeRemaining : undefined}
+          timeTotal={aiming && role !== 'spectator' ? AIMING_SECONDS : undefined}
+          roundKey={aiming ? `${host.round}:${host.turnInRound}` : undefined}
+        >
+          {body}
+        </GameFrame>
+      </div>
+    </>
   );
 }
 
 // --- Shooter --------------------------------------------------------------
 
-function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: number }) {
+/**
+ * The thumb drags on a pad at the bottom and moves the sight on the goal
+ * above, so the finger never covers the target. Holding sweeps the power
+ * bar; letting go shoots.
+ */
+function ShooterPad({ committed }: { committed?: boolean }) {
   const haptics = useHaptics();
   const padRef = useRef<HTMLDivElement>(null);
-  const [aim, setAim] = useState<PenaliPoint | null>(null);
+  const [aim, setAim] = useState<PenaliPoint>(AIM_START);
   const [power, setPower] = useState(0);
   const [holding, setHolding] = useState(false);
   const holdStartRef = useRef(0);
   const rafRef = useRef(0);
   const sentRef = useRef(false);
+  // Drag anchor: where the finger went down and where the sight was then.
+  const dragRef = useRef<{ x: number; y: number; aim: PenaliPoint } | null>(null);
 
   // Power sweeps 0 → 1 → 0 for as long as the finger is down; the release
   // moment is the choice. Deliberately a timing skill, not another slider.
@@ -114,21 +158,20 @@ function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: numb
     return () => cancelAnimationFrame(rafRef.current);
   }, [holding]);
 
-  const pointToAim = useCallback((clientX: number, clientY: number): PenaliPoint | null => {
+  const aimFrom = useCallback((clientX: number, clientY: number): PenaliPoint | null => {
+    const d = dragRef.current;
     const rect = padRef.current?.getBoundingClientRect();
-    if (!rect) return null;
-    const x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    const y = 1 - (clientY - rect.top) / rect.height;
-    return {
-      x: Math.max(-1, Math.min(1, x)),
-      y: Math.max(0, Math.min(1, y)),
-    };
+    if (!d || !rect) return null;
+    // Crossing the pad's width sweeps the whole goal; its height, the goal's.
+    const x = d.aim.x + ((clientX - d.x) / rect.width) * 2;
+    const y = d.aim.y - (clientY - d.y) / rect.height;
+    return { x: Math.max(-1, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
   }, []);
 
   const onDown = (e: React.PointerEvent) => {
     if (committed || sentRef.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setAim(pointToAim(e.clientX, e.clientY));
+    dragRef.current = { x: e.clientX, y: e.clientY, aim };
     holdStartRef.current = performance.now();
     setPower(0);
     setHolding(true);
@@ -136,14 +179,16 @@ function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: numb
 
   const onMove = (e: React.PointerEvent) => {
     if (!holding) return;
-    setAim(pointToAim(e.clientX, e.clientY));
+    const next = aimFrom(e.clientX, e.clientY);
+    if (next) setAim(next);
   };
 
   const onUp = (e: React.PointerEvent) => {
     if (!holding) return;
     setHolding(false);
-    const finalAim = pointToAim(e.clientX, e.clientY) ?? aim;
-    if (!finalAim || sentRef.current) return;
+    const finalAim = aimFrom(e.clientX, e.clientY) ?? aim;
+    dragRef.current = null;
+    if (sentRef.current) return;
     sentRef.current = true;
     haptics.success();
     socket.emit('game:player-action', {
@@ -155,14 +200,22 @@ function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: numb
   if (committed) {
     return (
       <div style={wrap}>
-        <p style={{ fontSize: '2.6rem' }}>⚽</p>
-        <p style={{ fontSize: '1.4rem', fontWeight: 800 }}>Udarac je zadat!</p>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+        <span style={{ fontSize: '2.8rem' }}>⚽</span>
+        <p className="display" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+          Udarac je zadat!
+        </p>
+        <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
           Gledaj TV — golman još bira ugao.
         </p>
       </div>
     );
   }
+
+  const risky = power > POWER_RISKY;
+  const sightPos = {
+    left: `${((aim.x + 1) / 2) * 100}%`,
+    top: `${(1 - aim.y) * 100}%`,
+  };
 
   return (
     <div
@@ -171,23 +224,82 @@ function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: numb
         flexDirection: 'column',
         height: '100%',
         width: '100%',
-        padding: '0.8rem',
-        gap: '0.6rem',
+        paddingTop: 20,
+        touchAction: 'none',
+        userSelect: 'none',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Nišani i pusti</span>
-        <span
+      <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', flexShrink: 0 }}>
+        <Goal>
+          <span
+            style={{
+              position: 'absolute',
+              ...sightPos,
+              width: 44,
+              height: 44,
+              margin: -22,
+              borderRadius: '50%',
+              border: '3px solid var(--amber)',
+              boxShadow: '0 0 0 6px rgba(227,180,94,.25)',
+              pointerEvents: 'none',
+            }}
+          />
+          <span
+            style={{
+              position: 'absolute',
+              ...sightPos,
+              width: 8,
+              height: 8,
+              margin: -4,
+              borderRadius: '50%',
+              background: 'var(--amber)',
+              pointerEvents: 'none',
+            }}
+          />
+        </Goal>
+        <div
+          aria-label="Snaga"
           style={{
-            fontSize: '1.1rem',
-            fontWeight: 800,
-            color: seconds <= 3 ? 'var(--danger)' : 'var(--text-secondary)',
+            width: 28,
+            borderRadius: 14,
+            background: 'rgba(11,22,40,.45)',
+            position: 'relative',
+            overflow: 'hidden',
+            flexShrink: 0,
           }}
         >
-          {seconds}s
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: `${power * 100}%`,
+              background: risky
+                ? 'var(--danger)'
+                : 'linear-gradient(0deg, var(--lime) 0%, var(--amber) 60%, var(--danger) 100%)',
+              transition: holding ? 'none' : 'height 120ms ease-out',
+            }}
+          />
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: 8,
+          fontSize: '0.75rem',
+          fontWeight: 800,
+          opacity: 0.8,
+          flexShrink: 0,
+        }}
+      >
+        <span>Nišan</span>
+        <span style={{ color: risky ? 'var(--danger)' : undefined }}>
+          {risky ? 'Preko gola!' : 'Snaga'}
         </span>
       </div>
-
+      <div style={{ flex: 1, minHeight: 12 }} />
       <div
         ref={padRef}
         onPointerDown={onDown}
@@ -195,121 +307,66 @@ function ShooterPad({ committed, seconds }: { committed?: boolean; seconds: numb
         onPointerUp={onUp}
         onPointerCancel={onUp}
         style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '3 / 1',
-          borderRadius: '0.5rem',
-          border: '3px solid var(--text-primary)',
-          borderBottomWidth: '5px',
-          background:
-            'repeating-linear-gradient(90deg, rgba(245,235,224,0.14) 0 1px, transparent 1px 14px), repeating-linear-gradient(0deg, rgba(245,235,224,0.14) 0 1px, transparent 1px 14px), rgba(22,46,78,0.55)',
+          height: 'min(200px, 30vh)',
+          flexShrink: 0,
+          borderRadius: 28,
+          background: holding ? 'rgba(11,22,40,.5)' : 'rgba(11,22,40,.35)',
+          border: '2px dashed rgba(250,246,240,.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          textAlign: 'center',
           touchAction: 'none',
-          overflow: 'hidden',
         }}
       >
-        {aim && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `${((aim.x + 1) / 2) * 100}%`,
-              top: `${(1 - aim.y) * 100}%`,
-              transform: 'translate(-50%, -50%)',
-              width: '2.6rem',
-              height: '2.6rem',
-              borderRadius: '50%',
-              border: '3px solid var(--accent)',
-              boxShadow: '0 0 0 2px rgba(22,46,78,0.6)',
-              display: 'grid',
-              placeItems: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>⚽</span>
-          </div>
-        )}
-        {!aim && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              color: 'var(--text-secondary)',
-              fontSize: '0.95rem',
-              pointerEvents: 'none',
-              padding: '0 1rem',
-            }}
-          >
-            Drži prst na golu i pomeraj — pusti kad je snaga prava
-          </div>
-        )}
+        <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>👆</span>
+        <span className="display" style={{ fontWeight: 700, fontSize: '1.35rem' }}>
+          Drži i pomeraj
+        </span>
+        <span style={{ fontSize: '0.88rem', fontWeight: 600, opacity: 0.85 }}>
+          Pusti kad je snaga prava
+        </span>
       </div>
+    </div>
+  );
+}
 
-      <div>
-        <div
-          style={{
-            position: 'relative',
-            height: '2.2rem',
-            borderRadius: '0.5rem',
-            overflow: 'hidden',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--line)',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: `${power * 100}%`,
-              background: 'linear-gradient(90deg, var(--success), var(--amber), var(--danger))',
-              transition: holding ? 'none' : 'width 120ms ease-out',
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '0 0.6rem',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              color: 'var(--text-primary)',
-              mixBlendMode: 'difference',
-            }}
-          >
-            <span>PRECIZNO</span>
-            <span>SNAŽNO</span>
-          </div>
-        </div>
-        <p
-          style={{
-            fontSize: '0.78rem',
-            color: 'var(--text-secondary)',
-            marginTop: '0.35rem',
-            textAlign: 'center',
-          }}
-        >
-          Jače je teže odbraniti, ali lakše promašiti gol.
-        </p>
-      </div>
+/** Goal frame with net — the shooter's target and the keeper's six corners. */
+function Goal({ children, grid }: { children: ReactNode; grid?: boolean }) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        flex: 1,
+        height: 'min(240px, 34vh)',
+        border: '6px solid var(--text-primary)',
+        borderBottom: 'none',
+        borderRadius: '6px 6px 0 0',
+        backgroundImage:
+          'linear-gradient(rgba(250,246,240,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(250,246,240,.12) 1px, transparent 1px)',
+        backgroundSize: '18px 18px',
+        ...(grid
+          ? {
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateRows: 'repeat(2, 1fr)',
+              gap: 6,
+              padding: 6,
+            }
+          : {}),
+      }}
+    >
+      {children}
     </div>
   );
 }
 
 // --- Keeper ---------------------------------------------------------------
 
-function KeeperPad({
-  committed,
-  chosen,
-  seconds,
-}: {
-  committed?: boolean;
-  chosen?: PenaliZone;
-  seconds: number;
-}) {
+/** Same goal, split into the six corners (3×2) — one blind pick. */
+function KeeperPad({ committed, chosen }: { committed?: boolean; chosen?: PenaliZone }) {
   const haptics = useHaptics();
   const sentRef = useRef(false);
 
@@ -320,20 +377,6 @@ function KeeperPad({
     socket.emit('game:player-action', { action: 'penali:dive', data: { zone } });
   };
 
-  if (committed) {
-    return (
-      <div style={wrap}>
-        <p style={{ fontSize: '2.6rem' }}>🧤</p>
-        <p style={{ fontSize: '1.4rem', fontWeight: 800 }}>
-          {chosen ? ZONE_LABELS[chosen] : 'Ugao izabran'}
-        </p>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Gledaj TV — šuter još nišani.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -341,69 +384,51 @@ function KeeperPad({
         flexDirection: 'column',
         height: '100%',
         width: '100%',
-        padding: '0.8rem',
-        gap: '0.6rem',
+        paddingTop: 20,
+        gap: 12,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Biraj ugao</span>
-        <span
-          style={{
-            fontSize: '1.1rem',
-            fontWeight: 800,
-            color: seconds <= 3 ? 'var(--danger)' : 'var(--text-secondary)',
-          }}
-        >
-          {seconds}s
-        </span>
+      <div style={{ display: 'flex' }}>
+        <Goal grid>
+          {PENALI_ZONES.map((zone) => {
+            const mine = !!committed && chosen === zone;
+            return (
+              <button
+                key={zone}
+                onClick={() => pick(zone)}
+                disabled={committed}
+                style={{
+                  minHeight: 0,
+                  border: mine ? '3px solid var(--amber)' : '2px solid rgba(250,246,240,.25)',
+                  borderRadius: 12,
+                  background: mine ? 'rgba(227,180,94,.3)' : 'rgba(11,22,40,.4)',
+                  color: 'var(--text-primary)',
+                  opacity: committed && !mine ? 0.35 : 1,
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  padding: 4,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
+                }}
+              >
+                <span style={{ fontSize: '1.3rem' }}>
+                  {mine ? '🧤' : ZONE_CENTERS[zone].y > 0.5 ? '↗' : '↘'}
+                </span>
+                {ZONE_LABELS[zone]}
+              </button>
+            );
+          })}
+        </Goal>
       </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gridTemplateRows: 'repeat(2, 1fr)',
-          gap: '0.5rem',
-          flex: 1,
-          padding: '0.5rem',
-          borderRadius: '0.5rem',
-          border: '3px solid var(--text-primary)',
-          borderBottomWidth: '5px',
-          background:
-            'repeating-linear-gradient(90deg, rgba(245,235,224,0.12) 0 1px, transparent 1px 14px), rgba(22,46,78,0.55)',
-        }}
-      >
-        {PENALI_ZONES.map((zone) => (
-          <button
-            key={zone}
-            onClick={() => pick(zone)}
-            style={{
-              border: '2px solid var(--line2)',
-              borderRadius: '0.5rem',
-              background: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              lineHeight: 1.2,
-              padding: '0.3rem',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.2rem',
-            }}
-          >
-            <span style={{ fontSize: '1.3rem' }}>
-              {ZONE_CENTERS[zone].y > 0.5 ? '↗' : '↘'}
-            </span>
-            {ZONE_LABELS[zone]}
-          </button>
-        ))}
-      </div>
-
-      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-        Strane su kao na TV-u. Šuter te ne vidi — bacaj se naslepo.
+      <div style={{ flex: 1 }} />
+      <p style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', margin: 0, opacity: 0.9 }}>
+        {committed
+          ? 'Gledaj TV — šuter još nišani.'
+          : 'Strane su kao na TV-u. Šuter te ne vidi — bacaj se naslepo.'}
       </p>
     </div>
   );
@@ -424,28 +449,20 @@ function ShotVerdict({
   if (!shot) return null;
 
   const points = my?.ownShotPoints ?? 0;
+  const playing = role !== 'spectator';
   const good =
     (role === 'shooter' && shot.outcome === 'gol') ||
     (role === 'keeper' && shot.outcome === 'odbrana');
 
   return (
     <div style={wrap}>
-      <p
-        style={{
-          fontSize: '2.2rem',
-          fontWeight: 800,
-          fontFamily: 'var(--font-display)',
-          color: good ? 'var(--success)' : 'var(--text-primary)',
-        }}
-      >
-        {outcomeLabel(shot.outcome)}
-      </p>
-      {role !== 'spectator' && (
-        <p style={{ fontSize: '1.6rem', fontWeight: 800 }}>
-          {points > 0 ? `+${points}` : '0'} poena
-        </p>
-      )}
-      <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+      <RoundVerdict
+        kind={!playing ? 'neutral' : good ? 'correct' : 'wrong'}
+        icon={shot.outcome === 'gol' ? '⚽' : shot.outcome === 'odbrana' ? '🧤' : undefined}
+        title={outcomeLabel(shot.outcome)}
+        points={playing ? points : undefined}
+      />
+      <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
         {shot.shooter.name} → {shot.keeper.name}
       </p>
     </div>

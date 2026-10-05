@@ -1,18 +1,21 @@
 import { useT } from '../../../i18n/useT';
 
-const SIZES = [1, 3, 5, 15];
+const SIZES = [2, 6, 15];
 
 interface BrushSizePickerProps {
   width: number;
   onChange: (width: number) => void;
+  /** False while the fill tool is on — no size is "in use" then. */
+  active?: boolean;
 }
 
-export function BrushSizePicker({ width, onChange }: BrushSizePickerProps) {
+/** Three wide brush sizes — the second thumb row under the canvas. */
+export function BrushSizePicker({ width, onChange, active = true }: BrushSizePickerProps) {
   const t = useT();
   return (
-    <div style={{ display: 'flex', gap: '0.3rem' }}>
+    <>
       {SIZES.map((s) => {
-        const active = width === s;
+        const on = active && width === s;
         return (
           <button
             key={s}
@@ -20,32 +23,27 @@ export function BrushSizePicker({ width, onChange }: BrushSizePickerProps) {
             aria-label={t('drawGuess.thickness', { n: s })}
             title={t('drawGuess.thickness', { n: s })}
             style={{
-              width: '36px',
-              height: '36px',
-              minWidth: '36px',
-              minHeight: '36px',
-              borderRadius: '8px',
-              background: active ? 'var(--accent)' : 'var(--bg-secondary)',
-              border: active
-                ? '2px solid var(--accent)'
-                : '2px solid var(--text-secondary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              height: 44,
+              minHeight: 44,
               padding: 0,
+              borderRadius: 12,
+              background: on ? 'rgba(245,235,224,.16)' : 'rgba(245,235,224,.08)',
+              border: on ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+              display: 'grid',
+              placeItems: 'center',
             }}
           >
-            <div
+            <span
               style={{
-                width: `${Math.min(s + 3, 22)}px`,
-                height: `${Math.min(s + 3, 22)}px`,
+                width: Math.min(s + 4, 20),
+                height: Math.min(s + 4, 20),
                 borderRadius: '50%',
-                background: active ? '#fff' : 'var(--text-primary)',
+                background: 'var(--text-primary)',
               }}
             />
           </button>
         );
       })}
-    </div>
+    </>
   );
 }

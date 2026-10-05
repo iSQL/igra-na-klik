@@ -513,6 +513,11 @@ export class DrawGuessModule extends BaseGameModule {
       if (isDrawer && this.state.phase === 'choosing-word') {
         pd.wordChoices = this.state.wordChoices;
       }
+      // The drawer's own word rides their private slice only (never the
+      // broadcast) so the phone can show it above the canvas.
+      if (isDrawer && this.state.phase === 'drawing' && this.state.currentWord) {
+        pd.word = this.state.currentWord;
+      }
       if (!isDrawer) {
         pd.hasGuessedCorrectly = this.state.correctGuessers.includes(player.id);
       }

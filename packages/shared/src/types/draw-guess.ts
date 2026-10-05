@@ -46,6 +46,8 @@ export interface DrawGuessHostData {
 export interface DrawGuessControllerData {
   isDrawer: boolean;
   wordChoices?: string[];
+  /** drawing phase, drawer only: the word being drawn. */
+  word?: string;
   hasGuessedCorrectly?: boolean;
 }
 

@@ -16,6 +16,18 @@ const useGameFrameStore = create<{ mounted: number; bump: (d: number) => void }>
   })
 );
 
+/**
+ * For a full-bleed screen that carries its own PlayerMenu instead of the
+ * GameFrame header (Splav's joystick): hides the floating circle the same way.
+ */
+export function useHideFloatingMenu(): void {
+  const bump = useGameFrameStore((s) => s.bump);
+  useEffect(() => {
+    bump(1);
+    return () => bump(-1);
+  }, [bump]);
+}
+
 export function useGameFrameMounted(): boolean {
   return useGameFrameStore((s) => s.mounted > 0);
 }
@@ -30,6 +42,8 @@ interface GameFrameProps {
   timeTotal?: number;
   /** Changes once per new question / round — fires the "new round" cue. */
   roundKey?: string | number;
+  /** Clock turns rust from this many seconds (default 5; the tick stays at 5). */
+  urgentAt?: number;
   children: ReactNode;
 }
 
@@ -43,6 +57,7 @@ export function GameFrame({
   timeRemaining,
   timeTotal,
   roundKey,
+  urgentAt = 5,
   children,
 }: GameFrameProps) {
   const t = useT();
@@ -56,13 +71,13 @@ export function GameFrame({
   const hex = def ? ACCENT_HEX[def.accent] : ACCENT_HEX.gold;
   const timed = timeRemaining !== undefined;
   const secs = timed ? Math.max(0, Math.ceil(timeRemaining)) : 0;
-  const urgent = timed && secs <= 5;
+  const urgent = timed && secs <= urgentAt;
   useEffect(() => {
     if (roundKey !== undefined) cue('round');
   }, [roundKey]);
 
   // Last seconds (4d): one short tick per second, felt more than heard.
-  const tickSec = urgent && secs > 0 ? secs : null;
+  const tickSec = timed && secs <= 5 && secs > 0 ? secs : null;
   useEffect(() => {
     if (tickSec !== null) cue('tick');
   }, [tickSec]);
@@ -158,19 +173,21 @@ export function GameFrame({
                   color: urgent ? 'var(--danger)' : 'var(--text-primary)',
                 }}
               >
-                {secs}
+                {secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : secs}
               </span>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  color: 'var(--text-secondary)',
-                  alignSelf: 'flex-end',
-                  paddingBottom: 9,
-                }}
-              >
-                s
-              </span>
+              {secs < 60 && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    color: 'var(--text-secondary)',
+                    alignSelf: 'flex-end',
+                    paddingBottom: 9,
+                  }}
+                >
+                  s
+                </span>
+              )}
             </span>
           )}
           <PlayerMenu inGame variant="header" />

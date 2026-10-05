@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { useHaptics } from '../../hooks/useHaptics';
+import { GameFrame } from '../../components/kit/GameFrame';
 import type {
   TajniAgentiPublicCard,
   TajniAgentiSecretCard,
@@ -47,6 +48,32 @@ interface MyData {
 
 export default function TajniAgentiController() {
   const gameState = useGameStore((s) => s.gameState);
+  if (!gameState) return null;
+  const { phase, data } = gameState;
+  const mode = (data.mode as TajniAgentiMode) ?? 'classic';
+  const currentTeam = data.currentTeam as TajniAgentiTeam | undefined;
+  const turnsRemaining = data.turnsRemaining as number | undefined;
+
+  let subtitle: string | undefined;
+  if (phase === 'team-selection') subtitle = 'Biranje timova';
+  else if (phase === 'ended') subtitle = 'Kraj igre';
+  else if (mode === 'classic' && currentTeam) subtitle = `${teamLabel(currentTeam)} na potezu`;
+  else if (typeof turnsRemaining === 'number')
+    subtitle = `${mode === 'duet' ? 'Preostalo poteza' : 'Preostalo poena'}: ${turnsRemaining}`;
+
+  return (
+    <GameFrame
+      gameId="tajni-agenti"
+      subtitle={subtitle}
+      roundKey={phase === 'clue-giving' ? `${currentTeam}:${turnsRemaining ?? ''}` : undefined}
+    >
+      <TajniAgentiBody />
+    </GameFrame>
+  );
+}
+
+function TajniAgentiBody() {
+  const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const roomPlayers = usePlayerStore((s) => s.room?.players ?? []);
   const remoteHostPlayerId = usePlayerStore(
@@ -84,7 +111,7 @@ export default function TajniAgentiController() {
   if (phase === 'clue-giving') {
     if (my.isCurrentSpymaster) {
       return (
-        <ClueGivingForm secretCards={my.secretCards ?? []} mode={mode} />
+        <ClueGivingForm secretCards={my.secretCards ?? []} mode={mode} myTeam={my.team} />
       );
     }
     if (my.isSpymaster) {
@@ -595,18 +622,21 @@ function TeamCard({
 function ClueGivingForm({
   secretCards,
   mode,
+  myTeam,
 }: {
   secretCards: TajniAgentiSecretCard[];
   mode: TajniAgentiMode;
+  myTeam: TajniAgentiTeam | null;
 }) {
   const haptics = useHaptics();
   const [word, setWord] = useState('');
   const [count, setCount] = useState(1);
   const [submitted, setSubmitted] = useState(false);
 
+  const cleaned = word.trim();
+  const valid = !!cleaned && !/\s/.test(cleaned);
   const submit = () => {
-    const cleaned = word.trim();
-    if (!cleaned || /\s/.test(cleaned)) return;
+    if (!valid) return;
     haptics.tap();
     socket.emit('game:player-action', {
       action: 'tajni-agenti:submit-clue',
@@ -615,106 +645,201 @@ function ClueGivingForm({
     setSubmitted(true);
   };
 
+  const left = (t: TajniAgentiCardType) =>
+    secretCards.filter((c) => c.type === t && !c.revealed).length;
+  const mine = myTeam ?? 'red';
+  const theirs = OTHER[mine];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 12, height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {mode === 'classic' ? (
+          <>
+            <TeamChip color={typeColor(mine)} label={`${teamLabel(mine)} · ${left(mine)} ostalo`} solid />
+            <TeamChip color={typeColor(theirs)} label={`${teamLabel(theirs)} · ${left(theirs)}`} />
+          </>
+        ) : (
+          <TeamChip color={AGENT_GREEN} label={`Agenti · ${left('agent')} ostalo`} solid />
+        )}
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
+          TI SI ŠPIJUN
+        </span>
+      </div>
+      <SecretMiniBoard cards={secretCards} />
+      <Legend mode={mode} mine={mine} />
+      <div style={{ flex: 1 }} />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: 14,
+          borderRadius: 22,
+          background: 'var(--bg-secondary)',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {mode === 'duet' ? 'Tvoja šifra · zeleno su vaši agenti' : 'Tvoja šifra'}
+        </span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            value={word}
+            onChange={(e) => setWord(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submit();
+            }}
+            placeholder="Jedna reč"
+            disabled={submitted}
+            maxLength={30}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              padding: '0 14px',
+              fontSize: '1.2rem',
+              fontWeight: 800,
+              fontFamily: 'inherit',
+              borderRadius: 14,
+              border: '1.5px solid var(--accent)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          />
+          <span
+            style={{
+              height: 56,
+              display: 'flex',
+              alignItems: 'center',
+              borderRadius: 14,
+              background: 'var(--bg-primary)',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              onClick={() => setCount((c) => Math.max(1, c - 1))}
+              disabled={submitted || count <= 1}
+              aria-label="Manje"
+              style={stepperBtn}
+            >
+              −
+            </button>
+            <span
+              className="display"
+              style={{ fontSize: '1.6rem', fontWeight: 800, width: 22, textAlign: 'center' }}
+            >
+              {count}
+            </span>
+            <button
+              onClick={() => setCount((c) => Math.min(9, c + 1))}
+              disabled={submitted || count >= 9}
+              aria-label="Više"
+              style={stepperBtn}
+            >
+              +
+            </button>
+          </span>
+        </div>
+        <button className="btn-primary" onClick={submit} disabled={submitted || !valid}>
+          {submitted ? 'Poslato ✓' : 'Pošalji šifru'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TeamChip({ color, label, solid }: { color: string; label: string; solid?: boolean }) {
+  return (
+    <span
+      style={{
+        height: 32,
+        padding: '0 12px',
+        borderRadius: 999,
+        background: solid ? color : color + '40',
+        color: solid ? '#faf6f0' : 'var(--text-primary)',
+        fontSize: '0.8rem',
+        fontWeight: 800,
+        display: 'flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Legend({ mode, mine }: { mode: TajniAgentiMode; mine: TajniAgentiTeam }) {
+  const items: [string, string, boolean?][] =
+    mode === 'classic'
+      ? [
+          [typeColor(mine), 'Vaši'],
+          [typeColor(OTHER[mine]), 'Njihovi'],
+          [NEUTRAL, 'Prolaznik'],
+          [ASSASSIN, 'Ubica', true],
+        ]
+      : [
+          [AGENT_GREEN, 'Agent'],
+          [NEUTRAL, 'Prolaznik'],
+          [ASSASSIN, 'Ubica', true],
+        ];
   return (
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: '0.6rem',
-        padding: '0.75rem',
-        height: '100%',
+        gap: 12,
+        flexWrap: 'wrap',
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        color: 'var(--text-secondary)',
+        flexShrink: 0,
       }}
     >
-      <p
-        style={{
-          margin: 0,
-          textAlign: 'center',
-          fontWeight: 700,
-          color: 'var(--accent)',
-        }}
-      >
-        {mode === 'duet'
-          ? 'Tvoja strana daje šifru — zeleno su vaši agenti.'
-          : 'Ti si špijun — daj šifru.'}
-      </p>
-      <SecretMiniBoard cards={secretCards} />
-      <input
-        type="text"
-        value={word}
-        onChange={(e) => setWord(e.target.value)}
-        placeholder="Jedna reč"
-        disabled={submitted}
-        maxLength={30}
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck={false}
-        style={{
-          padding: '0.65rem',
-          fontSize: '1rem',
-          fontWeight: 800,
-          fontFamily: 'var(--font-display)',
-          borderRadius: '12px',
-          border: '1.5px solid var(--line2)',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-        }}
-      />
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-        }}
-      >
-        <button
-          onClick={() => setCount((c) => Math.max(1, c - 1))}
-          disabled={submitted}
-          style={stepperBtn}
-        >
-          −
-        </button>
-        <span
-          style={{
-            fontSize: '1.6rem',
-            fontWeight: 800,
-            minWidth: '2rem',
-            textAlign: 'center',
-          }}
-        >
-          {count}
+      {items.map(([c, l, killer]) => (
+        <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 3,
+              background: c,
+              boxShadow: killer ? 'inset 0 0 0 1px var(--danger)' : 'none',
+            }}
+          />
+          {l}
         </span>
-        <button
-          onClick={() => setCount((c) => Math.min(9, c + 1))}
-          disabled={submitted}
-          style={stepperBtn}
-        >
-          +
-        </button>
-      </div>
-      <button
-        className="btn-primary"
-        onClick={submit}
-        disabled={submitted || !word.trim() || /\s/.test(word.trim())}
-      >
-        {submitted ? 'Poslato ✓' : 'Pošalji šifru ➤'}
-      </button>
+      ))}
     </div>
   );
 }
 
 const stepperBtn: React.CSSProperties = {
-  width: '3rem',
-  height: '3rem',
-  borderRadius: '12px',
-  background: 'var(--bg-secondary)',
-  color: 'var(--text-primary)',
+  width: 40,
+  height: 56,
+  minWidth: 40,
+  minHeight: 56,
+  padding: 0,
+  borderRadius: 14,
+  background: 'transparent',
+  color: 'var(--text-secondary)',
   fontSize: '1.4rem',
   fontWeight: 800,
-  border: '1.5px solid var(--line2)',
+  border: 'none',
 };
 
 // ============================================================ guessing
@@ -795,8 +920,9 @@ function GuessingGrid({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: '0.3rem',
+          gap: 5,
           flex: '1 1 auto',
+          alignContent: 'start',
         }}
       >
         {cards.map((card) => {
@@ -829,14 +955,15 @@ function GuessingGrid({
               style={{
                 background: bg,
                 color: fg,
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                padding: '0.15rem',
-                borderRadius: '0.35rem',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                padding: 2,
+                borderRadius: 10,
+                border: 'none',
                 textTransform: 'uppercase',
                 wordBreak: 'break-word',
-                lineHeight: 1.05,
-                minHeight: '48px',
+                lineHeight: 1.1,
+                minHeight: 58,
                 WebkitTapHighlightColor: 'transparent',
                 opacity: burned ? 0.6 : 1,
                 // Duet: outline what this card is on MY OWN key — legal
@@ -854,18 +981,7 @@ function GuessingGrid({
           );
         })}
       </div>
-      <button
-        onClick={endTurn}
-        style={{
-          padding: '0.65rem',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          borderRadius: '0.5rem',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          border: '1px solid var(--text-secondary)',
-        }}
-      >
+      <button className="btn-ghost" onClick={endTurn} style={{ flexShrink: 0 }}>
         Završi potez
       </button>
     </div>
@@ -927,40 +1043,34 @@ function SecretMiniBoard({ cards }: { cards: TajniAgentiSecretCard[] }) {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(5, 1fr)',
-        gap: '0.3rem',
-        flex: '1 1 auto',
+        gap: 5,
+        flexShrink: 0,
       }}
     >
       {cards.map((card) => {
-        const fill = typeColor(card.type);
+        const assassin = card.type === 'assassin';
         return (
           <div
             key={card.id}
             style={{
-              background: fill,
-              color:
-                card.type === 'assassin'
-                  ? 'var(--danger)'
-                  : card.type === 'neutral'
-                    ? '#2b230f'
-                    : '#fff',
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              padding: '0.15rem',
-              borderRadius: '0.35rem',
+              background: typeColor(card.type),
+              color: card.type === 'neutral' ? '#2b230f' : '#faf6f0',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: 2,
+              borderRadius: 10,
               textTransform: 'uppercase',
+              letterSpacing: '0.02em',
               textAlign: 'center',
               wordBreak: 'break-word',
-              lineHeight: 1.05,
-              minHeight: '46px',
+              lineHeight: 1.1,
+              minHeight: 58,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: card.revealed ? 0.55 : 1,
-              textDecoration: card.revealed ? 'line-through' : 'none',
-              boxShadow: card.revealed
-                ? 'inset 0 0 0 2px rgba(255,255,255,0.4)'
-                : 'none',
+              // Found words fade so the spymaster reads only what's left.
+              opacity: card.revealed ? 0.28 : 1,
+              boxShadow: assassin ? 'inset 0 0 0 2px var(--danger)' : 'none',
             }}
           >
             {card.word}

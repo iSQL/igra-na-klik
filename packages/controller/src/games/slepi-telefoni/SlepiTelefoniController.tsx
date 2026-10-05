@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { useT } from '../../i18n/useT';
 import { DrawingPad } from '../draw-guess/components/DrawingPad';
+import { GameFrame } from '../../components/kit/GameFrame';
 import type {
   Chain,
   DrawOp,
@@ -14,19 +15,49 @@ import { visibleOps, legacyStrokesToOps } from '@igra/shared';
 
 const MAX_PROMPT_LENGTH = 80;
 const MAX_GUESS_LENGTH = 80;
+/** Hostless reveal: one chain item every this many ms, like a story. */
+const REVEAL_STEP_MS = 600;
+/** Placeholder ideas rotate this often so nobody stares at an empty box. */
+const IDEA_ROTATE_MS = 2600;
 
 export default function SlepiTelefoniController() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
-  const remoteHostPlayerId = usePlayerStore(
-    (s) => s.room?.remoteHostPlayerId ?? null
-  );
-  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
   const t = useT();
 
   if (!gameState || !playerId) return null;
 
-  const { phase, timeRemaining, data, playerData } = gameState;
+  const { phase, timeRemaining, data } = gameState;
+  const host = data.host as SlepiTelefoniHostData | undefined;
+  const timed =
+    phase === 'entering-prompts' || phase === 'drawing-step' || phase === 'guess-step';
+  let subtitle: string | undefined;
+  if ((phase === 'drawing-step' || phase === 'guess-step') && host)
+    subtitle = t('slepi.step', { n: host.stepIndex + 1, total: host.totalSteps });
+  else if (phase === 'reveal' && host?.totalChains)
+    subtitle = t('slepi.chain', { n: (host.currentRevealChain ?? 0) + 1, total: host.totalChains });
+  else if (phase === 'ended') subtitle = t('slepi.gameOver');
+
+  return (
+    <GameFrame
+      gameId="slepi-telefoni"
+      subtitle={subtitle}
+      timeRemaining={timed ? timeRemaining : undefined}
+      urgentAt={10}
+      roundKey={timed ? `${phase}:${host?.stepIndex ?? 0}` : undefined}
+    >
+      <Body playerId={playerId} />
+    </GameFrame>
+  );
+}
+
+function Body({ playerId }: { playerId: string }) {
+  const gameState = useGameStore((s) => s.gameState)!;
+  const remoteHostPlayerId = usePlayerStore((s) => s.room?.remoteHostPlayerId ?? null);
+  const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
+  const t = useT();
+
+  const { phase, data, playerData } = gameState;
   const myData = playerData[playerId] as unknown as SlepiTelefoniControllerData | undefined;
   const host = data.host as SlepiTelefoniHostData | undefined;
 
@@ -35,36 +66,20 @@ export default function SlepiTelefoniController() {
   }
 
   if (phase === 'entering-prompts') {
-    if (myData.hasSubmitted)
-      return <WaitingScreen message={t('common.waitingForOthers')} />;
-    return <PromptEntry timeRemaining={timeRemaining} />;
+    if (myData.hasSubmitted) return <WaitingScreen message={t('common.waitingForOthers')} />;
+    return <PromptEntry />;
   }
 
   if (phase === 'drawing-step') {
-    if (myData.hasSubmitted)
-      return <WaitingScreen message={t('slepi.drawingSent')} />;
-    if (!myData.promptToDraw)
-      return <WaitingScreen message={t('slepi.spectating')} />;
-    return (
-      <DrawingRound
-        prompt={myData.promptToDraw}
-        timeRemaining={timeRemaining}
-        operations={myData.myDraft ?? []}
-      />
-    );
+    if (myData.hasSubmitted) return <WaitingScreen message={t('slepi.drawingSent')} />;
+    if (!myData.promptToDraw) return <WaitingScreen message={t('slepi.spectating')} />;
+    return <DrawingRound prompt={myData.promptToDraw} operations={myData.myDraft ?? []} />;
   }
 
   if (phase === 'guess-step') {
-    if (myData.hasSubmitted)
-      return <WaitingScreen message={t('slepi.guessSent')} />;
-    if (!myData.drawingToGuess)
-      return <WaitingScreen message={t('slepi.spectating')} />;
-    return (
-      <GuessRound
-        operations={myData.drawingToGuess}
-        timeRemaining={timeRemaining}
-      />
-    );
+    if (myData.hasSubmitted) return <WaitingScreen message={t('slepi.guessSent')} />;
+    if (!myData.drawingToGuess) return <WaitingScreen message={t('slepi.spectating')} />;
+    return <GuessRound operations={myData.drawingToGuess} />;
   }
 
   if (phase === 'reveal') {
@@ -218,6 +233,7 @@ function HostlessReveal({
   isController: boolean;
 }) {
   const t = useT();
+  const roster = usePlayerStore((s) => s.room?.players ?? []);
   const isLast = totalChains > 0 && chainNumber >= totalChains;
   // Same click guard as RevealRemoteHostControl — one tap per chain.
   const lockedRef = useRef(false);
@@ -232,97 +248,90 @@ function HostlessReveal({
   };
 
   const kindLabel = (kind: string) =>
-    kind === 'drawing'
-      ? t('slepi.drew')
-      : kind === 'guess'
-        ? t('slepi.guessed')
-        : t('slepi.wrote');
+    kind === 'drawing' ? t('slepi.drew') : kind === 'guess' ? t('slepi.guessed') : t('slepi.wrote');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        gap: '0.6rem',
-        padding: '0.75rem',
-      }}
-    >
-      <p
-        style={{
-          textAlign: 'center',
-          fontSize: '1rem',
-          fontWeight: 700,
-          margin: 0,
-        }}
-      >
-        {totalChains > 0 && t('slepi.chain', { n: chainNumber, total: totalChains })}
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10, paddingTop: 12 }}>
+      {chain && (
+        <span
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+            textAlign: 'right',
+          }}
+        >
+          {t('slepi.chainOf', { name: chain.originName })}
+        </span>
+      )}
 
+      {/* Keyed by chain so a new chain replays the story from the top. */}
       <div
+        key={chainNumber}
         style={{
           flex: 1,
           minHeight: 0,
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.6rem',
+          gap: 8,
         }}
       >
-        {(chain?.items ?? []).map((item, i) => (
-          <div
-            key={i}
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--line)',
-              borderRadius: '13px',
-              padding: '0.6rem 0.75rem',
-              display: 'flex',
-              gap: '0.6rem',
-            }}
-          >
-            <span
-              className="avatar-tile"
+        {(chain?.items ?? []).map((item, i) => {
+          const emoji = roster.find((p) => p.id === item.authorId)?.avatarEmoji;
+          return (
+            <div
+              key={i}
               style={{
-                width: '26px',
-                height: '26px',
-                backgroundColor: item.authorColor,
-                marginTop: '2px',
-              }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: 'var(--dim)',
-                margin: '0 0 0.35rem',
+                display: 'flex',
+                gap: 10,
+                padding: 12,
+                borderRadius: 16,
+                background: 'rgba(245,235,224,.05)',
+                flexShrink: 0,
+                opacity: 0,
+                animation: `igra-rise .4s ease-out ${i * REVEAL_STEP_MS}ms forwards`,
               }}
             >
-              {item.authorName} {kindLabel(item.kind)}:
-            </p>
-            {item.kind === 'drawing' ? (
-              <SmallOpsPreview
-                operations={item.operations ?? legacyStrokesToOps(item.strokes)}
-              />
-            ) : (
-              <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
-                „{item.text}"
-              </p>
-            )}
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '30%',
+                  background: item.authorColor,
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '0.95rem',
+                  flexShrink: 0,
+                }}
+              >
+                {emoji}
+              </span>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--dim)',
+                  }}
+                >
+                  {item.authorName} {kindLabel(item.kind)}:
+                </span>
+                {item.kind === 'drawing' ? (
+                  <SmallOpsPreview operations={item.operations ?? legacyStrokesToOps(item.strokes)} />
+                ) : (
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800 }}>„{item.text}”</span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {isController && (
-        <button
-          onClick={advance}
-          className="btn-primary"
-          style={{ flexShrink: 0 }}
-        >
+        <button onClick={advance} className="btn-primary" style={{ flexShrink: 0 }}>
           {isLast ? t('slepi.finishGame') : t('slepi.nextChain')}
         </button>
       )}
@@ -388,9 +397,51 @@ function RevealRemoteHostControl({
   );
 }
 
-function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
+/** Cyan chip at the top of the write/guess screens. */
+function StepChip({ children }: { children: ReactNode }) {
+  return (
+    <span
+      style={{
+        alignSelf: 'flex-start',
+        height: 32,
+        padding: '0 12px',
+        borderRadius: 10,
+        background: 'rgba(111,194,187,.14)',
+        color: 'var(--cyan)',
+        fontSize: '0.82rem',
+        fontWeight: 800,
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+const fieldStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1.5px solid var(--cyan)',
+  boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
+  background: 'var(--bg-secondary)',
+  color: 'var(--text-primary)',
+  fontFamily: 'inherit',
+  fontWeight: 800,
+};
+
+function PromptEntry() {
   const t = useT();
   const [text, setText] = useState('');
+  const ideas = t('slepi.ideas').split('|');
+  const [idea, setIdea] = useState(0);
+
+  // Rotate the placeholder while the box is empty.
+  useEffect(() => {
+    if (text) return;
+    const timer = setInterval(() => setIdea((n) => (n + 1) % ideas.length), IDEA_ROTATE_MS);
+    return () => clearInterval(timer);
+  }, [text, ideas.length]);
 
   const submit = () => {
     const trimmed = text.trim();
@@ -402,82 +453,53 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '1rem',
-        gap: '0.75rem',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
+    // The field takes what's left, so with the keyboard open it shrinks and
+    // the send button stays above the keyboard.
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: 14 }}>
+      <StepChip>✍️ {t('slepi.writePrompt')}</StepChip>
+      <span
+        className="display"
+        style={{ marginTop: 14, fontWeight: 700, fontSize: '1.7rem', lineHeight: 1.1, flexShrink: 0 }}
       >
-        <span
-          style={{
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            color: 'var(--cyan)',
-            background: 'rgba(111,194,187,.12)',
-            padding: '5px 11px',
-            borderRadius: '9px',
-          }}
-        >
-          ✍️ {t('slepi.writePrompt')}
-        </span>
-        <span
-          className="display"
-          style={{
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
-          }}
-        >
-          {timeRemaining}
-        </span>
-      </div>
-      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
         {t('slepi.nextPlayerDraws')}
-      </p>
+      </span>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_PROMPT_LENGTH))}
         maxLength={MAX_PROMPT_LENGTH}
-        placeholder={t('slepi.promptPlaceholder')}
+        placeholder={ideas[idea % ideas.length]}
         style={{
+          ...fieldStyle,
+          marginTop: 14,
           flex: 1,
-          padding: '0.85rem',
-          fontSize: '1.05rem',
-          fontWeight: 700,
-          borderRadius: '16px',
-          border: '1.5px solid var(--cyan)',
-          boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
+          minHeight: 72,
+          padding: 16,
+          fontSize: '1.3rem',
+          lineHeight: 1.3,
           resize: 'none',
-          fontFamily: 'inherit',
         }}
       />
       <div
         style={{
+          marginTop: 8,
           display: 'flex',
-          justifyContent: 'flex-end',
-          fontSize: '0.78rem',
+          justifyContent: 'space-between',
+          fontSize: '0.8rem',
           fontWeight: 700,
           color: 'var(--dim)',
+          flexShrink: 0,
         }}
       >
-        <span>{text.length}/{MAX_PROMPT_LENGTH}</span>
+        <span>{t('slepi.funnier')}</span>
+        <span>
+          {text.length}/{MAX_PROMPT_LENGTH}
+        </span>
       </div>
       <button
         className="btn-primary"
         onClick={submit}
         disabled={text.trim().length === 0}
+        style={{ marginTop: 12, flexShrink: 0 }}
       >
         {t('common.send')} ✓
       </button>
@@ -485,15 +507,7 @@ function PromptEntry({ timeRemaining }: { timeRemaining: number }) {
   );
 }
 
-function DrawingRound({
-  prompt,
-  timeRemaining,
-  operations,
-}: {
-  prompt: string;
-  timeRemaining: number;
-  operations: DrawOp[];
-}) {
+function DrawingRound({ prompt, operations }: { prompt: string; operations: DrawOp[] }) {
   const t = useT();
   const submit = () => {
     socket.emit('game:player-action', {
@@ -503,65 +517,48 @@ function DrawingRound({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        width: '100%',
-      }}
-    >
-      <div
-        style={{
-          margin: '0.3rem 0.3rem 0',
-          padding: '0.55rem 0.85rem',
-          background: 'rgba(217,123,108,.12)',
-          border: '1px solid rgba(217,123,108,.4)',
-          borderRadius: '12px',
-          textAlign: 'center',
-        }}
-      >
-        <p
-          style={{
-            fontSize: '0.65rem',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: 'var(--text-secondary)',
-            margin: 0,
-          }}
-        >
-          {t('slepi.draw')}
-        </p>
-        <p style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>„{prompt}”</p>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
       <div style={{ flex: 1, minHeight: 0 }}>
         <DrawingPad
-          timeRemaining={timeRemaining}
           operations={operations}
           actionPrefix="slepi"
+          header={
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 16,
+                background: 'rgba(217,123,108,.14)',
+                border: '1px solid rgba(217,123,108,.4)',
+                display: 'flex',
+                flexDirection: 'column',
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {t('slepi.draw')}
+              </span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>„{prompt}”</span>
+            </div>
+          }
         />
       </div>
-      <div style={{ padding: '0.5rem 0.75rem' }}>
-        <button
-          onClick={submit}
-          className="btn-primary"
-          style={{ width: '100%', minHeight: '48px' }}
-        >
-          {t('slepi.done')}
-        </button>
-      </div>
+      {/* Always visible; when time runs out the drawing goes as it is. */}
+      <button onClick={submit} className="btn-primary" style={{ marginTop: 10, flexShrink: 0 }}>
+        {t('slepi.done')}
+      </button>
     </div>
   );
 }
 
-function GuessRound({
-  operations,
-  timeRemaining,
-}: {
-  operations: DrawOp[];
-  timeRemaining: number;
-}) {
+function GuessRound({ operations }: { operations: DrawOp[] }) {
   const t = useT();
   const [text, setText] = useState('');
 
@@ -575,67 +572,38 @@ function GuessRound({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '0.75rem',
-        gap: '0.6rem',
-      }}
-    >
-      <div
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingTop: 14 }}>
+      <StepChip>👀 {t('slepi.whatDoYouSee')}</StepChip>
+      <div style={{ marginTop: 14, flexShrink: 0 }}>
+        <SmallOpsPreview operations={operations} />
+      </div>
+      <span
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          marginTop: 14,
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
+          flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            color: 'var(--cyan)',
-            background: 'rgba(111,194,187,.12)',
-            padding: '5px 11px',
-            borderRadius: '9px',
-          }}
-        >
-          👀 {t('slepi.whatDoYouSee')}
-        </span>
-        <span
-          className="display"
-          style={{
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
-          }}
-        >
-          {timeRemaining}
-        </span>
-      </div>
-      <SmallOpsPreview operations={operations} />
+        {t('slepi.describeOne')}
+      </span>
       <input
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_GUESS_LENGTH))}
         maxLength={MAX_GUESS_LENGTH}
         placeholder={t('slepi.guessPlaceholder')}
-        style={{
-          padding: '0.75rem',
-          fontSize: '1rem',
-          fontWeight: 700,
-          borderRadius: '14px',
-          border: '1.5px solid var(--cyan)',
-          boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          fontFamily: 'inherit',
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') submit();
         }}
+        style={{ ...fieldStyle, marginTop: 12, height: 60, padding: '0 16px', fontSize: '1.1rem', flexShrink: 0 }}
       />
+      <div style={{ flex: 1, minHeight: 12 }} />
       <button
         className="btn-primary"
         onClick={submit}
         disabled={text.trim().length === 0}
+        style={{ flexShrink: 0 }}
       >
         {t('common.send')} ✓
       </button>
@@ -674,7 +642,7 @@ function SmallOpsPreview({ operations }: { operations: DrawOp[] }) {
     <div
       style={{
         background: '#fff',
-        borderRadius: '10px',
+        borderRadius: 14,
         width: '100%',
         aspectRatio: '4 / 3',
         overflow: 'hidden',

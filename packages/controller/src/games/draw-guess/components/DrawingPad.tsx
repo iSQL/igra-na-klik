@@ -1,17 +1,23 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
 import { socket } from '../../../socket';
 import type { DrawOp, StrokeOp, FillOp } from '@igra/shared';
 import { visibleOps, scanlineFloodFill, parseHexColor } from '@igra/shared';
 import { ColorPicker } from './ColorPicker';
 import { BrushSizePicker } from './BrushSizePicker';
-import { ToolButton, type DrawTool } from './ToolButton';
+import type { DrawTool } from './ToolButton';
 import { useT } from '../../../i18n/useT';
 
 interface DrawingPadProps {
-  timeRemaining: number;
   operations: DrawOp[];
   actionPrefix?: 'draw' | 'slepi';
+  /** Strip above the canvas — the drawer's secret word / the phrase. */
+  header?: ReactNode;
+  /** Small status pill over the canvas' top-left corner ("2 od 3 pogodilo"). */
+  pill?: ReactNode;
 }
+
+/** Quick swatches in the thumb row; the full palette sits behind "+". */
+const QUICK_COLORS = ['#000000', '#c0392b', '#2980b9', '#27ae60', '#f1c40f'];
 
 interface View {
   scale: number;
@@ -25,16 +31,17 @@ interface Pt {
 }
 
 export function DrawingPad({
-  timeRemaining,
   operations,
   actionPrefix = 'draw',
+  header,
+  pill,
 }: DrawingPadProps) {
   const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const [color, setColor] = useState('#000000');
-  const [width, setWidth] = useState(5);
+  const [width, setWidth] = useState(6);
   const [tool, setTool] = useState<DrawTool>('pencil');
 
   const viewRef = useRef<View>({ scale: 1, tx: 0, ty: 0 });
@@ -601,6 +608,23 @@ export function DrawingPad({
 
   const zoomed = viewRef.current.scale > 1.01;
 
+  const iconBtn = (active: boolean): React.CSSProperties => ({
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    padding: 0,
+    borderRadius: 12,
+    border: active ? '1.5px solid var(--accent)' : 'none',
+    background: active ? 'rgba(245,235,224,.16)' : 'rgba(245,235,224,.08)',
+    color: 'var(--text-primary)',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: '1.15rem',
+    fontWeight: 800,
+    flexShrink: 0,
+  });
+
   return (
     <div
       style={{
@@ -608,10 +632,11 @@ export function DrawingPad({
         flexDirection: 'column',
         height: '100%',
         width: '100%',
-        gap: '0.3rem',
-        padding: '0.3rem',
+        gap: 10,
+        paddingTop: 10,
       }}
     >
+      {header}
       <div
         ref={wrapperRef}
         style={{
@@ -620,7 +645,7 @@ export function DrawingPad({
           width: '100%',
           position: 'relative',
           background: '#fff',
-          borderRadius: '16px',
+          borderRadius: 24,
           overflow: 'hidden',
         }}
       >
@@ -633,22 +658,28 @@ export function DrawingPad({
             touchAction: 'none',
           }}
         />
-        <span
-          style={{
-            position: 'absolute',
-            top: '6px',
-            right: '10px',
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            color: timeRemaining <= 10 ? 'var(--danger)' : '#000',
-            background: 'rgba(255,255,255,0.7)',
-            borderRadius: '6px',
-            padding: '0 0.4rem',
-            pointerEvents: 'none',
-          }}
-        >
-          {timeRemaining}s
-        </span>
+        {pill && !zoomed && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              height: 28,
+              padding: '0 10px',
+              borderRadius: 999,
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              pointerEvents: 'none',
+            }}
+          >
+            {pill}
+          </span>
+        )}
         {zoomed && (
           <button
             onClick={() => {
@@ -657,13 +688,17 @@ export function DrawingPad({
             }}
             style={{
               position: 'absolute',
-              top: '6px',
-              left: '6px',
-              padding: '0.2rem 0.5rem',
-              fontSize: '0.75rem',
-              background: 'rgba(255,255,255,0.85)',
-              border: '1px solid var(--text-secondary)',
-              borderRadius: '6px',
+              top: 12,
+              left: 12,
+              height: 32,
+              minHeight: 32,
+              padding: '0 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: 'none',
+              borderRadius: 999,
             }}
           >
             {t('drawGuess.resetZoom')}
@@ -671,49 +706,93 @@ export function DrawingPad({
         )}
       </div>
 
+      {/* Row 1: colours, undo, fill — under the thumb. */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.3rem',
-          flexWrap: 'wrap',
+          gap: 8,
+          padding: 10,
+          borderRadius: 20,
+          background: 'var(--bg-secondary)',
+          flexShrink: 0,
         }}
       >
-        <ToolButton tool="pencil" active={tool === 'pencil'} onSelect={setTool} />
-        <ToolButton tool="fill" active={tool === 'fill'} onSelect={setTool} />
-        <BrushSizePicker width={width} onChange={setWidth} />
-        <ColorPicker selectedColor={color} onSelect={setColor} />
-        <button
-          onClick={handleUndo}
-          aria-label={t('drawGuess.undo')}
-          style={{
-            minWidth: '44px',
-            height: '40px',
-            padding: '0 0.6rem',
-            borderRadius: '12px',
-            border: '1px solid var(--line2)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            fontWeight: 800,
-            fontSize: '0.95rem',
-          }}
-        >
-          ↩︎
+        {QUICK_COLORS.map((c) => {
+          const on = color.toLowerCase() === c;
+          return (
+            <button
+              key={c}
+              onClick={() => setColor(c)}
+              aria-label={t('common.colorAria', { color: c })}
+              style={{
+                width: 34,
+                height: 34,
+                minWidth: 34,
+                minHeight: 34,
+                padding: 0,
+                borderRadius: '50%',
+                border: 'none',
+                background: c,
+                boxShadow: on
+                  ? '0 0 0 3px var(--amber)'
+                  : c === '#000000'
+                    ? '0 0 0 1px var(--line2)'
+                    : 'none',
+                flexShrink: 0,
+              }}
+            />
+          );
+        })}
+        <ColorPicker
+          selectedColor={color}
+          onSelect={setColor}
+          compact
+          highlighted={!QUICK_COLORS.includes(color.toLowerCase())}
+        />
+        <span style={{ flex: 1 }} />
+        <button onClick={handleUndo} aria-label={t('drawGuess.undo')} style={iconBtn(false)}>
+          ↶
         </button>
+        <button
+          onClick={() => setTool(tool === 'fill' ? 'pencil' : 'fill')}
+          aria-label={t('drawGuess.fill')}
+          aria-pressed={tool === 'fill'}
+          style={iconBtn(tool === 'fill')}
+        >
+          🪣
+        </button>
+      </div>
+
+      {/* Row 2: brush size + clear. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr 52px',
+          gap: 8,
+          flexShrink: 0,
+        }}
+      >
+        <BrushSizePicker
+          width={width}
+          onChange={(w) => {
+            setWidth(w);
+            setTool('pencil');
+          }}
+          active={tool === 'pencil'}
+        />
         <button
           onClick={handleClear}
           aria-label={t('drawGuess.clearAll')}
           style={{
-            minWidth: '44px',
-            height: '40px',
-            padding: '0 0.6rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(255,77,94,.5)',
-            background: 'rgba(255,77,94,.14)',
+            height: 44,
+            minHeight: 44,
+            padding: 0,
+            borderRadius: 12,
+            border: 'none',
+            background: 'rgba(224,106,94,.14)',
             color: 'var(--danger)',
-            fontWeight: 800,
-            fontSize: '0.9rem',
+            fontSize: '1rem',
           }}
         >
           🗑

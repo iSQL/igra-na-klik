@@ -40,33 +40,98 @@ export default function PuzlaController() {
 // --- pregled ---------------------------------------------------------------------
 
 function Preview({ host, seconds }: { host: PuzlaHostData; seconds: number }) {
+  // Readable at a glance in the few seconds of preview: tiles, not a sentence.
+  const gestures: [string, string][] = [
+    ['☝️', 'Vuci komadić'],
+    ['👆', 'Pomeri sto'],
+    ['🤏', 'Zumiraj'],
+    ...(host.rotation ? ([['🔄', 'Tap okreće']] as [string, string][]) : []),
+  ];
+  const left = Math.max(1, seconds);
+  // The preview length is admin-tunable — the first value seen is the full ring.
+  const [total] = useState(left);
+  const frac = Math.max(0, Math.min(1, left / total));
   return (
-    <Centered>
-      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-        {host.total} komadića{host.rotation ? ' · okrenuti' : ''}
-      </p>
-      <p style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-display)', margin: 0 }}>
-        Zapamti sliku!
-      </p>
-      {/* Also warms the browser cache before the board cuts its sprites. */}
-      <img
-        src={host.imageUrl}
-        alt=""
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+      <Centered>
+        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)', margin: 0 }}>
+          {host.total} komadića{host.rotation ? ' · okrenuti' : ''}
+        </p>
+        <p className="display" style={{ fontSize: '2.1rem', fontWeight: 800, lineHeight: 1, margin: 0 }}>
+          Zapamti sliku!
+        </p>
+        {/* Also warms the browser cache before the board cuts its sprites. */}
+        <img
+          src={host.imageUrl}
+          alt=""
+          style={{
+            marginTop: 8,
+            maxWidth: '100%',
+            maxHeight: '45vh',
+            borderRadius: 18,
+            border: '2px solid var(--accent)',
+          }}
+        />
+        <span
+          style={{
+            marginTop: 8,
+            width: 88,
+            height: 88,
+            borderRadius: '50%',
+            background: `conic-gradient(var(--accent) 0 ${frac * 100}%, rgba(245,235,224,.1) ${frac * 100}% 100%)`,
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            className="display"
+            style={{
+              width: 74,
+              height: 74,
+              borderRadius: '50%',
+              background: 'var(--bg-primary)',
+              display: 'grid',
+              placeItems: 'center',
+              fontWeight: 800,
+              fontSize: '2.2rem',
+              color: 'var(--amber)',
+            }}
+          >
+            {left}
+          </span>
+        </span>
+      </Centered>
+      <div
         style={{
-          maxWidth: '100%',
-          maxHeight: '55vh',
-          borderRadius: '12px',
-          border: '2px solid var(--accent)',
+          display: 'grid',
+          gridTemplateColumns: `repeat(${gestures.length}, 1fr)`,
+          gap: 8,
+          textAlign: 'center',
+          flexShrink: 0,
         }}
-      />
-      <p style={{ fontSize: '2.6rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
-        {Math.max(1, seconds)}
-      </p>
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '19rem', margin: 0 }}>
-        Prstom vučeš komadić, jednim prstom po stolu pomeraš pogled, dva prsta zumiraju.
-        {host.rotation && ' Tap na komadić ga okreće.'}
-      </p>
-    </Centered>
+      >
+        {gestures.map(([icon, label]) => (
+          <div
+            key={label}
+            style={{
+              padding: '10px 6px',
+              borderRadius: 14,
+              background: 'rgba(245,235,224,.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span style={{ fontSize: '1.4rem' }}>{icon}</span>
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -317,14 +382,19 @@ function Board({
         <div
           style={{
             position: 'absolute',
-            top: 'calc(3.2rem + var(--safe-top, 0px))',
+            top: 'calc(3.4rem + var(--safe-top, 0px))',
             left: '50%',
             transform: 'translateX(-50%)',
-            padding: '0.35rem 0.9rem',
+            height: 32,
+            padding: '0 14px',
+            display: 'flex',
+            alignItems: 'center',
             borderRadius: '999px',
-            background: 'rgba(11, 28, 51, 0.9)',
+            background: 'rgba(11, 28, 51, 0.92)',
             border: '1px solid var(--line2)',
-            fontSize: '0.85rem',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            animation: 'igra-pop .2s',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
           }}
@@ -352,21 +422,6 @@ function Board({
         <RoundButton label="⤢" title="Ceo sto" onClick={() => stageRef.current?.fitTable()} />
         <RoundButton label="🔍" title="Ram" onClick={() => stageRef.current?.zoomToFrame()} />
       </div>
-      {host.rotation && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 'calc(3.9rem + var(--safe-bottom, 0px))',
-            left: '0.7rem',
-            fontSize: '0.72rem',
-            color: 'var(--text-secondary)',
-            pointerEvents: 'none',
-          }}
-        >
-          Tap na komadić ga okreće
-        </div>
-      )}
-
       {peek && (
         <div
           style={{
@@ -398,56 +453,110 @@ function Finale({ host, playerId, hostless }: { host: PuzlaHostData; playerId: s
   const pct = host.total > 0 ? Math.round((host.lockedCount / host.total) * 100) : 0;
   const sorted = [...host.roster].sort((a, b) => b.score - a.score);
   return (
-    <Centered>
-      <p style={{ fontSize: '1.7rem', fontWeight: 800, fontFamily: 'var(--font-display)', margin: 0 }}>
-        {result?.completed ? 'Složeno! 🎉' : `Isteklo vreme — ${pct}%`}
-      </p>
-      {result?.completed && (
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
-          za {formatClock(result.elapsedSec)}
-          {result.finisherId === playerId && ' · poslednji komadić je tvoj ✨'}
-        </p>
-      )}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        width: '100%',
+        overflowY: 'auto',
+        paddingTop: 8,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textAlign: 'center' }}>
+        <span className="display" style={{ fontWeight: 800, fontSize: '2.1rem', lineHeight: 1 }}>
+          {result?.completed ? 'Složeno! 🎉' : `Isteklo vreme — ${pct}%`}
+        </span>
+        {result?.completed && (
+          <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            za {formatClock(result.elapsedSec)}
+            {result.finisherId === playerId && ' · poslednji komadić je tvoj ✨'}
+          </span>
+        )}
+      </div>
       <img
         src={host.imageUrl}
         alt=""
-        style={{ maxWidth: '100%', maxHeight: '38vh', borderRadius: '12px', border: '2px solid var(--accent)' }}
+        style={{
+          marginTop: 16,
+          width: '100%',
+          maxHeight: '34vh',
+          objectFit: 'contain',
+          borderRadius: 18,
+          border: '2px solid var(--accent)',
+          flexShrink: 0,
+          opacity: result?.completed ? 1 : 0.7,
+        }}
       />
       {me && (
         <>
-          <p style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>{me.score}</p>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-            tvojih poena · 🧷 {me.pairs} spojenih ivica · 🖼️ {me.locks} u ram
-          </p>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8 }}>
+            <span className="display" style={{ fontWeight: 800, fontSize: '2.75rem', lineHeight: 1, color: 'var(--amber)' }}>
+              {me.score}
+            </span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-secondary)' }}>tvojih poena</span>
+          </div>
+          <div
+            style={{
+              marginTop: 6,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 14,
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span>🧷 {me.pairs} spojenih ivica</span>
+            <span>🖼️ {me.locks} u ram</span>
+          </div>
         </>
       )}
       {hostless ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', maxWidth: '20rem' }}>
-          {sorted.map((p, i) => (
-            <div
-              key={p.playerId}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.3rem 0.6rem',
-                borderRadius: '0.6rem',
-                background: p.playerId === playerId ? 'rgba(194,155,71,0.16)' : 'rgba(11,28,51,0.5)',
-                border: '1px solid var(--line)',
-                fontSize: '0.9rem',
-              }}
-            >
-              <span style={{ color: 'var(--text-secondary)' }}>{i + 1}.</span>
-              <span>{p.avatarEmoji}</span>
-              <span style={{ fontWeight: 700 }}>{p.name}</span>
-              <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontWeight: 800 }}>{p.score}</span>
-            </div>
-          ))}
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {sorted.map((p, i) => {
+            const mine = p.playerId === playerId;
+            return (
+              <div
+                key={p.playerId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  minHeight: 44,
+                  padding: '0 12px',
+                  borderRadius: 12,
+                  background: mine ? 'rgba(194,155,71,.16)' : 'rgba(245,235,224,.05)',
+                  border: mine ? '1px solid var(--accent)' : '1px solid transparent',
+                }}
+              >
+                <span style={{ width: 18, color: 'var(--text-secondary)', fontWeight: 800 }}>{i + 1}.</span>
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '30%',
+                    background: p.avatarColor,
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '0.95rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  {p.avatarEmoji}
+                </span>
+                <span style={{ flex: 1, fontWeight: 800 }}>{p.name}</span>
+                <span style={{ fontWeight: 800, color: 'var(--amber)' }}>{p.score}</span>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Gledaj TV</p>
+        <p style={{ marginTop: 14, textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          Gledaj TV
+        </p>
       )}
-    </Centered>
+    </div>
   );
 }
 
@@ -496,12 +605,15 @@ function Chip({ children, danger }: { children: React.ReactNode; danger?: boolea
   return (
     <span
       style={{
-        padding: '0.3rem 0.75rem',
+        height: 34,
+        padding: '0 12px',
+        display: 'flex',
+        alignItems: 'center',
         borderRadius: '999px',
-        background: 'rgba(11, 28, 51, 0.82)',
+        background: 'rgba(11, 28, 51, 0.85)',
         border: `1px solid ${danger ? 'var(--danger)' : 'var(--line2)'}`,
         color: danger ? 'var(--danger)' : 'var(--text-primary)',
-        fontSize: '0.9rem',
+        fontSize: '0.88rem',
         fontWeight: 800,
         fontVariantNumeric: 'tabular-nums',
       }}
@@ -533,8 +645,10 @@ function RoundButton({
       onPointerCancel={onPointerUp}
       onPointerLeave={onPointerUp}
       style={{
-        width: '2.9rem',
-        height: '2.9rem',
+        width: 48,
+        height: 48,
+        minWidth: 48,
+        minHeight: 48,
         borderRadius: '50%',
         border: '1px solid var(--line2)',
         background: 'rgba(11, 28, 51, 0.85)',

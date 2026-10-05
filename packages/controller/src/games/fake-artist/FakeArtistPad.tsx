@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { DrawOp } from '@igra/shared';
 
 interface FakeArtistPadProps {
@@ -6,7 +6,8 @@ interface FakeArtistPadProps {
   operations: DrawOp[];
   /** The drawer's avatar colour — every player draws in their own colour. */
   color: string;
-  timeRemaining: number;
+  /** Who drew in which colour — rendered under the canvas. */
+  legend?: ReactNode;
   onSubmit: (points: { x: number; y: number }[]) => void;
 }
 
@@ -21,7 +22,7 @@ const STROKE_WIDTH = 6;
 export function FakeArtistPad({
   operations,
   color,
-  timeRemaining,
+  legend,
   onSubmit,
 }: FakeArtistPadProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -168,8 +169,7 @@ export function FakeArtistPad({
         flexDirection: 'column',
         height: '100%',
         width: '100%',
-        gap: '0.5rem',
-        padding: '0.3rem',
+        gap: 10,
       }}
     >
       <div
@@ -180,7 +180,7 @@ export function FakeArtistPad({
           width: '100%',
           position: 'relative',
           background: '#fff',
-          borderRadius: '10px',
+          borderRadius: 24,
           overflow: 'hidden',
         }}
       >
@@ -193,56 +193,19 @@ export function FakeArtistPad({
             touchAction: 'none',
           }}
         />
-        <span
-          style={{
-            position: 'absolute',
-            top: '6px',
-            right: '10px',
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            color: timeRemaining <= 5 ? 'var(--danger)' : '#000',
-            background: 'rgba(255,255,255,0.7)',
-            borderRadius: '6px',
-            padding: '0 0.4rem',
-            pointerEvents: 'none',
-          }}
-        >
-          {timeRemaining}s
-        </span>
       </div>
-
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      {legend}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, flexShrink: 0 }}>
         <button
+          className="btn-ghost"
           onClick={clear}
           disabled={!hasStroke || submitted}
-          style={{
-            flex: 1,
-            height: '48px',
-            borderRadius: '10px',
-            border: '2px solid var(--text-secondary)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-primary)',
-            fontWeight: 700,
-            opacity: !hasStroke || submitted ? 0.5 : 1,
-          }}
+          style={{ opacity: !hasStroke || submitted ? 0.45 : 1 }}
         >
           Obriši
         </button>
-        <button
-          onClick={confirm}
-          disabled={!hasStroke || submitted}
-          style={{
-            flex: 2,
-            height: '48px',
-            borderRadius: '10px',
-            border: 'none',
-            background: 'var(--accent)',
-            color: '#fff',
-            fontWeight: 800,
-            opacity: !hasStroke || submitted ? 0.5 : 1,
-          }}
-        >
-          {submitted ? 'Poslato ✓' : 'Potvrdi potez'}
+        <button className="btn-primary" onClick={confirm} disabled={!hasStroke || submitted}>
+          {submitted ? 'Poslato ✓' : 'Pošalji potez'}
         </button>
       </div>
     </div>

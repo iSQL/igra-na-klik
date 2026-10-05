@@ -5,7 +5,8 @@ import { useT } from '../../../i18n/useT';
 interface GuessingInputProps {
   hasGuessedCorrectly: boolean;
   hint: string;
-  timeRemaining: number;
+  /** Omit when the GameFrame header already shows the clock. */
+  timeRemaining?: number;
 }
 
 export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: GuessingInputProps) {
@@ -93,17 +94,19 @@ export function GuessingInput({ hasGuessedCorrectly, hint, timeRemaining }: Gues
         >
           {hint}
         </p>
-        <p
-          className="display"
-          style={{
-            fontSize: '1.6rem',
-            fontWeight: 700,
-            marginTop: '0.8rem',
-            color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
-          }}
-        >
-          {timeRemaining}
-        </p>
+        {timeRemaining !== undefined && (
+          <p
+            className="display"
+            style={{
+              fontSize: '1.6rem',
+              fontWeight: 700,
+              marginTop: '0.8rem',
+              color: timeRemaining <= 10 ? 'var(--danger)' : 'var(--amber)',
+            }}
+          >
+            {timeRemaining}
+          </p>
+        )}
       </div>
 
       <form

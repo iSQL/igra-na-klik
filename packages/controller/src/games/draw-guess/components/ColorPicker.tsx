@@ -20,6 +20,10 @@ const COLORS = [
 interface ColorPickerProps {
   selectedColor: string;
   onSelect: (color: string) => void;
+  /** A 34px "+" circle in the thumb row instead of the swatch + caret. */
+  compact?: boolean;
+  /** compact: ring it — the current colour came from this palette. */
+  highlighted?: boolean;
 }
 
 /**
@@ -28,7 +32,7 @@ interface ColorPickerProps {
  * custom shade. Keeps the drawing toolbar to one row instead of spilling 13
  * swatches across the screen.
  */
-export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
+export function ColorPicker({ selectedColor, onSelect, compact, highlighted }: ColorPickerProps) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -53,7 +57,23 @@ export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
         onClick={() => setOpen((o) => !o)}
         aria-label={t('drawGuess.pickColor')}
         aria-expanded={open}
-        style={{
+        style={compact ? {
+          width: 34,
+          height: 34,
+          minWidth: 34,
+          minHeight: 34,
+          padding: 0,
+          borderRadius: '50%',
+          border: 'none',
+          display: 'grid',
+          placeItems: 'center',
+          color: '#fff',
+          fontWeight: 800,
+          fontSize: '1.1rem',
+          background: highlighted ? selectedColor : 'conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)',
+          boxShadow: highlighted ? '0 0 0 3px var(--amber)' : 'none',
+          textShadow: '0 0 3px rgba(0,0,0,.7)',
+        } : {
           display: 'flex',
           alignItems: 'center',
           gap: '0.35rem',
@@ -65,18 +85,24 @@ export function ColorPicker({ selectedColor, onSelect }: ColorPickerProps) {
           background: 'var(--bg-secondary)',
         }}
       >
-        <span
-          style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '50%',
-            background: selectedColor,
-            boxShadow: '0 0 0 1px var(--line2)',
-          }}
-        />
-        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-          {open ? '▴' : '▾'}
-        </span>
+        {compact ? (
+          '+'
+        ) : (
+          <>
+            <span
+              style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                background: selectedColor,
+                boxShadow: '0 0 0 1px var(--line2)',
+              }}
+            />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+              {open ? '▴' : '▾'}
+            </span>
+          </>
+        )}
       </button>
 
       {open && (

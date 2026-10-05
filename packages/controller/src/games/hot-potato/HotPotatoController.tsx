@@ -1,13 +1,28 @@
+import { useEffect, type ReactNode } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
+import { GameFrame } from '../../components/kit/GameFrame';
+import { RoundVerdict, verdictWash } from '../../components/kit/RoundVerdict';
 import { AnswerButtons } from '../quiz/components/AnswerButtons';
+import { vibrate } from '../../utils/cues';
 import type {
   HotPotatoControllerData,
   HotPotatoHostData,
+  HotPotatoPlayerLite,
   QuizOption,
 } from '@igra/shared';
+
+/** Mirror the server's kviz timers — they only drive the drain bar. */
+const KVIZ_ANSWER_SECONDS = 5;
+const KVIZ_PICK_SECONDS = 10;
+
+/** Holding the potato: a soft buzz every so often until it's passed on. */
+const HOLD_BUZZ_MS = 900;
+
+const HOT_BG =
+  'radial-gradient(520px 420px at 50% 38%, rgba(227,180,94,.6), transparent 70%), #7a3a1f';
 
 const wrap: React.CSSProperties = {
   display: 'flex',
@@ -15,9 +30,9 @@ const wrap: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   height: '100%',
-  gap: '1rem',
+  gap: '0.8rem',
   textAlign: 'center',
-  padding: '1rem',
+  padding: '1rem 0',
 };
 
 function pass(targetId?: string) {
@@ -32,28 +47,80 @@ export default function HotPotatoController() {
   const playerId = usePlayerStore((s) => s.player?.id);
   const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
 
-  if (!gameState || !playerId) return null;
+  const phase = gameState?.phase;
+  const host = gameState?.data.host as HotPotatoHostData | undefined;
+  const isHolder = !!host && !!playerId && host.holderId === playerId;
+  const hot = isHolder && (phase === 'passing' || phase === 'question');
 
+  // Continuous soft vibration while the potato is in your hands.
+  useEffect(() => {
+    if (!hot) return;
+    vibrate(40);
+    const timer = setInterval(() => vibrate(40), HOLD_BUZZ_MS);
+    return () => {
+      clearInterval(timer);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(0);
+    };
+  }, [hot]);
+
+  if (!gameState || !playerId || !host) return null;
+
+  const timeRemaining = gameState.timeRemaining;
+  const timed = phase === 'question' || phase === 'picking';
+  const subtitle =
+    host.mode === 'kviz'
+      ? `Kviz · ${host.aliveCount} u igri`
+      : `${host.category ? host.category + ' · ' : ''}${host.aliveCount} u igri`;
+
+  return (
+    <>
+      {/* The hot screen covers the whole phone, header included. */}
+      {hot && (
+        <div
+          aria-hidden
+          style={{ position: 'fixed', inset: 0, zIndex: 0, background: HOT_BG, pointerEvents: 'none' }}
+        />
+      )}
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
+        <GameFrame
+          gameId="hot-potato"
+          subtitle={phase === 'ended' || phase === 'final-leaderboard' ? 'Kraj igre' : subtitle}
+          timeRemaining={timed ? timeRemaining : undefined}
+          timeTotal={
+            phase === 'question' ? KVIZ_ANSWER_SECONDS : phase === 'picking' ? KVIZ_PICK_SECONDS : undefined
+          }
+          roundKey={phase === 'question' ? host.question?.text : undefined}
+        >
+          <Body playerId={playerId} hostless={hostless} />
+        </GameFrame>
+      </div>
+    </>
+  );
+}
+
+function Body({ playerId, hostless }: { playerId: string; hostless: boolean }) {
+  const gameState = useGameStore((s) => s.gameState)!;
   const { phase, data, playerData } = gameState;
   const host = data.host as HotPotatoHostData;
-  const my = playerData[playerId] as unknown as
-    | HotPotatoControllerData
-    | undefined;
+  const my = playerData[playerId] as unknown as HotPotatoControllerData | undefined;
   const eliminated = my?.eliminated ?? false;
   const isHolder = host.holderId === playerId;
   const holder = host.players.find((p) => p.playerId === host.holderId);
+  const others = host.players.filter((p) => p.alive && p.playerId !== playerId);
 
   if (phase === 'intro') {
     return (
       <div style={wrap}>
-        <p style={{ fontSize: '2.6rem' }}>🥔💣</p>
-        <p style={{ fontSize: '1.4rem', fontWeight: 800 }}>Vruć krompir</p>
+        <span style={{ fontSize: '4.5rem', lineHeight: 1 }}>🥔</span>
         {host.category && (
-          <p style={{ fontSize: '1.1rem', color: 'var(--accent)', fontWeight: 700 }}>
-            Kategorija: {host.category}
-          </p>
+          <>
+            <Eyebrow>Kategorija</Eyebrow>
+            <span className="display" style={{ fontWeight: 800, fontSize: '2rem', lineHeight: 1 }}>
+              {host.category}
+            </span>
+          </>
         )}
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0, maxWidth: '20rem' }}>
           {host.mode === 'kviz'
             ? 'Pitanje sleće nasumičnom igraču — 5 sekundi za tačan odgovor ili 💥!'
             : 'Kaži reč iz kategorije i brzo prosledi krompir!'}
@@ -64,45 +131,23 @@ export default function HotPotatoController() {
 
   if (phase === 'question' && host.question) {
     const q = host.question;
-    const timeRemaining = gameState.timeRemaining;
     if (eliminated || !isHolder) {
       return (
         <div style={wrap}>
-          <p style={{ fontSize: '2rem' }}>{eliminated ? '💀' : '🥔'}</p>
-          <p style={{ fontSize: '1rem', fontWeight: 700 }}>{q.text}</p>
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-            <strong>
-              {holder?.avatarEmoji} {holder?.name ?? '—'}
-            </strong>{' '}
-            odgovara… {timeRemaining}s
+          <span style={{ fontSize: '2.6rem' }}>{eliminated ? '💀' : '🥔'}</span>
+          <p className="display" style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>
+            {q.text}
           </p>
+          <HolderLine holder={holder} suffix="odgovara…" />
         </div>
       );
     }
-    // I hold the bomb — 5 seconds to answer!
+    // I hold the bomb — kit answer grid, 5 s on the header clock.
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          height: '100%',
-          padding: '0.75rem',
-          gap: '0.6rem',
-        }}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12, paddingTop: 14 }}>
         <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <p
-            style={{
-              fontSize: '1.3rem',
-              fontWeight: 800,
-              color: timeRemaining <= 2 ? 'var(--danger)' : 'var(--accent)',
-              margin: 0,
-            }}
-          >
-            🥔💣 {timeRemaining}s
-          </p>
-          <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.3rem 0 0' }}>
+          <Eyebrow>🥔 Kod tebe je — odgovori!</Eyebrow>
+          <p className="display" style={{ fontSize: '1.35rem', fontWeight: 700, margin: '6px 0 0', lineHeight: 1.15 }}>
             {q.text}
           </p>
         </div>
@@ -122,118 +167,94 @@ export default function HotPotatoController() {
     if (!isHolder) {
       return (
         <div style={wrap}>
-          <p style={{ fontSize: '2rem' }}>✅</p>
-          <p style={{ fontSize: '1.05rem', fontWeight: 700 }}>
-            {holder?.avatarEmoji} {holder?.name ?? '—'} je pogodio!
-          </p>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: '2.4rem' }}>✅</span>
+          <HolderLine holder={holder} suffix="je pogodio!" />
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
             Bira kome baca sledeće pitanje…
           </p>
         </div>
       );
     }
-    const others = host.players.filter((p) => p.alive && p.playerId !== playerId);
     return (
-      <div style={{ ...wrap, justifyContent: 'flex-start', overflowY: 'auto' }}>
-        <p style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--success)', margin: 0 }}>
-          ✅ Tačno!
-        </p>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          gap: 12,
+          paddingTop: 16,
+          background: verdictWash('correct'),
+          overflowY: 'auto',
+        }}
+      >
+        <RoundVerdict kind="correct" title="Tačno!" />
         {my?.nextQuestionText && (
           <div
             style={{
               background: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              padding: '0.7rem 0.9rem',
-              width: '100%',
+              borderRadius: 18,
+              padding: '12px 14px',
             }}
           >
-            <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-              👀 Sledeće pitanje (samo ti ga vidiš)
-            </p>
-            <p style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0.3rem 0 0' }}>
-              {my.nextQuestionText}
-            </p>
+            <Eyebrow>👀 Sledeće pitanje · samo ti ga vidiš</Eyebrow>
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: '6px 0 0' }}>{my.nextQuestionText}</p>
           </div>
         )}
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Kome ga bacaš? · {gameState.timeRemaining}s
-        </span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-          {others.map((p) => (
-            <button key={p.playerId} onClick={() => pass(p.playerId)} style={pickBtn}>
-              {p.avatarEmoji} {p.name}
-            </button>
-          ))}
-        </div>
+        <PlayerGrid players={others} label="Kome ga bacaš?" />
       </div>
     );
   }
 
   if (phase === 'passing') {
-    if (eliminated) {
+    if (eliminated || !isHolder) {
       return (
         <div style={wrap}>
-          <p style={{ fontSize: '2rem' }}>💀</p>
-          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-            Ispao si — gledaj ko će sledeći!
-          </p>
-          <p style={{ fontSize: '1rem' }}>
-            Krompir je kod <strong>{holder?.name ?? '—'}</strong>
-          </p>
-        </div>
-      );
-    }
-
-    if (!isHolder) {
-      return (
-        <div style={wrap}>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Kategorija: <strong style={{ color: 'var(--accent)' }}>{host.category}</strong>
-          </p>
-          <p style={{ fontSize: '3rem' }}>🥔</p>
-          <p style={{ fontSize: '1.2rem' }}>
-            Krompir je kod{' '}
-            <strong>
-              {holder?.avatarEmoji} {holder?.name ?? '—'}
-            </strong>
-          </p>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Pripremi reč iz kategorije za slučaj da stigne do tebe!
+          {host.category && (
+            <>
+              <Eyebrow>Kategorija</Eyebrow>
+              <span className="display" style={{ fontWeight: 800, fontSize: '1.6rem', lineHeight: 1 }}>
+                {host.category}
+              </span>
+            </>
+          )}
+          <span style={{ fontSize: '4rem', lineHeight: 1, marginTop: 24 }}>🥔</span>
+          <HolderLine holder={holder} prefix="Krompir je kod" big />
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+            {eliminated
+              ? 'Ispao si — gledaj ko će sledeći!'
+              : 'Pripremi reč za slučaj da stigne do tebe!'}
           </p>
         </div>
       );
     }
 
     // I hold the bomb.
-    const others = host.players.filter((p) => p.alive && p.playerId !== playerId);
     return (
-      <div style={wrap}>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Kategorija
-        </p>
-        <p style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent)' }}>
-          {host.category}
-        </p>
-        <p style={{ fontSize: '3.4rem' }}>🥔💣</p>
-        <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-          Krompir je kod tebe — kaži reč i prosledi!
-        </p>
-
+      <div style={{ ...wrap, justifyContent: 'flex-start', paddingTop: 20 }}>
+        {host.category && (
+          <>
+            <Eyebrow>Kategorija</Eyebrow>
+            <span className="display" style={{ fontWeight: 800, fontSize: '1.9rem', lineHeight: 1 }}>
+              {host.category}
+            </span>
+          </>
+        )}
+        <span style={{ fontSize: '6.5rem', lineHeight: 1, marginTop: 24, animation: 'igra-wiggle 1.2s infinite' }}>
+          🥔
+        </span>
+        <span className="display" style={{ fontWeight: 800, fontSize: '2.6rem', lineHeight: 1 }}>
+          Kod tebe je!
+        </span>
+        <span style={{ fontSize: '1rem', fontWeight: 700, opacity: 0.9 }}>
+          Kaži reč iz kategorije i prosledi
+        </span>
+        <div style={{ flex: 1 }} />
         {host.mode === 'sequential' ? (
-          <button onClick={() => pass()} style={bigBtn}>
+          <button className="btn-primary" onClick={() => pass()} style={{ width: '100%', minHeight: 72, fontSize: '1.4rem' }}>
             Prosledi →
           </button>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Kome prosleđuješ?
-            </span>
-            {others.map((p) => (
-              <button key={p.playerId} onClick={() => pass(p.playerId)} style={pickBtn}>
-                {p.avatarEmoji} {p.name}
-              </button>
-            ))}
-          </div>
+          <PlayerGrid players={others} label="Kome prosleđuješ?" />
         )}
       </div>
     );
@@ -243,24 +264,21 @@ export default function HotPotatoController() {
     const iExploded = host.explodedId === playerId;
     const who = host.players.find((p) => p.playerId === host.explodedId);
     return (
-      <div style={wrap}>
-        <p style={{ fontSize: '3.5rem' }}>💥</p>
-        {iExploded ? (
-          <p style={{ fontSize: '1.5rem', fontWeight: 800 }}>Bum! Ispao si!</p>
-        ) : (
-          <p style={{ fontSize: '1.3rem', fontWeight: 700 }}>
-            {who ? `${who.avatarEmoji} ${who.name}` : 'Neko'} je ispao!
-          </p>
-        )}
+      <div style={{ ...wrap, background: verdictWash(iExploded ? 'wrong' : 'neutral') }}>
+        <RoundVerdict
+          kind={iExploded ? 'wrong' : 'neutral'}
+          icon="💥"
+          title={iExploded ? 'Bum! Ispao si!' : `${who ? who.name : 'Neko'} je ispao!`}
+        />
         {host.question && host.correctIndex != null && (
-          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
             Tačan odgovor:{' '}
-            <strong style={{ color: 'var(--success)' }}>
+            <strong style={{ color: 'var(--success-ink)' }}>
               {host.question.options[host.correctIndex]?.text}
             </strong>
           </p>
         )}
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0 }}>
           {host.aliveCount === 1 ? 'Ostao je poslednji…' : `Još ${host.aliveCount} u igri`}
         </p>
       </div>
@@ -272,37 +290,114 @@ export default function HotPotatoController() {
     // the standings on the phone.
     if (hostless && host.leaderboard) {
       return (
-        <HostlessLeaderboard
-          title="Konačni poredak"
-          entries={host.leaderboard}
-          myPlayerId={playerId}
-        />
+        <HostlessLeaderboard title="Konačni poredak" entries={host.leaderboard} myPlayerId={playerId} />
       );
     }
-    return null;
+    return (
+      <div style={wrap}>
+        <span style={{ fontSize: '3rem' }}>📺</span>
+        <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>Gledaj TV</p>
+      </div>
+    );
   }
 
   return null;
 }
 
-const bigBtn: React.CSSProperties = {
-  padding: '1.2rem',
-  fontSize: '1.4rem',
-  fontWeight: 800,
-  borderRadius: 14,
-  border: 'none',
-  background: 'var(--accent)',
-  color: '#fff',
-  width: '100%',
-};
+function Eyebrow({ children }: { children: ReactNode }) {
+  return (
+    <span
+      style={{
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        opacity: 0.85,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
-const pickBtn: React.CSSProperties = {
-  padding: '0.9rem',
-  fontSize: '1.1rem',
-  fontWeight: 700,
-  borderRadius: 12,
-  border: 'none',
-  background: 'var(--accent)',
-  color: '#fff',
-  width: '100%',
-};
+function HolderLine({
+  holder,
+  prefix,
+  suffix,
+  big,
+}: {
+  holder?: HotPotatoPlayerLite;
+  prefix?: string;
+  suffix?: string;
+  big?: boolean;
+}) {
+  return (
+    <p
+      className={big ? 'display' : undefined}
+      style={{ fontSize: big ? '1.6rem' : '1rem', fontWeight: big ? 700 : 600, margin: 0 }}
+    >
+      {prefix && <>{prefix} </>}
+      <strong>
+        {holder?.avatarEmoji} {holder?.name ?? '—'}
+      </strong>
+      {suffix && <> {suffix}</>}
+    </p>
+  );
+}
+
+function PlayerGrid({ players, label }: { players: HotPotatoPlayerLite[]; label: string }) {
+  return (
+    <div style={{ width: '100%', flexShrink: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {players.map((p) => (
+          <button
+            key={p.playerId}
+            onClick={() => pass(p.playerId)}
+            style={{
+              height: 64,
+              minHeight: 64,
+              borderRadius: 18,
+              border: 'none',
+              background: 'rgba(22,46,78,.55)',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '0 12px',
+              textAlign: 'left',
+            }}
+          >
+            <span
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: '30%',
+                background: p.avatarColor,
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '1.25rem',
+                flexShrink: 0,
+              }}
+            >
+              {p.avatarEmoji}
+            </span>
+            <span
+              style={{
+                fontSize: '1rem',
+                fontWeight: 800,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {p.name}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p style={{ margin: '10px 0 0', fontSize: '0.82rem', fontWeight: 700, opacity: 0.85, textAlign: 'center' }}>
+        {label}
+      </p>
+    </div>
+  );
+}
