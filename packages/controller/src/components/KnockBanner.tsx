@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { KnockRequest } from '@igra/shared';
 import { useT } from '../i18n/useT';
 import { useKnockStore } from '../store/knockStore';
+import { cue } from '../utils/cues';
 
 // How long the banner stays before folding into the ✊ badge on the avatar.
 const COLLAPSE_MS = 8000;
@@ -27,6 +28,11 @@ function Banner({ request }: { request: KnockRequest }) {
   const answer = useKnockStore((s) => s.answer);
   const collapse = useKnockStore((s) => s.collapse);
   const ref = useRef<HTMLDivElement>(null);
+
+  // Kuc-kuc once per guest (keyed banner = one mount per knock).
+  useEffect(() => {
+    cue('knock');
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => collapse(request.knockId), COLLAPSE_MS);

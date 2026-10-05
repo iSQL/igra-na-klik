@@ -1,11 +1,14 @@
 import { GameRouter } from '../components/GameRouter';
 import { PlayerMenu } from '../components/PlayerMenu';
 import { useGameFrameMounted } from '../components/kit/GameFrame';
+import { FirstTimeHint } from '../components/FirstTimeHint';
+import { useGameStore } from '../store/gameStore';
 
 export function GameScreen() {
   // Games built on the shared GameFrame carry the menu in their header; the
   // floating circle stays only for the ones that haven't moved over yet.
   const framed = useGameFrameMounted();
+  const gameId = useGameStore((s) => s.gameId);
   return (
     <div
       style={{
@@ -17,6 +20,7 @@ export function GameScreen() {
       }}
     >
       <GameRouter />
+      {gameId && <FirstTimeHint key={gameId} gameId={gameId} />}
       {!framed && (
         <div
           style={{

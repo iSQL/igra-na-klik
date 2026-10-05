@@ -9,6 +9,8 @@ import { QuizFeedbackMenu } from './QuizFeedbackMenu';
 import { BitkaBoardMenu } from './BitkaBoardMenu';
 import { KnockButtons, KnockFace } from './KnockBanner';
 import { useKnockStore } from '../store/knockStore';
+import { useRulesStore } from './RulesScreen';
+import { CueToggles } from './CueToggles';
 
 type ConfirmKind = 'leave' | 'close' | 'stop' | null;
 
@@ -213,6 +215,19 @@ export function PlayerMenu({
               </span>
               <LanguageSwitch />
             </div>
+
+            {/* Vibracija / zvuk (4i) */}
+            <CueToggles compact />
+
+            {/* Rules in the app (4a) — current game pinned on top. */}
+            <MenuRow
+              icon="📖"
+              label={t('rules.inGame')}
+              onClick={() => {
+                setOpen(false);
+                useRulesStore.getState().show();
+              }}
+            />
 
             {/* Change look */}
             <MenuRow

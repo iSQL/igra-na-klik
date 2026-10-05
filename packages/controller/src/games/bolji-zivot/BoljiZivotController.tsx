@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
 import { useHaptics } from '../../hooks/useHaptics';
+import { cue } from '../../utils/cues';
 import type {
   BoljiZivotHostData,
   BoljiZivotPlayerData,
@@ -69,7 +70,7 @@ export default function BoljiZivotController() {
   const wasOnTurnRef = useRef(false);
   useEffect(() => {
     if (amOnTurnNow && !wasOnTurnRef.current) {
-      haptics.success();
+      cue('turn');
       setTurnBannerId((n) => n + 1);
     }
     wasOnTurnRef.current = amOnTurnNow;

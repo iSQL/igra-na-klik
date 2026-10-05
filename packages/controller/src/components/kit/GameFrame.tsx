@@ -4,6 +4,7 @@ import { GAME_DEFINITIONS } from '@igra/shared';
 import { useT } from '../../i18n/useT';
 import { ACCENT_HEX } from '../../utils/gameAccent';
 import { PlayerMenu } from '../PlayerMenu';
+import { cue } from '../../utils/cues';
 
 // How many GameFrames are mounted. GameScreen hides its floating player-menu
 // circle while one is, because the frame's header carries the menu instead —
@@ -27,6 +28,8 @@ interface GameFrameProps {
   timeRemaining?: number;
   /** Full phase length — draws the drain bar under the header. */
   timeTotal?: number;
+  /** Changes once per new question / round — fires the "new round" cue. */
+  roundKey?: string | number;
   children: ReactNode;
 }
 
@@ -39,6 +42,7 @@ export function GameFrame({
   subtitle,
   timeRemaining,
   timeTotal,
+  roundKey,
   children,
 }: GameFrameProps) {
   const t = useT();
@@ -53,6 +57,15 @@ export function GameFrame({
   const timed = timeRemaining !== undefined;
   const secs = timed ? Math.max(0, Math.ceil(timeRemaining)) : 0;
   const urgent = timed && secs <= 5;
+  useEffect(() => {
+    if (roundKey !== undefined) cue('round');
+  }, [roundKey]);
+
+  // Last seconds (4d): one short tick per second, felt more than heard.
+  const tickSec = urgent && secs > 0 ? secs : null;
+  useEffect(() => {
+    if (tickSec !== null) cue('tick');
+  }, [tickSec]);
   const frac =
     timed && timeTotal && timeTotal > 0
       ? Math.max(0, Math.min(1, timeRemaining / timeTotal))
@@ -131,8 +144,11 @@ export function GameFrame({
               }}
             >
               <span
+                key={tickSec ?? 'calm'}
                 className="display"
                 style={{
+                  display: 'inline-block',
+                  animation: tickSec !== null ? 'igra-tick .15s ease-out' : undefined,
                   fontWeight: 700,
                   fontSize: '1.4rem',
                   lineHeight: 1,

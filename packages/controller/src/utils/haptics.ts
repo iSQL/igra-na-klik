@@ -1,4 +1,4 @@
-type HapticPattern = number | readonly number[];
+import { vibrate } from './cues';
 
 const patterns = {
   tap: [50],
@@ -8,12 +8,8 @@ const patterns = {
   error: [100, 50, 100, 50, 100],
 } as const;
 
-function vibrate(pattern: HapticPattern): void {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate(pattern as VibratePattern);
-  }
-}
-
+// Goes through cues.vibrate so the per-device vibration toggle covers every
+// game's existing haptics too.
 export const haptics = {
   tap: () => vibrate(patterns.tap),
   double: () => vibrate(patterns.double),

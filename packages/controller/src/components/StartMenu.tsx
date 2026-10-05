@@ -4,6 +4,8 @@ import { useT } from '../i18n/useT';
 import { BottomSheet, SheetRow } from './BottomSheet';
 import { LanguageSwitch } from './LanguageSwitch';
 import { copyText } from './CopyRoomLinkButton';
+import { useRulesStore } from './RulesScreen';
+import { CueToggles } from './CueToggles';
 
 /**
  * Start screen ⋯ menu: TV play, game rules, language and zabari.net — the
@@ -26,7 +28,13 @@ export function StartMenu({
   return (
     <BottomSheet label={t('start.menu')} onClose={onClose}>
       {view === 'menu' ? (
-        <MenuView onTv={() => setView('tv')} />
+        <MenuView
+          onTv={() => setView('tv')}
+          onRules={() => {
+            onClose();
+            useRulesStore.getState().show();
+          }}
+        />
       ) : (
         <TvView onBack={() => setView('menu')} onEnterCode={onEnterCode} />
       )}
@@ -34,7 +42,7 @@ export function StartMenu({
   );
 }
 
-function MenuView({ onTv }: { onTv: () => void }) {
+function MenuView({ onTv, onRules }: { onTv: () => void; onRules: () => void }) {
   const t = useT();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -50,8 +58,9 @@ function MenuView({ onTv }: { onTv: () => void }) {
         tint="#a9c46c"
         title={t('start.rulesTitle')}
         hint={t('start.rulesHint', { n: Object.keys(GAME_DEFINITIONS).length })}
-        href="/uputstva"
+        onClick={onRules}
       />
+      <CueToggles />
       <div
         style={{
           display: 'flex',

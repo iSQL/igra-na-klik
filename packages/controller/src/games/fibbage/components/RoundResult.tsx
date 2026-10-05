@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useHaptics } from '../../../hooks/useHaptics';
+import { cue } from '../../../utils/cues';
 import {
   RoundVerdict,
   verdictWash,
@@ -37,15 +37,15 @@ export function RoundResult({
   fooledByNames,
   fooledByText,
 }: RoundResultProps) {
-  const haptics = useHaptics();
-
-  useEffect(() => {
-    if (foundTruth || fooledCount > 0) haptics.success();
-    else haptics.error();
-  }, []);
-
   const good = foundTruth || fooledCount > 0;
   const kind: VerdictKind = foundTruth ? 'correct' : good ? 'neutral' : 'wrong';
+
+  // RoundVerdict cues correct/wrong itself; a lie that fooled someone is a
+  // win too, though it renders neutral.
+  useEffect(() => {
+    if (kind === 'neutral' && good) cue('correct');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div

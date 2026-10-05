@@ -14,50 +14,10 @@ import { GameScreen } from './screens/GameScreen';
 import { BackButtonGuard } from './components/BackButtonGuard';
 import { ChatHead } from './components/ChatHead';
 import { KnockBanner } from './components/KnockBanner';
+import { ConnectionStatus, ProblemScreen } from './components/ConnectionStatus';
+import { RulesScreen } from './components/RulesScreen';
 import { bindKnockSocket } from './store/knockStore';
 import { useT } from './i18n/useT';
-
-function ReconnectingOverlay() {
-  const t = useT();
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(11, 10, 23, 0.92)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1.5rem',
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            width: '44px',
-            height: '44px',
-            border: '4px solid var(--amber)',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'igra-spin .8s linear infinite',
-            marginBottom: '1.2rem',
-          }}
-        />
-        <p
-          className="display"
-          style={{ fontSize: '1.4rem', fontWeight: 600, color: 'var(--amber)' }}
-        >
-          {t('reconnect.reconnecting')}
-        </p>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontWeight: 700 }}>
-          {t('reconnect.wait')}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function GameEndedOverlay({
   placement,
@@ -276,61 +236,12 @@ function KickedOverlay({
   onClose: () => void;
 }) {
   const t = useT();
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'linear-gradient(180deg, #1a0d12, var(--bg-primary))',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1100,
-        padding: '2rem',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '340px',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1.4rem',
-        }}
-      >
-        <div
-          style={{
-            width: '96px',
-            height: '96px',
-            borderRadius: '50%',
-            background: 'rgba(255,77,94,.14)',
-            border: '1px solid rgba(255,77,94,.4)',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: '2.6rem',
-          }}
-        >
-          🚪
-        </div>
-        <p
-          className="display"
-          style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}
-        >
-          {message}
-        </p>
-        <button className="btn-primary" onClick={onClose} style={{ width: '100%' }}>
-          {t('kicked.ok')}
-        </button>
-      </div>
-    </div>
-  );
+  // Same layout as "can't reach the room" (4h) — kicked / room closed / full.
+  return <ProblemScreen icon="🚪" title={message} primary={{ label: t('kicked.ok'), run: onClose }} />;
 }
 
 export function App() {
-  const { player, isConnected, setPlayer, setRoom, setConnected, reset } =
-    usePlayerStore();
+  const { player, setPlayer, setRoom, setConnected, reset } = usePlayerStore();
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
   const [gameEndedNotice, setGameEndedNotice] = useState(false);
   const [finalPlacement, setFinalPlacement] = useState<{
@@ -385,7 +296,7 @@ export function App() {
       // Receiving this event means the socket IS connected — sync the flag
       // in case a late server-side disconnect from a prior session landed
       // out of order and left isConnected stuck at false, which would
-      // wedge the UI on the "Reconnecting" overlay.
+      // wedge the UI on the reconnecting banner.
       setConnected(true);
     });
 
@@ -640,8 +551,6 @@ export function App() {
     };
   }, []);
 
-  // Show reconnecting overlay when disconnected but player exists
-  const showReconnecting = player && !isConnected;
   const screen = useNavStore((s) => s.screen);
 
   let body: React.ReactNode;
@@ -657,7 +566,6 @@ export function App() {
 
   return (
     <>
-      {showReconnecting && <ReconnectingOverlay />}
       <BackButtonGuard />
       {body}
       {/* Chat only works while the room is in the lobby (server-enforced), so
@@ -666,6 +574,9 @@ export function App() {
       {player && !gameId && <ChatHead showBubble={screen !== 'lobby'} />}
       {/* Pokucaj — only the remote-host holder ever has guests at the door. */}
       {player && <KnockBanner />}
+      {/* Drops stay in place: banner + dim, then a retry screen (4g/4h). */}
+      <ConnectionStatus />
+      <RulesScreen />
       {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
       {kickNotice && (
         <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />

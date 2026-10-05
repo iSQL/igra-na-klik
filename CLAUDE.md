@@ -48,7 +48,7 @@ Miss any one and the game breaks end-to-end:
 3. Register the module in [packages/server/src/socket/setup.ts](packages/server/src/socket/setup.ts).
 4. Host component + lazy entry in [packages/host/src/games/registry.ts](packages/host/src/games/registry.ts).
 5. Controller component + lazy entry in [packages/controller/src/games/registry.ts](packages/controller/src/games/registry.ts).
-6. A `GAME_RULES` entry in [packages/server/src/uputstva-page.ts](packages/server/src/uputstva-page.ts) — the public `/uputstva` hub lists only games that have one, so the game silently disappears from it otherwise.
+6. A `GAME_RULES` entry in [packages/shared/src/games/game-rules.ts](packages/shared/src/games/game-rules.ts) — the public `/uputstva` hub and the phone's in-app rules list only games that have one, so the game silently disappears from both otherwise. Give it a one-line `hint` (first-time tip); `steps`/`points`/`notes` are optional (the phone falls back to `body`).
 
 Optional knobs a game opts into rather than reinvents: `GAME_ROUND_CONFIG` ([round-config.ts](packages/shared/src/games/round-config.ts)) for the round-count selector (UI options + server clamp in one place), and `GAME_TIMING_DEFS` for admin-tunable wait durations (see below).
 
@@ -90,6 +90,8 @@ Rooms can also be created with no TV at all (`player:create-room` → `hostless:
 ### Controller kit (in-game phone UI)
 
 Shared in-game patterns live in [controller/src/components/kit/](packages/controller/src/components/kit/): `GameFrame` (header with game, progress, timer and the player menu, plus a drain bar), `WaitingPanel`/`WhoIsIn`/`DoneFaces` (who's in, from broadcast id lists only), `PlayerVoteGrid`, `RoundVerdict`; the standings are [HostlessLeaderboard](packages/controller/src/components/HostlessLeaderboard.tsx) (podium + pinned "you" card). Kviz, Lažov and Ko bi pre are built on it so far. While a `GameFrame` is mounted, [GameScreen](packages/controller/src/screens/GameScreen.tsx) hides the floating player-menu circle; a phase rendered outside the frame falls back to that circle, so wrap **every** phase (the three games do it once, at the controller root) to keep the menu in one place.
+
+Phone feedback goes through [utils/cues.ts](packages/controller/src/utils/cues.ts): `cue('round' | 'tick' | 'sent' | 'correct' | 'wrong' | 'turn' | 'knock' | 'reconnected')` maps each event to a vibration pattern and an optional synthesized tone, gated by the per-device toggles (vibration on, sound off by default; `igra-cues` in localStorage). The older `haptics.*` helpers route through the same vibration toggle. `RoundVerdict` fires correct/wrong itself and `GameFrame` fires the last-5-seconds tick and, given a `roundKey`, the new-round cue — don't fire them again in a game. Rules open in-app ([RulesScreen](packages/controller/src/components/RulesScreen.tsx), `useRulesStore().show(gameId?)`), and [FirstTimeHint](packages/controller/src/components/FirstTimeHint.tsx) shows a game's `hint` once per device. A dropped connection never leaves the room: [ConnectionStatus](packages/controller/src/components/ConnectionStatus.tsx) shows a banner and dims the screen in place (socket.io buffers taps meanwhile), and after 15 s swaps to a retry screen.
 
 ### Drawing data flow
 

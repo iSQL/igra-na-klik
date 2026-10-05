@@ -1,6 +1,6 @@
 import type { QuizOption } from '@igra/shared';
 import { socket } from '../../../socket';
-import { useHaptics } from '../../../hooks/useHaptics';
+import { cue } from '../../../utils/cues';
 
 interface AnswerButtonsProps {
   options: QuizOption[];
@@ -26,11 +26,9 @@ export function AnswerButtons({
   selectedIndex,
   action = 'quiz:answer',
 }: AnswerButtonsProps) {
-  const haptics = useHaptics();
-
   const handleAnswer = (optionIndex: number) => {
     if (hasAnswered) return;
-    haptics.tap();
+    cue('sent');
     socket.emit('game:player-action', {
       action,
       data: { optionIndex },
@@ -71,6 +69,8 @@ export function AnswerButtons({
               color: textColor,
               opacity: hasAnswered && !isSelected ? 0.4 : 1,
               transition: 'opacity 0.2s, transform 0.1s',
+              // 4d: the picked tile gives a springy squeeze, the rest fade.
+              animation: isSelected ? 'igra-press .24s cubic-bezier(.34,1.56,.64,1)' : undefined,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',

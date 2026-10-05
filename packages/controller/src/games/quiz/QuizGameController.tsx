@@ -87,6 +87,7 @@ export default function QuizGameController() {
       subtitle={subtitle}
       timeRemaining={timed ? timeRemaining : undefined}
       timeTotal={timed ? ((data.timeLimit as number) || 15) : undefined}
+      roundKey={data.loading === true ? undefined : (data.questionIndex as number)}
     >
       <QuizGameControllerInner />
     </GameFrame>

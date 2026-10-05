@@ -679,6 +679,32 @@ textarea {
   }
 }
 
+/* Poslednjih 5 s (4d): broj kucne jednom u sekundi. */
+@keyframes igra-tick {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* Odgovor tapnut (4d): pločica se stisne i vrati. */
+@keyframes igra-press {
+  50% {
+    transform: scale(0.96);
+  }
+}
+
+/* Netačno (4f): ✕ se jednom strese levo-desno. */
+@keyframes igra-nope {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
 /* Prodrmaj element — karta koju je poslednja akcija upravo promenila. */
 @keyframes igra-shake {
   0%,
@@ -818,4 +844,28 @@ textarea {
 
 .bitka-castle-active {
   animation: igra-bitka-zamak 1.2s ease-in-out infinite;
+}
+
+/* In-app rules (4b): GAME_RULES body HTML, same text as /uputstva. */
+.rules-body {
+  margin-top: 18px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.rules-body p {
+  margin: 0 0 0.6rem;
+}
+.rules-body ul {
+  margin: 0 0 0.6rem;
+  padding-left: 1.2rem;
+}
+.rules-body li {
+  margin-bottom: 0.4rem;
+}
+.rules-body strong {
+  color: var(--amber);
+}
+.rules-body .tip {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
 }
