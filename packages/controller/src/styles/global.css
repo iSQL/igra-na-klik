@@ -25,6 +25,8 @@
   --lime: #a9c46c;
   --amber: #e3b45e;
   --success: #57b380;
+  /* Lightened success for TEXT on navy — #57b380 text is under 4.5:1. */
+  --success-ink: #7fd3a3;
   --danger: #e06a5e;
   --blue: #6d9bd1;
   --grad: linear-gradient(125deg, #c0964a, #8f6e2c);

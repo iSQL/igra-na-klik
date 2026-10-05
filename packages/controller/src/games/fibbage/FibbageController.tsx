@@ -1,9 +1,10 @@
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
+import { GameFrame } from '../../components/kit/GameFrame';
+import { WaitingPanel, type ProgressPlayer } from '../../components/kit/WaitingPanel';
 import { AnswerInput } from './components/AnswerInput';
 import { VoteOptions } from './components/VoteOptions';
-import { WaitingScreen } from './components/WaitingScreen';
 import { RoundResult } from './components/RoundResult';
 import type {
   FibbageQuestionPublic,
@@ -18,6 +19,43 @@ const WRITING_SECONDS = 30;
 const VOTING_SECONDS = 20;
 
 export default function FibbageController() {
+  const gameState = useGameStore((s) => s.gameState);
+  if (!gameState) return null;
+  const { phase, timeRemaining, data } = gameState;
+
+  const round = `Runda ${(data.questionIndex as number) + 1}/${data.totalQuestions as number}`;
+  const step: Record<string, string> = {
+    'showing-question': data.loading === true ? 'Pripremam pitanja…' : 'Novo pitanje',
+    'writing-answers': 'Napiši laž',
+    voting: 'Pronađi istinu',
+    'showing-results': 'Rezultat',
+    leaderboard: 'Rang lista',
+  };
+  const subtitle = phase === 'ended' ? 'Kraj igre' : `${round} · ${step[phase] ?? ''}`;
+  const total =
+    phase === 'writing-answers' ? WRITING_SECONDS : phase === 'voting' ? VOTING_SECONDS : undefined;
+
+  return (
+    <GameFrame
+      gameId="fibbage"
+      subtitle={subtitle}
+      timeRemaining={total ? timeRemaining : undefined}
+      timeTotal={total}
+    >
+      <FibbagePhaseView />
+    </GameFrame>
+  );
+}
+
+// Who's in, from the broadcast chip lists (booleans only — never the text).
+function progressOf(list: unknown): ProgressPlayer[] {
+  return ((list as { playerId: string; done: boolean }[] | undefined) ?? []).map((p) => ({
+    playerId: p.playerId,
+    done: p.done,
+  }));
+}
+
+function FibbagePhaseView() {
   const gameState = useGameStore((s) => s.gameState);
   const playerId = usePlayerStore((s) => s.player?.id);
   const hostless = usePlayerStore((s) => s.room?.hostless ?? false);
@@ -41,15 +79,15 @@ export default function FibbageController() {
           textAlign: 'center',
         }}
       >
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
-          Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
-        </p>
         {question?.text && (
-          <p style={{ fontSize: '1.4rem', fontWeight: 700, lineHeight: 1.3, margin: 0 }}>
+          <p
+            className="display"
+            style={{ fontSize: '1.55rem', fontWeight: 600, lineHeight: 1.2, margin: 0 }}
+          >
             {question.text}
           </p>
         )}
-        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--cyan)', margin: 0 }}>
+        <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--amber)', margin: 0 }}>
           {data.loading === true ? 'Pripremam pitanja…' : 'Smisli laž…'}
         </p>
       </div>
@@ -63,18 +101,41 @@ export default function FibbageController() {
 
     if (myData?.isAutoFinder) {
       return (
-        <WaitingScreen
-          message="Znao/la si odgovor!"
-          subMessage="Bonus je tvoj — ne moraš da glasaš. Čekamo ostale..."
+        <WaitingPanel
+          hero={<TruthHero />}
+          title="Znao/la si odgovor!"
+          subtitle="Bonus je tvoj — ne moraš da glasaš."
+          progressLabel="Ko je poslao"
+          players={progressOf(data.submitters)}
         />
       );
     }
 
     if (myData?.hasSubmitted) {
       return (
-        <WaitingScreen
-          message="Poslato!"
-          subMessage="Čekamo ostale..."
+        <WaitingPanel
+          hero={
+            <div
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 36,
+                background: 'var(--bg-secondary)',
+                border: '2px solid var(--accent)',
+                boxShadow: '0 0 0 6px rgba(194,155,71,.18)',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '3.2rem',
+                animation: 'igra-pop .4s',
+              }}
+            >
+              🤥
+            </div>
+          }
+          title="Laž poslata"
+          subtitle="Glasanje počinje kad svi pošalju ili istekne vreme."
+          progressLabel="Ko je poslao"
+          players={progressOf(data.submitters)}
         />
       );
     }
@@ -82,8 +143,6 @@ export default function FibbageController() {
     return (
       <AnswerInput
         questionText={question.text}
-        timeRemaining={timeRemaining}
-        duration={WRITING_SECONDS}
         submittedCount={(data.submittedCount as number) ?? 0}
         totalPlayers={(data.totalPlayers as number) ?? 0}
       />
@@ -106,9 +165,12 @@ export default function FibbageController() {
     // truth bonus, so a ballot would just be a way to pay it twice.
     if (myData?.isAutoFinder || myData?.canVote === false) {
       return (
-        <WaitingScreen
-          message="Već si pogodio/la!"
-          subMessage="Ostali traže tačan odgovor među lažima..."
+        <WaitingPanel
+          hero={<TruthHero />}
+          title="Već si pogodio/la!"
+          subtitle="Ostali traže tačan odgovor među lažima."
+          progressLabel="Ko je glasao"
+          players={progressOf(data.voters)}
         />
       );
     }
@@ -119,10 +181,7 @@ export default function FibbageController() {
         hasVoted={myData?.hasVoted ?? false}
         votedOptionId={myData?.votedOptionId ?? null}
         myFakeOptionId={myData?.myFakeOptionId ?? null}
-        timeRemaining={timeRemaining}
-        duration={VOTING_SECONDS}
-        votedCount={(data.votedCount as number) ?? 0}
-        totalPlayers={(data.totalPlayers as number) ?? 0}
+        voters={progressOf(data.voters)}
       />
     );
 
@@ -135,16 +194,17 @@ export default function FibbageController() {
             display: 'flex',
             flexDirection: 'column',
             height: '100%',
-            padding: '0.5rem',
+            paddingTop: '1rem',
           }}
         >
           <p
+            className="display"
             style={{
               textAlign: 'center',
-              fontSize: '1rem',
-              fontWeight: 700,
-              lineHeight: 1.3,
-              margin: '0.5rem 0.75rem',
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              lineHeight: 1.25,
+              margin: 0,
             }}
           >
             {question.text}
@@ -211,54 +271,39 @@ export default function FibbageController() {
   }
 
   if ((phase === 'leaderboard' || phase === 'ended') && data.leaderboard) {
-    const leaderboard = data.leaderboard as FibbageLeaderboardEntry[];
-    const myEntry = leaderboard.find((e) => e.playerId === playerId);
-
-    // TV mode: own rank as the hero, with the full standings underneath so
-    // the phone shows everyone's placement too.
+    // TV mode: the pinned "you" card carries your own place.
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          width: '100%',
-          padding: '1rem',
-          gap: '0.25rem',
-          overflowY: 'auto',
-        }}
-      >
-        {myEntry && (
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
-              {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
-            </p>
-            <p
-              style={{
-                fontSize: '3rem',
-                fontWeight: 800,
-                color: 'var(--accent)',
-                margin: 0,
-              }}
-            >
-              #{myEntry.rank}
-            </p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 600, margin: 0 }}>
-              {myEntry.score.toLocaleString()} poena
-            </p>
-          </div>
-        )}
-        <HostlessLeaderboard
-          title=""
-          entries={leaderboard}
-          myPlayerId={playerId}
-          embedded
-        />
-      </div>
+      <HostlessLeaderboard
+        title={phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
+        entries={data.leaderboard as FibbageLeaderboardEntry[]}
+        myPlayerId={playerId}
+      />
     );
   }
 
   return null;
+}
+
+function TruthHero() {
+  return (
+    <div
+      style={{
+        width: 120,
+        height: 120,
+        borderRadius: 36,
+        background: 'rgba(87,179,128,.14)',
+        border: '2px solid var(--success)',
+        color: 'var(--success-ink)',
+        display: 'grid',
+        placeItems: 'center',
+        fontSize: '3.4rem',
+        fontWeight: 800,
+        animation: 'igra-pop .4s',
+      }}
+    >
+      ✓
+    </div>
+  );
 }
 
 // Hostless one-screen reveal: every option with its author and votes, then
@@ -282,7 +327,7 @@ function FibbageMergedResults({
         flexDirection: 'column',
         height: '100%',
         gap: '0.6rem',
-        padding: '1rem',
+        padding: '1rem 0 0.5rem',
         overflowY: 'auto',
       }}
     >
@@ -305,8 +350,8 @@ function FibbageMergedResults({
           alignSelf: 'center',
           fontSize: '1.35rem',
           fontWeight: 700,
-          color: 'var(--success)',
-          background: 'rgba(47,224,138,.14)',
+          color: 'var(--success-ink)',
+          background: 'rgba(87,179,128,.14)',
           border: '1px solid var(--success)',
           padding: '0.55rem 1.1rem',
           borderRadius: '14px',
@@ -371,84 +416,12 @@ function FibbageMergedResults({
           ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-        {leaderboard.map((entry) => {
-          const isMe = entry.playerId === myPlayerId;
-          const delta = entry.roundScore ?? 0;
-          return (
-            <div
-              key={entry.playerId}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                padding: '0.55rem 0.75rem',
-                background: isMe
-                  ? 'linear-gradient(90deg, rgba(217,123,108,.14), var(--bg-secondary))'
-                  : 'var(--bg-secondary)',
-                borderRadius: '12px',
-                border: isMe
-                  ? '1px solid rgba(217,123,108,.4)'
-                  : '1px solid var(--line)',
-                fontSize: '0.9rem',
-              }}
-            >
-              <span
-                className="display"
-                style={{
-                  fontWeight: 700,
-                  color:
-                    entry.rank === 1
-                      ? 'var(--amber)'
-                      : entry.rank === 2
-                        ? '#C9CCE0'
-                        : entry.rank === 3
-                          ? '#D8916A'
-                          : 'var(--dim)',
-                  minWidth: '1.4rem',
-                  textAlign: 'center',
-                }}
-              >
-                {entry.rank}
-              </span>
-              <span
-                className="avatar-tile"
-                style={{ width: '26px', height: '26px', backgroundColor: entry.avatarColor }}
-              />
-              <span
-                style={{
-                  flex: 1,
-                  fontWeight: 800,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {entry.name}
-              </span>
-              <span
-                style={{
-                  fontWeight: 800,
-                  fontSize: '0.78rem',
-                  color: delta > 0 ? 'var(--success)' : 'var(--dim)',
-                  background:
-                    delta > 0 ? 'rgba(47,224,138,.15)' : 'rgba(255,255,255,.05)',
-                  padding: '2px 7px',
-                  borderRadius: '7px',
-                }}
-              >
-                +{delta}
-              </span>
-              <span
-                className="display"
-                style={{ fontWeight: 700, minWidth: '3.2rem', textAlign: 'right' }}
-              >
-                {entry.score.toLocaleString()}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      <HostlessLeaderboard
+        title=""
+        entries={leaderboard}
+        myPlayerId={myPlayerId}
+        embedded
+      />
     </div>
   );
 }

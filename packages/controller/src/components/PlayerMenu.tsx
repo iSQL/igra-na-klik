@@ -16,7 +16,14 @@ type ConfirmKind = 'leave' | 'close' | 'stop' | null;
  * leave/close/end-game — instead of scattering pill buttons over the game
  * where they overlapped game elements.
  */
-export function PlayerMenu({ inGame = false }: { inGame?: boolean }) {
+export function PlayerMenu({
+  inGame = false,
+  variant = 'floating',
+}: {
+  inGame?: boolean;
+  /** 'header' = 40px, flat, sits inside the GameFrame header bar. */
+  variant?: 'floating' | 'header';
+}) {
   const player = usePlayerStore((s) => s.player);
   const room = usePlayerStore((s) => s.room);
   const t = useT();
@@ -65,16 +72,17 @@ export function PlayerMenu({ inGame = false }: { inGame?: boolean }) {
         aria-label={t('playerMenu.open')}
         style={{
           position: 'relative',
-          width: '46px',
-          height: '46px',
-          minWidth: '46px',
-          minHeight: '46px',
+          width: variant === 'header' ? '40px' : '46px',
+          height: variant === 'header' ? '40px' : '46px',
+          minWidth: variant === 'header' ? '40px' : '46px',
+          minHeight: variant === 'header' ? '40px' : '46px',
+          flexShrink: 0,
           padding: 0,
           borderRadius: '50%',
           background: player.avatarColor,
-          border: '1px solid var(--line2)',
-          boxShadow: '0 2px 10px rgba(0,0,0,.45)',
-          fontSize: '1.4rem',
+          border: variant === 'header' ? 'none' : '1px solid var(--line2)',
+          boxShadow: variant === 'header' ? 'none' : '0 2px 10px rgba(0,0,0,.45)',
+          fontSize: variant === 'header' ? '1.25rem' : '1.4rem',
           display: 'grid',
           placeItems: 'center',
         }}

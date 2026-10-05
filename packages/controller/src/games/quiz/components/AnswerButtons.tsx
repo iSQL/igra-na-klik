@@ -37,15 +37,20 @@ export function AnswerButtons({
     });
   };
 
+  // One type size for the whole grid (sized to the longest answer), so the
+  // four tiles read as a set rather than four different fonts.
+  const longest = Math.max(0, ...options.map((o) => o.text.length));
+  const fontSize = optionFontSize(longest);
+
   return (
     <div
       style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '0.75rem',
+        gridAutoRows: '1fr',
+        gap: '10px',
         width: '100%',
         height: '100%',
-        padding: '0.5rem',
       }}
     >
       {options.map((option) => {
@@ -57,31 +62,51 @@ export function AnswerButtons({
             onClick={() => handleAnswer(option.index)}
             disabled={hasAnswered}
             style={{
+              position: 'relative',
               background: option.color,
               border: isSelected ? '4px solid #fff' : '4px solid transparent',
-              borderRadius: '16px',
+              borderRadius: '22px',
+              // Pressed-in bottom edge — reads as a physical key.
+              boxShadow: 'inset 0 -5px 0 rgba(0,0,0,.18)',
               color: textColor,
-              fontSize: '1.15rem',
-              fontWeight: 800,
               opacity: hasAnswered && !isSelected ? 0.4 : 1,
               transition: 'opacity 0.2s, transform 0.1s',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
               gap: '0.5rem',
-              textAlign: 'center',
-              padding: '1rem',
+              textAlign: 'left',
+              padding: '14px',
+              minHeight: '96px',
               WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>
+            <span style={{ fontSize: '1.35rem', lineHeight: 1, opacity: 0.85 }}>
               {OPTION_SHAPES[option.index] ?? '●'}
             </span>
-            {option.text}
+            <span
+              className="display"
+              style={{
+                fontWeight: 700,
+                fontSize,
+                lineHeight: 1.1,
+                wordBreak: 'break-word',
+                hyphens: 'auto',
+              }}
+            >
+              {option.text}
+            </span>
           </button>
         );
       })}
     </div>
   );
+}
+
+function optionFontSize(chars: number): string {
+  if (chars <= 6) return '1.9rem';
+  if (chars <= 12) return '1.5rem';
+  if (chars <= 24) return '1.2rem';
+  return '1.02rem';
 }

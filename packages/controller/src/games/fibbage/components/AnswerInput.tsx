@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { socket } from '../../../socket';
 import { useHaptics } from '../../../hooks/useHaptics';
 import { FIBBAGE_MAX_ANSWER_LENGTH } from '@igra/shared';
-import { PhaseTimer } from './PhaseTimer';
 
 interface AnswerInputProps {
   questionText: string;
-  timeRemaining: number;
-  duration: number;
   /** How many of the expected players are already in. */
   submittedCount: number;
   totalPlayers: number;
 }
 
+// Text entry (Kontroler kit 2c). The question is plain text rather than a
+// boxed card so more of it fits with the keyboard open, and the send button
+// sits in a bar at the bottom of the screen — with the viewport set to
+// resize for the keyboard, that bar rides just above it.
 export function AnswerInput({
   questionText,
-  timeRemaining,
-  duration,
   submittedCount,
   totalPlayers,
 }: AnswerInputProps) {
@@ -28,17 +27,6 @@ export function AnswerInput({
   // submission the server never got.
   const [pending, setPending] = useState(false);
   const haptics = useHaptics();
-
-  // The phone keyboard covers most of the screen, so scroll the field into
-  // view once it is focused rather than letting the question push it off.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      document
-        .getElementById('fibbage-answer')
-        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }, 300);
-    return () => clearTimeout(t);
-  }, []);
 
   const handleSubmit = () => {
     const trimmed = text.trim();
@@ -55,92 +43,100 @@ export function AnswerInput({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '1rem',
-        gap: '0.6rem',
-      }}
-    >
-      <PhaseTimer
-        timeRemaining={timeRemaining}
-        duration={duration}
-        label={`${submittedCount}/${totalPlayers} poslalo`}
-      />
-
-      <p
-        className="display card"
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div
         style={{
-          fontSize: '1.05rem',
-          fontWeight: 600,
-          lineHeight: 1.3,
-          textAlign: 'center',
-          padding: '0.75rem 0.9rem',
-          borderRadius: '16px',
-          margin: 0,
-          flexShrink: 0,
-          maxHeight: '30vh',
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
+          padding: '1rem 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
         }}
       >
-        {questionText}
-      </p>
+        <p
+          className="display"
+          style={{ fontSize: '1.32rem', fontWeight: 600, lineHeight: 1.25, margin: 0 }}
+        >
+          {questionText}
+        </p>
 
-      <textarea
-        id="fibbage-answer"
-        value={text}
-        onChange={(e) => setText(e.target.value.slice(0, FIBBAGE_MAX_ANSWER_LENGTH))}
-        placeholder="Napiši lažan odgovor..."
-        autoFocus
-        rows={2}
-        enterKeyHint="send"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
-        style={{
-          width: '100%',
-          fontSize: '1.1rem',
-          fontWeight: 700,
-          padding: '0.85rem 1rem',
-          borderRadius: '16px',
-          border: '1.5px solid var(--cyan)',
-          boxShadow: '0 0 0 4px rgba(111,194,187,.12)',
-          background: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          resize: 'none',
-          fontFamily: 'inherit',
-          flexShrink: 0,
-        }}
-      />
+        <textarea
+          id="fibbage-answer"
+          value={text}
+          onChange={(e) => setText(e.target.value.slice(0, FIBBAGE_MAX_ANSWER_LENGTH))}
+          placeholder="Napiši lažan odgovor..."
+          autoFocus
+          rows={2}
+          enterKeyHint="send"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          style={{
+            width: '100%',
+            minHeight: 74,
+            fontSize: '1.2rem',
+            fontWeight: 700,
+            padding: '14px 16px',
+            borderRadius: '18px',
+            border: '2px solid var(--accent)',
+            boxShadow: '0 0 0 4px rgba(194,155,71,.15)',
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            caretColor: 'var(--amber)',
+            resize: 'none',
+            fontFamily: 'inherit',
+            outline: 'none',
+            flexShrink: 0,
+          }}
+        />
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 12,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span>Pogodiš tačan odgovor? Bonus poeni.</span>
+          <span style={{ flexShrink: 0 }}>
+            {text.length}/{FIBBAGE_MAX_ANSWER_LENGTH}
+          </span>
+        </div>
+      </div>
 
       <div
         style={{
+          flexShrink: 0,
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: '0.78rem',
-          fontWeight: 700,
-          color: 'var(--dim)',
+          gap: 10,
+          padding: '10px 0 2px',
+          borderTop: '1px solid var(--line)',
         }}
       >
-        <span>Ako pogodiš tačan odgovor — bonus poeni!</span>
-        <span>
-          {text.length}/{FIBBAGE_MAX_ANSWER_LENGTH}
+        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+          {submittedCount}/{totalPlayers} poslalo
         </span>
+        <button
+          className="btn-primary"
+          onClick={handleSubmit}
+          // Keep focus in the textarea, so tapping send doesn't drop the
+          // keyboard (and the bar with it) before the click lands.
+          onMouseDown={(e) => e.preventDefault()}
+          disabled={!text.trim() || pending}
+          style={{ minHeight: 52, padding: '0 26px' }}
+        >
+          {pending ? 'Šaljem…' : 'Pošalji laž'}
+        </button>
       </div>
-
-      <button
-        className="btn-primary"
-        onClick={handleSubmit}
-        disabled={!text.trim() || pending}
-      >
-        {pending ? 'Šaljem…' : 'Pošalji ✓'}
-      </button>
     </div>
   );
 }

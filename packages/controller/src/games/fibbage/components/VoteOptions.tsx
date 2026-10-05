@@ -1,17 +1,15 @@
 import type { FibbageAnswerOptionPublic } from '@igra/shared';
 import { socket } from '../../../socket';
 import { useHaptics } from '../../../hooks/useHaptics';
-import { PhaseTimer } from './PhaseTimer';
+import { DoneFaces, type ProgressPlayer } from '../../../components/kit/WaitingPanel';
 
 interface VoteOptionsProps {
   options: FibbageAnswerOptionPublic[];
   hasVoted: boolean;
   votedOptionId: string | null;
   myFakeOptionId: string | null;
-  timeRemaining: number;
-  duration: number;
-  votedCount: number;
-  totalPlayers: number;
+  /** Expected voters with a done flag — ids only, never the pick. */
+  voters: ProgressPlayer[];
 }
 
 export function VoteOptions({
@@ -19,10 +17,7 @@ export function VoteOptions({
   hasVoted,
   votedOptionId,
   myFakeOptionId,
-  timeRemaining,
-  duration,
-  votedCount,
-  totalPlayers,
+  voters,
 }: VoteOptionsProps) {
   const haptics = useHaptics();
 
@@ -42,22 +37,16 @@ export function VoteOptions({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        padding: '1rem',
-        gap: '0.6rem',
+        padding: '1rem 0 0.25rem',
+        gap: '0.75rem',
       }}
     >
-      <PhaseTimer
-        timeRemaining={timeRemaining}
-        duration={duration}
-        label={`${votedCount}/${totalPlayers} glasalo`}
-      />
-
       <p
         style={{
           fontSize: '0.8rem',
           fontWeight: 800,
           textAlign: 'center',
-          color: 'var(--pink)',
+          color: 'var(--amber)',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
           margin: 0,
@@ -88,15 +77,15 @@ export function VoteOptions({
               style={{
                 minHeight: '56px',
                 background: isSelected
-                  ? 'rgba(217,123,108,.14)'
+                  ? 'rgba(194,155,71,.14)'
                   : 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 border: isSelected
-                  ? '2px solid var(--pink)'
+                  ? '3px solid var(--accent)'
                   : '1.5px solid var(--line2)',
-                borderRadius: '14px',
+                borderRadius: '16px',
                 padding: '0.9rem 1.1rem',
-                fontSize: '1rem',
+                fontSize: '1.08rem',
                 fontWeight: 800,
                 textAlign: 'left',
                 display: 'flex',
@@ -109,8 +98,18 @@ export function VoteOptions({
             >
               <span>{opt.text}</span>
               {isSelected && (
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--pink)', flexShrink: 0 }}>
-                  ✓ tvoj glas
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    padding: '3px 8px',
+                    borderRadius: 7,
+                    background: 'var(--accent)',
+                    color: 'var(--bg-primary)',
+                    flexShrink: 0,
+                  }}
+                >
+                  Tvoj glas
                 </span>
               )}
               {isMine && (
@@ -130,18 +129,7 @@ export function VoteOptions({
         })}
       </div>
 
-      {hasVoted && (
-        <p
-          style={{
-            textAlign: 'center',
-            color: 'var(--text-secondary)',
-            fontSize: '0.95rem',
-            margin: 0,
-          }}
-        >
-          Glas poslat! Čekamo ostale...
-        </p>
-      )}
+      <DoneFaces players={voters} verb="glasalo" />
     </div>
   );
 }

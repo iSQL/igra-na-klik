@@ -3,6 +3,12 @@ import { socket } from '../../socket';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { HostlessLeaderboard } from '../../components/HostlessLeaderboard';
+import { GameFrame } from '../../components/kit/GameFrame';
+import {
+  DoneFaces,
+  WaitingPanel,
+  type ProgressPlayer,
+} from '../../components/kit/WaitingPanel';
 import { PhotoFrame } from '../../components/PhotoFrame';
 import { AnswerButtons } from './components/AnswerButtons';
 import { WaitingForResults } from './components/WaitingForResults';
@@ -46,10 +52,53 @@ interface MyResultData {
   wasExact?: boolean;
 }
 
-// Report/rate now lives in the PlayerMenu popup (bottom-right), so the quiz
-// controller just renders the phase UI.
+// Report/rate lives in the PlayerMenu popup (in the GameFrame header), so the
+// quiz controller just renders the phase UI.
 export default function QuizGameController() {
-  return <QuizGameControllerInner />;
+  const gameState = useGameStore((s) => s.gameState);
+  if (!gameState) return null;
+  const { phase, timeRemaining, data } = gameState;
+
+  // Header line: progress + pack (the pack name moved out of the question
+  // card so the question stands on its own).
+  const counter = `Pitanje ${(data.questionIndex as number) + 1}/${data.totalQuestions as number}`;
+  const pack = typeof data.packName === 'string' ? data.packName : '';
+  let subtitle: string | undefined;
+  let timed = false;
+  if (data.loading === true) {
+    subtitle = 'Pripremam pitanja…';
+  } else if (phase === 'answering') {
+    subtitle = pack ? `${counter} · ${pack}` : counter;
+    timed = true;
+  } else if (phase === 'showing-question') {
+    // The big countdown ring is the hero here — no second clock in the header.
+    subtitle = pack ? `${counter} · ${pack}` : counter;
+  } else if (phase === 'showing-results') {
+    subtitle = `${counter} · Rezultat`;
+  } else if (phase === 'leaderboard') {
+    subtitle = `Posle pitanja ${(data.questionIndex as number) + 1}/${data.totalQuestions as number}`;
+  } else if (phase === 'ended') {
+    subtitle = 'Kraj igre';
+  }
+
+  return (
+    <GameFrame
+      gameId="quiz"
+      subtitle={subtitle}
+      timeRemaining={timed ? timeRemaining : undefined}
+      timeTotal={timed ? ((data.timeLimit as number) || 15) : undefined}
+    >
+      <QuizGameControllerInner />
+    </GameFrame>
+  );
+}
+
+// Who the room is waiting on, from the broadcast's expected/answered id lists
+// (ids only — never what anyone picked).
+function answerProgress(data: Record<string, unknown>): ProgressPlayer[] {
+  const expected = (data.expectedIds as string[] | undefined) ?? [];
+  const answered = new Set((data.answeredIds as string[] | undefined) ?? []);
+  return expected.map((playerId) => ({ playerId, done: answered.has(playerId) }));
 }
 
 function QuizGameControllerInner() {
@@ -84,24 +133,16 @@ function QuizGameControllerInner() {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
-          padding: '0.75rem',
-          gap: '0.75rem',
+          paddingTop: '1rem',
+          gap: '0.9rem',
         }}
       >
-        <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <QuestionPanel data={data} text={questionText} compact />
-        </div>
+        <QuestionPanel data={data} text={questionText} compact />
         <PhoneMedia
           key={data.questionIndex as number}
           audioUrl={data.audioUrl as string | undefined}
           video={data.video as KvizVideoRef | undefined}
         />
-        {phase === 'answering' && (
-          <AnswerCountdown
-            timeRemaining={timeRemaining}
-            timeLimit={data.timeLimit as number | undefined}
-          />
-        )}
         <div style={{ flex: 1, minHeight: 0 }}>
           {phase === 'showing-question' ? (
             <Centered>
@@ -115,11 +156,8 @@ function QuizGameControllerInner() {
             </Centered>
           ) : hasAnswered && selectedIndex !== null && options ? (
             <WaitingForResults
-              selectedIndex={selectedIndex}
-              optionColor={
-                options.find((o) => o.index === selectedIndex)?.color ??
-                'var(--accent)'
-              }
+              option={options.find((o) => o.index === selectedIndex)}
+              players={answerProgress(data)}
             />
           ) : options ? (
             <AnswerButtons
@@ -271,20 +309,19 @@ function QuizGameControllerInner() {
         const unit = data.unit as string | undefined;
         const valueType = data.valueType as KvizValueType | undefined;
         return (
-          <Centered>
-            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-              Zaključao si odgovor
-            </p>
-            <p style={{ fontSize: '3rem', fontWeight: 800 }}>
-              {myData.ownGuess != null
-                ? formatBrojValue(myData.ownGuess, unit, valueType)
-                : '—'}
-            </p>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {(data.answeredCount as number) ?? 0}/{(data.totalPlayers as number) ?? 0}{' '}
-              zaključalo
-            </p>
-          </Centered>
+          <WaitingPanel
+            hero={
+              <LockedHero>
+                {myData.ownGuess != null
+                  ? formatBrojValue(myData.ownGuess, unit, valueType)
+                  : '—'}
+              </LockedHero>
+            }
+            title="Odgovor zaključan"
+            subtitle="Rezultat stiže kad svi odgovore ili istekne vreme."
+            progressLabel="Ko je zaključao"
+            players={answerProgress(data)}
+          />
         );
       }
       return (
@@ -400,16 +437,13 @@ function QuizGameControllerInner() {
       const items = (data.items as string[]) ?? [];
       if (myData?.hasAnswered) {
         return (
-          <Centered>
-            <p style={{ fontSize: '2.4rem', margin: 0 }}>✅</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
-              Redosled zaključan!
-            </p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              {(data.answeredCount as number) ?? 0}/{(data.totalPlayers as number) ?? 0}{' '}
-              zaključalo
-            </p>
-          </Centered>
+          <WaitingPanel
+            hero={<LockedHero>✓</LockedHero>}
+            title="Redosled zaključan"
+            subtitle="Rezultat stiže kad svi odgovore ili istekne vreme."
+            progressLabel="Ko je zaključao"
+            players={answerProgress(data)}
+          />
         );
       }
       return (
@@ -444,13 +478,13 @@ function QuizGameControllerInner() {
         | undefined;
       if (matMy?.hasAnswered) {
         return (
-          <Centered>
-            <p style={{ fontSize: '2.4rem', margin: 0 }}>✅</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Poslato!</p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-              {(data.answeredCount as number) ?? 0}/{(data.totalPlayers as number) ?? 0} poslalo
-            </p>
-          </Centered>
+          <WaitingPanel
+            hero={<LockedHero>✓</LockedHero>}
+            title="Poslato!"
+            subtitle="Rezultat stiže kad svi odgovore ili istekne vreme."
+            progressLabel="Ko je poslao"
+            players={answerProgress(data)}
+          />
         );
       }
       return (
@@ -518,23 +552,16 @@ function QuizGameControllerInner() {
     const options = data.options as QuizOption[];
     const hasAnswered = myData?.hasAnswered ?? false;
     const selectedIndex = myData?.selectedIndex ?? null;
+    const progress = answerProgress(data);
 
-    const body =
-      hasAnswered && selectedIndex !== null ? (
+    if (hasAnswered && selectedIndex !== null) {
+      return (
         <WaitingForResults
-          selectedIndex={selectedIndex}
-          optionColor={
-            options.find((o) => o.index === selectedIndex)?.color ??
-            'var(--accent)'
-          }
-        />
-      ) : (
-        <AnswerButtons
-          options={options}
-          hasAnswered={hasAnswered}
-          selectedIndex={selectedIndex}
+          option={options.find((o) => o.index === selectedIndex)}
+          players={progress}
         />
       );
+    }
 
     return (
       <div
@@ -543,19 +570,22 @@ function QuizGameControllerInner() {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
-          padding: '0.75rem',
-          gap: '0.75rem',
+          paddingTop: '1.25rem',
+          gap: '1.25rem',
         }}
       >
-        <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <QuestionPanel data={data} text={questionText} compact />
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <QuestionPanel data={data} text={questionText} />
           {imageUrl && <QuestionImage src={imageUrl} compact />}
         </div>
-        <AnswerCountdown
-          timeRemaining={timeRemaining}
-          timeLimit={data.timeLimit as number | undefined}
-        />
-        <div style={{ flex: 1, minHeight: 0 }}>{body}</div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <AnswerButtons
+            options={options}
+            hasAnswered={hasAnswered}
+            selectedIndex={selectedIndex}
+          />
+        </div>
+        <DoneFaces players={progress} verb="odgovorilo" />
       </div>
     );
   }
@@ -651,76 +681,14 @@ function QuizGameControllerInner() {
   }
 
   if ((phase === 'leaderboard' || phase === 'ended') && data.leaderboard) {
-    const leaderboard = data.leaderboard as QuizLeaderboardEntry[];
-    const myEntry = leaderboard.find((e) => e.playerId === playerId);
-
-    // Hostless room: no TV showing the standings, so render the full
-    // leaderboard on the phone instead of just the player's own rank.
-    if (hostless) {
-      return (
-        <HostlessLeaderboard
-          title={phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
-          entries={leaderboard}
-          myPlayerId={playerId}
-        />
-      );
-    }
-
-    // TV mode: own rank as the hero, with the full standings underneath so
-    // the phone shows everyone's placement too.
+    // Same standings with or without a TV: the pinned "you" card carries your
+    // own place, which is what the TV-mode hero used to show.
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          width: '100%',
-          padding: '1rem',
-          gap: '0.25rem',
-          overflowY: 'auto',
-        }}
-      >
-        {myEntry && (
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <p
-              style={{
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                color: 'var(--text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                margin: 0,
-              }}
-            >
-              {phase === 'ended' ? 'Konačno mesto' : 'Tvoje mesto'}
-            </p>
-            <p
-              className="display text-grad"
-              style={{
-                fontSize: '3rem',
-                fontWeight: 700,
-                animation: 'igra-pop .5s',
-                margin: 0,
-              }}
-            >
-              #{myEntry.rank}
-            </p>
-            <p
-              className="display"
-              style={{ fontSize: '1.3rem', fontWeight: 600, margin: 0 }}
-            >
-              {myEntry.score.toLocaleString()}{' '}
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>poena</span>
-            </p>
-          </div>
-        )}
-        <HostlessLeaderboard
-          title=""
-          entries={leaderboard}
-          myPlayerId={playerId}
-          embedded
-        />
-      </div>
+      <HostlessLeaderboard
+        title={phase === 'ended' ? 'Konačni poredak' : 'Rang lista'}
+        entries={data.leaderboard as QuizLeaderboardEntry[]}
+        myPlayerId={playerId}
+      />
     );
   }
 
@@ -1703,78 +1671,52 @@ function QuestionPanel({
   text?: string;
   compact?: boolean;
 }) {
-  const category = typeof data.packName === 'string' ? data.packName : '';
-  const radius = compact ? '16px' : '18px';
-  const strip = (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: category ? 'space-between' : 'center',
-        gap: '0.6rem',
-        padding: '0.45rem 0.8rem',
-        background: 'rgba(194,155,71,0.12)',
-        borderBottom: text ? '1px solid rgba(194,155,71,0.28)' : 'none',
-      }}
-    >
-      {category && (
-        <span
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 800,
-            letterSpacing: '0.03em',
-            textTransform: 'uppercase',
-            color: 'var(--accent)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {category}
-        </span>
-      )}
-      <span
-        style={{
-          fontSize: '0.72rem',
-          fontWeight: 800,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-          flex: 'none',
-        }}
-      >
-        Pitanje {(data.questionIndex as number) + 1}/{data.totalQuestions as number}
-      </span>
-    </div>
-  );
-
+  // Progress and pack name live in the GameFrame header now; `data` stays in
+  // the signature so every call site keeps passing the same props.
+  void data;
+  if (!text) return null;
   return (
-    <div
-      className="card"
+    <p
+      className="display"
       style={{
         width: '100%',
-        borderRadius: radius,
-        overflow: 'hidden',
-        marginBottom: '0.35rem',
-        textAlign: 'left',
+        // Long questions step down so the answer grid keeps its room.
+        fontSize: compact || text.length > 110 ? '1.2rem' : text.length > 70 ? '1.35rem' : '1.55rem',
+        fontWeight: 600,
+        lineHeight: 1.2,
+        margin: 0,
+        textAlign: 'center',
+        textWrap: 'balance',
+        flexShrink: 0,
       }}
     >
-      {strip}
-      {text && (
-        <p
-          className="display"
-          style={{
-            fontSize: compact ? '1.1rem' : '1.3rem',
-            fontWeight: 600,
-            lineHeight: 1.25,
-            margin: 0,
-            padding: compact ? '0.8rem 1rem' : '1.1rem 1.2rem',
-            textAlign: 'center',
-          }}
-        >
-          {text}
-        </p>
-      )}
+      {text}
+    </p>
+  );
+}
+
+/** Gold-ringed card for a locked non-choice answer (broj value, ✓). */
+function LockedHero({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="display"
+      style={{
+        minWidth: 168,
+        minHeight: 120,
+        padding: '18px 24px',
+        borderRadius: 36,
+        background: 'var(--bg-secondary)',
+        border: '2px solid var(--accent)',
+        boxShadow: '0 0 0 6px rgba(194,155,71,.18)',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+        fontSize: '2.6rem',
+        lineHeight: 1.05,
+        animation: 'igra-pop .4s',
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -1931,55 +1873,6 @@ function QuestionImage({ src, compact }: { src: string; compact?: boolean }) {
         boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
       }}
     />
-  );
-}
-
-// Slim depleting progress bar + seconds, shown during the answering phase so
-// the player always sees how long is left to answer.
-function AnswerCountdown({
-  timeRemaining,
-  timeLimit,
-}: {
-  timeRemaining: number;
-  timeLimit?: number;
-}) {
-  const total = timeLimit && timeLimit > 0 ? timeLimit : 15;
-  const frac = Math.max(0, Math.min(1, timeRemaining / total));
-  const urgent = timeRemaining <= 5;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-      <div
-        style={{
-          flex: 1,
-          height: 8,
-          borderRadius: 999,
-          background: 'var(--bg-card)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${frac * 100}%`,
-            height: '100%',
-            borderRadius: 999,
-            background: urgent ? 'var(--danger)' : 'var(--accent)',
-            transition: 'width 0.3s linear, background 0.3s',
-          }}
-        />
-      </div>
-      <span
-        style={{
-          fontVariantNumeric: 'tabular-nums',
-          fontWeight: 800,
-          fontSize: '0.95rem',
-          minWidth: '2.6ch',
-          textAlign: 'right',
-          color: urgent ? 'var(--danger)' : 'var(--text-primary)',
-        }}
-      >
-        {Math.ceil(timeRemaining)}s
-      </span>
-    </div>
   );
 }
 

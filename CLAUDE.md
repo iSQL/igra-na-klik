@@ -86,6 +86,10 @@ Any one player can claim the host controls from their phone (`player:claim-remot
 
 Rooms can also be created with no TV at all (`player:create-room` → `hostless: true`, creator auto-gets the claim). Only games with `supportsHostless: true` may start there (validated server-side). Hostless controller UIs key off `room.hostless` and render what the TV would have shown (full leaderboards, spectator canvas, the geo map, audio/video playback…). **TV-mode phone UX stays deliberately unchanged** — with a TV present, players should look at the TV.
 
+### Controller kit (in-game phone UI)
+
+Shared in-game patterns live in [controller/src/components/kit/](packages/controller/src/components/kit/): `GameFrame` (header with game, progress, timer and the player menu, plus a drain bar), `WaitingPanel`/`WhoIsIn`/`DoneFaces` (who's in, from broadcast id lists only), `PlayerVoteGrid`, `RoundVerdict`; the standings are [HostlessLeaderboard](packages/controller/src/components/HostlessLeaderboard.tsx) (podium + pinned "you" card). Kviz, Lažov and Ko bi pre are built on it so far. While a `GameFrame` is mounted, [GameScreen](packages/controller/src/screens/GameScreen.tsx) hides the floating player-menu circle; a phase rendered outside the frame falls back to that circle, so wrap **every** phase (the three games do it once, at the controller root) to keep the menu in one place.
+
 ### Drawing data flow
 
 Controllers collect touch points in **normalized 0–1 coordinates**, batch every ~50ms, and emit; the host scales back up to its canvas size. Never send absolute pixels — devices differ in aspect ratio. Drawing ops are appended via the tiny `game:ops-append` event (`getPendingOpsAppend`) instead of re-broadcasting a growing state array (that was O(n²) traffic per turn).

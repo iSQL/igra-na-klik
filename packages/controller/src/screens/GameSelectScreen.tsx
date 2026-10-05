@@ -45,6 +45,7 @@ import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
 import { useLanguageStore } from '../store/languageStore';
 import { useT } from '../i18n/useT';
+import { ACCENT_HEX } from '../utils/gameAccent';
 import { unpackQuizZip } from '../utils/quizZipImport';
 import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
 
@@ -146,19 +147,6 @@ const KO_BI_PRE_ROUND_OPTIONS = [5, 8, 10, 12];
 const GLUVO_DOBA_DISCUSSION_OPTIONS = [120, 180, 240];
 const SPIJUN_DISCUSSION_OPTIONS = [300, 420, 480, 600];
 
-// Accent hex per token — hex (not CSS var) because the card tiles/tags append
-// alpha suffixes (e.g. '2b'/'55'/'22'), which var() can't do. Values mirror
-// the brand palette in global.css.
-const ACCENT_HEX: Record<GameAccent, string> = {
-  gold: '#c29b47',
-  pink: '#d97b6c',
-  violet: '#8fa3d9',
-  cyan: '#6fc2bb',
-  lime: '#a9c46c',
-  amber: '#e3b45e',
-  danger: '#e06a5e',
-  blue: '#6d9bd1',
-};
 
 // Per-category tag color — every game with the same category tag shows the
 // same color (independent of the per-game icon accent), so "Crtanje" is never
