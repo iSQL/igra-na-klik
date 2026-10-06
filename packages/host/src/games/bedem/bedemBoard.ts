@@ -3,6 +3,12 @@
 // puzlaTable.ts). Plain canvas 2D, no React: frames arrive ~10×/s straight
 // from the socket and are interpolated here at the display rate, so React
 // never re-renders for movement.
+//
+// Projectiles are purely visual. The server lands every hit on the step it
+// fires, but the screen renders BEDEM_RENDER_DELAY_MS behind it — so a shot
+// can be launched the moment its frame arrives and still land exactly when the
+// render clock reaches the hit (when the enemy's HP drops, or it vanishes).
+// The render delay IS the flight time.
 
 import type { BedemFrameMap, BedemTowerType } from '@igra/shared';
 import {
@@ -36,11 +42,33 @@ interface Snapshot {
   map: BedemFrameMap;
 }
 
+type Pt = { x: number; y: number };
+
+/** A shot in flight, in cell units. Homes on its target's live position. */
+interface Projectile {
+  kind: BedemTowerType;
+  from: Pt;
+  /** Enemy ids it hits, in order (a bolt's chain; the rest only one). */
+  targets: number[];
+  /** Where each target stood in the frame — used once it has vanished. */
+  fallback: Pt[];
+  launch: number;
+  land: number;
+  /** Splash radius, cells (katapult / led). */
+  radius?: number;
+  level: number;
+  /** Small per-shot variety, so a volley doesn't fly as one line. */
+  seed: number;
+}
+
+/** Things that happen at one spot and fade: impacts, deaths, leaks. */
 interface Effect {
-  kind: 'arrow' | 'rock' | 'frost' | 'bolt' | 'puff' | 'leak';
-  points: { x: number; y: number }[];
+  kind: 'spark' | 'crater' | 'frost' | 'zap' | 'puff' | 'leak';
   at: number;
   dur: number;
+  /** Follows this enemy while it lives (hit sparks), otherwise stays at `pos`. */
+  enemyId?: number;
+  pos: Pt;
   radius?: number;
 }
 
@@ -61,7 +89,8 @@ const COLORS = {
   frost: '#9FD3F5',
   bolt: '#D4C2FF',
   arrow: '#E3C27A',
-  rock: '#C9A27A',
+  rock: '#8A7360',
+  shadow: 'rgba(0,0,0,0.28)',
 };
 
 const ENEMY_COLORS: Record<string, string> = {
@@ -72,8 +101,25 @@ const ENEMY_COLORS: Record<string, string> = {
   azdaja: '#B5473A',
 };
 
+/** Flight times, ms — each at most the render delay, so a shot never lands late. */
+const FLIGHT: Record<BedemTowerType, number> = {
+  strelac: 150,
+  katapult: Math.min(BEDEM_RENDER_DELAY_MS, 250),
+  led: 190,
+  // Lightning doesn't fly — it strikes when the render clock reaches the hit.
+  munja: 0,
+};
+/** How long a tower stays "kicked back" after firing. */
+const FIRE_PULSE_MS = 160;
+
 /** Top/bottom margin in cells, so the entrance and the gate show past the grid. */
 const MARGIN = 0.35;
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+const lerp = (a: Pt, b: Pt, k: number): Pt => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+const easeOut = (t: number) => 1 - (1 - t) * (1 - t);
 
 export class BedemBoard {
   private ctx: CanvasRenderingContext2D;
@@ -86,7 +132,12 @@ export class BedemBoard {
   private highlightOwner: string | null = null;
   private selection: BoardSelection | null = null;
   private snapshots: Snapshot[] = [];
+  private projectiles: Projectile[] = [];
   private effects: Effect[] = [];
+  /** tower id → when it last fired (render clock), for the recoil pulse */
+  private fired = new Map<number, number>();
+  /** enemy id → its position this draw (cell units) */
+  private livePos = new Map<number, Pt>();
   private cell = 10;
   private ox = 0;
   private oy = 0;
@@ -98,6 +149,7 @@ export class BedemBoard {
   private activeUntil = 0;
   private sprites = new Map<string, HTMLCanvasElement>();
   private disposed = false;
+  private reduced = reducedMotion();
 
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
@@ -133,43 +185,65 @@ export class BedemBoard {
   /** Drop every enemy and effect — a wave ended or a new one is about to start. */
   clearEnemies(): void {
     this.snapshots = [];
+    this.projectiles = [];
     this.effects = [];
+    this.fired.clear();
     this.dirty = true;
   }
 
   pushFrame(map: BedemFrameMap): void {
     const at = performance.now();
     const prev = this.snapshots[this.snapshots.length - 1];
+    // When the render clock reaches this frame — i.e. when its hits land.
+    const hitAt = at + BEDEM_RENDER_DELAY_MS;
 
-    // Shots become effects that play when the render clock reaches this frame.
-    const show = at + BEDEM_RENDER_DELAY_MS;
     const byId = new Map(map.e.map((e) => [e.i, e]));
     const prevById = new Map((prev?.map.e ?? []).map((e) => [e.i, e]));
-    const enemyPos = (id: number) => {
+    const enemyPos = (id: number): Pt | null => {
       const e = byId.get(id) ?? prevById.get(id);
       return e ? bedemPathPoint(this.path, e.d) : null;
     };
+
     for (const shot of map.s) {
       const tower = this.towers.find((t) => t.id === shot.t);
       if (!tower) continue;
-      const from = { x: tower.c + 0.5, y: tower.r + 0.5 };
-      const hits = shot.e.map(enemyPos).filter((p): p is { x: number; y: number } => !!p);
-      if (hits.length === 0) continue;
-      const lvl = BEDEM_TOWERS[tower.type].levels[tower.level - 1];
-      switch (tower.type) {
-        case 'strelac':
-          this.effects.push({ kind: 'arrow', points: [from, hits[0]], at: show, dur: 130 });
-          break;
-        case 'katapult':
-          this.effects.push({ kind: 'rock', points: [from, hits[0]], at: show, dur: 280, radius: lvl.splash });
-          break;
-        case 'led':
-          this.effects.push({ kind: 'frost', points: [from, hits[0]], at: show, dur: 300, radius: lvl.splash });
-          break;
-        case 'munja':
-          this.effects.push({ kind: 'bolt', points: [from, ...hits], at: show, dur: 170 });
-          break;
+      const fallback: Pt[] = [];
+      const targets: number[] = [];
+      for (const id of shot.e) {
+        const p = enemyPos(id);
+        if (!p) continue;
+        targets.push(id);
+        fallback.push(p);
       }
+      if (targets.length === 0) continue;
+      const lvl = BEDEM_TOWERS[tower.type].levels[tower.level - 1];
+      const flight = this.reduced ? 0 : FLIGHT[tower.type];
+      const launch = hitAt - flight;
+      // Splash towers report the whole blast; the shell only flies at the first.
+      const flying = tower.type === 'munja' ? targets : targets.slice(0, 1);
+      this.projectiles.push({
+        kind: tower.type,
+        from: { x: tower.c + 0.5, y: tower.r + 0.5 },
+        targets: flying,
+        fallback: fallback.slice(0, flying.length),
+        launch,
+        land: hitAt,
+        radius: lvl.splash,
+        level: tower.level,
+        seed: Math.random(),
+      });
+      this.fired.set(tower.id, launch);
+
+      // Impacts, at the moment of the hit.
+      if (tower.type === 'katapult') {
+        this.effects.push({ kind: 'crater', at: hitAt, dur: 420, pos: fallback[0], radius: lvl.splash });
+      } else if (tower.type === 'led') {
+        this.effects.push({ kind: 'frost', at: hitAt, dur: 380, pos: fallback[0], radius: lvl.splash });
+      }
+      const sparkKind = tower.type === 'munja' ? 'zap' : 'spark';
+      targets.forEach((id, i) => {
+        this.effects.push({ kind: sparkKind, at: hitAt, dur: 200, enemyId: id, pos: fallback[i] });
+      });
     }
 
     // Whoever vanished since the last frame either died (puff) or reached the gate.
@@ -180,9 +254,9 @@ export class BedemBoard {
         const leaked = e.d > this.pathLength - 0.8;
         this.effects.push({
           kind: leaked ? 'leak' : 'puff',
-          points: [p],
-          at: show,
-          dur: leaked ? 500 : 320,
+          pos: p,
+          at: hitAt,
+          dur: leaked ? 500 : 360,
           radius: BEDEM_ENEMIES[e.t].size,
         });
       }
@@ -240,7 +314,8 @@ export class BedemBoard {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
     // Idle boards (build phase, nothing moving) only redraw when told to.
-    if (!this.dirty && now > this.activeUntil && this.effects.length === 0) return;
+    const busy = this.effects.length > 0 || this.projectiles.length > 0;
+    if (!this.dirty && now > this.activeUntil && !busy) return;
     this.dirty = false;
     this.draw(now);
   }
@@ -251,6 +326,10 @@ export class BedemBoard {
 
   private py(y: number): number {
     return this.oy + y * this.cell;
+  }
+
+  private toPx(p: Pt): Pt {
+    return { x: this.px(p.x), y: this.py(p.y) };
   }
 
   private sprite(emoji: string, size: number): HTMLCanvasElement {
@@ -276,12 +355,63 @@ export class BedemBoard {
     this.ctx.drawImage(s, x - w / 2, y - w / 2, w, w);
   }
 
+  /** A projectile's target right now: the live enemy, or where it was last seen. */
+  private targetPos(p: Projectile, i: number): Pt {
+    return this.livePos.get(p.targets[i]) ?? p.fallback[i];
+  }
+
   private draw(now: number): void {
     const ctx = this.ctx;
     const cell = this.cell;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.width, this.height);
 
+    this.drawGround();
+
+    // Selection + range preview under the towers.
+    const sel = this.selection;
+    if (sel?.range) {
+      ctx.beginPath();
+      ctx.arc(this.px(sel.c + 0.5), this.py(sel.r + 0.5), sel.range * cell, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245,235,224,0.09)';
+      ctx.fill();
+      ctx.setLineDash([cell * 0.15, cell * 0.12]);
+      ctx.strokeStyle = 'rgba(245,235,224,0.55)';
+      ctx.lineWidth = Math.max(1, cell * 0.04);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Ground-level effects (craters, frost) go under the enemies.
+    this.effects = this.effects.filter((fx) => now < fx.at + fx.dur);
+    for (const fx of this.effects) {
+      if (now >= fx.at && (fx.kind === 'crater' || fx.kind === 'frost')) this.drawEffect(fx, now);
+    }
+
+    this.drawTowers(now);
+
+    if (sel) {
+      roundRect(ctx, this.px(sel.c) + 1, this.py(sel.r) + 1, cell - 2, cell - 2, cell * 0.18);
+      ctx.lineWidth = Math.max(2, cell * 0.07);
+      ctx.strokeStyle = sel.color ?? COLORS.cream;
+      ctx.stroke();
+    }
+
+    this.drawEnemies(now);
+
+    // Shots in flight, then the impacts on top.
+    this.projectiles = this.projectiles.filter((p) => now < p.land + (p.kind === 'munja' ? 180 : 0));
+    for (const p of this.projectiles) {
+      if (now >= p.launch) this.drawProjectile(p, now);
+    }
+    for (const fx of this.effects) {
+      if (now >= fx.at && fx.kind !== 'crater' && fx.kind !== 'frost') this.drawEffect(fx, now);
+    }
+  }
+
+  private drawGround(): void {
+    const ctx = this.ctx;
+    const cell = this.cell;
     // Ground, checkered just enough to read as a grid you can tap.
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
@@ -338,35 +468,38 @@ export class BedemBoard {
       ctx.lineTo(this.px(this.cols), this.py(r));
     }
     ctx.stroke();
+  }
 
-    // Selection + range preview under the towers.
-    const sel = this.selection;
-    if (sel?.range) {
-      ctx.beginPath();
-      ctx.arc(this.px(sel.c + 0.5), this.py(sel.r + 0.5), sel.range * cell, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(245,235,224,0.09)';
-      ctx.fill();
-      ctx.setLineDash([cell * 0.15, cell * 0.12]);
-      ctx.strokeStyle = 'rgba(245,235,224,0.55)';
-      ctx.lineWidth = Math.max(1, cell * 0.04);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Towers.
+  private drawTowers(now: number): void {
+    const ctx = this.ctx;
+    const cell = this.cell;
     for (const t of this.towers) {
       const x = this.px(t.c);
       const y = this.py(t.r);
       const inset = cell * 0.08;
       const own = this.highlightOwner !== null && t.ownerId === this.highlightOwner;
       const ring = this.colors[t.ownerId] ?? COLORS.cream;
+
+      // Recoil: a quick squash-and-glow right as the shot leaves.
+      const since = now - (this.fired.get(t.id) ?? -Infinity);
+      const pulse = since >= 0 && since < FIRE_PULSE_MS && !this.reduced ? 1 - since / FIRE_PULSE_MS : 0;
+
       roundRect(ctx, x + inset, y + inset, cell - inset * 2, cell - inset * 2, cell * 0.18);
       ctx.fillStyle = COLORS.towerBase;
       ctx.fill();
+      if (pulse > 0) {
+        ctx.save();
+        ctx.shadowColor = BEDEM_TOWERS[t.type].color;
+        ctx.shadowBlur = cell * 0.5 * pulse;
+        ctx.lineWidth = Math.max(1.5, cell * 0.08);
+        ctx.strokeStyle = BEDEM_TOWERS[t.type].color;
+        ctx.stroke();
+        ctx.restore();
+      }
       ctx.lineWidth = Math.max(1.5, cell * (own ? 0.09 : 0.06));
       ctx.strokeStyle = ring;
       ctx.stroke();
-      this.drawEmoji(BEDEM_TOWERS[t.type].emoji, x + cell / 2, y + cell * 0.45, cell * 0.5);
+      this.drawEmoji(BEDEM_TOWERS[t.type].emoji, x + cell / 2, y + cell * (0.45 + 0.03 * pulse), cell * (0.5 - 0.06 * pulse));
       // Level pips.
       for (let k = 0; k < t.level; k++) {
         ctx.beginPath();
@@ -375,125 +508,308 @@ export class BedemBoard {
         ctx.fill();
       }
     }
+  }
 
-    if (sel) {
-      roundRect(ctx, this.px(sel.c) + 1, this.py(sel.r) + 1, cell - 2, cell - 2, cell * 0.18);
-      ctx.lineWidth = Math.max(2, cell * 0.07);
-      ctx.strokeStyle = sel.color ?? COLORS.cream;
-      ctx.stroke();
-    }
-
-    // Enemies, interpolated between the two frames around the render clock.
+  /** Enemies, interpolated between the two frames around the render clock. */
+  private drawEnemies(now: number): void {
+    const ctx = this.ctx;
+    const cell = this.cell;
+    this.livePos.clear();
     const renderAt = now - BEDEM_RENDER_DELAY_MS;
     const snaps = this.snapshots;
-    if (snaps.length > 0) {
-      let a = snaps[0];
-      let b = snaps[0];
-      for (let i = 0; i < snaps.length; i++) {
-        if (snaps[i].at <= renderAt) a = snaps[i];
-        b = snaps[i];
-        if (snaps[i].at > renderAt) break;
+    if (snaps.length === 0) return;
+    let a = snaps[0];
+    let b = snaps[0];
+    for (let i = 0; i < snaps.length; i++) {
+      if (snaps[i].at <= renderAt) a = snaps[i];
+      b = snaps[i];
+      if (snaps[i].at > renderAt) break;
+    }
+    const span = b.at - a.at;
+    const k = span > 0 ? Math.max(0, Math.min(1, (renderAt - a.at) / span)) : 1;
+    const prev = new Map(a.map.e.map((e) => [e.i, e]));
+    // An enemy killed in b is still alive on screen until the render clock gets
+    // there — keep drawing it from a, so the projectile has something to hit.
+    const next = new Map(b.map.e.map((e) => [e.i, e]));
+    const list = [...b.map.e];
+    if (b !== a && k < 1) for (const e of a.map.e) if (!next.has(e.i)) list.push(e);
+    // Draw the furthest-along last, so the leader sits on top of the queue.
+    list.sort((p, q) => p.d - q.d);
+
+    for (const e of list) {
+      const from = prev.get(e.i);
+      const to = next.get(e.i);
+      // Newcomers wait until the render clock reaches the frame they appeared in.
+      if (!from && b !== a && k < 1) continue;
+      const d = from && to ? from.d + (to.d - from.d) * k : (to ?? from)!.d;
+      // HP drops when the hit lands, not before.
+      const hp = to && k >= 1 ? to.h : (from ?? to)!.h;
+      const slowed = (k >= 1 ? to?.s : from?.s) ?? false;
+      const p = bedemPathPoint(this.path, d);
+      this.livePos.set(e.i, p);
+      const def = BEDEM_ENEMIES[e.t];
+      const x = this.px(p.x);
+      const y = this.py(p.y);
+      const rad = def.size * cell;
+      ctx.beginPath();
+      ctx.arc(x, y, rad, 0, Math.PI * 2);
+      ctx.fillStyle = ENEMY_COLORS[e.t] ?? '#999';
+      ctx.fill();
+      if (slowed) {
+        ctx.lineWidth = Math.max(1.5, cell * 0.06);
+        ctx.strokeStyle = COLORS.frost;
+        ctx.stroke();
       }
-      const span = b.at - a.at;
-      const k = span > 0 ? Math.max(0, Math.min(1, (renderAt - a.at) / span)) : 1;
-      const prev = new Map(a.map.e.map((e) => [e.i, e]));
-      // Draw the furthest-along last, so the leader sits on top of the queue.
-      const list = [...b.map.e].sort((p, q) => p.d - q.d);
-      for (const e of list) {
-        const from = prev.get(e.i);
-        // Newcomers wait until the render clock reaches the frame they appeared in.
-        if (!from && b !== a && k < 1) continue;
-        const d = from ? from.d + (e.d - from.d) * k : e.d;
-        const p = bedemPathPoint(this.path, d);
-        const def = BEDEM_ENEMIES[e.t];
-        const x = this.px(p.x);
-        const y = this.py(p.y);
-        const rad = def.size * cell;
-        ctx.beginPath();
-        ctx.arc(x, y, rad, 0, Math.PI * 2);
-        ctx.fillStyle = ENEMY_COLORS[e.t] ?? '#999';
-        ctx.fill();
-        if (e.s) {
-          ctx.lineWidth = Math.max(1.5, cell * 0.06);
-          ctx.strokeStyle = COLORS.frost;
-          ctx.stroke();
-        }
-        this.drawEmoji(def.emoji, x, y, rad * 1.45);
-        if (e.h < 100) {
-          const w = Math.max(rad * 2, cell * 0.5);
-          const hh = Math.max(2, cell * 0.07);
-          ctx.fillStyle = COLORS.hpBack;
-          ctx.fillRect(x - w / 2, y - rad - hh * 2, w, hh);
-          ctx.fillStyle = e.h < 35 ? COLORS.hpLow : COLORS.hp;
-          ctx.fillRect(x - w / 2, y - rad - hh * 2, (w * e.h) / 100, hh);
-        }
+      this.drawEmoji(def.emoji, x, y, rad * 1.45);
+      if (hp < 100) {
+        const w = Math.max(rad * 2, cell * 0.5);
+        const hh = Math.max(2, cell * 0.07);
+        ctx.fillStyle = COLORS.hpBack;
+        ctx.fillRect(x - w / 2, y - rad - hh * 2, w, hh);
+        ctx.fillStyle = hp < 35 ? COLORS.hpLow : COLORS.hp;
+        ctx.fillRect(x - w / 2, y - rad - hh * 2, (w * hp) / 100, hh);
       }
     }
+  }
 
-    // Effects.
-    this.effects = this.effects.filter((fx) => now < fx.at + fx.dur);
-    for (const fx of this.effects) {
-      if (now < fx.at) continue;
-      const t = (now - fx.at) / fx.dur;
-      const alpha = 1 - t;
-      const pts = fx.points.map((p) => ({ x: this.px(p.x), y: this.py(p.y) }));
-      ctx.globalAlpha = Math.max(0, alpha);
-      switch (fx.kind) {
-        case 'arrow': {
-          ctx.strokeStyle = COLORS.arrow;
-          ctx.lineWidth = Math.max(1.5, cell * 0.05);
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
-          ctx.lineTo(pts[1].x, pts[1].y);
-          ctx.stroke();
-          break;
+  private drawProjectile(p: Projectile, now: number): void {
+    const ctx = this.ctx;
+    const cell = this.cell;
+    const flight = p.land - p.launch;
+    const t = flight > 0 ? Math.min(1, (now - p.launch) / flight) : 1;
+
+    switch (p.kind) {
+      case 'strelac': {
+        // A straight, fast arrow that homes on its target, with a short streak.
+        const to = this.targetPos(p, 0);
+        const head = this.toPx(lerp(p.from, to, t));
+        const tail = this.toPx(lerp(p.from, to, Math.max(0, t - 0.35)));
+        const ang = Math.atan2(head.y - tail.y, head.x - tail.x);
+        const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+        grad.addColorStop(0, 'rgba(227,194,122,0)');
+        grad.addColorStop(1, COLORS.arrow);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = Math.max(1.5, cell * (0.045 + 0.01 * p.level));
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(tail.x, tail.y);
+        ctx.lineTo(head.x, head.y);
+        ctx.stroke();
+        const s = cell * 0.13;
+        ctx.fillStyle = COLORS.cream;
+        ctx.beginPath();
+        ctx.moveTo(head.x + Math.cos(ang) * s, head.y + Math.sin(ang) * s);
+        ctx.lineTo(head.x + Math.cos(ang + 2.5) * s * 0.8, head.y + Math.sin(ang + 2.5) * s * 0.8);
+        ctx.lineTo(head.x + Math.cos(ang - 2.5) * s * 0.8, head.y + Math.sin(ang - 2.5) * s * 0.8);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      }
+      case 'katapult': {
+        // A lobbed rock: parabola in screen space, its shadow sliding on the ground.
+        const to = this.targetPos(p, 0);
+        const ground = this.toPx(lerp(p.from, to, t));
+        const dist = Math.hypot(to.x - p.from.x, to.y - p.from.y);
+        const height = cell * (0.6 + 0.25 * dist) * 4 * t * (1 - t);
+        const size = cell * (0.13 + 0.02 * p.level) * (1 + 0.35 * 4 * t * (1 - t));
+        ctx.fillStyle = COLORS.shadow;
+        ctx.beginPath();
+        ctx.ellipse(ground.x, ground.y, size, size * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const spin = (p.seed + t) * Math.PI * 3;
+        ctx.save();
+        ctx.translate(ground.x, ground.y - height);
+        ctx.rotate(spin);
+        ctx.fillStyle = COLORS.rock;
+        ctx.beginPath();
+        // A lumpy pentagon reads as a rock at any size.
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          const r = size * (0.85 + 0.2 * Math.sin(i * 2.3 + p.seed * 7));
+          if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+          else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
         }
-        case 'rock':
-        case 'frost': {
-          const at = pts[1];
-          const r = (fx.radius ?? 0.8) * cell * (0.4 + 0.6 * t);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = Math.max(1, cell * 0.025);
+        ctx.stroke();
+        ctx.restore();
+        break;
+      }
+      case 'led': {
+        // A glowing frost orb on a slight curve, leaving a short sparkling trail.
+        const to = this.targetPos(p, 0);
+        const bend = (p.seed - 0.5) * 0.8;
+        const at = (k: number): Pt => {
+          const base = lerp(p.from, to, easeOut(k));
+          const nx = -(to.y - p.from.y);
+          const ny = to.x - p.from.x;
+          const arc = 4 * k * (1 - k) * bend * 0.35;
+          return { x: base.x + nx * arc, y: base.y + ny * arc };
+        };
+        for (let i = 4; i >= 1; i--) {
+          const tp = this.toPx(at(Math.max(0, t - i * 0.07)));
+          ctx.fillStyle = `rgba(159,211,245,${0.14 * (5 - i)})`;
           ctx.beginPath();
-          ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
-          ctx.fillStyle = fx.kind === 'rock' ? 'rgba(201,162,122,0.35)' : 'rgba(159,211,245,0.3)';
+          ctx.arc(tp.x, tp.y, cell * 0.06 * (5 - i) * 0.5, 0, Math.PI * 2);
           ctx.fill();
-          ctx.lineWidth = Math.max(1.5, cell * 0.05);
-          ctx.strokeStyle = fx.kind === 'rock' ? COLORS.rock : COLORS.frost;
-          ctx.stroke();
-          break;
         }
-        case 'bolt': {
-          ctx.strokeStyle = COLORS.bolt;
-          ctx.lineWidth = Math.max(1.5, cell * 0.06);
+        const pos = this.toPx(at(t));
+        ctx.save();
+        ctx.shadowColor = COLORS.frost;
+        ctx.shadowBlur = cell * 0.35;
+        ctx.fillStyle = '#E8F6FF';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, cell * (0.09 + 0.015 * p.level), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        break;
+      }
+      case 'munja': {
+        // Lightning strikes at the hit and flickers: re-jagged every frame, so
+        // it crackles instead of sitting there as a static zig-zag.
+        const age = now - p.land;
+        if (age < 0) break;
+        const alpha = Math.max(0, 1 - age / 180);
+        const pts = [p.from, ...p.targets.map((_, i) => this.targetPos(p, i))].map((q) => this.toPx(q));
+        const jag = () => {
           ctx.beginPath();
           ctx.moveTo(pts[0].x, pts[0].y);
           for (let i = 1; i < pts.length; i++) {
             const p0 = pts[i - 1];
             const p1 = pts[i];
-            // One jag per hop — enough to read as lightning.
-            const mx = (p0.x + p1.x) / 2 + (p1.y - p0.y) * 0.18;
-            const my = (p0.y + p1.y) / 2 - (p1.x - p0.x) * 0.18;
-            ctx.lineTo(mx, my);
+            const len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+            const steps = Math.max(2, Math.round(len / (cell * 0.35)));
+            const nx = -(p1.y - p0.y) / (len || 1);
+            const ny = (p1.x - p0.x) / (len || 1);
+            for (let s = 1; s < steps; s++) {
+              const k = s / steps;
+              const off = (Math.random() - 0.5) * cell * 0.28;
+              ctx.lineTo(p0.x + (p1.x - p0.x) * k + nx * off, p0.y + (p1.y - p0.y) * k + ny * off);
+            }
             ctx.lineTo(p1.x, p1.y);
           }
-          ctx.stroke();
-          break;
-        }
-        case 'puff': {
-          const p = pts[0];
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, (fx.radius ?? 0.25) * cell * (1 + t), 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(245,235,224,0.35)';
-          ctx.fill();
-          break;
-        }
-        case 'leak': {
-          ctx.fillStyle = 'rgba(224,106,94,0.55)';
-          ctx.fillRect(this.px(0), this.py(this.rows - 0.4), this.cols * cell, (0.4 + MARGIN) * cell);
-          break;
-        }
+        };
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = COLORS.bolt;
+        ctx.shadowBlur = cell * 0.4;
+        ctx.strokeStyle = COLORS.bolt;
+        ctx.lineWidth = Math.max(2, cell * 0.09);
+        jag();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = Math.max(1, cell * 0.035);
+        jag();
+        ctx.stroke();
+        ctx.restore();
+        break;
       }
-      ctx.globalAlpha = 1;
     }
+  }
+
+  private drawEffect(fx: Effect, now: number): void {
+    const ctx = this.ctx;
+    const cell = this.cell;
+    const t = Math.min(1, (now - fx.at) / fx.dur);
+    const world = (fx.enemyId !== undefined && this.livePos.get(fx.enemyId)) || fx.pos;
+    const p = this.toPx(world);
+    ctx.save();
+    switch (fx.kind) {
+      case 'spark': {
+        // A few short rays bursting off the enemy that was hit.
+        ctx.globalAlpha = 1 - t;
+        ctx.strokeStyle = COLORS.cream;
+        ctx.lineWidth = Math.max(1, cell * 0.035);
+        const r0 = cell * (0.12 + 0.18 * t);
+        const r1 = r0 + cell * 0.12 * (1 - t);
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 + (fx.enemyId ?? 0);
+          ctx.moveTo(p.x + Math.cos(a) * r0, p.y + Math.sin(a) * r0);
+          ctx.lineTo(p.x + Math.cos(a) * r1, p.y + Math.sin(a) * r1);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 'zap': {
+        ctx.globalAlpha = (1 - t) * 0.8;
+        ctx.fillStyle = COLORS.bolt;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, cell * (0.18 + 0.2 * t), 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case 'crater': {
+        // Dust ring spreading over the whole splash, plus a brief dark scorch.
+        const r = (fx.radius ?? 0.8) * cell;
+        ctx.globalAlpha = (1 - t) * 0.5;
+        ctx.fillStyle = 'rgba(40,28,18,1)';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, r * 0.45, r * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1 - t;
+        ctx.strokeStyle = '#C9A27A';
+        ctx.lineWidth = Math.max(1.5, cell * 0.08 * (1 - t));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * easeOut(t), 0, Math.PI * 2);
+        ctx.stroke();
+        // Pebbles flung out.
+        ctx.fillStyle = COLORS.rock;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + 0.4;
+          const d = r * 0.9 * easeOut(t);
+          ctx.beginPath();
+          ctx.arc(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d - cell * 0.3 * 4 * t * (1 - t), cell * 0.04, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'frost': {
+        const r = (fx.radius ?? 0.7) * cell;
+        ctx.globalAlpha = (1 - t) * 0.6;
+        ctx.fillStyle = 'rgba(159,211,245,1)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * easeOut(t), 0, Math.PI * 2);
+        ctx.fill();
+        // Six ice shards around the rim.
+        ctx.globalAlpha = 1 - t;
+        ctx.strokeStyle = '#E8F6FF';
+        ctx.lineWidth = Math.max(1, cell * 0.04);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const d = r * easeOut(t);
+          ctx.moveTo(p.x + Math.cos(a) * d * 0.6, p.y + Math.sin(a) * d * 0.6);
+          ctx.lineTo(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 'puff': {
+        ctx.globalAlpha = (1 - t) * 0.6;
+        ctx.fillStyle = COLORS.cream;
+        const r = (fx.radius ?? 0.25) * cell;
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2 + 0.8;
+          const d = r * 0.8 * easeOut(t);
+          ctx.beginPath();
+          ctx.arc(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d - cell * 0.15 * t, r * (0.55 + 0.4 * t), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'leak': {
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle = 'rgba(224,106,94,0.55)';
+        ctx.fillRect(this.px(0), this.py(this.rows - 0.4), this.cols * cell, (0.4 + MARGIN) * cell);
+        break;
+      }
+    }
+    ctx.restore();
   }
 }
 

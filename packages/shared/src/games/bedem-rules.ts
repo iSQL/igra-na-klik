@@ -20,8 +20,13 @@ import type {
 export const BEDEM_TICK_MS = 50;
 /** Target gap between positional frames (~10/s), counted in accumulated ms. */
 export const BEDEM_FRAME_INTERVAL_MS = 100;
-/** How far behind live the screens render, ms — one frame gap plus slack. */
-export const BEDEM_RENDER_DELAY_MS = 160;
+/**
+ * How far behind live the screens render, ms. Two frame gaps plus slack — and
+ * it doubles as projectile flight time: a shot launches when its frame
+ * arrives and lands as the render clock reaches the hit (see bedemBoard.ts),
+ * so the longest flight (the catapult's lob) can't exceed this.
+ */
+export const BEDEM_RENDER_DELAY_MS = 260;
 
 // --- Match -----------------------------------------------------------------
 
