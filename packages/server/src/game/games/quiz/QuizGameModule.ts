@@ -34,6 +34,7 @@ import {
   parseQuizImport,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import { QuizFeedbackTracker } from '../../quiz-feedback-tracker.js';
@@ -440,6 +441,57 @@ export class QuizGameModule extends BaseGameModule {
       this.transitionToResults(room);
     }
     return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'answering') {
+      const expectedIds = [...this.state.expectedAnswererIds];
+      const doneIds = expectedIds.filter((id) => this.state.answers.has(id));
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'answered' };
+    }
+    const last = this.state.currentQuestionIndex >= this.state.questions.length - 1;
+    const skipLabel =
+      phase === 'showing-question'
+        ? this.state.questions.length > 0
+          ? 'Odmah na odgovore'
+          : null
+        : phase === 'answering'
+          ? 'Preskoči pitanje'
+          : phase === 'showing-results'
+            ? last
+              ? 'Na tabelu'
+              : 'Sledeće pitanje'
+            : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    const phase = this.state.phase;
+    if (phase === 'leaderboard' || phase === 'ended') return null;
+    if (phase === 'showing-question' && this.state.questions.length === 0) return null;
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (!this.state.expectedAnswererIds.delete(playerId)) return null;
+    if (this.state.phase === 'answering' && this.allExpectedAnswered(room)) {
+      this.transitionToResults(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  onResume(pausedMs: number): void {
+    // Speed scoring, the emoji hint and the anagram scramble all measure from
+    // questionStartTime — shift it so the pause doesn't count as thinking time.
+    this.state.questionStartTime += pausedMs;
   }
 
   private allExpectedAnswered(room: Room): boolean {

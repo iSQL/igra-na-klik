@@ -170,6 +170,7 @@ export function setupSocket(
     // only cleanup — it lives in memory exactly as long as its room.
     puzlaImages.deleteRoom(roomCode);
     knockManager.onRoomDestroyed(roomCode);
+    gameManager.forgetRoom(roomCode);
     roomManager.deleteRoom(roomCode);
   };
 

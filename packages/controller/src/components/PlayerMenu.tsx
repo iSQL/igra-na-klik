@@ -1,24 +1,39 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { GAME_DEFINITIONS } from '@igra/shared';
 import { socket } from '../socket';
 import { usePlayerStore } from '../store/playerStore';
 import { leaveRoom } from '../leaveRoom';
 import { useT } from '../i18n/useT';
 import { AvatarPickerModal } from './AvatarPickerModal';
-import { LanguageSwitch } from './LanguageSwitch';
 import { QuizFeedbackMenu } from './QuizFeedbackMenu';
 import { BitkaBoardMenu } from './BitkaBoardMenu';
-import { KnockButtons, KnockFace } from './KnockBanner';
 import { useKnockStore } from '../store/knockStore';
 import { useRulesStore } from './RulesScreen';
-import { CueToggles } from './CueToggles';
+import { BottomSheet } from './BottomSheet';
+import { previewSound, useCueSettings, vibrate } from '../utils/cues';
+import { useLanguageStore } from '../store/languageStore';
+import { useGameStore } from '../store/gameStore';
+import { flowAction, useFlowStore } from '../store/flowStore';
 
-type ConfirmKind = 'leave' | 'close' | 'stop' | null;
+type ConfirmKind = 'leave' | 'close' | null;
+
+/** The running game's name, translated where a card name exists. */
+export function useGameName(): string {
+  const t = useT();
+  const gameId = useGameStore((s) => s.gameId);
+  if (!gameId) return '';
+  const key = `game.${gameId}.name`;
+  const name = t(key);
+  return name === key ? (GAME_DEFINITIONS[gameId]?.name ?? gameId) : name;
+}
 
 /**
- * Single round button (the player's avatar) that opens a popup with all
- * player-scoped actions — change look, language, and the destructive
- * leave/close/end-game — instead of scattering pill buttons over the game
- * where they overlapped game elements.
+ * Single round button (the player's avatar) that opens the player menu — a
+ * bottom sheet the thumb reaches entirely (Tok igre 1a). Grouped: "Igra"
+ * (the holder's pause / skip / players, plus game-specific rows), "Ja"
+ * (per-device settings), then the dangerous actions apart. Guests at the
+ * door moved to the holder's "Igrači" screen; the ✊ count stays on the
+ * avatar.
  */
 export function PlayerMenu({
   inGame = false,
@@ -35,22 +50,20 @@ export function PlayerMenu({
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
   const knocks = useKnockStore((s) => s.requests);
-  const answerKnock = useKnockStore((s) => s.answer);
+  const flow = useFlowStore((s) => s.flow);
+  const setPanel = useFlowStore((s) => s.setPanel);
+  const cues = useCueSettings();
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
+  const gameName = useGameName();
 
   if (!player || !room) return null;
 
   const iAmRemoteHost = room.remoteHostPlayerId === player.id;
+  const offlineCount = room.players.filter((p) => !p.isConnected).length;
 
   const confirmDialog = (() => {
     if (!confirm) return null;
-    if (confirm === 'stop') {
-      return {
-        title: t('overlay.endGameConfirmTitle'),
-        body: t('overlay.endGameConfirmBody'),
-        cta: t('overlay.end'),
-        run: () => socket.emit('host:stop-game'),
-      };
-    }
     if (confirm === 'close') {
       return {
         title: t('closeRoom.confirmTitle'),
@@ -139,198 +152,206 @@ export function PlayerMenu({
       </button>
 
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(11,10,23,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1100,
-            padding: '1.25rem',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--line2)',
-              borderRadius: '20px',
-              padding: '1.1rem',
-              width: '100%',
-              maxWidth: '22rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-              animation: 'igra-pop .22s',
-            }}
-          >
-            {/* Header: avatar + name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+        <BottomSheet label={t('playerMenu.open')} onClose={() => setOpen(false)} zIndex={1100}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
+            {/* Header: avatar, name, who runs the room */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span
                 className="avatar-tile"
                 style={{
-                  width: '44px',
-                  height: '44px',
+                  width: 44,
+                  height: 44,
                   backgroundColor: player.avatarColor,
                   fontSize: '1.4rem',
                 }}
               >
                 {player.avatarEmoji}
               </span>
-              <span style={{ flex: 1, fontWeight: 800, fontSize: '1.05rem', minWidth: 0 }}>
-                {player.name}
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{player.name}</span>
+                {iAmRemoteHost && (
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--amber)' }}>
+                    {t('playerMenu.leading', { code: room.code })}
+                  </span>
+                )}
               </span>
               <button
                 onClick={() => setOpen(false)}
                 aria-label={t('common.close')}
                 style={{
+                  width: 44,
+                  height: 44,
                   background: 'transparent',
                   color: 'var(--text-secondary)',
                   border: 'none',
                   fontSize: '1.5rem',
-                  padding: '0 0.25rem',
                 }}
               >
                 ×
               </button>
             </div>
 
-            {/* Language */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                padding: '0.15rem 0.15rem',
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                {t('playerMenu.language')}
-              </span>
-              <LanguageSwitch />
-            </div>
-
-            {/* Vibracija / zvuk (4i) */}
-            <CueToggles compact />
-
-            {/* Rules in the app (4a) — current game pinned on top. */}
-            <MenuRow
-              icon="📖"
-              label={t('rules.inGame')}
-              onClick={() => {
-                setOpen(false);
-                useRulesStore.getState().show();
-              }}
-            />
-
-            {/* Change look */}
-            <MenuRow
-              icon="🎨"
-              label={t('lobby.changeAvatar')}
-              onClick={() => {
-                setOpen(false);
-                setAvatarOpen(true);
-              }}
-            />
-
-            {/* Kviz: report/rate the current question (renders only when a
-                kviz question is on screen). */}
-            <QuizFeedbackMenu />
-
-            {/* Osvajanje: spisak teritorija + tabla (renderuje se samo u toj
-                igri). Izbor sa spiska zatvara popup da bi se videla mapa. */}
-            <BitkaBoardMenu onPicked={() => setOpen(false)} />
-
-            {/* Pokucaj: guests waiting for the holder's answer. */}
-            {knocks.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: 'var(--amber)',
-                  }}
-                >
-                  {t('knock.atTheDoor')}
-                </span>
-                {knocks.map((k) => (
+            {/* Igra — the holder's controls + game-specific rows (everyone) */}
+            {inGame && (
+              <>
+                <SectionLabel accent>{t('playerMenu.gameSection', { game: gameName })}</SectionLabel>
+                {iAmRemoteHost && (
                   <div
-                    key={k.knockId}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: flow?.skipLabel ? '1fr 1fr' : '1fr',
+                      gap: 8,
+                    }}
+                  >
+                    <BigTile
+                      icon={flow?.paused ? '▶' : '⏸'}
+                      label={flow?.paused ? t('flow.resume') : t('flow.pause')}
+                      disabled={!flow || !!flow.resumeCountdown}
+                      onClick={() => {
+                        setOpen(false);
+                        flowAction(flow?.paused ? 'resume' : 'pause');
+                      }}
+                    />
+                    {flow?.skipLabel && (
+                      <BigTile
+                        icon="⏭"
+                        label={flow.skipLabel}
+                        disabled={flow.paused}
+                        onClick={() => {
+                          setOpen(false);
+                          flowAction('skip');
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+                {iAmRemoteHost && (
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      setPanel('players');
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.6rem',
-                      padding: '0.5rem 0.5rem 0.5rem 0.6rem',
-                      borderRadius: '14px',
+                      gap: 12,
+                      minHeight: 56,
+                      padding: '0 14px',
+                      borderRadius: 14,
                       background: 'var(--bg-primary)',
+                      border: 'none',
+                      color: 'var(--text-primary)',
+                      textAlign: 'left',
                     }}
                   >
-                    <KnockFace request={k} />
-                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                      <span
-                        style={{
-                          fontWeight: 800,
-                          fontSize: '0.92rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {k.name}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                        {t(k.entry === 'next-round' ? 'knock.entryNext' : 'knock.entryAfter')}
-                      </span>
+                    <span style={{ fontSize: '1.1rem' }}>👥</span>
+                    <span style={{ flex: 1, fontWeight: 800, fontSize: '0.95rem' }}>
+                      {t('playerMenu.players')}
                     </span>
-                    <KnockButtons request={k} onAnswer={answerKnock} onDark />
-                  </div>
-                ))}
-              </div>
+                    {offlineCount > 0 && (
+                      <Chip tone="danger">{t('playerMenu.offline', { n: offlineCount })}</Chip>
+                    )}
+                    {knocks.length > 0 && <Chip tone="gold">✊ {knocks.length}</Chip>}
+                    <span aria-hidden style={{ color: 'var(--dim)', fontSize: '1.2rem' }}>
+                      ›
+                    </span>
+                  </button>
+                )}
+                {/* Kviz: report/rate the current question (renders only when a
+                    kviz question is on screen). */}
+                <QuizFeedbackMenu />
+                {/* Osvajanje: spisak teritorija + tabla (samo u toj igri).
+                    Izbor sa spiska zatvara meni da bi se videla mapa. */}
+                <BitkaBoardMenu onPicked={() => setOpen(false)} />
+              </>
             )}
 
-            <div style={{ height: '1px', background: 'var(--line2)', margin: '0.15rem 0' }} />
-
-            {inGame && iAmRemoteHost && (
-              <MenuRow
-                icon="⏹"
-                label={t('overlay.endGame')}
-                danger
+            {/* Ja — per-device settings */}
+            <SectionLabel>{t('playerMenu.me')}</SectionLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+              <SmallTile
+                icon="📖"
+                label={t('playerMenu.rules')}
                 onClick={() => {
                   setOpen(false);
-                  setConfirm('stop');
+                  useRulesStore.getState().show();
                 }}
               />
-            )}
+              <SmallTile
+                icon="🎨"
+                label={t('playerMenu.look')}
+                onClick={() => {
+                  setOpen(false);
+                  setAvatarOpen(true);
+                }}
+              />
+              <SmallTile
+                icon="📳"
+                label={t('playerMenu.vibration')}
+                on={cues.vibration}
+                onClick={() => {
+                  cues.setVibration(!cues.vibration);
+                  if (!cues.vibration) vibrate(30);
+                }}
+              />
+              <SmallTile
+                icon={cues.sound ? '🔊' : '🔈'}
+                label={t('playerMenu.sound')}
+                on={cues.sound}
+                onClick={() => {
+                  cues.setSound(!cues.sound);
+                  if (!cues.sound) previewSound();
+                }}
+              />
+              <SmallTile
+                icon="🌐"
+                label={language.toUpperCase()}
+                onClick={() => setLanguage(language === 'sr' ? 'en' : 'sr')}
+              />
+            </div>
+
+            <div style={{ height: 1, background: 'var(--line2)', margin: '4px 0' }} />
+
+            {/* Dangerous actions, kept apart from the rest. */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: inGame && iAmRemoteHost ? '1fr 1fr' : '1fr',
+                gap: 8,
+              }}
+            >
+              {inGame && iAmRemoteHost && (
+                <DangerButton
+                  strong
+                  onClick={() => {
+                    setOpen(false);
+                    setPanel('end');
+                  }}
+                >
+                  ⏹ {t('overlay.endGame')}
+                </DangerButton>
+              )}
+              <DangerButton
+                onClick={() => {
+                  setOpen(false);
+                  setConfirm('leave');
+                }}
+              >
+                🚪 {t('leave.leaveRoom')}
+              </DangerButton>
+            </div>
             {iAmRemoteHost && room.hostless && (
-              <MenuRow
-                icon="🚫"
-                label={t('closeRoom.button')}
-                danger
+              <DangerButton
                 onClick={() => {
                   setOpen(false);
                   setConfirm('close');
                 }}
-              />
+              >
+                🚫 {t('closeRoom.button')}
+              </DangerButton>
             )}
-            <MenuRow
-              icon="🚪"
-              label={t('leave.leaveRoom')}
-              danger
-              onClick={() => {
-                setOpen(false);
-                setConfirm('leave');
-              }}
-            />
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {confirmDialog && (
@@ -428,37 +449,159 @@ export function PlayerMenu({
   );
 }
 
-function MenuRow({
+export function SectionLabel({ children, accent }: { children: ReactNode; accent?: boolean }) {
+  return (
+    <span
+      style={{
+        marginTop: 4,
+        fontSize: '0.7rem',
+        fontWeight: 800,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: accent ? 'var(--amber)' : 'var(--text-secondary)',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function BigTile({
   icon,
   label,
-  danger,
+  disabled,
   onClick,
 }: {
   icon: string;
   label: string;
-  danger?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
+        height: 72,
+        borderRadius: 16,
+        background: 'var(--bg-primary)',
+        border: '1px solid var(--line)',
+        color: 'var(--text-primary)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.7rem',
-        width: '100%',
-        padding: '0.7rem 0.8rem',
-        borderRadius: '12px',
-        background: danger ? 'rgba(255,77,94,.12)' : 'var(--bg-card)',
-        border: `1px solid ${danger ? 'rgba(255,77,94,.4)' : 'var(--line2)'}`,
-        color: danger ? 'var(--danger)' : 'var(--text-primary)',
-        fontWeight: 800,
-        fontSize: '0.95rem',
-        textAlign: 'left',
+        justifyContent: 'center',
+        gap: 2,
+        opacity: disabled ? 0.45 : 1,
       }}
     >
-      <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{icon}</span>
-      <span>{label}</span>
+      <span style={{ fontSize: '1.25rem' }}>{icon}</span>
+      <span style={{ fontSize: '0.88rem', fontWeight: 800 }}>{label}</span>
+    </button>
+  );
+}
+
+function SmallTile({
+  icon,
+  label,
+  on,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  /** Toggle tiles: lit while on. */
+  on?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      style={{
+        height: 64,
+        minWidth: 0,
+        padding: '0 2px',
+        borderRadius: 14,
+        background: on ? 'rgba(194,155,71,.16)' : 'var(--bg-primary)',
+        border: on ? '1px solid var(--accent)' : '1px solid transparent',
+        color: on === false ? 'var(--dim)' : 'var(--text-secondary)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        fontSize: '0.72rem',
+        fontWeight: 800,
+      }}
+    >
+      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+      <span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
+export function Chip({
+  tone,
+  children,
+}: {
+  tone: 'danger' | 'gold' | 'plain';
+  children: ReactNode;
+}) {
+  return (
+    <span
+      style={{
+        height: 26,
+        padding: '0 9px',
+        borderRadius: 999,
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0,
+        fontSize: '0.75rem',
+        fontWeight: 800,
+        background:
+          tone === 'gold'
+            ? 'var(--accent)'
+            : tone === 'danger'
+              ? 'rgba(224,106,94,.2)'
+              : 'rgba(245,235,224,.08)',
+        color:
+          tone === 'gold'
+            ? 'var(--bg-primary)'
+            : tone === 'danger'
+              ? 'var(--danger)'
+              : 'var(--text-primary)',
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function DangerButton({
+  strong,
+  onClick,
+  children,
+}: {
+  strong?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: 52,
+        borderRadius: 14,
+        background: strong ? 'rgba(224,106,94,.12)' : 'transparent',
+        border: strong ? '1px solid rgba(224,106,94,.4)' : '1px solid var(--line2)',
+        color: strong ? 'var(--danger)' : 'var(--text-secondary)',
+        fontWeight: 800,
+        fontSize: '0.9rem',
+      }}
+    >
+      {children}
     </button>
   );
 }

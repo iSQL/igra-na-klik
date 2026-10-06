@@ -8,6 +8,10 @@ export interface Player {
   isConnected: boolean;
   score: number;
   reconnectToken: string;
+  // Game ids this player has played (sent from the phone's memory on join,
+  // plus every game finished in this room). Powers the tutorial's
+  // "Preporuka" — most of the room hasn't played this one yet.
+  playedGames?: string[];
 }
 
 export type PublicPlayer = Omit<Player, 'reconnectToken'>;

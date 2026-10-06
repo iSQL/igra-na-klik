@@ -5,6 +5,8 @@ import type {
   InterServerEvents,
   SocketData,
   GameState,
+  GameFlowState,
+  Room,
 } from '@igra/shared';
 import { GAME_DEFINITIONS, genericScoreCandidates, allocateDiplomas } from '@igra/shared';
 import { RoomManager } from '../room/RoomManager.js';
@@ -45,10 +47,30 @@ interface ActiveGame {
   timerAccumMs: number;
   /** Wall clock of the previous tick — only consulted by fast-tick modules. */
   lastTickAt: number;
+  // --- Platform flow (see GameFlowState) ---
+  /** No ticks and no player/host actions while true (including the 3-2-1). */
+  paused: boolean;
+  pausedAt: number;
+  pausedBy: string | null;
+  resumeCountdown: 3 | 2 | 1 | null;
+  resumeTimer: ReturnType<typeof setTimeout> | null;
+  /** "Ne čekaj ga" — re-applied each phase until the player acts or returns. */
+  notWaiting: Set<string>;
+  lastFlowSignature: string;
+}
+
+/** Player actions still accepted while a game is paused. */
+const PAUSE_ALLOWED_ACTIONS = new Set(['quiz:feedback']);
+
+export interface StopOptions {
+  /** false = "Bez rezultata": clients skip the standings. */
+  showResults?: boolean;
 }
 
 export class GameManager {
   private activeGames = new Map<string, ActiveGame>();
+  /** Last successful start per room — `restartGame` replays it. */
+  private lastStarts = new Map<string, { gameId: string; customContent?: unknown }>();
   /** Called once a room is back in the lobby after a game (knock seating). */
   onGameEnded: ((roomCode: string) => void) | null = null;
 
@@ -141,7 +163,15 @@ export class GameManager {
       tickMs,
       timerAccumMs: 0,
       lastTickAt: Date.now(),
+      paused: false,
+      pausedAt: 0,
+      pausedBy: null,
+      resumeCountdown: null,
+      resumeTimer: null,
+      notWaiting: new Set(),
+      lastFlowSignature: '',
     });
+    this.lastStarts.set(roomCode, { gameId, customContent });
     this.emitGameState(roomCode, gameState);
 
     logger.info('game_started', {
@@ -165,6 +195,10 @@ export class GameManager {
 
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
+
+    if (active.paused && !PAUSE_ALLOWED_ACTIONS.has(action)) return;
+    // Acting at all means they're back — wait for them again from now on.
+    active.notWaiting.delete(playerId);
 
     const newState = active.module.onPlayerAction(
       room,
@@ -201,6 +235,7 @@ export class GameManager {
       active.gameState = pending.gameState;
       this.emitPlayerState(roomCode, pending.playerId, pending.gameState);
     }
+    this.syncFlow(roomCode);
   }
 
   handleHostAction(
@@ -215,6 +250,7 @@ export class GameManager {
     if (!room) return;
 
     if (!active.module.onHostAction) return;
+    if (active.paused) return;
 
     const newState = active.module.onHostAction(
       room,
@@ -265,6 +301,10 @@ export class GameManager {
 
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
+
+    // Paused: the module's clocks stand still because it simply isn't ticked.
+    // `resume` resets lastTickAt so a fast-tick module gets no jump either.
+    if (active.paused) return;
 
     // A ~33ms setInterval never fires at exactly 33ms, and a simulation that
     // integrates the nominal step while the clock runs faster plays in slow
@@ -333,18 +373,189 @@ export class GameManager {
       .emit('game:timer', { timeRemaining: active.gameState.timeRemaining });
   }
 
-  stopGame(roomCode: string): { error?: string } {
+  /**
+   * End the running game on request. `opts` comes from the host's "Završi
+   * igru" sheet: with it the clients learn the game was cut short (and how
+   * far it got); without it (room teardown) it ends like a normal finish.
+   */
+  stopGame(roomCode: string, opts?: StopOptions): { error?: string } {
     const active = this.activeGames.get(roomCode);
     if (!active) return { error: 'No active game' };
-    this.endGame(roomCode);
+    this.endGame(
+      roomCode,
+      opts
+        ? {
+            stoppedEarly: {
+              round: active.gameState.round,
+              totalRounds: active.gameState.totalRounds,
+            },
+            skipResults: opts.showResults === false,
+          }
+        : undefined
+    );
     return {};
   }
 
-  private endGame(roomCode: string): void {
+  /**
+   * Same game, same settings, with or without tutorial mode — the tutorial's
+   * "Igraj pravu partiju" / "Još jedna proba". A running game ends silently
+   * first.
+   */
+  restartGame(roomCode: string, tutorial: boolean): { error?: string } {
+    const last = this.lastStarts.get(roomCode);
+    if (!last) return { error: 'Nema igre za ponovno pokretanje.' };
+    if (this.activeGames.has(roomCode)) {
+      this.endGame(roomCode, { skipResults: true });
+    }
+    const content =
+      last.customContent && typeof last.customContent === 'object'
+        ? {
+            ...(last.customContent as Record<string, unknown>),
+            gluvoDobaTutorial: tutorial,
+            boljiZivotTutorial: tutorial,
+            spijunTutorial: tutorial,
+          }
+        : last.customContent;
+    return this.startGame(roomCode, last.gameId, content);
+  }
+
+  /** Room is gone — drop what restartGame remembered for it. */
+  forgetRoom(roomCode: string): void {
+    this.lastStarts.delete(roomCode);
+  }
+
+  // --- Flow controls (host:flow-action) ---------------------------------
+
+  pause(roomCode: string, pausedBy: string | null): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active || active.paused) return;
+    active.paused = true;
+    active.pausedAt = Date.now();
+    active.pausedBy = pausedBy;
+    logger.info('game_paused', { room: roomCode, game: active.gameId });
+    this.syncFlow(roomCode);
+  }
+
+  /** 3-2-1 on every screen, then the clocks run again. */
+  resume(roomCode: string): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active || !active.paused || active.resumeTimer) return;
+    const step = (n: 3 | 2 | 1 | null) => {
+      if (this.activeGames.get(roomCode) !== active) return;
+      if (n === null) {
+        const now = Date.now();
+        active.resumeTimer = null;
+        active.resumeCountdown = null;
+        active.paused = false;
+        active.pausedBy = null;
+        active.lastTickAt = now;
+        active.timerAccumMs = 0;
+        active.module.onResume?.(now - active.pausedAt);
+        this.syncFlow(roomCode);
+        return;
+      }
+      active.resumeCountdown = n;
+      this.syncFlow(roomCode);
+      active.resumeTimer = setTimeout(
+        () => step(n === 3 ? 2 : n === 2 ? 1 : null),
+        1000
+      );
+    };
+    step(3);
+  }
+
+  /** Close the current phase as if its clock ran out. */
+  skip(roomCode: string): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active || active.paused || !active.module.onHostSkip) return;
+    const room = this.roomManager.getRoom(roomCode);
+    if (!room) return;
+    const newState = active.module.onHostSkip(room, active.gameState);
+    if (!newState) return;
+    active.gameState = newState;
+    this.emitGameState(roomCode, newState);
+    if (newState.phase === 'ended') this.endGame(roomCode);
+  }
+
+  /** "Ne čekaj ga" — until the player acts or reconnects. */
+  stopWaiting(roomCode: string, playerId: string): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active || active.paused || !active.module.onStopWaiting) return;
+    const room = this.roomManager.getRoom(roomCode);
+    if (!room || !room.players.some((p) => p.id === playerId)) return;
+    active.notWaiting.add(playerId);
+    const newState = active.module.onStopWaiting(room, active.gameState, playerId);
+    if (newState) {
+      active.gameState = newState;
+      this.emitGameState(roomCode, newState);
+      if (newState.phase === 'ended') this.endGame(roomCode);
+      return;
+    }
+    this.syncFlow(roomCode);
+  }
+
+  private buildFlow(active: ActiveGame, room: Room): GameFlowState {
+    const info = active.module.getFlowInfo?.(room, active.gameState) ?? null;
+    return {
+      paused: active.paused,
+      pausedBy: active.pausedBy,
+      resumeCountdown: active.resumeCountdown,
+      collection: info?.collection ?? null,
+      skipLabel: active.module.onHostSkip ? (info?.skipLabel ?? null) : null,
+      notWaitingIds: [...active.notWaiting],
+      round: active.gameState.round,
+      totalRounds: active.gameState.totalRounds,
+    };
+  }
+
+  /**
+   * Re-apply "ne čekaj ga" to a freshly snapshotted phase, then broadcast the
+   * flow if it changed. Called after every emitted state and every action.
+   */
+  private syncFlow(roomCode: string): void {
+    const active = this.activeGames.get(roomCode);
+    if (!active) return;
+    const room = this.roomManager.getRoom(roomCode);
+    if (!room) return;
+
+    if (active.notWaiting.size > 0 && !active.paused && active.module.onStopWaiting) {
+      const c = active.module.getFlowInfo?.(room, active.gameState)?.collection;
+      if (c?.doneIds) {
+        const done = new Set(c.doneIds);
+        for (const id of active.notWaiting) {
+          if (!c.expectedIds.includes(id) || done.has(id)) continue;
+          const newState = active.module.onStopWaiting(room, active.gameState, id);
+          if (newState) {
+            // emitGameState re-enters syncFlow; the module dropped `id` from
+            // its snapshot, so the recursion ends.
+            active.gameState = newState;
+            this.emitGameState(roomCode, newState);
+            if (newState.phase === 'ended') this.endGame(roomCode);
+            return;
+          }
+        }
+      }
+    }
+
+    const flow = this.buildFlow(active, room);
+    const sig = JSON.stringify(flow);
+    if (sig === active.lastFlowSignature) return;
+    active.lastFlowSignature = sig;
+    this.io.to(roomCode).emit('game:flow', { flow });
+  }
+
+  private endGame(
+    roomCode: string,
+    extra?: {
+      stoppedEarly?: { round: number; totalRounds: number };
+      skipResults?: boolean;
+    }
+  ): void {
     const active = this.activeGames.get(roomCode);
     if (!active) return;
 
     clearInterval(active.intervalId);
+    if (active.resumeTimer) clearTimeout(active.resumeTimer);
 
     const room = this.roomManager.getRoom(roomCode);
     if (!room) return;
@@ -376,7 +587,12 @@ export class GameManager {
       );
     }
 
-    this.io.to(roomCode).emit('game:ended', { finalScores, awards });
+    this.io.to(roomCode).emit('game:ended', {
+      finalScores,
+      awards,
+      ...(extra?.stoppedEarly ? { stoppedEarly: extra.stoppedEarly } : {}),
+      ...(extra?.skipResults ? { skipResults: true } : {}),
+    });
 
     logger.info('game_ended', {
       room: roomCode,
@@ -384,8 +600,10 @@ export class GameManager {
       players: room.players.length,
       durationSec: Math.round((Date.now() - active.startedAt) / 1000),
       topScore: finalScores.reduce((max, s) => Math.max(max, s.score), 0),
+      stoppedEarly: !!extra?.stoppedEarly,
     });
 
+    this.roomManager.markPlayed(roomCode, active.gameId);
     room.status = 'lobby';
     room.currentGameId = null;
     this.activeGames.delete(roomCode);
@@ -419,6 +637,9 @@ export class GameManager {
         playerData: { [player.id]: gameState.playerData[player.id] || {} },
       });
     }
+
+    // The flow trails the state it describes (and may itself re-emit).
+    this.syncFlow(roomCode);
   }
 
   /** Current full state (with playerData) — server-side use only. */
@@ -458,6 +679,8 @@ export class GameManager {
 
     const sock = this.io.sockets.sockets.get(socketId);
     if (!sock) return;
+    const room = this.roomManager.getRoom(roomCode);
+    if (!room) return;
 
     const playerState: GameState = {
       ...active.gameState,
@@ -471,5 +694,11 @@ export class GameManager {
       gameState: playerState,
     });
     sock.emit('game:player-state', { playerData: playerState.playerData });
+
+    // Back in the room — wait for them again, and hand them the flow (a
+    // returning phone must see the pause overlay too).
+    active.notWaiting.delete(playerId);
+    this.syncFlow(roomCode);
+    sock.emit('game:flow', { flow: this.buildFlow(active, room) });
   }
 }

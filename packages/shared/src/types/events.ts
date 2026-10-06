@@ -5,7 +5,7 @@ import type {
   RoomSettings,
   ChatMessage,
 } from './room.js';
-import type { GameState } from './game.js';
+import type { GameState, GameFlowState } from './game.js';
 import type { DrawOp } from './draw-guess.js';
 import type { KvizImportQuestion } from '../games/quiz-import.js';
 import type { KvizQuestionType } from './quiz.js';
@@ -68,7 +68,15 @@ export interface ServerToClientEvents {
     // Funny consolation diplomas — one per player (see games/awards.ts). May be
     // absent for team games that don't rank players by score.
     awards?: PlayerAward[];
+    // Set when the host ended the game before its natural end — clients label
+    // the standings "Prekinuto posle 4/10". Absent on a normal finish.
+    stoppedEarly?: { round: number; totalRounds: number };
+    // The host stopped with "Bez rezultata": go straight back to the lobby.
+    skipResults?: boolean;
   }) => void;
+  // Platform flow around the running game (pause, waiting-on, skip). Sent on
+  // change and on reconnect; cleared client-side on game:ended.
+  'game:flow': (data: { flow: GameFlowState }) => void;
   'game:phase-changed': (data: { phase: string; timeRemaining: number }) => void;
   'room:chat-message': (data: { message: ChatMessage }) => void;
   'room:chat-history': (data: { messages: ChatMessage[] }) => void;
@@ -97,11 +105,14 @@ export interface ClientToServerEvents {
     roomCode: string;
     playerName: string;
     reconnectToken?: string;
+    // Games this phone has played before (its local memory) — see
+    // Player.playedGames. Untrusted; clamped server-side.
+    playedGames?: string[];
   }) => void;
   // Create a hostless room from a phone: the creator joins as a regular
   // player and automatically receives the remote-host claim. Responds with
   // player:joined like a normal join.
-  'player:create-room': (data: { playerName: string }) => void;
+  'player:create-room': (data: { playerName: string; playedGames?: string[] }) => void;
   // Ask to join a room whose game is running. Answered with knock:status /
   // knock:closed (or error). One knock per socket at a time.
   'player:knock': (data: { roomCode: string; playerName: string }) => void;
@@ -218,7 +229,21 @@ export interface ClientToServerEvents {
     data: { bytes: ArrayBuffer },
     ack: (res: PuzlaUploadAck) => void
   ) => void;
-  'host:stop-game': () => void;
+  // showResults=false ("Bez rezultata") skips the standings and returns
+  // everyone straight to the lobby. Omitted = show them.
+  'host:stop-game': (data?: { showResults?: boolean }) => void;
+  // Generic in-game controls (canControl only): pause / resume (3-2-1), skip
+  // the current phase as if its clock ran out, and stop waiting for one
+  // player. Skip and stop-waiting only work in modules that implement the
+  // matching IGameModule hooks.
+  'host:flow-action': (data: {
+    action: 'pause' | 'resume' | 'skip' | 'stop-waiting';
+    playerId?: string;
+  }) => void;
+  // Restart the game that just ran with the same settings — the tutorial's
+  // "Igraj pravu partiju" / "Još jedna proba". Ends the running game silently
+  // first if there is one.
+  'host:restart-game': (data: { tutorial: boolean }) => void;
   // Close/delete the room entirely. Accepted from the host socket or the
   // remote-host holder; kicks all players, host auto-creates a fresh room.
   'host:close-room': () => void;
@@ -227,6 +252,8 @@ export interface ClientToServerEvents {
   'host:kick-player': (data: { playerId: string }) => void;
   'player:claim-remote-host': () => void;
   'player:release-remote-host': () => void;
+  // Hand the remote-host claim to another connected player (holder or TV).
+  'host:transfer-remote-host': (data: { playerId: string }) => void;
   'player:leave-room': () => void;
   'player:set-avatar': (data: {
     avatarColor?: string;

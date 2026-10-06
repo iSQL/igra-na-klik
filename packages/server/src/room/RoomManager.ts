@@ -7,6 +7,7 @@ import {
   RoomSummary,
   ChatMessage,
   DEFAULT_ROOM_SETTINGS,
+  GAME_DEFINITIONS,
   AVATAR_COLORS,
   AVATAR_EMOJIS,
   CHAT_HISTORY_LIMIT,
@@ -277,6 +278,45 @@ export class RoomManager {
     const player = room.players.find((p) => p.id === playerId);
     if (!player || !player.isConnected) {
       return { error: 'Igrač nije u sobi.' };
+    }
+    room.remoteHostPlayerId = playerId;
+    return { ok: true };
+  }
+
+  /**
+   * Fold a phone's "games I've played" memory into the player. Untrusted
+   * input: only known game ids, capped.
+   */
+  mergePlayedGames(player: Player, raw: unknown): void {
+    if (!Array.isArray(raw)) return;
+    const known = raw
+      .filter((id): id is string => typeof id === 'string' && id in GAME_DEFINITIONS)
+      .slice(0, 64);
+    if (known.length === 0) return;
+    player.playedGames = [...new Set([...(player.playedGames ?? []), ...known])];
+  }
+
+  /** A game finished — everyone in the room has now played it. */
+  markPlayed(roomCode: string, gameId: string): void {
+    const room = this.rooms.get(roomCode);
+    if (!room) return;
+    for (const p of room.players) {
+      if (!p.playedGames?.includes(gameId)) {
+        p.playedGames = [...(p.playedGames ?? []), gameId];
+      }
+    }
+  }
+
+  /** Hand the claim straight to `playerId` (transfer — no "already held" check). */
+  setRemoteHost(
+    roomCode: string,
+    playerId: string
+  ): { ok: true } | { error: string } {
+    const room = this.rooms.get(roomCode);
+    if (!room) return { error: 'Room not found' };
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player || !player.isConnected) {
+      return { error: 'Igrač nije povezan.' };
     }
     room.remoteHostPlayerId = playerId;
     return { ok: true };

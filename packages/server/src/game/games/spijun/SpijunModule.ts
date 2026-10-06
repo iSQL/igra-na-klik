@@ -18,6 +18,7 @@ import {
   parseSpijunPack,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { SpijunInternalState } from './SpijunState.js';
@@ -95,7 +96,9 @@ export class SpijunModule extends BaseGameModule {
       phase: 'reveal-role',
       phaseTimeRemaining: this.timings.REVEAL_ROLE_DURATION ?? REVEAL_ROLE_DURATION,
       tutorialMode: opts.spijunTutorial === true,
-      totalRounds: clampGameRounds(this.gameId, opts.roundCount),
+      // Proba je jedna runda (Tok igre 3a).
+      totalRounds:
+        opts.spijunTutorial === true ? 1 : clampGameRounds(this.gameId, opts.roundCount),
       currentRound: 1,
       discussionSeconds: clampDiscussion(opts.spijunDiscussionSeconds),
       discussionRemaining: 0,
@@ -364,6 +367,21 @@ export class SpijunModule extends BaseGameModule {
       this.timings.REVEAL_ROLE_DURATION ?? REVEAL_ROLE_DURATION;
   }
 
+  private tutorialDone = false;
+
+  /** The vote's progress — counts only, the ballots stay secret. */
+  getFlowInfo(
+    room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    if (this.state.phase !== 'voting') return { collection: null, skipLabel: null };
+    const expectedIds = [...this.state.expectedVoterIds].filter((id) =>
+      room.players.some((p) => p.id === id)
+    );
+    const doneCount = expectedIds.filter((id) => this.state.votes.has(id)).length;
+    return { collection: { expectedIds, doneCount, verb: 'voted' }, skipLabel: null };
+  }
+
   private advanceOnTimeout(room: Room): void {
     switch (this.state.phase) {
       case 'reveal-role':
@@ -384,6 +402,15 @@ export class SpijunModule extends BaseGameModule {
         this.resolveResults(room, 'spy-missed');
         break;
       case 'results':
+        // Kraj probe: „Spremni ste!” umesto gašenja igre — domaćin bira
+        // pravu partiju ili još jednu probu.
+        if (
+          this.state.tutorialMode &&
+          this.state.currentRound >= this.state.totalRounds
+        ) {
+          this.tutorialDone = true;
+          break;
+        }
         this.nextRoundOrEnd(room);
         break;
     }
@@ -588,6 +615,7 @@ export class SpijunModule extends BaseGameModule {
     const data: Record<string, unknown> = {
       phase: this.state.phase,
       tutorialMode: this.state.tutorialMode,
+      tutorialDone: this.tutorialDone,
       host: hostData,
     };
 

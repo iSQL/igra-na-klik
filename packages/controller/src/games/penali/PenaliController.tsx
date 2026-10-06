@@ -117,6 +117,7 @@ export default function PenaliController() {
           timeRemaining={aiming && role !== 'spectator' ? timeRemaining : undefined}
           timeTotal={aiming && role !== 'spectator' ? AIMING_SECONDS : undefined}
           roundKey={aiming ? `${host.round}:${host.turnInRound}` : undefined}
+          roundCard={{ round: host.round, total: host.totalRounds }}
         >
           {body}
         </GameFrame>

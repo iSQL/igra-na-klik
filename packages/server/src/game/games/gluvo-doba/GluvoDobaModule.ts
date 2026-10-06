@@ -17,6 +17,7 @@ import {
   parseGluvoDobaPack,
 } from '@igra/shared';
 import type { GluvoDobaPack } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type {
@@ -81,6 +82,10 @@ export class GluvoDobaModule extends BaseGameModule {
   // Rano završavanje kroz akcije igrača (svi odigrali / svi glasali) i
   // dalje važi nepromenjeno.
   private tutorialMode = false;
+  // Proba je kratka (Tok igre 3a): jedna noć i jedan dan, pa otkrivanje
+  // uloga. Domaćinovo „dalje” u `kraj` tada ne gasi igru nego pali ekran
+  // „Spremni ste!” — igra stoji dok domaćin ne pokrene pravu partiju.
+  private tutorialDone = false;
   private info = new Map<string, ParticipantInfo>();
   // The match's role composition — open setup knowledge, computed once.
   private rolesInPlay: { roleId: GluvoDobaRoleId; count: number }[] = [];
@@ -393,6 +398,32 @@ export class GluvoDobaModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  // --- Platform flow ---------------------------------------------------------
+
+  /**
+   * Who the night / the vote is waiting on — counts only. Who already acted
+   * at night would tell a watcher who has a power (anti-tell), and who already
+   * voted is the village's business until the verdict, so no `doneIds`; the
+   * proba's host card just reads "Odigralo je 5 od 6".
+   */
+  getFlowInfo(
+    room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const inRoom = (id: string) => room.players.some((p) => p.id === id);
+    if (this.state.phase === 'noc') {
+      const expectedIds = [...this.state.expectedActorIds].filter(inRoom);
+      const doneCount = expectedIds.filter((id) => this.state.nightActions.has(id)).length;
+      return { collection: { expectedIds, doneCount, verb: 'acted' }, skipLabel: null };
+    }
+    if (this.state.phase === 'glasanje') {
+      const expectedIds = [...this.state.expectedVoterIds].filter(inRoom);
+      const doneCount = expectedIds.filter((id) => this.state.dayVotes.has(id)).length;
+      return { collection: { expectedIds, doneCount, verb: 'voted' }, skipLabel: null };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
   // --- Phase machine -----------------------------------------------------
 
   private advanceOnTimeout(room: Room): void {
@@ -417,10 +448,14 @@ export class GluvoDobaModule extends BaseGameModule {
         this.finishVoting(room);
         break;
       case 'presuda':
-        if (this.state.winner) this.enterKraj();
+        if (this.state.winner || this.tutorialMode) this.enterKraj();
         else this.enterNoc();
         break;
       case 'kraj':
+        if (this.tutorialMode) {
+          this.tutorialDone = true;
+          break;
+        }
         this.state.phase = 'ended';
         this.state.phaseTimeRemaining = 0;
         break;
@@ -788,6 +823,7 @@ export class GluvoDobaModule extends BaseGameModule {
     const data: Record<string, unknown> = {
       phase: this.state.phase,
       tutorialMode: this.tutorialMode,
+      tutorialDone: this.tutorialDone,
       host: hostData,
     };
 

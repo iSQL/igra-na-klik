@@ -1,10 +1,13 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { create } from 'zustand';
 import { GAME_DEFINITIONS } from '@igra/shared';
 import { useT } from '../../i18n/useT';
 import { ACCENT_HEX } from '../../utils/gameAccent';
 import { PlayerMenu } from '../PlayerMenu';
 import { cue } from '../../utils/cues';
+import { useGameStore } from '../../store/gameStore';
+import { RoundCard } from './RoundCard';
+import { TutorialBadge } from './Tutorial';
 
 // How many GameFrames are mounted. GameScreen hides its floating player-menu
 // circle while one is, because the frame's header carries the menu instead —
@@ -44,8 +47,17 @@ interface GameFrameProps {
   roundKey?: string | number;
   /** Clock turns rust from this many seconds (default 5; the tick stays at 5). */
   urgentAt?: number;
+  /**
+   * Games with real rounds: a gold "Runda 3 od 5" card flashes for 1.2 s
+   * whenever `round` goes up (Tok igre 2b).
+   */
+  roundCard?: { round: number; total: number; note?: string };
   children: ReactNode;
 }
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' &&
+  !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Shared in-game shell (Kontroler kit): one header with game, progress, time
@@ -58,6 +70,7 @@ export function GameFrame({
   timeTotal,
   roundKey,
   urgentAt = 5,
+  roundCard,
   children,
 }: GameFrameProps) {
   const t = useT();
@@ -66,6 +79,35 @@ export function GameFrame({
     bump(1);
     return () => bump(-1);
   }, [bump]);
+
+  // Every phase enters the same way (Tok igre 2a): the play area rises 24px
+  // with a fade on a springy curve — never a sideways slide, which reads as
+  // "back". Web Animations on the existing node, not a keyed remount, so a
+  // phase's local state survives and taps land from the first frame. `top`
+  // rather than transform: a transform would re-anchor the games'
+  // position:fixed backdrops to this box mid-animation.
+  const phase = useGameStore((s) => s.gameState?.phase);
+  // Proba: the clock stands still, so its slot shows "🎓 PROBA" + steps.
+  const tutorial = useGameStore((s) => s.gameState?.data.tutorialMode === true);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const seenPhase = useRef(phase);
+  useLayoutEffect(() => {
+    if (seenPhase.current === phase) return;
+    seenPhase.current = phase;
+    const el = bodyRef.current;
+    if (!el?.animate) return;
+    if (reducedMotion()) {
+      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: 'ease' });
+    } else {
+      el.animate(
+        [
+          { opacity: 0, top: '24px' },
+          { opacity: 1, top: '0px' },
+        ],
+        { duration: 220, easing: 'cubic-bezier(.34,1.56,.64,1)' }
+      );
+    }
+  }, [phase]);
 
   const def = GAME_DEFINITIONS[gameId];
   const hex = def ? ACCENT_HEX[def.accent] : ACCENT_HEX.gold;
@@ -190,6 +232,7 @@ export function GameFrame({
               )}
             </span>
           )}
+          {tutorial && !timed && phase && <TutorialBadge gameId={gameId} phase={phase} />}
           <PlayerMenu inGame variant="header" />
         </div>
         {frac !== null && (
@@ -215,6 +258,7 @@ export function GameFrame({
         )}
       </div>
       <div
+        ref={bodyRef}
         style={{
           flex: 1,
           minHeight: 0,
@@ -225,6 +269,14 @@ export function GameFrame({
       >
         {children}
       </div>
+      {roundCard && (
+        <RoundCard
+          gameId={gameId}
+          round={roundCard.round}
+          total={roundCard.total}
+          note={roundCard.note}
+        />
+      )}
     </div>
   );
 }

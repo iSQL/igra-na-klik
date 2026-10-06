@@ -10,11 +10,14 @@ export function BottomSheet({
   label,
   onClose,
   children,
+  zIndex = 900,
 }: {
   /** Accessible name of the dialog. */
   label: string;
   onClose: () => void;
   children: ReactNode;
+  /** In a game the sheet must clear the GameFrame, overlays and hints. */
+  zIndex?: number;
 }) {
   return (
     <div
@@ -23,7 +26,7 @@ export function BottomSheet({
         position: 'fixed',
         inset: 0,
         background: 'rgba(11,22,40,.62)',
-        zIndex: 900,
+        zIndex,
         animation: 'igra-fade .18s ease',
       }}
     >

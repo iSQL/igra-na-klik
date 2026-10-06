@@ -33,6 +33,7 @@ export default function KoBiPreController() {
     <GameFrame
       gameId="ko-bi-pre"
       subtitle={subtitle}
+      roundCard={host ? { round: host.round, total: host.totalRounds } : undefined}
       timeRemaining={voting ? timeRemaining : undefined}
       timeTotal={voting ? VOTING_SECONDS : undefined}
     >

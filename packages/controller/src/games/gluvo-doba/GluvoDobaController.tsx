@@ -19,6 +19,8 @@ import {
   GLUVO_CHEAT_FLOW,
   gluvoTutorialControllerHint,
 } from '@igra/shared';
+import { TutorialCoach, TutorialDone, TutorialHostCard } from '../../components/kit/Tutorial';
+import { TUTORIAL_FLOW } from '@igra/shared';
 
 function emit(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -776,41 +778,39 @@ export default function GluvoDobaController() {
           roundKey={phase === 'noc' ? host.day : undefined}
         >
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12, paddingTop: 14 }}>
-            {tutorial && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexShrink: 0 }}>
-                {tutorialHint ? (
-                  <p
-                    key={`${phase}-${my.hasActed}-${my.canAct}`}
-                    style={{
-                      flex: 1,
-                      margin: 0,
-                      fontSize: '0.78rem',
-                      background: 'rgba(194,155,71,0.1)',
-                      border: '1px solid rgba(194,155,71,0.35)',
-                      borderRadius: 12,
-                      padding: '0.45rem 0.6rem',
-                      lineHeight: 1.4,
-                      animation: 'igra-pop .3s',
-                    }}
-                  >
-                    🎓 {tutorialHint}
-                  </p>
-                ) : (
-                  <span style={{ flex: 1 }} />
+            {tutorial && data.tutorialDone === true ? (
+              <TutorialDone gameId="gluvo-doba" />
+            ) : (
+              <>
+                {tutorial && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+                    <RolesInPlayButton host={host} />
+                  </div>
                 )}
-                <RolesInPlayButton host={host} />
-              </div>
+                {screen}
+                {/* Proba (3b/3c): the holder runs it, everyone else gets a
+                    personal tip pointing at the screen above. */}
+                {tutorial && isRemoteHost && phase !== 'ended' ? (
+                  <TutorialHostCard
+                    gameId="gluvo-doba"
+                    phase={phase}
+                    action="gluvo:next-phase"
+                    label={
+                      GLUVO_INPUT_PHASES.has(phase) &&
+                      gluvoNextLabel(phase) !== null
+                        ? `Preskoči — ${gluvoNextLabel(phase)} ▸`
+                        : undefined
+                    }
+                    tip={tutorialHint}
+                  />
+                ) : (
+                  tutorial &&
+                  tutorialHint && (
+                    <TutorialCoach gameId="gluvo-doba" phase={phase} text={tutorialHint} />
+                  )
+                )}
+              </>
             )}
-            {tutorial && isRemoteHost && phase !== 'ended' && (
-              <button
-                className="btn-ghost"
-                onClick={() => socket.emit('host:game-action', { action: 'gluvo:next-phase' })}
-                style={{ minHeight: 44, borderColor: 'var(--accent)', flexShrink: 0 }}
-              >
-                🎓 {GLUVO_INPUT_PHASES.has(phase) ? 'Preskoči — nastavi ▸' : 'Sledeća faza ▸'}
-              </button>
-            )}
-            {screen}
           </div>
         </GameFrame>
       </div>
@@ -1235,7 +1235,9 @@ function Screen({
       (host.moranaWon && my.roleId === 'morana') ||
       (!host.moranaWon && roleDef.team === host.winner) ||
       (my.roleId === 'lesnik' && my.alive);
-    const [icon, title] = host.moranaWon
+    const [icon, title] = !host.winner && tutorial
+      ? ['🎓', 'Kraj probe — uloge na sto!']
+      : host.moranaWon
       ? ['❄️', 'Morana je uzela selo!']
       : host.winner === 'vukodlaci'
         ? ['🐺', 'Sile Mraka su pobedile!']
@@ -1406,3 +1408,7 @@ function TallyRow({
 // Faze u kojima igrači unose odluke — "sledeća faza" tu prinudno razrešava
 // fazu sa dosad pristiglim akcijama, pa dugme menja tekst.
 const GLUVO_INPUT_PHASES = new Set(['noc', 'osveta', 'glasanje']);
+
+function gluvoNextLabel(phase: string): string | null {
+  return TUTORIAL_FLOW['gluvo-doba'].nextLabel[phase] ?? null;
+}

@@ -133,6 +133,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     category: 'team',
     estimatedMinutes: 20,
     supportsHostless: true,
+    tutorial: {
+      blurb: 'Jedna noć i jedan dan. Ti pomeraš faze, svako dobija savet za svoju ulogu. Bez poena.',
+      minutes: 4,
+    },
   },
   'bolji-zivot': {
     id: 'bolji-zivot',
@@ -152,6 +156,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     supportsHostless: true,
     // Uroci: manje poena = bolji plasman (rang liste sortirati rastuće).
     lowerScoreWins: true,
+    tutorial: {
+      blurb: 'Jedna runda sa savetom na svakom potezu. Ti pomeraš faze.',
+      minutes: 6,
+    },
   },
   'tajni-agenti': {
     id: 'tajni-agenti',
@@ -185,6 +193,10 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // Hostless-capable: sve tajno (uloga, lokacija) je ionako na telefonu;
     // javna lista lokacija + optužbe + glasanje stižu i do kontrolera.
     supportsHostless: true,
+    tutorial: {
+      blurb: 'Jedna runda. Ti pomeraš faze, svako dobija savet za svoju ulogu. Bez poena.',
+      minutes: 4,
+    },
   },
   asocijacije: {
     id: 'asocijacije',

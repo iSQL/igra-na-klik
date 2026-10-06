@@ -151,6 +151,8 @@ export interface BoljiZivotHostData {
    * kriju tajmer — faze pomera admin dugmetom (host akcija 'bz:next-phase').
    */
   tutorialMode: boolean;
+  /** The proba is over — phones show "Spremni ste!" (Tok igre 3d). */
+  tutorialDone?: boolean;
   roundNumber: number;
   totalRounds: number;
   turnOrder: string[];

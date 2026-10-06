@@ -252,6 +252,43 @@ textarea {
   }
 }
 
+/* Tok igre: a strip / card rising into place (no horizontal centering). */
+@keyframes igra-slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Gold round interstitial (2b): in, hold, out — over 1.2 s. */
+@keyframes igra-round-card {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes igra-round-num {
+  from {
+    transform: scale(1.4);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
 /* Knock banner sliding down over the header (centered with translateX). */
 @keyframes igra-banner-in {
   from {

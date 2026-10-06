@@ -6,6 +6,7 @@ import { StartMenu } from '../components/StartMenu';
 import { KnockWaitingSheet } from '../components/KnockWaitingSheet';
 import { useKnockStore } from '../store/knockStore';
 import { useT } from '../i18n/useT';
+import { readSeen } from '../components/FirstTimeHint';
 
 const SINGLE_ROOM_MODE = import.meta.env.VITE_SINGLE_ROOM === 'true';
 // Last name used to enter a room — returning players get it pre-filled so
@@ -155,6 +156,7 @@ export function JoinScreen() {
       roomCode: code.toUpperCase(),
       playerName: name,
       reconnectToken: reconnectToken || undefined,
+      playedGames: readSeen(),
     });
   };
 
@@ -180,7 +182,7 @@ export function JoinScreen() {
     setError('');
     setCreating(true);
     localStorage.setItem(LAST_NAME_KEY, name);
-    socket.emit('player:create-room', { playerName: name });
+    socket.emit('player:create-room', { playerName: name, playedGames: readSeen() });
   };
 
   // Tapping a room in the list fills its code, then joins if the name is

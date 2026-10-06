@@ -48,6 +48,7 @@ import { useT } from '../i18n/useT';
 import { ACCENT_HEX } from '../utils/gameAccent';
 import { unpackQuizZip } from '../utils/quizZipImport';
 import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
+import { ProbaPicker, probaRecommended } from '../components/ProbaPicker';
 
 interface QuestionPackSummary {
   id: string;
@@ -264,15 +265,14 @@ export function GameSelectScreen() {
   const [gluvoBajacica, setGluvoBajacica] = useState(false);
   const [gluvoPacks, setGluvoPacks] = useState<GluvoDobaPackSummary[]>([]);
   const [gluvoPackId, setGluvoPackId] = useState('');
-  const [gluvoTutorial, setGluvoTutorial] = useState(false);
   const [tajniMode, setTajniMode] = useState<TajniAgentiMode>('classic');
   const [hotPotatoMode, setHotPotatoMode] = useState<HotPotatoMode>('sequential');
   const [hotPotatoAnswerSecs, setHotPotatoAnswerSecs] = useState(5);
-  const [bzTutorial, setBzTutorial] = useState(false);
   const [spijunPacks, setSpijunPacks] = useState<SpijunPackSummary[]>([]);
   const [spijunPackId, setSpijunPackId] = useState('');
   const [spijunDiscussion, setSpijunDiscussion] = useState(420);
-  const [spijunTutorial, setSpijunTutorial] = useState(false);
+  // Proba vs prava igra (Tok igre 3a), per game; unset = the recommendation.
+  const [probaPick, setProbaPick] = useState<Record<string, boolean>>({});
   const [asocijacijePacks, setAsocijacijePacks] = useState<
     AsocijacijePackSummary[]
   >([]);
@@ -380,6 +380,9 @@ export function GameSelectScreen() {
   if (!room) return null;
 
   const connectedCount = room.players.filter((p) => p.isConnected).length;
+  const isProba = (gameId: string): boolean =>
+    !!GAME_DEFINITIONS[gameId]?.tutorial &&
+    (probaPick[gameId] ?? probaRecommended(room.players, gameId));
   const games: GameDefinition[] = Object.values(GAME_DEFINITIONS);
   const visibleGames =
     activeCat === null
@@ -452,9 +455,9 @@ export function GameSelectScreen() {
       } else {
         payload.gluvoDobaBajacica = gluvoBajacica;
       }
-      if (gluvoTutorial) payload.gluvoDobaTutorial = true;
+      if (isProba(game.id)) payload.gluvoDobaTutorial = true;
     }
-    if (game.id === 'bolji-zivot' && bzTutorial) {
+    if (game.id === 'bolji-zivot' && isProba(game.id)) {
       payload.boljiZivotTutorial = true;
     }
     if (game.id === 'spijun') {
@@ -463,7 +466,7 @@ export function GameSelectScreen() {
       if (pack) {
         payload.spijunPack = { name: pack.name, locations: pack.locations };
       }
-      if (spijunTutorial) payload.spijunTutorial = true;
+      if (isProba(game.id)) payload.spijunTutorial = true;
     }
     if (game.id === 'asocijacije') {
       payload.asocijacijeMode = asocijacijeMode;
@@ -922,6 +925,12 @@ export function GameSelectScreen() {
                 <span style={{ flex: 1 }}>{t('gameSelect.howToPlayLabel')}</span>
                 <span style={{ color: 'var(--dim)', fontSize: '1.3rem' }}>›</span>
               </button>
+              <ProbaPicker
+                game={selectedGame}
+                players={room.players}
+                proba={isProba(selectedGame.id)}
+                onChange={(on) => setProbaPick((m) => ({ ...m, [selectedGame.id]: on }))}
+              />
             </div>
             <div
               style={{
@@ -1181,23 +1190,7 @@ export function GameSelectScreen() {
                               🕯️ {t('config.gluvoBajacica')}
                             </Pill>
                           )}
-                          <Pill
-                            active={gluvoTutorial}
-                            onClick={() => setGluvoTutorial(!gluvoTutorial)}
-                          >
-                            🎓 {t('config.gluvoTutorial')}
-                          </Pill>
                         </div>
-                        {gluvoTutorial && (
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {t('config.gluvoTutorialHint')}
-                          </span>
-                        )}
                         {gluvoPackId !== '' && (
                           <span
                             style={{
@@ -1248,24 +1241,6 @@ export function GameSelectScreen() {
                               ))}
                             </div>
                           </>
-                        )}
-                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                          <Pill
-                            active={spijunTutorial}
-                            onClick={() => setSpijunTutorial(!spijunTutorial)}
-                          >
-                            🎓 {t('config.spijunTutorial')}
-                          </Pill>
-                        </div>
-                        {spijunTutorial && (
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {t('config.spijunTutorialHint')}
-                          </span>
                         )}
                       </div>
                     </>
@@ -1391,28 +1366,6 @@ export function GameSelectScreen() {
                       />
                     </div>
                   )}
-                  {game.id === 'bolji-zivot' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                        <Pill
-                          active={bzTutorial}
-                          onClick={() => setBzTutorial(!bzTutorial)}
-                        >
-                          🎓 {t('config.bzTutorial')}
-                        </Pill>
-                      </div>
-                      {bzTutorial && (
-                        <span
-                          style={{
-                            fontSize: '0.68rem',
-                            color: 'var(--text-secondary)',
-                          }}
-                        >
-                          {t('config.bzTutorialHint')}
-                        </span>
-                      )}
-                    </div>
-                  )}
                   {GAME_ROUND_CONFIG[game.id] && (
                     <RoundsConfig
                       label={t('config.rounds')}
@@ -1525,14 +1478,22 @@ export function GameSelectScreen() {
                 {connectedCount}{' '}
                 {t(connectedCount === 1 ? 'common.player.one' : 'common.player.many')}
                 {' · ~'}
-                {t('config.minutes', { n: String(selectedGame.estimatedMinutes) })}
+                {t('config.minutes', {
+                  n: String(
+                    isProba(selectedGame.id) && selectedGame.tutorial
+                      ? selectedGame.tutorial.minutes
+                      : selectedGame.estimatedMinutes
+                  ),
+                })}
               </span>
               <button
                 className="btn-primary"
                 onClick={() => handleStart(selectedGame)}
                 style={{ display: 'block', width: '100%' }}
               >
-                ▶ {t('gameSelect.start')}
+                {isProba(selectedGame.id)
+                  ? `🎓 ${t('tutorial.startProba')}`
+                  : `▶ ${t('gameSelect.start')}`}
               </button>
             </div>
           </div>

@@ -118,6 +118,7 @@ export function registerRoomHandlers(
     }
 
     const { player } = result;
+    roomManager.mergePlayedGames(player, data.playedGames);
     // The creator drives the show from their phone.
     room.remoteHostPlayerId = player.id;
 
@@ -171,6 +172,7 @@ export function registerRoomHandlers(
     }
 
     const { player, room, reclaimed } = result;
+    roomManager.mergePlayedGames(player, data.playedGames);
     if (reclaimed) cancelGraceTimer(player.id);
     socket.data.roomCode = room.code;
     socket.data.playerId = player.id;
@@ -241,6 +243,28 @@ export function registerRoomHandlers(
       });
       onHolderChanged(roomCode);
     }
+  });
+
+  // Hand the claim to someone else — from the holder's "Igrači" screen (or the
+  // TV). The target must be a connected player other than the holder.
+  socket.on('host:transfer-remote-host', (data) => {
+    const { roomCode, playerId, isHost } = socket.data;
+    if (!roomCode) return;
+    const room = roomManager.getRoom(roomCode);
+    if (!room) return;
+    const allowed = isHost || (!!playerId && room.remoteHostPlayerId === playerId);
+    if (!allowed) return;
+    const targetId = data?.playerId;
+    if (typeof targetId !== 'string' || targetId === room.remoteHostPlayerId) return;
+    const result = roomManager.setRemoteHost(roomCode, targetId);
+    if ('error' in result) {
+      socket.emit('error', { code: 'CLAIM_ERROR', message: result.error });
+      return;
+    }
+    io.to(roomCode).emit('room:remote-host-changed', {
+      remoteHostPlayerId: targetId,
+    });
+    onHolderChanged(roomCode);
   });
 
   socket.on('player:set-avatar', (data) => {

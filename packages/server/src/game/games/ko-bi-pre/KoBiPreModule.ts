@@ -9,6 +9,7 @@ import type {
   KoBiPreVoter,
 } from '@igra/shared';
 import { KO_BI_PRE_PROMPTS, shuffled } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { KoBiPreInternalState } from './KoBiPreState.js';
@@ -99,6 +100,50 @@ export class KoBiPreModule extends BaseGameModule {
       this.state.expectedVoterIds.delete(playerId);
       if (this.allExpectedVoted(room)) this.transitionToResults(room);
     }
+    return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    if (this.state.phase === 'voting') {
+      const expectedIds = [...this.state.expectedVoterIds];
+      const doneIds = expectedIds.filter((id) => this.state.votes.has(id));
+      return {
+        collection: { expectedIds, doneIds, doneCount: doneIds.length, verb: 'voted' },
+        skipLabel: 'Zatvori glasanje',
+      };
+    }
+    if (
+      this.state.phase === 'showing-results' &&
+      this.state.currentRound < this.state.totalRounds
+    ) {
+      return { collection: null, skipLabel: 'Sledeća runda' };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (this.state.phase === 'voting') {
+      this.transitionToResults(room);
+    } else if (
+      this.state.phase === 'showing-results' &&
+      this.state.currentRound < this.state.totalRounds
+    ) {
+      this.nextRoundOrEnd(room);
+    } else {
+      return null;
+    }
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (this.state.phase !== 'voting') return null;
+    if (!this.state.expectedVoterIds.delete(playerId)) return null;
+    if (this.allExpectedVoted(room)) this.transitionToResults(room);
     return this.buildGameState(room);
   }
 

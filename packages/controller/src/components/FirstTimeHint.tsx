@@ -7,7 +7,8 @@ const SEEN_KEY = 'igra-hint-seen';
 /** The card never holds up play for long — it folds itself after this. */
 const AUTO_HIDE_MS = 8000;
 
-function readSeen(): string[] {
+/** Games this device has played (or at least seen the hint for). */
+export function readSeen(): string[] {
   try {
     const raw = localStorage.getItem(SEEN_KEY);
     const arr = raw ? JSON.parse(raw) : [];
@@ -17,7 +18,7 @@ function readSeen(): string[] {
   }
 }
 
-function markSeen(gameId: string): void {
+export function markSeen(gameId: string): void {
   try {
     const seen = readSeen();
     if (!seen.includes(gameId)) localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, gameId]));

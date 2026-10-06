@@ -49,9 +49,45 @@ export interface GameDefinition {
   // player who wasn't there at onStart — the rest seat admitted guests when
   // the game ends.
   lateJoin?: boolean;
+  // Has a short host-led "proba" (tutorial mode): phases advance on the
+  // holder's button, every phone gets a personal tip, no scoring. Drives the
+  // Proba / Prava igra choice at game select (Tok igre 3a).
+  tutorial?: { blurb: string; minutes: number };
 }
 
 export type GamePhase = string;
+
+/**
+ * Who the current input phase is waiting on. Player ids only — never what
+ * anyone answered. `doneIds` is omitted where "who already acted" would
+ * itself leak something (Gluvo doba's night), leaving just the count.
+ */
+export interface GameFlowCollection {
+  expectedIds: string[];
+  doneIds?: string[];
+  doneCount: number;
+  verb: 'answered' | 'wrote' | 'voted' | 'acted';
+}
+
+/**
+ * Platform-level flow around a running game (pause, "who are we waiting
+ * for", skip). Rides its own `game:flow` event rather than GameState, so
+ * modules, the state signature and per-game clients stay untouched.
+ */
+export interface GameFlowState {
+  paused: boolean;
+  /** Name of the player who paused; null = the TV (or nobody). */
+  pausedBy: string | null;
+  /** Server-driven 3-2-1 before a paused game resumes. */
+  resumeCountdown: 3 | 2 | 1 | null;
+  collection: GameFlowCollection | null;
+  /** Label for the host's skip button; null = this phase can't be skipped. */
+  skipLabel: string | null;
+  /** Players the host chose not to wait for (until they act or reconnect). */
+  notWaitingIds: string[];
+  round: number;
+  totalRounds: number;
+}
 
 export interface GameState {
   gameId: string;

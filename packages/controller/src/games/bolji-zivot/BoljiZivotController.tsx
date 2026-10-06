@@ -17,6 +17,7 @@ import {
 } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 import { BZFxLayer } from './components/BZFxLayer';
+import { TutorialCoach, TutorialDone, TutorialHostCard } from '../../components/kit/Tutorial';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
 
@@ -249,13 +250,28 @@ export default function BoljiZivotController() {
 
   // ------------------------------------------------------------ ekrani
 
+  if (tutorial && data.tutorialDone) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.75rem' }}>
+        <TutorialDone gameId="bolji-zivot" />
+      </div>
+    );
+  }
+
   if (phase === 'final-leaderboard' || phase === 'ended') {
     const entries = data.leaderboard ?? [];
     const mine = entries.find((e) => e.playerId === playerId);
     return (
       <Centered>
         {canAdvance && phase === 'final-leaderboard' && (
-          <TutorialNextButton label="Završi igru ▸" onTap={haptics.tap} />
+          <div style={{ width: '100%' }}>
+            <TutorialHostCard
+              gameId="bolji-zivot"
+              phase={phase}
+              action="bz:next-phase"
+              label="Završi probu ▸"
+            />
+          </div>
         )}
         <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0 }}>
           Kraj partije — manje uroka je bolje!
@@ -304,13 +320,15 @@ export default function BoljiZivotController() {
       <div style={{ padding: '0.75rem', overflowY: 'auto', height: '100%' }}>
         {canAdvance && (
           <div style={{ marginBottom: '0.5rem' }}>
-            <TutorialNextButton
+            <TutorialHostCard
+              gameId="bolji-zivot"
+              phase={phase}
+              action="bz:next-phase"
               label={
                 data.roundNumber < data.totalRounds
                   ? 'Sledeća runda ▸'
                   : 'Konačni rezultati ▸'
               }
-              onTap={haptics.tap}
             />
           </div>
         )}
@@ -455,25 +473,8 @@ export default function BoljiZivotController() {
             amTargeted: me.amTargeted,
             amRiskaHolder: me.amRiskaHolder,
           });
-          if (!hint) return null;
-          return (
-            <p
-              key={data.sub + String(me.isMyTurn)}
-              style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-primary)',
-                background: 'rgba(194,155,71,0.1)',
-                border: '1px solid rgba(194,155,71,0.35)',
-                borderRadius: '0.6rem',
-                padding: '0.45rem 0.6rem',
-                margin: 0,
-                lineHeight: 1.4,
-                animation: 'igra-pop .3s',
-              }}
-            >
-              🎓 {hint}
-            </p>
-          );
+          if (!hint || canAdvance) return null;
+          return <TutorialCoach gameId="bolji-zivot" phase={phase} text={hint} />;
         })()}
 
       {/* Poslednji događaj */}
@@ -940,12 +941,16 @@ export default function BoljiZivotController() {
 
       {/* Tutorial: onaj ko drži kontrolu ručno pomera faze */}
       {canAdvance && (
-        <TutorialNextButton
-          label={
-            BZ_WAIT_PHASES.has(phase) ? 'Sledeća faza ▸' : 'Preskoči potez ▸'
-          }
-          subtle={!BZ_WAIT_PHASES.has(phase)}
-          onTap={haptics.tap}
+        <TutorialHostCard
+          gameId="bolji-zivot"
+          phase={phase}
+          action="bz:next-phase"
+          label={BZ_WAIT_PHASES.has(phase) ? undefined : 'Preskoči potez ▸'}
+          tip={bzTutorialControllerHint(data.sub, {
+            isMyTurn: me.isMyTurn,
+            amTargeted: me.amTargeted,
+            amRiskaHolder: me.amRiskaHolder,
+          })}
         />
       )}
 
@@ -982,37 +987,6 @@ export default function BoljiZivotController() {
 // Faze pauze/prikaza — tu je "Sledeća faza" prirodan tok; u ulaznim fazama
 // isto dugme znači "preskoči potez igrača" pa je vizuelno tiše.
 const BZ_WAIT_PHASES = new Set(['peek-show', 'racija-show', 'reveal', 'final-leaderboard']);
-
-function TutorialNextButton({
-  label,
-  subtle,
-  onTap,
-}: {
-  label: string;
-  subtle?: boolean;
-  onTap?: () => void;
-}) {
-  return (
-    <button
-      onClick={() => {
-        onTap?.();
-        socket.emit('host:game-action', { action: 'bz:next-phase' });
-      }}
-      style={{
-        padding: '0.55rem 1rem',
-        borderRadius: '0.6rem',
-        fontWeight: 700,
-        fontSize: '0.85rem',
-        width: '100%',
-        background: subtle ? 'var(--bg-secondary)' : 'var(--accent)',
-        color: subtle ? 'var(--text-secondary)' : '#fff',
-        border: subtle ? '1px dashed rgba(194,155,71,0.5)' : 'none',
-      }}
-    >
-      🎓 {label}
-    </button>
-  );
-}
 
 /** "?" podsetnik pravila — pun ekran, skroluje se, tutorial mod. */
 function HelpSheet({ onClose }: { onClose: () => void }) {

@@ -95,6 +95,7 @@ export class BoljiZivotModule extends BaseGameModule {
   // host akcija, izvršava tačno ono što bi istek tajmera uradio). Slap
   // prozor nema rok ni ovde — zatvaraju ga isti događaji kao u pravoj igri.
   private tutorialMode = false;
+  private tutorialDone = false;
 
   private sub: BoljiZivotPhase = 'peeking';
   private timeLeft = 0;
@@ -149,10 +150,14 @@ export class BoljiZivotModule extends BaseGameModule {
     this.tutorialMode =
       (customContent as { boljiZivotTutorial?: unknown } | undefined)
         ?.boljiZivotTutorial === true;
-    this.totalRounds = clampGameRounds(
-      this.gameId,
-      (customContent as { roundCount?: unknown } | undefined)?.roundCount
-    );
+    // Proba je jedna runda (Tok igre 3a).
+    this.totalRounds = this.tutorialMode
+      ? 1
+      : clampGameRounds(
+          this.gameId,
+          (customContent as { roundCount?: unknown } | undefined)?.roundCount
+        );
+    this.tutorialDone = false;
     this.roundNumber = 1;
     this.turnOrder = shuffled(
       room.players.filter((p) => p.isConnected).map((p) => p.id)
@@ -1293,6 +1298,11 @@ export class BoljiZivotModule extends BaseGameModule {
         break;
 
       case 'final-leaderboard':
+        // Kraj probe: „Spremni ste!” umesto gašenja igre.
+        if (this.tutorialMode) {
+          this.tutorialDone = true;
+          break;
+        }
         this.sub = 'ended';
         this.timeLeft = 0;
         break;
@@ -1425,6 +1435,7 @@ export class BoljiZivotModule extends BaseGameModule {
     const data: Record<string, unknown> = {
       sub: this.sub,
       tutorialMode: this.tutorialMode,
+      tutorialDone: this.tutorialDone,
       roundNumber: this.roundNumber,
       totalRounds: this.totalRounds,
       turnOrder: this.turnOrder,

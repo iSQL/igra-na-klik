@@ -18,6 +18,7 @@ import {
   fibbageGlasLabel,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import { resolveFibbageQuestions } from './fibbage-pack-resolver.js';
@@ -216,6 +217,67 @@ export class FibbageModule extends BaseGameModule {
       this.state.phase === 'voting' &&
       this.allExpectedVoted(room)
     ) {
+      this.transitionToResults(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'writing-answers') {
+      const expectedIds = [...this.state.expectedSubmitterIds];
+      const doneIds = expectedIds.filter(
+        (id) => this.state.submissions.has(id) || this.state.autoFinders.has(id)
+      );
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'wrote' };
+    } else if (phase === 'voting') {
+      const expectedIds = [...this.state.expectedVoterIds];
+      const doneIds = expectedIds.filter((id) => this.state.votes.has(id));
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'voted' };
+    }
+    if (!this.state.questionsReady) return { collection, skipLabel: null };
+    const skipLabel =
+      phase === 'showing-question'
+        ? 'Odmah na pisanje'
+        : phase === 'writing-answers'
+          ? 'Zatvori pisanje'
+          : phase === 'voting'
+            ? 'Zatvori glasanje'
+            : phase === 'showing-results'
+              ? 'Na tabelu'
+              : phase === 'leaderboard' &&
+                  this.state.currentIndex < this.state.questions.length - 1
+                ? 'Sledeća runda'
+                : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (!this.state.questionsReady || this.state.phase === 'ended') return null;
+    // The last leaderboard ends the game — that's "Završi igru", not a skip.
+    if (
+      this.state.phase === 'leaderboard' &&
+      this.state.currentIndex >= this.state.questions.length - 1
+    ) {
+      return null;
+    }
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    const a = this.state.expectedSubmitterIds.delete(playerId);
+    const b = this.state.expectedVoterIds.delete(playerId);
+    if (!a && !b) return null;
+    if (this.state.phase === 'writing-answers' && this.allExpectedSubmitted(room)) {
+      this.transitionToVoting(room);
+    } else if (this.state.phase === 'voting' && this.allExpectedVoted(room)) {
       this.transitionToResults(room);
     }
     return this.buildGameState(room);

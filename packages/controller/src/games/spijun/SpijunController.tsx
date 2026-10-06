@@ -15,6 +15,7 @@ import type {
   SpijunPhase,
   SpijunRole,
 } from '@igra/shared';
+import { TutorialCoach, TutorialDone, TutorialHostCard } from '../../components/kit/Tutorial';
 
 function emit(action: string, data: Record<string, unknown> = {}) {
   socket.emit('game:player-action', { action, data });
@@ -90,30 +91,21 @@ export default function SpijunController() {
   const timed = ['discussion', 'defense', 'voting', 'spy-guess'].includes(phase);
 
   const tutorialHint = tutorial ? spijunTutorialControllerHint(phase as SpijunPhase, role) : null;
-  const hintBanner = tutorialHint ? (
-    <p
-      style={{
-        fontSize: '0.8rem',
-        color: 'var(--text-secondary)',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--accent)',
-        borderRadius: 12,
-        padding: '0.5rem 0.75rem',
-        margin: 0,
-        textAlign: 'center',
-        flexShrink: 0,
-      }}
-    >
-      🎓 {tutorialHint}
-    </p>
-  ) : null;
-
-  const nextPhaseButton =
-    tutorial && isRemoteHost && phase !== 'ended' ? (
-      <button onClick={() => hostAction('spijun:next-phase')} style={{ ...darkBtn, borderColor: 'var(--accent)' }}>
-        Sledeća faza ▸
-      </button>
+  // Proba (3b/3c): the holder runs it, everyone else gets a personal tip.
+  const hostCard = tutorial && isRemoteHost && phase !== 'ended';
+  const hintBanner =
+    tutorialHint && !hostCard ? (
+      <TutorialCoach gameId="spijun" phase={phase} text={tutorialHint} />
     ) : null;
+
+  const nextPhaseButton = hostCard ? (
+    <TutorialHostCard
+      gameId="spijun"
+      phase={phase}
+      action="spijun:next-phase"
+      tip={tutorialHint}
+    />
+  ) : null;
 
   const toggleCross = (name: string) => {
     setCrossed((prev) => {
@@ -622,14 +614,21 @@ export default function SpijunController() {
     <GameFrame
       gameId="spijun"
       subtitle={phase === 'ended' ? 'Kraj igre' : `Runda ${host.round}/${host.totalRounds}`}
+      roundCard={{ round: host.round, total: host.totalRounds }}
       timeRemaining={timed ? timeRemaining : undefined}
       roundKey={phase === 'reveal-role' ? host.round : undefined}
     >
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12, paddingTop: 12 }}>
-        {secretStrip}
-        {hintBanner}
-        {body}
-        {nextPhaseButton}
+        {tutorial && data.tutorialDone === true ? (
+          <TutorialDone gameId="spijun" />
+        ) : (
+          <>
+            {secretStrip}
+            {body}
+            {hintBanner}
+            {nextPhaseButton}
+          </>
+        )}
       </div>
     </GameFrame>
   );

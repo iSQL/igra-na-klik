@@ -17,11 +17,16 @@ import { KnockBanner } from './components/KnockBanner';
 import { ConnectionStatus, ProblemScreen } from './components/ConnectionStatus';
 import { RulesScreen } from './components/RulesScreen';
 import { bindKnockSocket } from './store/knockStore';
+import { bindFlowSocket } from './store/flowStore';
+import { markSeen } from './components/FirstTimeHint';
 import { useT } from './i18n/useT';
 
 function GameEndedOverlay({
   placement,
+  stoppedEarly,
 }: {
+  /** Set when the host ended the game early ("Prekinuto posle 4/10"). */
+  stoppedEarly: { round: number; totalRounds: number } | null;
   placement: {
     rank: number;
     points: number;
@@ -75,6 +80,24 @@ function GameEndedOverlay({
         <p className="display" style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
           {t('reconnect.gameEnded')}
         </p>
+        {stoppedEarly && (
+          <p
+            style={{
+              margin: '0.35rem 0 0',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              color: 'var(--amber)',
+            }}
+          >
+            {stoppedEarly.totalRounds > 0
+              ? t('gameEnd.stoppedAfter', {
+                  round: stoppedEarly.round,
+                  total: stoppedEarly.totalRounds,
+                })
+              : t('gameEnd.stopped')}
+          </p>
+        )}
         {placement && (
           <p
             className="display"
@@ -259,6 +282,10 @@ export function App() {
     }[];
   } | null>(null);
   const [kickNotice, setKickNotice] = useState<string | null>(null);
+  const [stoppedEarly, setStoppedEarly] = useState<{
+    round: number;
+    totalRounds: number;
+  } | null>(null);
 
   // Hold a screen wake lock once the player is in a room — prevents the
   // phone from sleeping mid-round and dropping the WebSocket.
@@ -273,6 +300,7 @@ export function App() {
   useEffect(() => {
     socket.connect();
     const unbindKnocks = bindKnockSocket();
+    const unbindFlow = bindFlowSocket();
 
     socket.on('connect', () => {
       setConnected(true);
@@ -451,7 +479,37 @@ export function App() {
       });
     });
 
-    socket.on('game:ended', ({ finalScores, awards }) => {
+    socket.on('game:ended', ({ finalScores, awards, stoppedEarly, skipResults }) => {
+      // Everyone in the room has now played this game (the server marks the
+      // same) — the tutorial's "Preporuka" counts on it.
+      {
+        const endedId = useGameStore.getState().gameId;
+        if (endedId) {
+          markSeen(endedId);
+          usePlayerStore.setState((state) =>
+            state.room
+              ? {
+                  room: {
+                    ...state.room,
+                    players: state.room.players.map((p) =>
+                      p.playedGames?.includes(endedId)
+                        ? p
+                        : { ...p, playedGames: [...(p.playedGames ?? []), endedId] }
+                    ),
+                  },
+                }
+              : state
+          );
+        }
+      }
+      // "Bez rezultata": the host sent everyone straight back to the room.
+      if (skipResults) {
+        setGameEndedNotice(false);
+        setFinalPlacement(null);
+        resetGame();
+        return;
+      }
+      setStoppedEarly(stoppedEarly ?? null);
       // Surface a quick "Igra je završena" notice so players (especially
       // when the remote host triggered "Završi igru") see why the game UI
       // is about to vanish, instead of being snapped back to the lobby
@@ -529,6 +587,7 @@ export function App() {
 
     return () => {
       unbindKnocks();
+      unbindFlow();
       socket.off('connect');
       socket.off('disconnect');
       socket.off('player:joined');
@@ -577,7 +636,9 @@ export function App() {
       {/* Drops stay in place: banner + dim, then a retry screen (4g/4h). */}
       <ConnectionStatus />
       <RulesScreen />
-      {gameEndedNotice && <GameEndedOverlay placement={finalPlacement} />}
+      {gameEndedNotice && (
+        <GameEndedOverlay placement={finalPlacement} stoppedEarly={stoppedEarly} />
+      )}
       {kickNotice && (
         <KickedOverlay message={kickNotice} onClose={() => setKickNotice(null)} />
       )}

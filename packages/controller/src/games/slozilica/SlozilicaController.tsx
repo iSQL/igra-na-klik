@@ -108,6 +108,7 @@ export default function SlozilicaController() {
       timeRemaining={phase === 'pisanje' ? timeRemaining : undefined}
       timeTotal={phase === 'pisanje' ? PISANJE_SECONDS : undefined}
       roundKey={phase === 'pisanje' ? host.round : undefined}
+      roundCard={{ round: host.round, total: host.totalRounds }}
     >
       {body}
     </GameFrame>

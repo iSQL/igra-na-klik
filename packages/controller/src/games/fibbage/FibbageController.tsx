@@ -39,6 +39,10 @@ export default function FibbageController() {
     <GameFrame
       gameId="fibbage"
       subtitle={subtitle}
+      roundCard={{
+        round: (data.questionIndex as number) + 1,
+        total: data.totalQuestions as number,
+      }}
       timeRemaining={total ? timeRemaining : undefined}
       timeTotal={total}
     >

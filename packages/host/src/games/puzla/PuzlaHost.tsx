@@ -14,6 +14,7 @@ import {
   type PuzlaFlash,
   type PuzlaSprites,
 } from './puzlaTable';
+import { usePaused } from '../../store/flowStore';
 
 /**
  * Puzla on the TV — a mirror of the table everyone is working on from their
@@ -272,15 +273,19 @@ function useElapsed(host: PuzlaHostData | undefined, phase: string | undefined):
   const [now, setNow] = useState(() => Date.now());
   const base = useRef({ sec: 0, at: Date.now() });
   const sec = host?.elapsedSec ?? 0;
+  // A pause freezes the server's clock, so stop extrapolating — and restart
+  // from the server's value on resume.
+  const paused = usePaused();
   useEffect(() => {
     base.current = { sec, at: Date.now() };
-  }, [sec]);
+  }, [sec, paused]);
   useEffect(() => {
-    if (phase !== 'slaganje') return;
+    if (phase !== 'slaganje' || paused) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [phase]);
+  }, [phase, paused]);
   if (phase !== 'slaganje') return host?.result?.elapsedSec ?? sec;
+  if (paused) return base.current.sec;
   return base.current.sec + Math.max(0, Math.floor((now - base.current.at) / 1000));
 }
 

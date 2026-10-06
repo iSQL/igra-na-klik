@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useSound } from '../../hooks/useSound';
+import { usePaused } from '../../store/flowStore';
 import { OptionGrid } from '../quiz/components/OptionGrid';
 import type { HotPotatoHostData, QuizOption } from '@igra/shared';
 
@@ -9,6 +10,7 @@ export default function HotPotatoHost() {
   const gameState = useGameStore((s) => s.gameState);
   const { play } = useSound();
   const prevPhaseRef = useRef<string | null>(null);
+  const paused = usePaused();
 
   const phase = gameState?.phase;
 
@@ -22,11 +24,12 @@ export default function HotPotatoHost() {
   }, [phase, play]);
 
   // Ticking heartbeat while the bomb is live — no numbers, just tension.
+  // Silent while the game is paused — the server's clock stands still too.
   useEffect(() => {
-    if (phase !== 'passing' && phase !== 'question') return;
+    if (paused || (phase !== 'passing' && phase !== 'question')) return;
     const id = setInterval(() => play('tick'), 1000);
     return () => clearInterval(id);
-  }, [phase, play]);
+  }, [phase, play, paused]);
 
   if (!gameState) return null;
   const timeRemaining = gameState.timeRemaining;

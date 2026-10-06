@@ -684,12 +684,18 @@ export default function GluvoDobaHost() {
 
   // --- kraj / ended ---------------------------------------------------------------
   if (phase === 'kraj' || phase === 'ended') {
-    const winnerEmoji = host.moranaWon
+    // A proba ends after one night and one day — usually with no winner.
+    const probaEnd = tutorial && !host.winner;
+    const winnerEmoji = probaEnd
+      ? '🎓'
+      : host.moranaWon
       ? '❄️'
       : host.winner === 'vukodlaci'
         ? '🐺'
         : '🌾';
-    const winnerText = host.moranaWon
+    const winnerText = probaEnd
+      ? 'Kraj probe — uloge na sto!'
+      : host.moranaWon
       ? 'Morana je uzela selo!'
       : host.winner === 'vukodlaci'
         ? 'Sile Mraka su pobedile!'

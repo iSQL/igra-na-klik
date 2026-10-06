@@ -147,7 +147,7 @@ export function registerGameHandlers(
     });
   });
 
-  socket.on('host:stop-game', () => {
+  socket.on('host:stop-game', (data) => {
     if (!startStopThrottle()) return;
     const { roomCode } = socket.data;
     if (!roomCode || !canControl()) {
@@ -158,9 +158,49 @@ export function registerGameHandlers(
       return;
     }
 
-    const result = gameManager.stopGame(roomCode);
+    const result = gameManager.stopGame(roomCode, {
+      showResults: data?.showResults !== false,
+    });
     if (result.error) {
       socket.emit('error', { code: 'STOP_ERROR', message: result.error });
+    }
+  });
+
+  socket.on('host:restart-game', (data) => {
+    if (!startStopThrottle()) return;
+    const { roomCode } = socket.data;
+    if (!roomCode || !canControl()) return;
+    const result = gameManager.restartGame(roomCode, data?.tutorial === true);
+    if (result.error) {
+      socket.emit('error', { code: 'START_ERROR', message: result.error });
+    }
+  });
+
+  // Pause / resume / skip / stop-waiting — the host's in-game controls.
+  socket.on('host:flow-action', (data) => {
+    if (!hostActionLimiter()) return;
+    const { roomCode, isHost, playerId } = socket.data;
+    if (!roomCode || !canControl()) return;
+    switch (data?.action) {
+      case 'pause': {
+        const room = roomManager.getRoom(roomCode);
+        const name = isHost
+          ? null
+          : (room?.players.find((p) => p.id === playerId)?.name ?? null);
+        gameManager.pause(roomCode, name);
+        break;
+      }
+      case 'resume':
+        gameManager.resume(roomCode);
+        break;
+      case 'skip':
+        gameManager.skip(roomCode);
+        break;
+      case 'stop-waiting':
+        if (typeof data.playerId === 'string') {
+          gameManager.stopWaiting(roomCode, data.playerId);
+        }
+        break;
     }
   });
 

@@ -3,6 +3,7 @@ import type { DrawOp } from '@igra/shared';
 import { socket } from './socket';
 import { useRoomStore } from './store/roomStore';
 import { useGameStore } from './store/gameStore';
+import { useFlowStore } from './store/flowStore';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
@@ -78,6 +79,7 @@ export function App() {
     });
 
     socket.on('game:started', ({ gameState }) => {
+      useFlowStore.setState({ flow: null });
       setGameState(gameState);
       setStatus('in-game');
       clearChat();
@@ -112,7 +114,19 @@ export function App() {
       });
     });
 
-    socket.on('game:ended', ({ awards }) => {
+    socket.on('game:flow', ({ flow }) => {
+      useFlowStore.setState({ flow });
+    });
+
+    socket.on('game:ended', ({ awards, skipResults }) => {
+      useFlowStore.setState({ flow: null });
+      // "Bez rezultata" — straight back to the lobby, no diplomas.
+      if (skipResults) {
+        setAwards(null);
+        resetGame();
+        setStatus('lobby');
+        return;
+      }
       // Show the "utešne diplome" overlay when the game ranked players; hold
       // long enough to read them before dropping back to the lobby.
       const hasAwards = !!awards && awards.length > 0;
@@ -174,6 +188,7 @@ export function App() {
       socket.off('game:timer');
       socket.off('game:ops-append');
       socket.off('game:ended');
+      socket.off('game:flow');
       socket.off('room:destroyed');
       socket.off('error');
       socket.off('connect');

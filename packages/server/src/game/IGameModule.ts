@@ -1,4 +1,10 @@
-import type { Room, GameState, DrawOp, DiplomaCandidate } from '@igra/shared';
+import type {
+  Room,
+  GameState,
+  DrawOp,
+  DiplomaCandidate,
+  GameFlowCollection,
+} from '@igra/shared';
 
 export interface IGameModule {
   readonly gameId: string;
@@ -102,4 +108,37 @@ export interface IGameModule {
    * frame on read so it fires once.
    */
   getPendingFrame?(): unknown | null;
+
+  // --- Platform flow (pause / skip / "ne čekaj ga"), all optional ---------
+  // A module without these still pauses and stops like any other game; the
+  // host's skip button and the "who are we waiting for" UI just don't show.
+
+  /**
+   * Polled by GameManager after every emitted state. `collection` lists who
+   * the current input phase is waiting on (ids only — never answers; leave
+   * out `doneIds` where who-already-acted leaks something). `skipLabel` names
+   * what the host's skip button does in this phase, or null if it can't.
+   */
+  getFlowInfo?(
+    room: Room,
+    gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null };
+
+  /** The host skipped: close the current phase exactly as if its clock ran out. */
+  onHostSkip?(room: Room, gameState: GameState): GameState | null;
+
+  /**
+   * The host stopped waiting for this player: drop them from the current
+   * phase's expected snapshot and re-check completion (the same thing
+   * `onPlayerDisconnect` does past grace, without removing them). GameManager
+   * re-applies it on each new phase until the player acts or reconnects.
+   */
+  onStopWaiting?(room: Room, gameState: GameState, playerId: string): GameState | null;
+
+  /**
+   * A paused game resumed after `pausedMs`. Phase timers driven by `deltaMs`
+   * already stood still (no ticks while paused) — only Date.now() stamps
+   * (speed scoring, hint reveal) need shifting here.
+   */
+  onResume?(pausedMs: number): void;
 }
