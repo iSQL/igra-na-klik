@@ -64,7 +64,7 @@ export function VoteOptions({
           overflowY: 'auto',
         }}
       >
-        {options.map((opt) => {
+        {options.map((opt, i) => {
           const isMine = opt.id === myFakeOptionId;
           const isSelected = votedOptionId === opt.id;
           const disabled = hasVoted || isMine;
@@ -74,7 +74,10 @@ export function VoteOptions({
               key={opt.id}
               onClick={() => handleVote(opt.id)}
               disabled={disabled}
+              // Dealt like cards (2c), 60 ms apart — tappable from frame one.
+              className="tg-deal"
               style={{
+                animationDelay: `${i * 60}ms`,
                 minHeight: '56px',
                 background: isSelected
                   ? 'rgba(194,155,71,.14)'

@@ -587,10 +587,31 @@ export default function SpijunController() {
     body = (
       <div style={{ ...wrap, background: verdictWash(won ? 'correct' : 'wrong') }}>
         <RoundVerdict kind={won ? 'correct' : 'wrong'} icon="🕵️" title={outcomeText} points={roundScore} />
-        <p style={{ fontSize: '1rem', margin: 0 }}>
-          📍 <strong style={{ color: 'var(--amber)' }}>{host.location}</strong> · špijun:{' '}
-          <strong>{host.spyName}</strong>
-        </p>
+        {/* The location card turns over on every phone at once (2c). */}
+        <div
+          key={`loc-${host.round}`}
+          className="tg-flip"
+          style={{
+            padding: '14px 18px',
+            borderRadius: 18,
+            background: 'var(--bg-secondary)',
+            border: '1.5px solid var(--accent)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+            Lokacija
+          </span>
+          <span className="display" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--amber)', lineHeight: 1.1 }}>
+            📍 {host.location}
+          </span>
+          <span style={{ fontSize: '0.95rem' }}>
+            špijun: <strong>{host.spyName}</strong>
+          </span>
+        </div>
       </div>
     );
   } else if (phase === 'ended') {

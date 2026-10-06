@@ -16,6 +16,7 @@ import { ChatHead } from './components/ChatHead';
 import { KnockBanner } from './components/KnockBanner';
 import { ConnectionStatus, ProblemScreen } from './components/ConnectionStatus';
 import { RulesScreen } from './components/RulesScreen';
+import { HostlessLeaderboard } from './components/HostlessLeaderboard';
 import { bindKnockSocket } from './store/knockStore';
 import { bindFlowSocket } from './store/flowStore';
 import { markSeen } from './components/FirstTimeHint';
@@ -61,10 +62,12 @@ function GameEndedOverlay({
         padding: '1.5rem',
       }}
     >
+      {/* Kraj igre (2c): confetti only for the top three. */}
+      {placement && placement.rank <= 3 && <Confetti />}
       <div
         style={{
           textAlign: 'center',
-          animation: 'igra-pop .5s',
+          animation: placement && placement.rank <= 3 ? 'igra-pop .5s' : 'igra-fade .4s ease',
           // Solid card so the overlay text never bleeds into the game
           // screen still rendered behind the translucent gold gradient.
           background: 'rgba(11,23,40,.92)',
@@ -172,68 +175,13 @@ function GameEndedOverlay({
               textAlign: 'left',
             }}
           >
-            {placement.standings.map((s) => {
-              const isMe = s.playerId === myId;
-              const rankColor =
-                s.rank === 1
-                  ? 'var(--amber)'
-                  : s.rank === 2
-                    ? '#C9CCE0'
-                    : s.rank === 3
-                      ? '#D8916A'
-                      : 'var(--dim)';
-              return (
-                <div
-                  key={s.playerId}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.35rem 0.6rem',
-                    background: isMe
-                      ? 'rgba(194,155,71,.16)'
-                      : 'var(--bg-secondary)',
-                    border: `1px solid ${isMe ? 'var(--accent)' : 'var(--line)'}`,
-                    borderRadius: '10px',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  <span
-                    className="display"
-                    style={{
-                      fontWeight: 700,
-                      color: rankColor,
-                      minWidth: '1.3rem',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {s.rank}
-                  </span>
-                  <span
-                    className="avatar-tile"
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: s.avatarColor,
-                    }}
-                  />
-                  <span
-                    style={{
-                      flex: 1,
-                      fontWeight: isMe ? 800 : 600,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {s.name}
-                  </span>
-                  <span className="display" style={{ fontWeight: 700 }}>
-                    {s.score.toLocaleString()}
-                  </span>
-                </div>
-              );
-            })}
+            {/* Same standings as every game's own (Kontroler kit 2f). */}
+            <HostlessLeaderboard
+              title=""
+              entries={placement.standings}
+              myPlayerId={myId ?? ''}
+              embedded
+            />
           </div>
         )}
         <p
@@ -247,6 +195,41 @@ function GameEndedOverlay({
           {t('reconnect.returningToLobby')}
         </p>
       </div>
+    </div>
+  );
+}
+
+const CONFETTI_COLORS = ['#C29B47', '#E3B45E', '#D97B6C', '#6FC2BB', '#8FA3D9', '#A9C46C', '#FAF6F0'];
+
+function Confetti() {
+  return (
+    <div aria-hidden style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      {Array.from({ length: 36 }, (_, i) => {
+        // Deterministic spread — no Math.random in render.
+        const x = (i * 53) % 100;
+        const k = ((i * 29) % 13) / 12 - 0.5;
+        return (
+          <span
+            key={i}
+            className="tg-confetti"
+            style={
+              {
+                position: 'absolute',
+                top: 0,
+                left: `${x}%`,
+                width: 8,
+                height: i % 3 === 0 ? 14 : 8,
+                borderRadius: i % 2 ? 2 : 999,
+                background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+                '--dx': `${k * 160}px`,
+                '--rot': `${360 + k * 540}deg`,
+                '--dur': `${2.2 + ((i * 17) % 10) / 10}s`,
+                '--delay': `${((i * 7) % 10) / 20}s`,
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
     </div>
   );
 }

@@ -92,6 +92,14 @@ export function RoundVerdict({
         flexShrink: 0,
       }}
     >
+      {/* Tok igre 2a: the verdict's colour floods out from the centre. */}
+      {kind !== 'neutral' && (
+        <div
+          aria-hidden
+          className="tg-flood"
+          style={{ position: 'fixed', inset: 0, background: s.bg, pointerEvents: 'none', zIndex: 2 }}
+        />
+      )}
       <span
         style={{
           width: 72,

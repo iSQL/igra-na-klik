@@ -37,6 +37,68 @@ export default function PuzlaController() {
   return <Finale host={host} playerId={playerId} hostless={hostless} />;
 }
 
+// --- pregled → sto (2c) ----------------------------------------------------------
+
+/**
+ * The picture everyone just memorised breaks into pieces that drop onto the
+ * table (600 ms), once, as the board appears. Purely visual — a coarse grid
+ * (not the real cut) with pointer-events off, so the table is live at once.
+ */
+function Shatter({ host }: { host: PuzlaHostData }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setOn(false), 1000);
+    return () => clearTimeout(t);
+  }, []);
+  if (!on) return null;
+  const { imageW, imageH } = host.geo;
+  const cols = Math.max(2, Math.min(host.geo.cols, 6));
+  const rows = Math.max(2, Math.min(host.geo.rows, 6));
+  const aspect = imageW > 0 && imageH > 0 ? imageW / imageH : 1;
+  const width = `min(92vw, ${45 * aspect}vh)`;
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute',
+        left: '50%',
+        top: '45%',
+        transform: 'translate(-50%, -50%)',
+        width,
+        aspectRatio: String(aspect),
+        display: 'grid',
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
+        pointerEvents: 'none',
+        zIndex: 2,
+      }}
+    >
+      {Array.from({ length: cols * rows }, (_, i) => {
+        const c = i % cols;
+        const r = Math.floor(i / cols);
+        // Deterministic scatter per piece, so a re-render doesn't reshuffle.
+        const k = ((i * 37) % 11) / 10 - 0.5;
+        return (
+          <span
+            key={i}
+            className="tg-fall"
+            style={
+              {
+                backgroundImage: `url(${host.imageUrl})`,
+                backgroundSize: `${cols * 100}% ${rows * 100}%`,
+                backgroundPosition: `${(c / (cols - 1)) * 100}% ${(r / (rows - 1)) * 100}%`,
+                animationDelay: `${(r * cols + c) * (240 / (cols * rows))}ms`,
+                '--dx': `${k * 120}px`,
+                '--rot': `${k * 160}deg`,
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 // --- pregled ---------------------------------------------------------------------
 
 function Preview({ host, seconds }: { host: PuzlaHostData; seconds: number }) {
@@ -354,6 +416,7 @@ function Board({
       }}
     >
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }} />
+      <Shatter host={host} />
 
       {/* HUD */}
       <div

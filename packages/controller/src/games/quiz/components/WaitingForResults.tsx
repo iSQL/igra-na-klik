@@ -13,6 +13,14 @@ export function WaitingForResults({ option, players }: WaitingForResultsProps) {
   // Hex, not a CSS var — the glow appends alpha suffixes.
   const color = option?.color ?? '#c29b47';
   return (
+    <>
+      {/* Tok igre 2a: the picked tile's colour floods the screen as it
+          becomes the waiting screen. */}
+      <div
+        aria-hidden
+        className="tg-burst"
+        style={{ position: 'fixed', inset: 0, background: color, pointerEvents: 'none', zIndex: 2 }}
+      />
     <WaitingPanel
       hero={
         <div
@@ -28,7 +36,7 @@ export function WaitingForResults({ option, players }: WaitingForResultsProps) {
             justifyContent: 'space-between',
             textAlign: 'left',
             boxShadow: `0 0 0 6px ${color}40, 0 20px 50px ${color}59`,
-            animation: 'igra-pop .4s',
+            animation: 'igra-pop .3s cubic-bezier(.34,1.56,.64,1)',
           }}
         >
           <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>
@@ -53,5 +61,6 @@ export function WaitingForResults({ option, players }: WaitingForResultsProps) {
       progressLabel="Ko je odgovorio"
       players={players}
     />
+    </>
   );
 }

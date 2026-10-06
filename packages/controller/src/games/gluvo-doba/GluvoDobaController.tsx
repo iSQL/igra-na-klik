@@ -767,8 +767,21 @@ export default function GluvoDobaController() {
 
   return (
     <>
-      {backdrop && (
-        <div aria-hidden style={{ position: 'fixed', inset: 0, background: backdrop, pointerEvents: 'none' }} />
+      {backdrop === BG.dawn ? (
+        // Noć → Zora (2c): the gold sky rises over the night, bottom up.
+        <>
+          <div aria-hidden style={{ position: 'fixed', inset: 0, background: BG.night, pointerEvents: 'none' }} />
+          <div
+            aria-hidden
+            key={`zora-${host.day}`}
+            className="tg-sunrise"
+            style={{ position: 'fixed', inset: 0, background: backdrop, pointerEvents: 'none' }}
+          />
+        </>
+      ) : (
+        backdrop && (
+          <div aria-hidden style={{ position: 'fixed', inset: 0, background: backdrop, pointerEvents: 'none' }} />
+        )
       )}
       <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
         <GameFrame
@@ -1047,12 +1060,15 @@ function Screen({
             🌪️ Zduhać (<b>{host.zduhacSaved.name}</b>) je presreo napad u oblacima!
           </DawnNote>
         )}
-        {deaths.map((d) => (
-          <DeathCard key={d.playerId} death={d} avatar={avatarOf(d.playerId)} />
-        ))}
-        {deaths.length === 0 && !host.peacefulFirstNight && !host.zduhacSaved && (
-          <DawnNote>Niko nije stradao ove noći.</DawnNote>
-        )}
+        {/* The victim's name only once the sky has turned (2c). */}
+        <div className="tg-after-sky" style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
+          {deaths.map((d) => (
+            <DeathCard key={d.playerId} death={d} avatar={avatarOf(d.playerId)} />
+          ))}
+          {deaths.length === 0 && !host.peacefulFirstNight && !host.zduhacSaved && (
+            <DawnNote>Niko nije stradao ove noći.</DawnNote>
+          )}
+        </div>
         {host.mutedToday && (
           <DawnNote>
             👹 <b>{host.mutedToday.name}</b> je preplašen — danas ne glasa.

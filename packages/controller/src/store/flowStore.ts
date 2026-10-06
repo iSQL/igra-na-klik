@@ -34,7 +34,17 @@ export function formatClock(secs: number): string {
 
 /** Wire the flow events; returns the cleanup. Called once from App. */
 export function bindFlowSocket(): () => void {
-  const onFlow = ({ flow }: { flow: GameFlowState }) => useFlowStore.setState({ flow });
+  const onFlow = ({ flow }: { flow: GameFlowState }) =>
+    useFlowStore.setState((s) => {
+      // The server knows when each player dropped — including drops this phone
+      // missed while it was offline itself. Shift into this phone's clock.
+      const skew = Date.now() - flow.serverNow;
+      const offlineSince = { ...s.offlineSince };
+      for (const [id, at] of Object.entries(flow.offlineSince ?? {})) {
+        offlineSince[id] = at + skew;
+      }
+      return { flow, offlineSince };
+    });
   const onReset = () => useFlowStore.setState({ flow: null, panel: null });
   const onLeft = ({ playerId }: { playerId: string }) =>
     useFlowStore.setState((s) => ({

@@ -78,6 +78,7 @@ export default function HotPotatoController() {
       {hot && (
         <div
           aria-hidden
+          className="tg-heat"
           style={{ position: 'fixed', inset: 0, zIndex: 0, background: HOT_BG, pointerEvents: 'none' }}
         />
       )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { socket } from '../../socket';
@@ -68,6 +68,15 @@ export default function TajniAgentiController() {
       roundKey={phase === 'clue-giving' ? `${currentTeam}:${turnsRemaining ?? ''}` : undefined}
     >
       <TajniAgentiBody />
+      {/* The assassin (2c): the whole screen flashes red. */}
+      {phase === 'ended' &&
+        (data.ended as TajniAgentiEndedData | undefined)?.reason === 'assassin' && (
+          <div
+            aria-hidden
+            className="tg-red-flash"
+            style={{ position: 'fixed', inset: 0, background: 'var(--danger)', pointerEvents: 'none', zIndex: 30 }}
+          />
+        )}
     </GameFrame>
   );
 }
@@ -861,6 +870,7 @@ function GuessingGrid({
   ownKey?: TajniAgentiSecretCard[];
 }) {
   const haptics = useHaptics();
+  const fresh = useJustRevealed(cards);
   const tap = (cardId: number) => {
     haptics.tap();
     socket.emit('game:player-action', {
@@ -926,6 +936,7 @@ function GuessingGrid({
         }}
       >
         {cards.map((card) => {
+          const flip = fresh.has(card.id);
           // Duet: a card already burned as a bystander against the current
           // clue-giver's key can't be guessed again this direction.
           const burned =
@@ -950,6 +961,7 @@ function GuessingGrid({
           return (
             <button
               key={card.id}
+              className={flip ? 'tg-flip' : undefined}
               onClick={() => !card.revealed && !burned && tap(card.id)}
               disabled={card.revealed || burned}
               style={{
@@ -1099,6 +1111,7 @@ function WaitingBoard({
   subtitle?: string;
   accent?: string;
 }) {
+  const fresh = useJustRevealed(cards);
   return (
     <div
       style={{
@@ -1141,6 +1154,7 @@ function WaitingBoard({
         }}
       >
         {cards.map((card) => {
+          const flip = fresh.has(card.id);
           const bg =
             card.revealed && card.type ? typeColor(card.type) : '#f3eedd';
           const fg = card.revealed
@@ -1153,6 +1167,7 @@ function WaitingBoard({
           return (
             <div
               key={card.id}
+              className={flip ? 'tg-flip' : undefined}
               style={{
                 background: bg,
                 color: fg,
@@ -1445,4 +1460,30 @@ function EndedScreen({
       </p>
     </div>
   );
+}
+
+/**
+ * Cards revealed since the last render (2c): they flip over to their team's
+ * colour once. Ids seen at mount count as old — a remount never re-flips.
+ */
+function useJustRevealed(cards: { id: number; revealed: boolean }[]): Set<number> {
+  const seen = useRef<Set<number> | null>(null);
+  const [fresh, setFresh] = useState<Set<number>>(() => new Set());
+  const key = cards
+    .filter((c) => c.revealed)
+    .map((c) => c.id)
+    .join(',');
+  useEffect(() => {
+    const now = new Set(cards.filter((c) => c.revealed).map((c) => c.id));
+    const before = seen.current;
+    seen.current = now;
+    if (!before) return;
+    const added = new Set([...now].filter((id) => !before.has(id)));
+    if (added.size === 0) return;
+    setFresh(added);
+    const t = setTimeout(() => setFresh(new Set()), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return fresh;
 }

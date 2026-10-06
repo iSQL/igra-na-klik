@@ -124,6 +124,7 @@ export class RoomManager {
       if (existing.isConnected) return { error: 'Name already taken' };
       existing.reconnectToken = generateReconnectToken();
       existing.isConnected = true;
+      delete existing.disconnectedAt;
       logger.info('player_joined', {
         room: room.code,
         name: existing.name,
@@ -204,6 +205,8 @@ export class RoomManager {
     const player = room.players.find((p) => p.id === playerId);
     if (!player) return false;
     player.isConnected = connected;
+    if (connected) delete player.disconnectedAt;
+    else player.disconnectedAt = player.disconnectedAt ?? Date.now();
     return true;
   }
 

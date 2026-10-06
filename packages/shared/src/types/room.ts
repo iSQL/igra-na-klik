@@ -12,6 +12,9 @@ export interface Player {
   // plus every game finished in this room). Powers the tutorial's
   // "Preporuka" — most of the room hasn't played this one yet.
   playedGames?: string[];
+  // Server epoch ms of the last disconnect while still in grace; absent when
+  // connected. The holder's "van mreže 0:40" counts from it.
+  disconnectedAt?: number;
 }
 
 export type PublicPlayer = Omit<Player, 'reconnectToken'>;

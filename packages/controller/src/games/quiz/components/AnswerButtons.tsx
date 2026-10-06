@@ -51,7 +51,7 @@ export function AnswerButtons({
         height: '100%',
       }}
     >
-      {options.map((option) => {
+      {options.map((option, i) => {
         const isSelected = selectedIndex === option.index;
         const textColor = OPTION_TEXT_COLORS[option.color] ?? '#fff';
         return (
@@ -59,7 +59,10 @@ export function AnswerButtons({
             key={option.index}
             onClick={() => handleAnswer(option.index)}
             disabled={hasAnswered}
+            // Tok igre 2a: tiles enter one after another, live from frame one.
+            className="tg-tile"
             style={{
+              animationDelay: `${i * 40}ms`,
               position: 'relative',
               background: option.color,
               border: isSelected ? '4px solid #fff' : '4px solid transparent',

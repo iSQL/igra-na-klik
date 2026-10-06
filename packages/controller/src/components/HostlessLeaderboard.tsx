@@ -1,4 +1,10 @@
+import { useLayoutEffect, useRef } from 'react';
 import { usePlayerStore } from '../store/playerStore';
+import { useGameStore } from '../store/gameStore';
+
+// Your last place in this game — the standings slide your row from there
+// (Tok igre 2a). Module-level: a leaderboard is a fresh mount every time.
+let lastMyRank: { gameId: string | null; rank: number } | null = null;
 
 // Standings for the phone (Kontroler kit 2f): a top-3 podium, the rest as
 // rows, and a pinned "you" card with your place and the gap to the player
@@ -44,6 +50,24 @@ export function HostlessLeaderboard({
   const rows = entries.slice(podium.length);
   const myIndex = entries.findIndex((e) => e.playerId === myPlayerId);
   const me = myIndex >= 0 ? entries[myIndex] : undefined;
+
+  // Your row slides from your previous place to the new one (400 ms); the
+  // others stand still.
+  const gameId = useGameStore((s) => s.gameId);
+  const myRowRef = useRef<HTMLDivElement>(null);
+  const myRank = me?.rank;
+  useLayoutEffect(() => {
+    if (myRank === undefined) return;
+    const prev = lastMyRank && lastMyRank.gameId === gameId ? lastMyRank.rank : null;
+    lastMyRank = { gameId, rank: myRank };
+    const el = myRowRef.current;
+    if (prev === null || prev === myRank || !el?.animate) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    el.animate(
+      [{ transform: `translateY(${(prev - myRank) * 58}px)` }, { transform: 'none' }],
+      { duration: 400, easing: 'cubic-bezier(.22,1,.36,1)' }
+    );
+  }, [myRank, gameId]);
 
   return (
     <div
@@ -147,7 +171,10 @@ export function HostlessLeaderboard({
           return (
             <div
               key={e.playerId}
+              ref={isMe ? myRowRef : undefined}
               style={{
+                position: 'relative',
+                zIndex: isMe ? 1 : undefined,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,

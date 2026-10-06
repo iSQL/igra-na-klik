@@ -504,6 +504,12 @@ export class GameManager {
       skipLabel: active.module.onHostSkip ? (info?.skipLabel ?? null) : null,
       notWaitingIds: [...active.notWaiting],
       canStopWaiting: !!active.module.onStopWaiting,
+      offlineSince: Object.fromEntries(
+        room.players
+          .filter((p) => !p.isConnected && p.disconnectedAt)
+          .map((p) => [p.id, p.disconnectedAt as number])
+      ),
+      serverNow: Date.now(),
       round: active.gameState.round,
       totalRounds: active.gameState.totalRounds,
     };
@@ -539,7 +545,8 @@ export class GameManager {
     }
 
     const flow = this.buildFlow(active, room);
-    const sig = JSON.stringify(flow);
+    // serverNow moves every call — keep it out of the change check.
+    const sig = JSON.stringify({ ...flow, serverNow: 0 });
     if (sig === active.lastFlowSignature) return;
     active.lastFlowSignature = sig;
     this.io.to(roomCode).emit('game:flow', { flow });

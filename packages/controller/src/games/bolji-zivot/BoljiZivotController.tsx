@@ -17,7 +17,12 @@ import {
 } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 import { BZFxLayer } from './components/BZFxLayer';
-import { TutorialCoach, TutorialDone, TutorialHostCard } from '../../components/kit/Tutorial';
+import {
+  TutorialBadge,
+  TutorialCoach,
+  TutorialDone,
+  TutorialHostCard,
+} from '../../components/kit/Tutorial';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
 
@@ -424,7 +429,7 @@ export default function BoljiZivotController() {
           {statusLine(phase, data, me)}
         </span>
         {tutorial ? (
-          <span style={{ fontWeight: 700, color: 'var(--accent)' }}>🎓</span>
+          <TutorialBadge gameId="bolji-zivot" phase={phase} />
         ) : (
           <span style={{ fontFamily: 'monospace', fontWeight: 700, color: timeRemaining <= 5 ? 'var(--danger)' : 'var(--text-primary)' }}>
             {timeRemaining}s

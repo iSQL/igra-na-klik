@@ -87,6 +87,10 @@ export interface GameFlowState {
   notWaitingIds: string[];
   /** The module supports "ne čekaj ga" at all (onStopWaiting). */
   canStopWaiting: boolean;
+  /** playerId → server epoch ms they dropped (offline players only). */
+  offlineSince: Record<string, number>;
+  /** Server clock at emit — lets a phone convert offlineSince to its own. */
+  serverNow: number;
   round: number;
   totalRounds: number;
 }
