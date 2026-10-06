@@ -332,6 +332,71 @@ async function main(): Promise<void> {
   emit(bane.s, 'host:stop-game', { showResults: false });
   await until('restart: zaustavljeno', () => !!va.ended);
 
+  // --- Preskoči u ostalim igrama: svaki skip pomera fazu, ništa ne puca ---
+  const SKIP_GAMES = [
+    'dve-istine-i-laz',
+    'fake-artist',
+    'ko-sam-ja',
+    'slozilica',
+    'draw-guess',
+    'spot-it',
+    'slepi-telefoni',
+    'hot-potato',
+    'ko-bi-pre',
+    'fibbage',
+    'tajni-agenti',
+    'asocijacije',
+    'spijun',
+  ];
+  for (const gameId of SKIP_GAMES) {
+    await sleep(600);
+    va.flow = null;
+    emit(bane.s, 'host:start-game', { gameId, ...(gameId === 'tajni-agenti' ? { tajniAgentiMode: 'classic' } : {}) });
+    const started = await until(`${gameId}: kreće`, () => !va.ended && va.state?.gameId === gameId, 6000);
+    if (!started) continue;
+    if (gameId === 'tajni-agenti') {
+      emit(bane.s, 'host:game-action', { action: 'tajni-agenti:auto-balance' });
+      await sleep(200);
+      emit(bane.s, 'host:game-action', { action: 'tajni-agenti:start-round' });
+    }
+    if (gameId === 'dve-istine-i-laz') {
+      // Preskakanje pisanja traži bar dve izjave (inače bi igra stala).
+      await sleep(300);
+      for (const s of [ana, bane.s]) {
+        emit(s, 'game:player-action', {
+          action: 'dveistine:submit',
+          data: { truth1: 'Volim planine', truth2: 'Imam psa Žuću', lie: 'Bio sam na Mesecu' },
+        });
+      }
+    }
+    // Vruć krompir: dok bomba gori nema preskakanja — čeka se eksplozija.
+    // Bomba koja gori i Špijunovo pogađanje lokacije se ne preskaču.
+    const minMoves = gameId === 'hot-potato' || gameId === 'spijun' ? 1 : 2;
+    const sig = () => `${va.state?.phase}|${va.state?.round}|${JSON.stringify(va.state?.data ?? {})}`;
+    let moved = 0;
+    for (let i = 0; i < 6 && !va.ended; i++) {
+      // Tiho: faza bez preskakanja (npr. poslednji rezultat) nije greška.
+      const end = Date.now() + 20000;
+      while (!va.flow?.skipLabel && !va.ended && Date.now() < end) await sleep(40);
+      if (!va.flow?.skipLabel || va.ended) break;
+      const before = sig();
+      emit(bane.s, 'host:flow-action', { action: 'skip' });
+      const changed = await until(
+        `${gameId}: „${va.flow?.skipLabel}” pomera igru`,
+        () => !!va.ended || sig() !== before,
+        3000
+      );
+      if (!changed) break;
+      moved++;
+    }
+    check(`${gameId}: preskakanje radi (${moved}×)`, moved >= minMoves);
+    if (!va.ended) {
+      await sleep(600);
+      emit(bane.s, 'host:stop-game', { showResults: false });
+      await until(`${gameId}: zaustavljeno`, () => !!va.ended);
+    }
+  }
+
   for (const s of [ana, bane.s, cane.s, late, ...extra.map((e) => e.s)]) s.close();
   httpServer.close();
 

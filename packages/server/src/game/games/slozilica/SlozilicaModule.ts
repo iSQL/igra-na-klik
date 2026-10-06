@@ -16,6 +16,7 @@ import {
   scoreWord,
   SLOZILICA_MIN_WORD,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import {
@@ -171,6 +172,43 @@ export class SlozilicaModule extends BaseGameModule {
     if (this.state.phase !== 'pisanje') return null;
     this.state.expected.delete(playerId);
     this.state.done.delete(playerId);
+    if (this.allDone(room)) this.finishRound(room);
+    return this.buildGameState(room);
+  }
+
+  // --- Tok igre: pauza / preskoči / ne čekaj --------------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    if (phase === 'pisanje') {
+      // Samo ko je rekao „gotov sam" — nikad reči ni njihov broj po igraču.
+      const expectedIds = [...this.state.expected];
+      const doneIds = expectedIds.filter((id) => this.state.done.has(id));
+      return {
+        collection: { expectedIds, doneIds, doneCount: doneIds.length, verb: 'acted' },
+        skipLabel: 'Zatvori rundu',
+      };
+    }
+    if (phase === 'najava') return { collection: null, skipLabel: 'Odmah na slaganje' };
+    if (phase === 'rezultati' && this.state.currentRound < this.state.totalRounds) {
+      return { collection: null, skipLabel: 'Sledeća runda' };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    // Isto što bi uradio istek sata u tekućoj fazi.
+    this.state.phaseTimeRemaining = 0;
+    return this.onTick(room, gameState, 0);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (this.state.phase !== 'pisanje') return null;
+    if (!this.state.expected.delete(playerId)) return null;
     if (this.allDone(room)) this.finishRound(room);
     return this.buildGameState(room);
   }

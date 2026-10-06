@@ -421,7 +421,17 @@ export class GluvoDobaModule extends BaseGameModule {
       const doneCount = expectedIds.filter((id) => this.state.dayVotes.has(id)).length;
       return { collection: { expectedIds, doneCount, verb: 'voted' }, skipLabel: null };
     }
+    // Same as the in-game "skip discussion"; the proba has its own button.
+    if (this.state.phase === 'diskusija' && !this.tutorialMode) {
+      return { collection: null, skipLabel: 'Preskoči raspravu' };
+    }
     return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (this.state.phase !== 'diskusija' || this.tutorialMode) return null;
+    this.enterGlasanje();
+    return this.buildGameState(room);
   }
 
   // --- Phase machine -----------------------------------------------------

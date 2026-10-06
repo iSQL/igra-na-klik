@@ -178,6 +178,28 @@ export class TajniAgentiModule extends BaseGameModule {
     }
   }
 
+  // --- Platform flow (pause / skip) ---------------------------------------
+
+  getFlowInfo(): { collection: null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    const skipLabel =
+      phase === 'clue-giving'
+        ? 'Preskoči potez'
+        : phase === 'guessing'
+          ? 'Završi potez'
+          : phase === 'turn-results' && !this.state.gameOver
+            ? 'Sledeći potez'
+            : null;
+    return { collection: null, skipLabel };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (!this.getFlowInfo().skipLabel) return null;
+    // Same as the clock running out: a skipped clue forfeits the turn.
+    this.advanceOnTimeout(room);
+    return this.buildGameState(room);
+  }
+
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {
     if (this.state.phase === 'ended') return null;
 

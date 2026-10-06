@@ -293,6 +293,28 @@ export class HotPotatoModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
+  // --- Platform flow (pause / skip) ---------------------------------------
+  // A live bomb is never skippable — that would be an explosion. Only the
+  // beats between rounds are.
+
+  getFlowInfo(): { collection: null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    if (phase === 'intro') {
+      const loading = this.state.mode === 'kviz' && this.state.questions.length === 0;
+      return { collection: null, skipLabel: loading ? null : 'Kreni odmah' };
+    }
+    if (phase === 'exploded' && this.state.aliveOrder.length > 1) {
+      return { collection: null, skipLabel: 'Sledeća runda' };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (!this.getFlowInfo().skipLabel) return null;
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
   // --- Phase machine -----------------------------------------------------
 
   private advancePhase(room: Room): void {

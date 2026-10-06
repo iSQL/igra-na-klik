@@ -16,6 +16,7 @@ import {
   clampGameRounds,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import {
@@ -255,6 +256,69 @@ export class KoSamJaModule extends BaseGameModule {
       this.transitionToResults(room);
     }
     return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'collecting-upfront') {
+      const expectedIds = [...this.state.upfrontAssignments]
+        .filter(([, assigned]) => assigned.length > 0)
+        .map(([id]) => id);
+      const doneIds = expectedIds.filter((id) => {
+        const submitted = this.state.upfrontAnswers.get(id);
+        const assigned = this.state.upfrontAssignments.get(id) ?? [];
+        return !!submitted && assigned.every((qid) => submitted.has(qid));
+      });
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'wrote' };
+    } else if (phase === 'guessing') {
+      const expectedIds = [...this.state.expectedGuesserIds];
+      const doneIds = expectedIds.filter((id) => this.state.roundGuesses.has(id));
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'answered' };
+    }
+    const last = this.state.currentRoundIndex >= this.state.selectedRounds.length - 1;
+    const skipLabel =
+      phase === 'collecting-upfront'
+        ? 'Zatvori pisanje'
+        : phase === 'showing-question'
+          ? 'Odmah na pitanje'
+          : phase === 'subject-picking'
+            ? 'Preskoči rundu'
+            : phase === 'guessing'
+              ? 'Zatvori pogađanje'
+              : phase === 'showing-results' && !last
+                ? 'Sledeća runda'
+                : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (this.state.phase === 'collecting-upfront') {
+      if (!this.state.upfrontAssignments.delete(playerId)) return null;
+      if (this.allConnectedDoneWithUpfront(room)) this.transitionFromCollectionToFirstRound(room);
+    } else if (this.state.phase === 'guessing') {
+      if (!this.state.expectedGuesserIds.delete(playerId)) return null;
+      if (this.allExpectedGuessed(room)) this.transitionToResults(room);
+    } else {
+      return null;
+    }
+    return this.buildGameState(room);
+  }
+
+  onResume(pausedMs: number): void {
+    // Guess speed is measured from here — the pause isn't thinking time.
+    this.state.roundQuestionStartTime += pausedMs;
   }
 
   // ---------------------------------------------------------------- helpers

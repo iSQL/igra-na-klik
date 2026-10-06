@@ -85,6 +85,8 @@ export interface GameFlowState {
   skipLabel: string | null;
   /** Players the host chose not to wait for (until they act or reconnect). */
   notWaitingIds: string[];
+  /** The module supports "ne čekaj ga" at all (onStopWaiting). */
+  canStopWaiting: boolean;
   round: number;
   totalRounds: number;
 }

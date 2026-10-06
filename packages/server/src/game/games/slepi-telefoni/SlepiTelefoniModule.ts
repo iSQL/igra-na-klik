@@ -13,6 +13,7 @@ import {
   clearOps,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import type { SlepiTelefoniInternalState } from './SlepiTelefoniState.js';
 import {
@@ -322,6 +323,43 @@ export class SlepiTelefoniModule extends BaseGameModule {
   private cleanText(raw: unknown, max: number): string {
     if (typeof raw !== 'string') return '';
     return raw.trim().slice(0, max);
+  }
+
+  // --- Platform flow (pause / skip) ---------------------------------------
+  // No "ne čekaj": who's expected is recomputed from who's connected, so an
+  // offline phone already isn't waited for.
+
+  getFlowInfo(
+    room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    if (phase === 'entering-prompts' || phase === 'drawing-step' || phase === 'guess-step') {
+      const expectedIds = this.expectedSubmitters(room);
+      const doneIds = expectedIds.filter((id) => this.state.submissions.get(id)?.done);
+      return {
+        collection: {
+          expectedIds,
+          doneIds,
+          doneCount: doneIds.length,
+          verb: phase === 'drawing-step' ? 'acted' : 'wrote',
+        },
+        skipLabel: 'Zatvori korak',
+      };
+    }
+    if (phase === 'reveal' && this.state.revealChain + 1 < this.state.chains.length) {
+      return { collection: null, skipLabel: 'Sledeći lanac' };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    if (this.state.phase === 'reveal') {
+      return this.onHostAction(room, gameState, 'slepi:next-chain', {});
+    }
+    this.advancePhase(room);
+    return this.buildGameState(room);
   }
 
   // --- Phase state machine ---

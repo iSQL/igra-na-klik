@@ -487,6 +487,28 @@ export class AsocijacijeModule extends BaseGameModule {
     }
   }
 
+  // --- Platform flow (pause / skip) ---------------------------------------
+
+  getFlowInfo(): { collection: null; skipLabel: string | null } {
+    return {
+      collection: null,
+      skipLabel: this.state.phase === 'playing' && this.state.activePlayerId ? 'Preskoči potez' : null,
+    };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    const s = this.state;
+    if (s.phase !== 'playing' || !s.activePlayerId) return null;
+    // Same as the turn clock running out.
+    s.lastResult = {
+      correct: false,
+      text: 'Domaćin je preskočio potez',
+      actorName: this.activeName(room),
+    };
+    this.passTurn(room);
+    return this.buildGameState(room);
+  }
+
   // --- Tick --------------------------------------------------------------
 
   onTick(room: Room, _gameState: GameState, deltaMs: number): GameState | null {

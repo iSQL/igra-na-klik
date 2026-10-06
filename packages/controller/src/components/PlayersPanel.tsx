@@ -80,6 +80,7 @@ export function PlayersPanel() {
   const target = selected ? room.players.find((p) => p.id === selected) ?? null : null;
   const canStopWaiting =
     !!target &&
+    !!flow?.canStopWaiting &&
     !!collection?.doneIds &&
     expected.has(target.id) &&
     !done.has(target.id) &&

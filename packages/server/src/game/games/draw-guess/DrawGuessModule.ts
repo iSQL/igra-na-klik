@@ -18,6 +18,7 @@ import {
   clampDrawTime,
   shuffled,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { DrawGuessInternalState, DrawGuessPhase } from './DrawGuessState.js';
@@ -240,6 +241,51 @@ export class DrawGuessModule extends BaseGameModule {
 
   onEnd(_room: Room, _gameState: GameState): void {
     this.usedWords.clear();
+  }
+
+  // --- Platform flow (pause / skip) ---------------------------------------
+  // No "ne čekaj" here: a guesser is only done once they guess right, so
+  // there's no snapshot to drop anyone from.
+
+  getFlowInfo(
+    room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'drawing') {
+      const drawerId = this.currentDrawerId();
+      const expectedIds = room.players
+        .filter((p) => p.isConnected && p.id !== drawerId)
+        .map((p) => p.id);
+      const doneIds = expectedIds.filter((id) => this.state.correctGuessers.includes(id));
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'answered' };
+    }
+    const lastTurn =
+      this.state.currentTurnIndex + 1 >= this.state.turnOrder.length &&
+      this.state.currentRound >= this.state.totalRounds;
+    const skipLabel =
+      phase === 'choosing-word'
+        ? 'Preskoči izbor reči'
+        : phase === 'drawing'
+          ? 'Završi crtanje'
+          : phase === 'turn-results'
+            ? 'Na tabelu'
+            : phase === 'leaderboard' && !lastTurn
+              ? 'Sledeći crtač'
+              : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  onResume(pausedMs: number): void {
+    // Guesser scoring and hint reveal both run off the drawing start.
+    if (this.state.drawingStartTime) this.state.drawingStartTime += pausedMs;
   }
 
   // --- Phase transitions ---

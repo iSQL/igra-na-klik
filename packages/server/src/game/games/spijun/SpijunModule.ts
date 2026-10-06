@@ -374,12 +374,21 @@ export class SpijunModule extends BaseGameModule {
     room: Room,
     _gameState: GameState
   ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    if (this.state.phase === 'discussion' && !this.state.tutorialMode) {
+      return { collection: null, skipLabel: 'Preskoči raspravu' };
+    }
     if (this.state.phase !== 'voting') return { collection: null, skipLabel: null };
     const expectedIds = [...this.state.expectedVoterIds].filter((id) =>
       room.players.some((p) => p.id === id)
     );
     const doneCount = expectedIds.filter((id) => this.state.votes.has(id)).length;
     return { collection: { expectedIds, doneCount, verb: 'voted' }, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (this.state.phase !== 'discussion' || this.state.tutorialMode) return null;
+    this.enterSpyGuess(room);
+    return this.buildGameState(room);
   }
 
   private advanceOnTimeout(room: Room): void {

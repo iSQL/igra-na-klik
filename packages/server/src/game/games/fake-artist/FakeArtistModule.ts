@@ -13,6 +13,7 @@ import type {
   Language,
 } from '@igra/shared';
 import { appendStrokeOp, getFakeArtistWords, shuffled } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { FakeArtistInternalState } from './FakeArtistState.js';
@@ -151,6 +152,47 @@ export class FakeArtistModule extends BaseGameModule {
         if (playerId === this.state.fakeArtistId) this.resolveResults(room);
         break;
     }
+    return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'voting') {
+      const expectedIds = [...this.state.expectedVoterIds];
+      const doneIds = expectedIds.filter((id) => this.state.votes.has(id));
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'voted' };
+    }
+    const skipLabel =
+      phase === 'reveal-role'
+        ? 'Odmah na crtanje'
+        : phase === 'drawing'
+          ? 'Preskoči potez'
+          : phase === 'voting'
+            ? 'Zatvori glasanje'
+            : phase === 'fake-guess'
+              ? 'Preskoči pogađanje'
+              : phase === 'results' && this.state.currentRound < this.state.totalRounds
+                ? 'Sledeća runda'
+                : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    this.advanceOnTimeout(room);
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (this.state.phase !== 'voting') return null;
+    if (!this.state.expectedVoterIds.delete(playerId)) return null;
+    if (this.allExpectedVoted(room)) this.transitionAfterVoting(room);
     return this.buildGameState(room);
   }
 

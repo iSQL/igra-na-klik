@@ -503,6 +503,7 @@ export class GameManager {
       collection: info?.collection ?? null,
       skipLabel: active.module.onHostSkip ? (info?.skipLabel ?? null) : null,
       notWaitingIds: [...active.notWaiting],
+      canStopWaiting: !!active.module.onStopWaiting,
       round: active.gameState.round,
       totalRounds: active.gameState.totalRounds,
     };

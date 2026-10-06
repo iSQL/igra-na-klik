@@ -87,6 +87,36 @@ export class SpotItModule extends BaseGameModule {
 
   onEnd(): void {}
 
+  // --- Platform flow (pause / skip) ---------------------------------------
+
+  getFlowInfo(): { collection: null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    const skipLabel =
+      phase === 'card-reveal'
+        ? 'Kreni odmah'
+        : phase === 'racing'
+          ? 'Završi rundu'
+          : phase === 'round-results' && this.state.currentRound < this.state.totalRounds
+            ? 'Sledeća runda'
+            : null;
+    return { collection: null, skipLabel };
+  }
+
+  onHostSkip(room: Room, _gameState: GameState): GameState | null {
+    if (!this.getFlowInfo().skipLabel) return null;
+    this.advancePhase(room);
+    return this.buildGameState(room);
+  }
+
+  onResume(pausedMs: number): void {
+    // Race time and the wrong-tap lockouts are wall-clock based.
+    const round = this.state.round;
+    if (round.raceStartTime) round.raceStartTime += pausedMs;
+    for (const [id, until] of round.lockedUntil) {
+      round.lockedUntil.set(id, until + pausedMs);
+    }
+  }
+
   private dealNewRound(room: Room, deck: number[][]): SpotItRoundState {
     // Deal to every player in the room (including mid-grace disconnects)
     // so a reconnect during the round still finds their card. removePlayer

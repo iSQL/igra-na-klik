@@ -18,6 +18,7 @@ import {
   timeoutShot,
   TIMEOUT_ZONE,
 } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { PenaliInternalState, PenaliTurn } from './PenaliState.js';
@@ -120,6 +121,46 @@ export class PenaliModule extends BaseGameModule {
         break;
     }
     return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip) ---------------------------------------
+  // No "ne čekaj": a turn is a duel of two — skipping it is the same thing.
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    let collection: GameFlowCollection | null = null;
+    if (phase === 'aiming') {
+      // Only who has committed — the same booleans the TV already shows,
+      // never the aim or the zone.
+      const turn = this.state.turn;
+      const expectedIds = [turn.shooterId, turn.keeperId].filter((id) => !!id);
+      const doneIds = expectedIds.filter((id) =>
+        id === turn.shooterId ? turn.aim !== null : turn.zone !== null
+      );
+      collection = { expectedIds, doneIds, doneCount: doneIds.length, verb: 'acted' };
+    }
+    const skipLabel =
+      phase === 'intro'
+        ? 'Odmah na šut'
+        : phase === 'aiming'
+          ? 'Preskoči potez'
+          : phase === 'shot'
+            ? 'Sledeći šut'
+            : phase === 'leaderboard' && this.state.currentRound < this.state.totalRounds
+              ? 'Sledeća runda'
+              : null;
+    return { collection, skipLabel };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    // Exactly what the clock running out would do (a timed-out shooter still
+    // gets the jittered auto-shot, a keeper who didn't pick scores 0).
+    this.state.phaseTimeRemaining = 0;
+    return this.onTick(room, gameState, 0);
   }
 
   onPlayerDisconnect(

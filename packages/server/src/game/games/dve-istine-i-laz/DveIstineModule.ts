@@ -10,6 +10,7 @@ import type {
   DveIstineStatement,
 } from '@igra/shared';
 import { shuffled } from '@igra/shared';
+import type { GameFlowCollection } from '@igra/shared';
 import { BaseGameModule } from '../../BaseGameModule.js';
 import { getGameTimings } from '../../timing-config.js';
 import type { DveIstineInternalState } from './DveIstineState.js';
@@ -97,6 +98,60 @@ export class DveIstineModule extends BaseGameModule {
     } else if (this.state.phase === 'guessing') {
       this.state.expectedGuesserIds.delete(playerId);
       if (this.allGuessed(room)) this.transitionToResults(room);
+    }
+    return this.buildGameState(room);
+  }
+
+  // --- Platform flow (pause / skip / ne čekaj) ---------------------------
+
+  getFlowInfo(
+    _room: Room,
+    _gameState: GameState
+  ): { collection: GameFlowCollection | null; skipLabel: string | null } {
+    const phase = this.state.phase;
+    if (phase === 'collecting') {
+      const expectedIds = [...this.state.expectedSubmitterIds];
+      const doneIds = expectedIds.filter((id) => this.state.submissions.has(id));
+      return {
+        collection: { expectedIds, doneIds, doneCount: doneIds.length, verb: 'wrote' },
+        // Fewer than two statements would end the game — that's not a skip.
+        skipLabel: this.state.submissions.size >= 2 ? 'Zatvori pisanje' : null,
+      };
+    }
+    if (phase === 'guessing') {
+      const expectedIds = [...this.state.expectedGuesserIds];
+      const doneIds = expectedIds.filter((id) => this.state.guesses.has(id));
+      return {
+        collection: { expectedIds, doneIds, doneCount: doneIds.length, verb: 'answered' },
+        skipLabel: 'Zatvori pogađanje',
+      };
+    }
+    if (
+      phase === 'showing-results' &&
+      this.state.currentRoundIndex < this.state.subjectOrder.length - 1
+    ) {
+      return { collection: null, skipLabel: 'Sledeća runda' };
+    }
+    return { collection: null, skipLabel: null };
+  }
+
+  onHostSkip(room: Room, gameState: GameState): GameState | null {
+    if (!this.getFlowInfo(room, gameState).skipLabel) return null;
+    if (this.state.phase === 'collecting') this.finalizeCollection(room);
+    else if (this.state.phase === 'guessing') this.transitionToResults(room);
+    else this.nextRoundOrEnd(room);
+    return this.buildGameState(room);
+  }
+
+  onStopWaiting(room: Room, _gameState: GameState, playerId: string): GameState | null {
+    if (this.state.phase === 'collecting') {
+      if (!this.state.expectedSubmitterIds.delete(playerId)) return null;
+      if (this.allSubmitted(room)) this.finalizeCollection(room);
+    } else if (this.state.phase === 'guessing') {
+      if (!this.state.expectedGuesserIds.delete(playerId)) return null;
+      if (this.allGuessed(room)) this.transitionToResults(room);
+    } else {
+      return null;
     }
     return this.buildGameState(room);
   }
