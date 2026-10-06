@@ -14,6 +14,7 @@ export function BZCardFace({ v, name, size = 72, paired, style }: FaceProps) {
   const h = size * 1.4;
   return (
     <div
+      data-bz-card
       style={{
         width: size,
         height: h,
@@ -73,6 +74,7 @@ export function BZCardBack({ pos, size = 72, highlight, dimmed, style }: BackPro
   const h = size * 1.4;
   return (
     <div
+      data-bz-card
       style={{
         width: size,
         height: h,
@@ -111,6 +113,7 @@ export function BZCardGap({ size = 72, style }: { size?: number; style?: CSSProp
   const h = size * 1.4;
   return (
     <div
+      data-bz-card
       style={{
         width: size,
         height: h,
