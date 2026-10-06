@@ -225,6 +225,42 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'positive',
     subtitle: 'Najviše dobijenih rundi',
   },
+  // Bedem
+  'gospodar-kula': {
+    id: 'gospodar-kula',
+    title: 'Gospodar kula',
+    emoji: '🏹',
+    tone: 'positive',
+    subtitle: 'Najviše ubijenih neprijatelja',
+  },
+  graditelj: {
+    id: 'graditelj',
+    title: 'Graditelj',
+    emoji: '🧱',
+    tone: 'positive',
+    subtitle: 'Najviše sagrađenih kula',
+  },
+  zmajoubica: {
+    id: 'zmajoubica',
+    title: 'Zmajoubica',
+    emoji: '🐉',
+    tone: 'positive',
+    subtitle: 'Dokrajčio aždaju',
+  },
+  vukodlak: {
+    id: 'vukodlak',
+    title: 'Vođa čopora',
+    emoji: '🐺',
+    tone: 'positive',
+    subtitle: 'Najviše poslatih neprijatelja',
+  },
+  skrtica: {
+    id: 'skrtica',
+    title: 'Škrtica',
+    emoji: '💰',
+    tone: 'shame',
+    subtitle: 'Završio sa punim džepom',
+  },
   // Puzla
   spajalica: {
     id: 'spajalica',

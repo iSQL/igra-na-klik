@@ -99,6 +99,8 @@ export function registerGameHandlers(
       puzlaPieces: data.puzlaPieces,
       puzlaRotation: data.puzlaRotation,
       puzlaMode: data.puzlaMode,
+      bedemMode: data.bedemMode,
+      bedemLength: data.bedemLength,
       language: data.language,
     });
     if (result.error) {

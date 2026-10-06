@@ -142,6 +142,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'bedem',
+    gameName: 'Bedem',
+    fields: [
+      { key: 'UVOD_DURATION', label: 'Najava igre', min: 2, max: 15, def: 5 },
+      { key: 'KRAJ_DURATION', label: 'Završni prikaz', min: 4, max: 30, def: 10 },
+    ],
+  },
+  {
     gameId: 'puzla',
     gameName: 'Puzla',
     fields: [

@@ -272,6 +272,22 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // version would be a joystick pointed at nothing.
     supportsHostless: false,
   },
+  bedem: {
+    id: 'bedem',
+    name: 'Bedem',
+    // Two is the smallest 'protiv' duel; eight small maps still fit a TV
+    // grid (4×2), and from four builders 'zajedno' moves to the bigger maps.
+    minPlayers: 2,
+    maxPlayers: 8,
+    description:
+      'Odbrana kulama: neprijatelji idu stazom ka kapiji, a vi tapkate po mapi i gradite strelce, katapulte, led i munje. Branite bedem zajedno ili šaljite vukove jedni drugima!',
+    icon: '🏰',
+    accent: 'lime',
+    category: 'action',
+    estimatedMinutes: 8,
+    // The whole map is on every phone — the TV only shows it bigger.
+    supportsHostless: true,
+  },
   puzla: {
     id: 'puzla',
     name: 'Puzla',

@@ -516,6 +516,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.splav.name': 'Splav',
     'game.splav.description':
       'Sumo na splavu koji se smanjuje. Vozi džojstikom, čuvaj nalet za pravi trenutak i izguraj ostale u vodu — poslednji na splavu nosi rundu!',
+    'game.bedem.name': 'Bedem',
+    'game.bedem.description':
+      'Odbrana kulama: neprijatelji idu stazom ka kapiji, a vi tapkate po mapi i gradite strelce, katapulte, led i munje. Branite bedem zajedno ili šaljite vukove jedni drugima!',
     'game.puzla.name': 'Puzla',
     'game.puzla.description':
       'Izaberi svoju sliku, igra je iseče na komadiće — složite je zajedno, svako sa svog telefona, pre nego što istekne vreme!',
@@ -636,6 +639,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Telefon je džojstik: levo voziš, desno je nalet. Samo nalet nekoga stvarno izbacuje, a puni se oko 2 sekunde.',
     'game.splav.rule3':
       'Poeni idu i za plasman i za guranje — svako koga izguraš vredi 120. Poslednji na splavu nosi rundu.',
+    'game.bedem.blurb': 'Gradite kule, branite kapiju.',
+    'game.bedem.rule1':
+      'Neprijatelji idu stazom ka kapiji — tapni prazno polje pored staze i sagradi kulu.',
+    'game.bedem.rule2':
+      'Svako ima svoje zlato: ubistva i plata pred talas. Kule se nadograđuju do 3. nivoa.',
+    'game.bedem.rule3':
+      'Zajedno branite jednu kapiju, ili svako svoju — i šaljete neprijatelje protivnicima.',
     'game.puzla.blurb': 'Složite svoju sliku zajedno.',
     'game.puzla.rule1':
       'Domaćin izabere sliku sa svog uređaja, a igra je iseče na 16, 36, 64 ili 100 komadića.',
@@ -1159,6 +1169,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.splav.name': 'The Raft',
     'game.splav.description':
       'Sumo on a shrinking raft. Steer with the stick, save your dash for the right moment and shove everyone else into the water — last one aboard takes the round!',
+    'game.bedem.name': 'Rampart',
+    'game.bedem.description':
+      'Tower defense: enemies march down the path to the gate while you tap the map to build archers, catapults, frost and lightning. Hold the wall together or send wolves at each other!',
     'game.puzla.name': 'Jigsaw',
     'game.puzla.description':
       'Pick your own picture, the game cuts it into pieces — put it back together as a team, each from your own phone, before time runs out!',
@@ -1283,6 +1296,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'The phone is a joystick: steer on the left, dash on the right. Only a dash really ejects someone, and it recharges in about 2 seconds.',
     'game.splav.rule3':
       'Points come from placing and from shoving — every player you push in is worth 120. Last one aboard takes the round.',
+    'game.bedem.blurb': 'Build towers, hold the gate.',
+    'game.bedem.rule1':
+      'Enemies walk the path to the gate — tap an empty cell next to it and build a tower.',
+    'game.bedem.rule2':
+      'Everyone has their own gold: kills plus pay before each wave. Towers upgrade to level 3.',
+    'game.bedem.rule3':
+      'Defend one gate together, or one each — and send enemies at your opponents.',
     'game.puzla.blurb': 'Assemble your own picture together.',
     'game.puzla.rule1':
       'The host picks a picture from their device and the game cuts it into 16, 36, 64 or 100 pieces.',

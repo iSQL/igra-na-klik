@@ -59,5 +59,7 @@ export * from './games/bitka-map-import.js';
 export * from './games/bitka-fx.js';
 export * from './types/splav.js';
 export * from './games/splav-rules.js';
+export * from './types/bedem.js';
+export * from './games/bedem-rules.js';
 export * from './types/puzla.js';
 export * from './games/puzla-rules.js';

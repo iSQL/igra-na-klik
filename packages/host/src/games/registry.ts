@@ -23,6 +23,7 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   slozilica: () => import('./slozilica/SlozilicaHost'),
   osvajanje: () => import('./bitka/BitkaHost'),
   splav: () => import('./splav/SplavHost'),
+  bedem: () => import('./bedem/BedemHost'),
   puzla: () => import('./puzla/PuzlaHost'),
 };
 

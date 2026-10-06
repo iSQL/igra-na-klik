@@ -281,6 +281,36 @@ export const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>
 <p class="tip">Broj rundi se bira pre početka. Igra traži TV — arena je na velikom ekranu, telefon je samo kontroler.</p>`,
   },
+  bedem: {
+    hint: { title: 'Tapni prazno polje da sagradiš kulu', text: 'Tapni svoju kulu da je nadogradiš ili prodaš. Kad si gotov, pritisni „Spreman" — talas kreće kad su svi spremni.' },
+    emoji: '🏰',
+    body: `<p>Odbrana kulama: neprijatelji idu stazom od ulaza na vrhu do kapije na dnu, a vi im na putu gradite kule. Svako ima svoje zlato i gradi sa svog telefona — cela mapa je na ekranu.</p>
+<ul>
+<li><strong>Gradnja:</strong> tapni prazno polje pored staze i izaberi kulu. Tapni svoju kulu da je nadogradiš (do 3. nivoa) ili prodaš (vraća 70% uloženog). Graditi se može i usred talasa.</li>
+<li><strong>Kule:</strong> 🏹 <strong>Strelac</strong> — jeftin i brz; 🪨 <strong>Katapult</strong> — spor, ali pogađa celu gomilu; ❄️ <strong>Ledena kula</strong> — usporava; ⚡ <strong>Munja</strong> — skače sa mete na metu i probija oklop.</li>
+<li><strong>Neprijatelji:</strong> 🧟 pešaci, 🐺 brzi vukovi, 🦇 rojevi, 🛡️ oklopnici (oklop umanjuje svaki pogodak — tu pomaže munja) i 🐉 <strong>aždaja</strong> na svakom 5. talasu.</li>
+<li><strong>Zlato:</strong> svako ubistvo donosi zlato onome čija ga je kula ubila, a pred svaki talas svi dobijaju platu.</li>
+<li><strong>Zajedno:</strong> jedna mapa i jedna kapija sa 20 života. Pobeđujete ako izdržite sve talase.</li>
+<li><strong>Protiv:</strong> svako brani svoju mapu (iste talase). Tokom talasa možeš za zlato da <strong>pošalješ</strong> vukove, roj ili oklopnika protivniku — a svako slanje ti trajno povećava platu. Kad ti padne kapija, ispadaš; poslednji koji stoji pobeđuje.</li>
+<li><strong>Dužina:</strong> kratko (7 talasa), standardno (10) ili beskonačno — talasi jačaju dok bedem ne padne.</li>
+</ul>
+<p class="tip">Radi i bez TV-a — cela mapa je na svakom telefonu. Režim i dužina se biraju pre početka.</p>`,
+    steps: [
+      'Pre talasa imate nekoliko sekundi za gradnju — tapni polje pored staze i izaberi kulu.',
+      'Kad si gotov, pritisni „Spreman"; talas kreće kad su svi spremni ili kad istekne vreme.',
+      'Tokom talasa kule same pucaju, a ti dograđuješ, nadograđuješ i (u režimu Protiv) šalješ neprijatelje drugima.',
+    ],
+    points: [
+      { value: 'zlato', label: 'za svako ubistvo tvoje kule' },
+      { value: '20', label: 'za svaki preživljeni talas' },
+      { value: '200', label: 'svima kad bedem izdrži (Zajedno)' },
+      { value: '500', label: 'poslednjem koji stoji (Protiv)' },
+    ],
+    notes: [
+      'Oklopnik je otporan na slabe pogotke — munja ga probija.',
+      'Prodaja vraća 70% zlata uloženog u kulu.',
+    ],
+  },
   puzla: {
     hint: { title: 'Prevuci komadić do suseda', text: 'Blizu pravog suseda sam se zalepi. Dva prsta zumiraju, tap okreće komadić.' },
     emoji: '🖼️',

@@ -347,6 +347,7 @@ async function main(): Promise<void> {
     'tajni-agenti',
     'asocijacije',
     'spijun',
+    'bedem',
   ];
   for (const gameId of SKIP_GAMES) {
     await sleep(600);
@@ -371,7 +372,8 @@ async function main(): Promise<void> {
     }
     // Vruć krompir: dok bomba gori nema preskakanja — čeka se eksplozija.
     // Bomba koja gori i Špijunovo pogađanje lokacije se ne preskaču.
-    const minMoves = gameId === 'hot-potato' || gameId === 'spijun' ? 1 : 2;
+    // Bedem: samo gradnja se preskače, a talas traje duže od čekanja ispod.
+    const minMoves = gameId === 'hot-potato' || gameId === 'spijun' || gameId === 'bedem' ? 1 : 2;
     const sig = () => `${va.state?.phase}|${va.state?.round}|${JSON.stringify(va.state?.data ?? {})}`;
     let moved = 0;
     for (let i = 0; i < 6 && !va.ended; i++) {

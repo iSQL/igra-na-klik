@@ -34,6 +34,8 @@ import type {
   BitkaMapSummary,
   BitkaMode,
   PuzlaMode,
+  BedemLength,
+  BedemMode,
 } from '@igra/shared';
 import {
   getRecentPackIds,
@@ -294,6 +296,9 @@ export function GameSelectScreen() {
   const [puzlaPieces, setPuzlaPieces] = useState(PUZLA_PIECE_DEFAULT);
   const [puzlaRotation, setPuzlaRotation] = useState(false);
   const [puzlaMode, setPuzlaMode] = useState<PuzlaMode>('vreme');
+  // Bedem: shared map vs a map each, and how long it runs.
+  const [bedemMode, setBedemMode] = useState<BedemMode>('zajedno');
+  const [bedemLength, setBedemLength] = useState<BedemLength>('standard');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -508,6 +513,10 @@ export function GameSelectScreen() {
       payload.puzlaPieces = puzlaPieces;
       payload.puzlaRotation = puzlaRotation;
       payload.puzlaMode = puzlaMode;
+    }
+    if (game.id === 'bedem') {
+      payload.bedemMode = bedemMode;
+      payload.bedemLength = bedemLength;
     }
     if (game.id === 'quiz') {
       // Inline file import wins; otherwise the pack multi-select travels as
@@ -1386,6 +1395,40 @@ export function GameSelectScreen() {
                       options={[...SLOZILICA_LETTER_OPTIONS]}
                       onSelect={setSlozilicaLetters}
                     />
+                  )}
+                  {game.id === 'bedem' && (
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Režim</span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill active={bedemMode === 'zajedno'} onClick={() => setBedemMode('zajedno')}>
+                            🤝 Zajedno
+                          </Pill>
+                          <Pill active={bedemMode === 'protiv'} onClick={() => setBedemMode('protiv')}>
+                            ⚔️ Protiv
+                          </Pill>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                          {bedemMode === 'zajedno'
+                            ? 'Jedna mapa i jedna kapija za sve.'
+                            : 'Svako brani svoju mapu i šalje neprijatelje drugima.'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Dužina</span>
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                          <Pill active={bedemLength === 'kratko'} onClick={() => setBedemLength('kratko')}>
+                            Kratko · 7
+                          </Pill>
+                          <Pill active={bedemLength === 'standard'} onClick={() => setBedemLength('standard')}>
+                            Standard · 10
+                          </Pill>
+                          <Pill active={bedemLength === 'beskonacno'} onClick={() => setBedemLength('beskonacno')}>
+                            ♾️ Beskonačno
+                          </Pill>
+                        </div>
+                      </div>
+                    </>
                   )}
                   {game.id === 'puzla' && (
                     <>

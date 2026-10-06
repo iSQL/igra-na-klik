@@ -497,6 +497,8 @@ export function GameSelectScreen() {
       puzlaRotation:
         gameId === 'puzla' ? newGamesConfig.puzlaRotation : undefined,
       puzlaMode: gameId === 'puzla' ? newGamesConfig.puzlaMode : undefined,
+      bedemMode: gameId === 'bedem' ? newGamesConfig.bedemMode : undefined,
+      bedemLength: gameId === 'bedem' ? newGamesConfig.bedemLength : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -988,6 +990,45 @@ export function GameSelectScreen() {
           options={[...SLOZILICA_LETTER_OPTIONS]}
           onSelect={newGamesConfig.setSlozilicaLetters}
         />
+      )}
+      {game.id === 'bedem' && (
+        <>
+          <TextPillRow
+            label="Režim"
+            value={newGamesConfig.bedemMode}
+            options={[
+              { value: 'zajedno', label: '🤝 Zajedno' },
+              { value: 'protiv', label: '⚔️ Protiv' },
+            ]}
+            onSelect={(v) => newGamesConfig.setBedemMode(v === 'protiv' ? 'protiv' : 'zajedno')}
+          />
+          <TextPillRow
+            label="Dužina"
+            value={newGamesConfig.bedemLength}
+            options={[
+              { value: 'kratko', label: 'Kratko · 7 talasa' },
+              { value: 'standard', label: 'Standard · 10' },
+              { value: 'beskonacno', label: '♾️ Beskonačno' },
+            ]}
+            onSelect={(v) =>
+              newGamesConfig.setBedemLength(
+                v === 'kratko' || v === 'beskonacno' ? v : 'standard'
+              )
+            }
+          />
+          <p
+            style={{
+              fontSize: '0.72rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            {newGamesConfig.bedemMode === 'zajedno'
+              ? 'Jedna mapa i jedna kapija za sve — igra se na telefonima.'
+              : 'Svako brani svoju mapu i šalje neprijatelje drugima.'}
+          </p>
+        </>
       )}
       {game.id === 'puzla' && (
         <>

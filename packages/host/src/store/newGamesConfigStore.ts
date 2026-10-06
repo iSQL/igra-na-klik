@@ -7,6 +7,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   AsocijacijeMode,
+  BedemLength,
+  BedemMode,
   BitkaMode,
   GluvoDobaDeathReveal,
   HotPotatoMode,
@@ -58,6 +60,9 @@ interface NewGamesConfigStore {
   puzlaPieces: number;
   puzlaRotation: boolean;
   puzlaMode: PuzlaMode;
+  // Bedem: shared map vs a map each, and how many waves.
+  bedemMode: BedemMode;
+  bedemLength: BedemLength;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -87,6 +92,8 @@ interface NewGamesConfigStore {
   setPuzlaPieces: (n: number) => void;
   setPuzlaRotation: (v: boolean) => void;
   setPuzlaMode: (m: PuzlaMode) => void;
+  setBedemMode: (m: BedemMode) => void;
+  setBedemLength: (l: BedemLength) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -121,6 +128,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       puzlaPieces: PUZLA_PIECE_DEFAULT,
       puzlaRotation: false,
       puzlaMode: 'vreme',
+      bedemMode: 'zajedno',
+      bedemLength: 'standard',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -150,6 +159,8 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setPuzlaPieces: (n) => set({ puzlaPieces: n }),
       setPuzlaRotation: (v) => set({ puzlaRotation: v }),
       setPuzlaMode: (m) => set({ puzlaMode: m }),
+      setBedemMode: (m) => set({ bedemMode: m }),
+      setBedemLength: (l) => set({ bedemLength: l }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

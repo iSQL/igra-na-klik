@@ -106,10 +106,11 @@ export class GameManager {
         return reject('Ova igra zahteva TV ekran.');
       }
       const connectedPlayers = room.players.filter((p) => p.isConnected);
-      // Dev convenience: let Kviz run solo so a single browser tab can exercise
-      // the whole flow. Production keeps the real minimum.
+      // Dev convenience: let Kviz and co-op Bedem run solo so a single browser
+      // tab can exercise the whole flow. Production keeps the real minimum
+      // (Bedem's 'protiv' still refuses one player in validateStart).
       const devSolo =
-        process.env.NODE_ENV !== 'production' && gameId === 'quiz';
+        process.env.NODE_ENV !== 'production' && (gameId === 'quiz' || gameId === 'bedem');
       const minPlayers = devSolo ? 1 : definition.minPlayers;
       if (connectedPlayers.length < minPlayers) {
         return reject(`Need at least ${minPlayers} players`);

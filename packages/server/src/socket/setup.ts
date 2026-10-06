@@ -34,6 +34,7 @@ import { PenaliModule } from '../game/games/penali/PenaliModule.js';
 import { SlozilicaModule } from '../game/games/slozilica/SlozilicaModule.js';
 import { BitkaModule } from '../game/games/bitka/BitkaModule.js';
 import { SplavModule } from '../game/games/splav/SplavModule.js';
+import { BedemModule } from '../game/games/bedem/BedemModule.js';
 import { PuzlaModule } from '../game/games/puzla/PuzlaModule.js';
 import { puzlaImages } from '../game/games/puzla/puzla-image-store.js';
 import { registerRoomHandlers } from './handlers/room.js';
@@ -106,6 +107,7 @@ export function setupSocket(
   gameRegistry.register(() => new SlozilicaModule());
   gameRegistry.register(() => new BitkaModule(questionPacksDir, bitkaMapsDir));
   gameRegistry.register(() => new SplavModule());
+  gameRegistry.register(() => new BedemModule());
   gameRegistry.register(() => new PuzlaModule());
 
   const gameManager = new GameManager(io, roomManager, gameRegistry);

@@ -22,6 +22,7 @@ import type { SpijunPack } from '../games/spijun-import.js';
 import type { PlayerAward } from '../games/awards.js';
 import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
 import type { PuzlaMode, PuzlaUploadAck } from './puzla.js';
+import type { BedemLength, BedemMode } from './bedem.js';
 import type { KnockRequest, KnockStatus } from './knock.js';
 
 export interface ServerToClientEvents {
@@ -215,6 +216,10 @@ export interface ClientToServerEvents {
     puzlaPieces?: number;
     puzlaRotation?: boolean;
     puzlaMode?: PuzlaMode;
+    // Bedem: shared map vs a map each, and how many waves (7 / 10 / until
+    // the gate falls). Both re-clamped server-side (clampBedemMode/Length).
+    bedemMode?: BedemMode;
+    bedemLength?: BedemLength;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.
