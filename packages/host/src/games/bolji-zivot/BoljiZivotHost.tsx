@@ -7,6 +7,7 @@ import type { BoljiZivotHostData, BZFamilyPublic } from '@igra/shared';
 import { BZ_POWER_TEXT, BZ_TUTORIAL_PHASE_TEXT } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 import { BZFxLayer } from './components/BZFxLayer';
+import { BZPowerCallout } from './components/BZPowerCallout';
 
 // In-game ekrani su namerno samo na srpskom (kao Kviz/Lažov klasa igara).
 
@@ -71,6 +72,7 @@ export default function BoljiZivotHost() {
       }}
     >
       <BZFxLayer move={data.lastMove} phase={phase} />
+      <BZPowerCallout data={data} phase={phase} myId={null} size="tv" />
       {/* Zaglavlje */}
       <div
         style={{

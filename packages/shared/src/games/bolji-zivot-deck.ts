@@ -72,6 +72,37 @@ export const BZ_POWER_TEXT: Readonly<Record<BoljiZivotPowerKind, string>> = {
   'look-swap': 'Pogledaj tuđu kartu i po želji je zameni sa svojom',
 };
 
+/**
+ * Najava moći za sve za stolom (TV i svi telefoni), iz ugla posmatrača.
+ * `{a}` je ime igrača koji je bacio kartu. `short` ide svaki put; `long` je
+ * jedna rečenica više koja ide samo prvi put kad se ta moć pojavi na tom
+ * uređaju — tako se karte uče u igri, bez čitanja pravila.
+ */
+export const BZ_POWER_CALLOUT: Readonly<
+  Record<BoljiZivotPowerKind, { short: string; long: string }>
+> = {
+  'peek-own': {
+    short: '{a} gleda jednu svoju kartu.',
+    long: 'Ko baci Suđaju, sme krišom da pogleda jednu svoju skrivenu kartu — da proveri šta ima.',
+  },
+  'peek-other': {
+    short: '{a} će krišom pogledati jednu tuđu kartu.',
+    long: 'Ko baci Vračaru, vidi jednu kartu drugog igrača. Ako gađa tebe, Zduhać može da ga zaustavi.',
+  },
+  'blind-swap': {
+    short: '{a} menja jednu svoju kartu sa nečijom — naslepo.',
+    long: 'Podmenak je zamena bez gledanja. Ako uzme tvoju kartu, ono što si pamtio na tom mestu više ne važi.',
+  },
+  raid: {
+    short: 'Grom! Svakome se otkriva po jedna nasumična karta.',
+    long: 'Gromovnik na kratko pokaže svima po jednu kartu svakog igrača — zapamti šta vidiš.',
+  },
+  'look-swap': {
+    short: '{a} gleda nečiju kartu i može da je uzme.',
+    long: 'Veštica je najjača moć: prvo pogleda tuđu kartu, pa bira da li će je zameniti za svoju.',
+  },
+};
+
 export interface BZCardInfo {
   v: number;
   name: string;

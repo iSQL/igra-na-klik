@@ -17,6 +17,7 @@ import {
 } from '@igra/shared';
 import { BZCardFace, BZCardBack, BZCardGap } from './components/BZCard';
 import { BZFxLayer } from './components/BZFxLayer';
+import { BZPowerCallout } from './components/BZPowerCallout';
 import {
   TutorialBadge,
   TutorialCoach,
@@ -411,6 +412,7 @@ export default function BoljiZivotController() {
       }}
     >
       <BZFxLayer move={data.lastMove} phase={phase} />
+      <BZPowerCallout data={data} phase={phase} myId={playerId} size="phone" />
       {/* Status */}
       <div
         style={{
