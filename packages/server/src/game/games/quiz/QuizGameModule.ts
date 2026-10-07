@@ -8,6 +8,7 @@ import type {
   KvizDominoRoundResult,
   KvizDopunaQuestionFull,
   KvizEmojiQuestionFull,
+  KvizLinkRecap,
   KvizEmojiRoundResult,
   KvizGeoQuestionFull,
   KvizMatricaQuestionFull,
@@ -47,8 +48,19 @@ import type {
   QuizRoundShame,
 } from './QuizState.js';
 import { inlineQuestionsToRuntime, resolveQuizPack } from './quiz-pack-resolver.js';
-import type { KvizLinkStore, StoredKvizLink } from '../../../kviz-links/kviz-link-store.js';
+import type {
+  KvizLinkAnswer,
+  KvizLinkGameQuestion,
+  KvizLinkStore,
+  StoredKvizLink,
+} from '../../../kviz-links/kviz-link-store.js';
 import { resolveLinkItems } from '../../../kviz-links/kviz-link-questions.js';
+import {
+  describeLinkAnswer,
+  describeLinkCorrect,
+  linkQuestionLabel,
+  snapshotLinkQuestion,
+} from './kviz-link-answers.js';
 import {
   SERBIA_DECAY_KM,
   decayKmForMapDiagonal,
@@ -78,8 +90,14 @@ interface QuizLinkRun {
   keys: Map<string, string>;
   /** Question indices that reached their results, in play order. */
   played: number[];
-  /** playerId → question index → 1 correct / 0 wrong (absent = no answer). */
-  results: Map<string, Map<number, 0 | 1>>;
+  /** playerId → question index → the outcome (absent = no answer). */
+  results: Map<string, Map<number, LinkOutcome>>;
+}
+
+interface LinkOutcome {
+  r: 0 | 1;
+  a: KvizLinkAnswer | null;
+  ms: number | null;
 }
 
 const ALL_KVIZ_TYPES: KvizQuestionType[] = [
@@ -465,7 +483,7 @@ export class QuizGameModule extends BaseGameModule {
       );
       const player = room.players.find((p) => p.id === playerId);
       if (player) player.score += points;
-      answer = { kind: 'matrix', cells, hit, points };
+      answer = { kind: 'matrix', cells, hit, points, timeMs };
     } else if (action === 'quiz:domino') {
       if (question.type !== 'domino') return null;
       const dir = data.answer;
@@ -609,15 +627,15 @@ export class QuizGameModule extends BaseGameModule {
     const run = this.linkRun;
     this.linkRun = null;
     if (!run || run.played.length === 0 || !this.kvizLinks) return;
-    const questions = run.played.map((i) => {
-      const q = this.state.questions[i];
-      return { key: run.keys.get(q.id) ?? '', text: q.text, type: q.type };
-    });
+    const questions = run.played.map((i) =>
+      snapshotLinkQuestion(this.state.questions[i], run.keys.get(this.state.questions[i].id) ?? '')
+    );
     const players = room.players
       .filter((p) => run.results.has(p.id) || this.state.playerStats.has(p.id))
       .map((p) => {
         const mine = run.results.get(p.id);
-        const results = run.played.map((i) => mine?.get(i) ?? null);
+        const outcomes = run.played.map((i) => mine?.get(i) ?? null);
+        const results = outcomes.map((o) => (o ? o.r : null));
         return {
           name: p.name,
           emoji: p.avatarEmoji,
@@ -626,6 +644,8 @@ export class QuizGameModule extends BaseGameModule {
           correct: results.filter((r) => r === 1).length,
           answered: results.filter((r) => r !== null).length,
           results,
+          answers: outcomes.map((o) => (o ? o.a : null)),
+          ms: outcomes.map((o) => (o ? o.ms : null)),
         };
       })
       .sort((a, b) => b.points - a.points);
@@ -867,8 +887,12 @@ export class QuizGameModule extends BaseGameModule {
       }
 
       if (this.linkRun && attempted) {
-        const perPlayer = this.linkRun.results.get(id) ?? new Map<number, 0 | 1>();
-        perPlayer.set(this.state.currentQuestionIndex, correct ? 1 : 0);
+        const perPlayer = this.linkRun.results.get(id) ?? new Map<number, LinkOutcome>();
+        perPlayer.set(this.state.currentQuestionIndex, {
+          r: correct ? 1 : 0,
+          a: this.linkAnswerOf(question, id, answer),
+          ms: timeMs ?? (answer?.kind === 'matrix' ? answer.timeMs : null),
+        });
         this.linkRun.results.set(id, perPlayer);
       }
 
@@ -1292,7 +1316,85 @@ export class QuizGameModule extends BaseGameModule {
       }
     }
 
+    // Kviz link: "Tvoji odgovori" — each phone's own answers so far, in its
+    // private slice only. From the first results on, so a game stopped early
+    // still leaves the phone with what was played.
+    if (
+      this.linkRun &&
+      (this.state.phase === 'showing-results' || this.state.phase === 'leaderboard')
+    ) {
+      for (const player of room.players) {
+        playerData[player.id] = {
+          ...(playerData[player.id] ?? {}),
+          linkRecap: this.buildLinkRecap(room, player.id),
+        };
+      }
+    }
+
     return this.wrapState(data, playerData);
+  }
+
+  private buildLinkRecap(room: Room, playerId: string): KvizLinkRecap {
+    const run = this.linkRun!;
+    const mine = run.results.get(playerId);
+    const items = run.played.map((i) => {
+      const q = this.state.questions[i];
+      const o = mine?.get(i);
+      const right = describeLinkCorrect(q);
+      return {
+        q: linkQuestionLabel(q),
+        a: o?.a ? describeLinkAnswer(q, o.a) : null,
+        ok: o ? o.r === 1 : null,
+        ...(right !== undefined ? { right } : {}),
+      };
+    });
+    const points = room.players.find((p) => p.id === playerId)?.score ?? 0;
+    return {
+      rank: 1 + room.players.filter((p) => p.score > points).length,
+      points,
+      correct: items.filter((it) => it.ok === true).length,
+      total: items.length,
+      items,
+    };
+  }
+
+  /** The compact answer kept in a kviz link's statistics. */
+  private linkAnswerOf(
+    question: KvizQuestionFull,
+    playerId: string,
+    answer: QuizAnswer | undefined
+  ): KvizLinkAnswer | null {
+    // Text types keep only a solved answer; the last guess covers both.
+    if (isTextQuestion(question)) {
+      const guess = this.state.emojiLastGuess.get(playerId);
+      return guess ? { k: 'txt', v: guess.slice(0, 60) } : null;
+    }
+    if (!answer) return null;
+    switch (answer.kind) {
+      case 'choice':
+        return { k: 'opt', i: answer.optionIndex };
+      case 'value':
+        return { k: 'num', v: answer.value };
+      case 'pin': {
+        const km = this.state.lastRoundDistances.get(playerId);
+        return km === undefined ? null : { k: 'geo', km: Math.round(km * 10) / 10 };
+      }
+      case 'order': {
+        if (question.type !== 'redosled') return null;
+        const hits = answer.order.filter((item, pos) => question.order[item] === pos).length;
+        return { k: 'order', hits, of: answer.order.length };
+      }
+      case 'domino':
+        return {
+          k: 'domino',
+          streak: answer.streak,
+          of: question.type === 'domino' ? question.items.length - 1 : answer.streak,
+        };
+      case 'matrix':
+        return { k: 'cells', v: answer.cells, hit: answer.hit };
+      case 'text':
+        return null;
+    }
   }
 
   /** Own distance/points slice for geo/broj results. */

@@ -75,6 +75,17 @@ export interface StoredKvizLink extends KvizLinkSettings {
   types: Partial<Record<KvizQuestionType, number>>;
 }
 
+/** What one player answered to one question, compact per question type. */
+export type KvizLinkAnswer =
+  | { k: 'opt'; i: number }
+  | { k: 'num'; v: number }
+  /** Last guess, cut to 60 characters. */
+  | { k: 'txt'; v: string }
+  | { k: 'geo'; km: number }
+  | { k: 'order'; hits: number; of: number }
+  | { k: 'domino'; streak: number; of: number }
+  | { k: 'cells'; v: number[]; hit: number };
+
 export interface KvizLinkGamePlayer {
   name: string;
   emoji: string;
@@ -84,11 +95,33 @@ export interface KvizLinkGamePlayer {
   answered: number;
   /** Aligned with the record's questions: 1 correct, 0 wrong, null no answer. */
   results: (0 | 1 | null)[];
+  /** Aligned with questions. Absent in games recorded before answers were kept. */
+  answers?: (KvizLinkAnswer | null)[];
+  /** Milliseconds to the answer, where the type has one. */
+  ms?: (number | null)[];
+}
+
+/**
+ * The question as it was played — the link (and its packs) change later, and
+ * history must not change with them.
+ */
+export interface KvizLinkGameQuestion {
+  key: string;
+  text: string;
+  type: KvizQuestionType;
+  /** Choice options by index, matrica cells, redosled items in the correct order. */
+  options?: string[];
+  /** Option index, matrica triple, broj value or the text answer. */
+  correct?: number | number[] | string;
+  unit?: string;
+  min?: number;
+  max?: number;
+  valueType?: 'number' | 'duration';
 }
 
 export interface KvizLinkGameRecord {
   at: number;
-  questions: { key: string; text: string; type: KvizQuestionType }[];
+  questions: KvizLinkGameQuestion[];
   players: KvizLinkGamePlayer[];
 }
 

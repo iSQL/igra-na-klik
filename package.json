@@ -11,6 +11,7 @@
     "dev:host": "npm run dev -w @igra/host",
     "dev:controller": "npm run dev -w @igra/controller",
     "free-ports": "node scripts/free-ports.mjs",
+    "reel": "node scripts/render-reel.mjs",
     "predev": "node scripts/dev-clean.mjs",
     "predev:server": "node scripts/dev-clean.mjs",
     "dev": "npm run build:shared && concurrently \"npm:dev:server\" \"npm:dev:host\" \"npm:dev:controller\"",
@@ -21,6 +22,7 @@
     "@types/node": "^22.13.10",
     "concurrently": "^9.1.2",
     "nspell": "^2.1.5",
+    "puppeteer-core": "^25.12.0",
     "typescript": "^5.7.3"
   },
   "dependencies": {

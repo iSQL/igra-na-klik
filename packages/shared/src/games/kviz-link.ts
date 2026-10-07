@@ -105,6 +105,28 @@ export interface KvizLinkPublic {
   joinPinRequired?: boolean;
 }
 
+/**
+ * "Tvoji odgovori" — one player's own answers in a kviz-link game, sent only
+ * in that player's `playerData` slice (`linkRecap`) from the first results
+ * screen on, never in the broadcast. Strings are pre-formatted server-side.
+ */
+export interface KvizLinkRecap {
+  rank: number;
+  points: number;
+  correct: number;
+  /** Questions that reached their results so far. */
+  total: number;
+  items: {
+    q: string;
+    /** What the player answered, formatted; null = no answer. */
+    a: string | null;
+    /** null = no answer. */
+    ok: boolean | null;
+    /** The correct answer, formatted — absent where there is no single one (geo). */
+    right?: string;
+  }[];
+}
+
 /** Rough game length for the join card ("≈ 8 min"). */
 export function kvizLinkEstimateMinutes(info: {
   questionCount: number;

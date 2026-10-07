@@ -12,3 +12,5 @@ storage/
 .recnik-cache/
 Agent tool input*
 /kviz-links/
+# reelovi se renderuju iz html-a (npm run reel)
+docs/marketing/reels/*.mp4

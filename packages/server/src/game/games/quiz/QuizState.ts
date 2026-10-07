@@ -21,7 +21,7 @@ export type QuizAnswer =
   | { kind: 'order'; order: number[] }
   // Matrica: the 3 tapped cell indices + how many hit the correct triple;
   // scored on submit.
-  | { kind: 'matrix'; cells: number[]; hit: number; points: number }
+  | { kind: 'matrix'; cells: number[]; hit: number; points: number; timeMs: number }
   // Domino: only lands here once the player is DONE (first mistake or the
   // chain is finished). `streak` = consecutive-correct count; scored at
   // results time. In-flight progress lives in dominoProgress.

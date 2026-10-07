@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Igra Na Klik reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Platno je 1080x1920 (Instagram reel 9:16) i skalira se na prozor, pa snimak ekrana daje tacan kadar.
+     Tokeni su iz packages/{host,controller}/src/styles/global.css i brand.md (Sunrise Hill). */
+  :root {
+    --navy-deep: #162E4E; --navy: #1D3557; --card: #274469;
+    --gold: #C29B47; --gold-deep: #B89040;
+    --cream: #F5EBE0; --cream-hi: #FAF6F0; --beige: #E6DCD2;
+    --ink: #1D3557; --body-ink: #2B2B2B; --muted: #6B6458; --soft: #C9C2B3;
+    --pink: #D97B6C; --violet: #8FA3D9; --cyan: #6FC2BB; --lime: #A9C46C; --amber: #E3B45E;
+    --success: #57B380; --success-ink: #7FD3A3; --danger: #E06A5E; --blue: #6D9BD1;
+    --display: 'Baloo 2', 'Manrope', system-ui, sans-serif;
+    --sans: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; background: #0d1622; overflow: hidden; }
+  body { display: grid; place-items: center; font-family: var(--sans); }
+  #stage {
+    width: 1080px; height: 1920px; position: relative; overflow: hidden;
+    background: var(--navy-deep); color: var(--cream-hi); transform-origin: center;
+  }
+  /* podrazumevana scena je tamna kao aplikacija (navy + zlatni sjaj odozgo); .light je kremasta */
+  .scene { position: absolute; inset: 0; padding: 140px 90px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center; opacity: 0; transition: opacity .45s var(--ease);
+    background:
+      radial-gradient(1300px 800px at 50% -10%, rgba(194, 155, 71, .22), transparent 60%),
+      radial-gradient(1000px 600px at 50% 112%, rgba(9, 20, 36, .6), transparent 65%),
+      var(--navy-deep); }
+  .scene.on { opacity: 1; }
+  .light { background: var(--cream); color: var(--body-ink); }
+  .light h1, .light h2 { color: var(--ink); }
+
+  /* svaki element ulazi tek kad mu scena postane aktivna; --d je kasnjenje */
+  .in { opacity: 0; transform: translateY(60px); }
+  .on .in { animation: rise .7s var(--ease) forwards; animation-delay: var(--d, 0s); }
+  .pop { opacity: 0; transform: scale(.6); }
+  .on .pop { animation: pop .55s cubic-bezier(.34, 1.56, .64, 1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @keyframes pop { to { opacity: 1; transform: none; } }
+
+  h1 { font-family: var(--display); font-weight: 800; font-size: 128px; line-height: 1; }
+  h2 { font-family: var(--display); font-weight: 800; font-size: 96px; line-height: 1.02; margin-bottom: 64px; }
+  .kicker { font-family: var(--display); font-size: 38px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; margin-bottom: 30px; }
+  .light .kicker { color: var(--gold-deep); }
+  .sub { font-size: 48px; line-height: 1.35; color: var(--soft); margin-top: 50px; font-weight: 500; }
+  .light .sub { color: var(--muted); }
+  .gold { color: var(--gold); }
+
+  /* svetla kartica nosi svoju boju teksta, inace u tamnoj sceni nasledi kremasti tekst i nestane */
+  .card { background: var(--cream-hi); color: var(--body-ink); border: 3px solid var(--beige); border-radius: 40px;
+    padding: 50px; box-shadow: 0 30px 60px -30px rgba(9, 20, 36, .55); width: 100%; text-align: left; }
+
+  /* telefon: navy ekran kao u aplikaciji */
+  .phone { width: 520px; border-radius: 70px; padding: 22px; background: #0b1726;
+    box-shadow: 0 40px 80px -30px rgba(9, 20, 36, .6), inset 0 0 0 3px rgba(245, 235, 224, .12); }
+  .screen { border-radius: 52px; padding: 56px 38px 46px; color: var(--cream-hi);
+    background: radial-gradient(500px 300px at 50% -10%, rgba(194, 155, 71, .2), transparent 60%), var(--navy-deep); }
+  .screen .lbl { font-size: 30px; color: var(--soft); font-weight: 700; margin-bottom: 18px; }
+
+  /* 1: udica */
+  .crowd { display: flex; gap: 26px; justify-content: center; margin: 70px 0 10px; }
+  .mini { width: 150px; height: 270px; border-radius: 30px; background: var(--navy); padding: 22px 16px;
+    display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 40px -20px rgba(29, 53, 87, .6); }
+  .mini i { display: block; height: 20px; border-radius: 10px; background: rgba(245, 235, 224, .22); }
+  .on .mini i { animation: scroll 1.1s linear infinite; }
+  .mini i:nth-child(2n) { width: 70%; }
+  @keyframes scroll { 50% { opacity: .35; transform: translateY(-8px); } }
+
+  /* 2: logo */
+  .logo { width: 380px; height: 380px; margin-bottom: 56px; }
+  .on .logo { animation: spin-in 1s var(--ease) forwards; }
+  @keyframes spin-in { from { transform: rotate(-90deg) scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+  .word { font-family: var(--display); font-weight: 800; font-size: 150px; line-height: .95; }
+
+  /* 3: ulaz */
+  .code { display: flex; gap: 20px; justify-content: center; }
+  .code b { width: 120px; height: 150px; border-radius: 28px; display: grid; place-items: center;
+    font-family: var(--display); font-size: 100px; font-weight: 800; color: var(--gold);
+    background: var(--card); border: 3px solid rgba(194, 155, 71, .5); }
+  .name { margin-top: 34px; font-size: 40px; font-weight: 700; text-align: left; padding: 26px 30px;
+    border-radius: 24px; background: var(--card); border: 3px solid rgba(245, 235, 224, .14); }
+  .lobby { display: flex; gap: 22px; justify-content: center; margin-top: 60px; }
+  .ava { width: 132px; text-align: center; font-size: 32px; font-weight: 700; color: var(--ink); }
+  .ava span { display: grid; place-items: center; width: 132px; height: 132px; border-radius: 50%;
+    font-size: 70px; margin-bottom: 12px; box-shadow: 0 14px 30px -14px rgba(29, 53, 87, .6); }
+
+  /* 4: igre */
+  .games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; width: 100%; }
+  .g { border-radius: 30px; padding: 26px 14px 22px; background: var(--card);
+    border: 3px solid rgba(245, 235, 224, .1); font-size: 34px; font-weight: 700; line-height: 1.15; }
+  .g span { display: block; font-size: 76px; margin-bottom: 8px; line-height: 1; }
+  .count { font-family: var(--display); font-weight: 800; font-size: 230px; line-height: .8; color: var(--gold); }
+
+  /* 5: kviz */
+  .qcard { font-size: 46px; font-weight: 800; line-height: 1.25; text-align: center; margin-bottom: 40px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .opt { height: 170px; border-radius: 30px; display: grid; place-items: center; color: #fff;
+    font-family: var(--display); font-size: 84px; font-weight: 800; position: relative; }
+  .on .opt.miss { animation: dim .4s forwards 2.1s; }
+  @keyframes dim { to { opacity: .22; } }
+  .on .opt.tap { animation: tap .35s ease-out 1.6s; }
+  @keyframes tap { 50% { transform: scale(.9); } }
+  .on .opt.tap::after { content: ''; position: absolute; inset: 0; border-radius: 30px;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, .9); animation: ring .7s ease-out 1.7s forwards; }
+  @keyframes ring { to { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0); } }
+  .verdict { margin-top: 36px; display: inline-flex; align-items: center; gap: 16px; font-size: 44px; font-weight: 800;
+    color: var(--success-ink); background: rgba(87, 179, 128, .18); padding: 18px 34px; border-radius: 999px; }
+  .verdict b { font-family: var(--display); color: var(--gold); font-size: 56px; }
+  /* --success-ink je svetla zelena za navy; na kremi treba tamnija */
+  .light .verdict { color: #2F7D4F; background: #DDEEDF; }
+  .light .verdict b { color: var(--gold-deep); }
+
+  /* 6: tajna */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; width: 100%; }
+  .secret { padding: 40px 34px; }
+  .secret .ic { font-size: 84px; line-height: 1; margin-bottom: 20px; }
+  .secret .t { font-family: var(--display); font-size: 54px; font-weight: 800; line-height: 1.02; color: var(--ink); }
+  .secret .t.spy { color: #B8483D; }
+  .secret small { display: block; font-size: 30px; font-weight: 700; color: var(--muted); margin-top: 16px; line-height: 1.3; }
+  .who { font-size: 32px; font-weight: 700; color: var(--soft); margin-bottom: 16px; }
+
+  /* 7: jos */
+  .feats { display: flex; flex-direction: column; gap: 32px; width: 100%; }
+  .feat { display: flex; gap: 34px; align-items: center; font-size: 48px; font-weight: 800; text-align: left; color: var(--ink); }
+  .ico { flex: none; width: 136px; height: 136px; border-radius: 36px; display: grid; place-items: center; font-size: 70px; }
+  .feat small { display: block; font-size: 34px; font-weight: 500; color: var(--muted); margin-top: 4px; }
+
+  /* 8: poziv */
+  .cta { margin-top: 80px; background: linear-gradient(125deg, #c0964a, #8f6e2c); color: var(--cream-hi);
+    font-family: var(--display); font-size: 62px; font-weight: 800; padding: 34px 84px; border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(194, 155, 71, .4); }
+  .on .cta { animation: pop .55s cubic-bezier(.34, 1.56, .64, 1) forwards 1s, pulse 1.6s ease-in-out infinite 1.8s; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+  .url { margin-top: 50px; font-size: 54px; font-weight: 800; letter-spacing: .02em; }
+  .mark-sm { width: 150px; height: 150px; margin-bottom: 50px; }
+
+  #progress { position: absolute; left: 0; top: 0; height: 10px; background: var(--gold); width: 0; z-index: 5; }
+  #controls { position: fixed; bottom: 16px; right: 16px; display: flex; gap: 8px; z-index: 10; }
+  #controls button { font: 700 14px var(--sans); padding: 10px 16px; border-radius: 999px; border: 0;
+    background: var(--gold); color: #fff; cursor: pointer; }
+  body.rec #controls { display: none; }
+  body.render .scene { transition: none; }
+  body.render #stage { transform: none !important; margin: 0 !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="progress"></div>
+
+  <!-- znak: packages/controller/public/ink-mark-reverse.svg (za tamnu podlogu) -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <clipPath id="inkClip"><circle cx="50" cy="50" r="46"/></clipPath>
+      <symbol id="mark" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="#1D3557"/>
+        <g clip-path="url(#inkClip)">
+          <circle cx="50" cy="58" r="26" fill="#C29B47"/>
+          <path d="M-4 100 C12 78 30 70 50 70 C70 70 88 78 104 100 Z" fill="#F5EBE0"/>
+          <g fill="#1D3557">
+            <rect x="38.8" y="44.4" width="6.4" height="3.2"/><rect x="54.8" y="44.4" width="6.4" height="3.2"/>
+            <rect x="38.8" y="47.6" width="6.4" height="3.2"/><rect x="54.8" y="47.6" width="6.4" height="3.2"/>
+            <rect x="35.6" y="50.8" width="28.8" height="3.2"/><rect x="32.4" y="54" width="35.2" height="3.2"/>
+            <rect x="32.4" y="57.2" width="35.2" height="3.2"/><rect x="35.6" y="60.4" width="28.8" height="3.2"/>
+            <rect x="32.4" y="63.6" width="6.4" height="3.2"/><rect x="42" y="63.6" width="16" height="3.2"/>
+            <rect x="61.2" y="63.6" width="6.4" height="3.2"/><rect x="32.4" y="66.8" width="6.4" height="3.2"/>
+            <rect x="61.2" y="66.8" width="6.4" height="3.2"/>
+          </g>
+          <g fill="#F5EBE0">
+            <rect x="42" y="47.6" width="3.2" height="3.2"/><rect x="54.8" y="47.6" width="3.2" height="3.2"/>
+            <rect x="42" y="60.4" width="3.2" height="3.2"/><rect x="54.8" y="60.4" width="3.2" height="3.2"/>
+            <rect x="45.2" y="63.6" width="9.6" height="3.2"/>
+          </g>
+          <path d="M14 90 C26 86 34 94 46 90 C58 86 66 94 86 90" fill="none" stroke="#1D3557" stroke-width="2.4" stroke-linecap="round"/>
+        </g>
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#F5EBE0" stroke-width="2.5"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <section class="scene light" data-dur="3">
+    <div class="kicker in">Društvo na okupu</div>
+    <h1 class="in" style="--d:.15s">A svako gleda<br>u svoj telefon?</h1>
+    <div class="crowd">
+      <div class="mini pop" style="--d:.5s"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mini pop" style="--d:.6s"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mini pop" style="--d:.7s"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mini pop" style="--d:.8s"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="3">
+    <svg class="logo"><use href="#mark"/></svg>
+    <div class="word in" style="--d:.5s">Igra <span class="gold">Na Klik</span></div>
+    <div class="sub in" style="--d:1s">Neka telefon postane <span class="gold">džojstik.</span></div>
+  </section>
+
+  <section class="scene light" data-dur="4">
+    <div class="kicker in">Bez aplikacije, bez naloga</div>
+    <h2 class="in" style="--d:.1s">Upiši kod sobe<br>i već igraš</h2>
+    <div class="phone in" style="--d:.3s">
+      <div class="screen">
+        <div class="lbl">Kod sobe</div>
+        <div class="code">
+          <b class="pop" style="--d:.9s">K</b><b class="pop" style="--d:1.15s">Z</b><b class="pop" style="--d:1.4s">B</b>
+        </div>
+        <div class="name">Ana</div>
+      </div>
+    </div>
+    <div class="lobby">
+      <div class="ava pop" style="--d:1.9s"><span style="background:#c75146">🦊</span>Ana</div>
+      <div class="ava pop" style="--d:2.15s"><span style="background:#4f80b8">🐸</span>Luka</div>
+      <div class="ava pop" style="--d:2.4s"><span style="background:#5fa173">🐼</span>Mina</div>
+      <div class="ava pop" style="--d:2.65s"><span style="background:#8b6bae">🦉</span>Đole</div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="3.8">
+    <div class="count pop">21</div>
+    <h2 class="in" style="--d:.2s">igra u jednoj sobi</h2>
+    <div class="games">
+      <div class="g pop" style="--d:.5s"><span>🧠</span>Kviz</div>
+      <div class="g pop" style="--d:.6s"><span>🎨</span>Crtaj i pogodi</div>
+      <div class="g pop" style="--d:.7s"><span>🤥</span>Lažov</div>
+      <div class="g pop" style="--d:.8s"><span>🐺</span>Gluvo doba</div>
+      <div class="g pop" style="--d:.9s"><span>🧩</span>Asocijacije</div>
+      <div class="g pop" style="--d:1s"><span>🕵️</span>Tajni agenti</div>
+      <div class="g pop" style="--d:1.1s"><span>⚽</span>Penali</div>
+      <div class="g pop" style="--d:1.2s"><span>🥔</span>Vruć krompir</div>
+      <div class="g pop" style="--d:1.3s"><span>🃏</span>Zavet</div>
+    </div>
+  </section>
+
+  <section class="scene light" data-dur="3.8">
+    <div class="kicker in">Kviz</div>
+    <h2 class="in" style="--d:.1s">Brži tačan<br>nosi više poena</h2>
+    <div class="phone in" style="--d:.3s">
+      <div class="screen">
+        <div class="qcard">Koliko polja ima šahovska tabla?</div>
+        <div class="opts">
+          <div class="opt miss" style="background:#C75146">36</div>
+          <div class="opt miss" style="background:#6FC2BB">49</div>
+          <div class="opt tap" style="background:#E3B45E">64</div>
+          <div class="opt miss" style="background:#7C5FA8">81</div>
+        </div>
+      </div>
+    </div>
+    <div class="verdict pop" style="--d:2.3s">✓ Tačno! <b>+870</b></div>
+  </section>
+
+  <section class="scene" data-dur="3.8">
+    <div class="kicker in">Blef i dedukcija</div>
+    <h2 class="in" style="--d:.1s">Tajna ostaje<br>na tvom telefonu</h2>
+    <div class="pair">
+      <div class="in" style="--d:.5s">
+        <div class="who">Ana, Luka, Mina</div>
+        <div class="card secret"><div class="ic">📍</div><div class="t">Srpska svadba pod šatrom</div><small>Tvoja uloga: Trubač</small></div>
+      </div>
+      <div class="in" style="--d:1s">
+        <div class="who">Đole</div>
+        <div class="card secret"><div class="ic">🕵️</div><div class="t spy">Ti si ŠPIJUN</div><small>Ne znaš lokaciju. Slušaj i blefiraj.</small></div>
+      </div>
+    </div>
+    <div class="sub in" style="--d:1.8s">Špijun, Gluvo doba, Lažni umetnik…</div>
+  </section>
+
+  <section class="scene light" data-dur="4">
+    <h2 class="in">Za pravo društvo</h2>
+    <div class="feats">
+      <div class="feat in" style="--d:.3s"><div class="ico" style="background:#dfe6f2">📺</div><div>19 igara radi i bez TV-a<small>sobu otvaraš sa telefona</small></div></div>
+      <div class="feat in" style="--d:.6s"><div class="ico" style="background:#f3e6cc">👥</div><div>Do 15 igrača<small>u istoj sobi</small></div></div>
+      <div class="feat in" style="--d:.9s"><div class="ico" style="background:#e3efe0">😴</div><div>Telefon zaspao?<small>mesto te čeka 5 minuta</small></div></div>
+      <div class="feat in" style="--d:1.2s"><div class="ico" style="background:#f6e0dc">💬</div><div>Sve na srpskom<small>pitanja, reči i pravila</small></div></div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="4.5">
+    <svg class="mark-sm in"><use href="#mark"/></svg>
+    <h1 class="in" style="--d:.2s">Večeras<br><span class="gold">igrate vi.</span></h1>
+    <div class="cta pop">Igraj besplatno</div>
+    <div class="url in" style="--d:1.5s">igranaklik.com</div>
+  </section>
+</div>
+
+<div id="controls">
+  <button id="replay">Ponovi</button>
+  <button id="rec">Režim snimanja</button>
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const scenes = [...document.querySelectorAll('.scene')];
+  const bar = document.getElementById('progress');
+  const total = scenes.reduce((s, el) => s + +el.dataset.dur, 0);
+  let timers = [];
+
+  function fit() {
+    const k = Math.min(innerWidth / 1080, innerHeight / 1920);
+    stage.style.transform = `scale(${k})`;
+    stage.style.margin = `${(1920 * k - 1920) / 2}px ${(1080 * k - 1080) / 2}px`;
+  }
+
+  function play() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    scenes.forEach(s => s.classList.remove('on'));
+    // restart animacije traka napretka: ukloni prelaz, vrati na nulu, pa pusti
+    bar.style.transition = 'none';
+    bar.style.width = '0';
+    void bar.offsetWidth;
+    bar.style.transition = `width ${total}s linear`;
+    bar.style.width = '100%';
+    let t = 0;
+    scenes.forEach((s, i) => {
+      timers.push(setTimeout(() => {
+        scenes.forEach(o => o !== s && o.classList.remove('on'));
+        s.classList.add('on');
+      }, t * 1000));
+      t += +s.dataset.dur;
+    });
+    timers.push(setTimeout(play, t * 1000 + 600));
+  }
+
+  // Render kadar po kadar (scripts/render-reel.mjs): umesto pravog vremena svaka animacija se
+  // pauzira i postavi na trenutak t, pa je snimak deterministican bez obzira na brzinu masine
+  const FADE = 0.45;
+  window.TOTAL = total;
+  window.renderAt = t => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    document.body.classList.add('rec', 'render');
+    let start = 0;
+    scenes.forEach(s => {
+      const end = start + +s.dataset.dur;
+      // scena ostaje "on" i tokom odlaska, da joj se elementi ne vrate na pocetno stanje dok bledi
+      const on = t >= start && t < end + FADE;
+      s.classList.toggle('on', on);
+      const fadeIn = Math.min(1, (t - start) / FADE);
+      const fadeOut = Math.min(1, Math.max(0, 1 - (t - end) / FADE));
+      s.style.opacity = on ? (start === 0 ? 1 : Math.min(fadeIn, fadeOut)) : 0;
+      s.dataset.start = start;
+      start = end;
+    });
+    bar.style.transition = 'none';
+    bar.style.width = `${Math.min(100, (t / total) * 100)}%`;
+    document.getAnimations().forEach(a => {
+      const scene = a.effect?.target?.closest?.('.scene');
+      if (!scene) return;
+      a.pause();
+      a.currentTime = Math.max(0, (t - +scene.dataset.start) * 1000);
+    });
+  };
+
+  document.getElementById('replay').onclick = play;
+  // sakriva dugmad pa pusti od pocetka, da snimak ekrana nema nista osim kadra
+  document.getElementById('rec').onclick = () => { document.body.classList.add('rec'); setTimeout(play, 1500); };
+  addEventListener('keydown', e => { if (e.key === 'Escape') document.body.classList.remove('rec'); });
+  addEventListener('resize', fit);
+  fit();
+  if (!location.hash.includes('render')) document.fonts.ready.then(play);
+</script>
+</body>
+</html>

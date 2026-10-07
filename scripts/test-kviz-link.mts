@@ -195,7 +195,20 @@ async function main(): Promise<void> {
   const enter = async (name: string) => {
     const s = connect();
     await once(s, 'connect');
-    const view = { state: null as StateLite | null, ended: null as null | { finalScores: { playerId: string; score: number }[] } };
+    const view = {
+      state: null as StateLite | null,
+      ended: null as null | { finalScores: { playerId: string; score: number }[] },
+      // Last "Tvoji odgovori" seen in this phone's private slice, plus every
+      // player id that ever showed up in it (must be only our own).
+      recap: null as null | { rank: number; correct: number; total: number; items: { a: string | null; ok: boolean | null; right?: string }[] },
+      sliceIds: new Set<string>(),
+    };
+    s.on('game:player-state' as never, ((d: { playerData: Record<string, { linkRecap?: typeof view.recap }> }) => {
+      for (const [id, slice] of Object.entries(d.playerData)) {
+        view.sliceIds.add(id);
+        if (slice.linkRecap) view.recap = slice.linkRecap;
+      }
+    }) as never);
     s.on('game:started' as never, ((d: { gameId: string; gameState: StateLite }) => {
       view.state = d.gameState;
       (view as { gameId?: string }).gameId = d.gameId;
@@ -253,8 +266,8 @@ async function main(): Promise<void> {
   await sleep(300);
   const stats = await call('GET', `/api/k/${slug}/stats`, undefined, token);
   const games = (stats.json.games ?? []) as {
-    questions: { key: string }[];
-    players: { name: string; results: (0 | 1 | null)[] }[];
+    questions: { key: string; options?: string[]; correct?: unknown }[];
+    players: { name: string; results: (0 | 1 | null)[]; answers?: unknown[]; ms?: (number | null)[] }[];
   }[];
   check('statistika: jedna partija', games.length === 1, stats.text.slice(0, 200));
   check('statistika: 4 pitanja sa ključevima', games[0]?.questions.map((q) => q.key).join(',') === [...picked, 'own:konobar'].join(','));
@@ -262,6 +275,25 @@ async function main(): Promise<void> {
   const sa = games[0]?.players.find((p) => p.name === 'Ana');
   check('statistika: Bane tačno na sopstvenom', sb?.results[3] === 1, JSON.stringify(sb));
   check('statistika: Ana netačno na sopstvenom', sa?.results[3] === 0, JSON.stringify(sa));
+  check('statistika: Anin odgovor zapamćen', JSON.stringify(sa?.answers?.[3]) === JSON.stringify({ k: 'opt', i: 0 }), JSON.stringify(sa?.answers));
+  check('statistika: vreme odgovora', typeof sa?.ms?.[3] === 'number' && sa.ms[3]! >= 0, JSON.stringify(sa?.ms));
+  const ownSnap = games[0]?.questions[3];
+  check(
+    'statistika: snimak sopstvenog pitanja',
+    JSON.stringify(ownSnap?.options) === JSON.stringify(['Bane', 'Žika']) && ownSnap?.correct === 1,
+    JSON.stringify(ownSnap)
+  );
+  check(
+    'tvoji odgovori: Ana dobila svoja 4 odgovora',
+    ana.view.recap?.total === 4 && ana.view.recap.items[3].a === 'Bane' && ana.view.recap.items[3].ok === false && ana.view.recap.items[3].right === 'Žika',
+    JSON.stringify(ana.view.recap)
+  );
+  check('tvoji odgovori: Bane tačno na sopstvenom', bane.view.recap?.items[3].ok === true, JSON.stringify(bane.view.recap));
+  check(
+    'tvoji odgovori: telefon vidi samo svoj deo',
+    [...ana.view.sliceIds].every((id) => id === ana.id) && [...bane.view.sliceIds].every((id) => id === bane.id),
+    [...ana.view.sliceIds].join(',') + ' / ' + [...bane.view.sliceIds].join(',')
+  );
   const manage = await call('GET', `/api/k/${slug}/manage`, undefined, token);
   check('upravljanje: zbir igrača', (manage.json.stats as { players?: number })?.players === 2);
 

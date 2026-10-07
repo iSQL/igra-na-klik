@@ -4,6 +4,7 @@ import { GAME_DEFINITIONS, ROOM_CODE_LENGTH } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
+import { useKvizRecapStore } from '../store/kvizRecapStore';
 import { socket } from '../socket';
 import { LeaveRoomButton } from '../components/LeaveRoomButton';
 import { CloseRoomButton } from '../components/CloseRoomButton';
@@ -12,6 +13,7 @@ import { ChatToggleButton } from '../components/ChatHead';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { BottomSheet, SheetRow } from '../components/BottomSheet';
 import { AvatarPickerModal } from '../components/AvatarPickerModal';
+import { KvizLinkRecap } from '../components/KvizLinkRecap';
 import { useT } from '../i18n/useT';
 
 const iconButton: React.CSSProperties = {
@@ -32,6 +34,8 @@ export function LobbyScreen() {
   const { player, room } = usePlayerStore();
   const setScreen = useNavStore((s) => s.setScreen);
   const lastStartPayload = useGameStore((s) => s.lastStartPayload);
+  const recap = useKvizRecapStore((s) => s.recap);
+  const clearRecap = useKvizRecapStore((s) => s.clear);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -67,6 +71,9 @@ export function LobbyScreen() {
   // Kviz-link room: the link itself is the invitation, the quiz card replaces
   // the room code and the only thing to start is that quiz.
   const kviz = room.kvizLink;
+  // After a link game the phone first shows its own answers; "Nova partija"
+  // drops back to this lobby.
+  if (kviz && recap) return <KvizLinkRecap recap={recap} onDone={clearRecap} />;
   const joinUrl = kviz
     ? `${window.location.origin}/k/${kviz.slug}`
     : roomJoinUrl(room.code);

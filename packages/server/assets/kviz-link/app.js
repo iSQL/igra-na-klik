@@ -1757,43 +1757,374 @@
   }
 
   // ---- 1f: statistics -----------------------------------------------------------------------------------
+  //
+  // Per game: a players × questions table of what everyone answered (1a), the
+  // picked question broken down by answer, and one player across every game
+  // (1b). Games recorded before answers were kept carry only results, so their
+  // cells fall back to ✓ / ✕ / —.
+
+  const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+  // View state survives re-renders inside the tab: which game, question, player.
+  const sv = { mode: 'game', gi: -1, q: 0, name: null, back: 'game', marks: false, byName: false };
 
   function renderStatsTab(body) {
     body.innerHTML = '<div class="loading">Učitavam statistiku…</div>';
-    Promise.all([api('GET', '/api/k/' + ed.slug + '/stats', undefined, ed.token), loadBank().catch(() => null)])
-      .then(([r]) => drawStats(body, r.games || [], 'all', null))
+    api('GET', '/api/k/' + ed.slug + '/stats', undefined, ed.token)
+      .then((r) => {
+        const games = r.games || [];
+        if (sv.gi < 0 || sv.gi >= games.length) Object.assign(sv, { mode: 'game', gi: games.length - 1, q: 0 });
+        drawStats(body, games);
+      })
       .catch((e) => (body.innerHTML = '<div class="loading">' + esc(e.message) + '</div>'));
   }
 
-  function drawStats(body, games, filter, picked) {
+  const fmtInt = (n) => Math.round(n).toLocaleString('sr-RS');
+  const fmtKm = (km) => String(km).replace('.', ',') + ' km';
+  const fmtSec = (ms) => (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+  function fmtNum(q, v) {
+    if (q.valueType === 'duration') {
+      const t = Math.max(0, Math.round(v));
+      return Math.floor(t / 60) + ':' + pad(t % 60);
+    }
+    return v.toLocaleString('sr-RS', { maximumFractionDigits: 2 }) + (q.unit ? ' ' + q.unit : '');
+  }
+  const isOwn = (q) => !!q.key && q.key.indexOf('own:') === 0;
+  const typeShort = (q) => (isOwn(q) ? '🔒 ' : '') + (SHORT[q.type] || q.type);
+  const typeChip = (q) => (isOwn(q) ? '🔒 Privatno' : (TYPE[q.type] || { chip: q.type }).chip);
+  const pctTone = (p) => (p < 35 ? 'var(--red)' : p < 65 ? 'var(--gold)' : 'var(--green)');
+  const resTone = (r) => (r === 1 ? 'ok1' : r === 0 ? 'ok0' : 'okn');
+  const face = (p, cls) =>
+    '<span class="' + (cls || 'face') + '" title="' + esc(p.name) + '" style="background:' + esc(p.color) + '">' + esc(p.emoji) + '</span>';
+  const gameTitle = (gi) => 'Partija #' + (gi + 1);
+  const placeOf = (g, p) => 1 + g.players.filter((x) => x.points > p.points).length;
+
+  /** A cell's short tag + label; null when the game kept no answer for it. */
+  function answerLabel(q, a) {
+    if (!a) return null;
+    switch (a.k) {
+      case 'opt':
+        return { tag: LETTERS[a.i] || '?', label: (q.options && q.options[a.i]) || 'opcija ' + (a.i + 1) };
+      case 'num':
+        return { tag: '#', label: fmtNum(q, a.v) };
+      case 'txt':
+        return { tag: 'Aa', label: a.v };
+      case 'geo':
+        return { tag: '📍', label: fmtKm(a.km) };
+      case 'order':
+        return { tag: '↕', label: a.hits + '/' + a.of + ' mesta' };
+      case 'domino':
+        return { tag: '⇅', label: 'niz ' + a.streak + '/' + a.of };
+      case 'cells':
+        return { tag: '▦', label: q.options ? a.v.map((i) => q.options[i]).join(' · ') : a.hit + '/3' };
+    }
+    return null;
+  }
+
+  function rightLabel(q) {
+    if (q.correct === undefined && !q.options) return '';
+    if (typeof q.correct === 'number' && q.options && q.type !== 'broj') return q.options[q.correct] || '';
+    if (q.type === 'broj' && typeof q.correct === 'number') return fmtNum(q, q.correct);
+    if (typeof q.correct === 'string') return q.correct;
+    if (q.type === 'redosled' && q.options) return q.options.join(' → ');
+    if (Array.isArray(q.correct) && q.options) return q.correct.map((i) => q.options[i]).join(' · ');
+    return '';
+  }
+
+  const answerOf = (p, qi) => (p.answers ? p.answers[qi] : null);
+  const msOf = (p, qi) => (p.ms ? p.ms[qi] : null);
+  const okCount = (g, qi) => g.players.filter((p) => p.results[qi] === 1).length;
+
+  function drawStats(body, games) {
     if (!games.length) {
       body.innerHTML =
         '<div class="narrow"><div class="empty" style="margin-top:2rem">Još niko nije odigrao ovaj kviz. Statistika se puni posle svake partije.</div></div>';
       return;
     }
-    const sel = filter === 'all' ? games : [games[filter]];
+    const redraw = () => drawStats(body, games);
+    const main =
+      sv.mode === 'player' ? statsPlayerHtml(games, sv.name) : sv.mode === 'all' ? statsAllHtml(games) : statsGameHtml(games, sv.gi);
 
-    // Players: one row per name (across the selected games).
-    const byName = new Map();
-    sel.forEach((g, gi) => {
+    body.innerHTML =
+      '<div class="st-grid"><aside class="st-side"><span class="sec-lbl">Partije</span><div class="st-games">' +
+      games
+        .map((g, gi) => ({ g, gi }))
+        .reverse()
+        .map(({ g, gi }) => {
+          const win = g.players[0];
+          return (
+            '<button class="st-game' + (sv.mode === 'game' && sv.gi === gi ? ' on' : '') + '" data-gi="' + gi + '">' +
+            '<span class="st-game-h"><b>' + gameTitle(gi) + '</b><span>' + esc(fmtDateTime(g.at)) + '</span></span>' +
+            '<span class="st-game-m"><span class="faces">' + g.players.slice(0, 4).map((p) => face(p, 'mini')).join('') + '</span>' +
+            '<span>' + g.players.length + ' igr. · ' + g.questions.length + ' pit.</span></span>' +
+            (win ? '<span class="st-game-w">🏆 ' + esc(win.name) + ' · ' + fmtInt(win.points) + '</span>' : '') +
+            '</button>'
+          );
+        })
+        .join('') +
+      '</div><button class="st-all' + (sv.mode === 'all' ? ' on' : '') + '" id="st-all">Sve partije zajedno · po igraču</button></aside>' +
+      '<div class="st-main">' + main + '</div></div>';
+
+    $$('.st-game', body).forEach((b) => (b.onclick = () => (Object.assign(sv, { mode: 'game', gi: +b.dataset.gi, q: 0 }), redraw())));
+    $('#st-all', body).onclick = () => ((sv.mode = 'all'), redraw());
+    $$('[data-q]', body).forEach((b) => (b.onclick = () => ((sv.q = +b.dataset.q), redraw())));
+    $$('[data-name]', body).forEach(
+      (b) => (b.onclick = () => (Object.assign(sv, { back: sv.mode, mode: 'player', name: b.dataset.name }), redraw()))
+    );
+    const back = $('#st-back', body);
+    if (back) back.onclick = () => ((sv.mode = sv.back === 'all' ? 'all' : 'game'), redraw());
+    const marks = $('#st-marks', body);
+    if (marks) marks.onclick = (e) => {
+      const v = e.target.closest('button');
+      if (!v) return;
+      sv.marks = v.dataset.v === '1';
+      redraw();
+    };
+    const sort = $('#st-sort', body);
+    if (sort) sort.onchange = (e) => ((sv.byName = e.target.value === 'name'), redraw());
+    const csv = $('#csv', body);
+    if (csv) csv.onclick = () => exportCsv(sv.mode === 'game' ? [games[sv.gi]] : games, sv.mode === 'game' ? sv.gi : 0);
+  }
+
+  // ---- 1a: one game -------------------------------------------------------------------------------------
+
+  function statsGameHtml(games, gi) {
+    const g = games[gi];
+    const qn = g.questions.length;
+    if (sv.q >= qn) sv.q = 0;
+    const n = g.players.length;
+    const rows = g.players.slice().sort(sv.byName ? (a, b) => a.name.localeCompare(b.name, 'sr') : (a, b) => b.points - a.points);
+
+    const heads = g.questions
+      .map((q, qi) => {
+        const pct = n ? Math.round((100 * okCount(g, qi)) / n) : 0;
+        return (
+          '<button class="mx-head' + (qi === sv.q ? ' on' : '') + '" data-q="' + qi + '" title="' + esc(q.text) + '">' +
+          '<b>' + (qi + 1) + '</b><span class="t">' + esc(typeShort(q)) + '</span>' +
+          '<span class="p" style="color:' + pctTone(pct) + '">' + pct + '%</span></button>'
+        );
+      })
+      .join('');
+    const body = rows
+      .map((p) => {
+        const cells = g.questions
+          .map((q, qi) => {
+            const r = p.results[qi];
+            const lab = answerLabel(q, answerOf(p, qi));
+            const mark = r === 1 ? '✓' : r === 0 ? '✕' : '—';
+            const ms = msOf(p, qi);
+            const tip = q.text + ' → ' + (lab ? lab.label : r === null ? 'bez odgovora' : mark) + (ms != null ? ' · ' + fmtSec(ms) : '');
+            const tag = sv.marks || !lab ? mark : lab.tag;
+            return (
+              '<div class="mx-cell ' + resTone(r) + (qi === sv.q ? ' pick' : '') + (!sv.marks && lab ? '' : ' only') + '" title="' + esc(tip) + '">' +
+              '<span class="tag">' + esc(tag) + '</span>' +
+              (!sv.marks && lab ? '<span class="lb">' + esc(lab.label) + '</span>' : '') +
+              '</div>'
+            );
+          })
+          .join('');
+        return (
+          '<button class="mx-name" data-name="' + esc(p.name) + '">' + face(p) + '<span>' + esc(p.name) + '</span></button>' +
+          cells +
+          '<span class="mx-pts">' + fmtInt(p.points) + '</span>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="st-insights">' + insightsHtml(g) + '</div>' +
+      '<div class="card"><div class="card-head"><h2>' + gameTitle(gi) + ' · ko je šta odgovorio</h2>' +
+      '<div class="mx-tools">' +
+      '<span class="legend"><i class="ok1"></i>tačno <i class="ok0"></i>netačno <i class="okn"></i>bez odgovora</span>' +
+      '<span class="seg seg-sm" id="st-marks"><button data-v="0" class="' + (sv.marks ? '' : 'on') + '">Odgovor</button><button data-v="1" class="' + (sv.marks ? 'on' : '') + '">✓/✕</button></span>' +
+      '<select id="st-sort"><option value="pts">po poenima</option><option value="name"' + (sv.byName ? ' selected' : '') + '>po imenu</option></select>' +
+      '</div></div>' +
+      '<div class="mx-scroll"><div class="mx" style="grid-template-columns:150px repeat(' + qn + ',minmax(' + (sv.marks ? 44 : 96) + 'px,1fr)) 70px">' +
+      '<span></span>' + heads + '<span class="mx-ph">Poeni</span>' + body +
+      '</div></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-top:.8rem;flex-wrap:wrap">' +
+      '<span class="hint" style="margin:0">Klikni broj pitanja za raspodelu odgovora, ime za igrača kroz sve partije.</span>' +
+      '<button class="btn btn-ghost btn-sm" id="csv">⬇ CSV ove partije</button></div></div>' +
+      '<div class="card">' + questionDetailHtml(g, sv.q) + '</div>'
+    );
+  }
+
+  function insightsHtml(g) {
+    const n = g.players.length;
+    const card = (label, title, sub) =>
+      '<div class="ins"><span class="sec-lbl">' + label + '</span><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div>';
+    const kept = g.players.some((p) => p.answers);
+
+    // Hardest: fewest correct.
+    let hard = 0;
+    g.questions.forEach((_, qi) => {
+      if (okCount(g, qi) < okCount(g, hard)) hard = qi;
+    });
+    const hq = g.questions[hard];
+    let hardSub = okCount(g, hard) + ' od ' + n + ' tačno';
+    if (hq.type === 'geo') {
+      const kms = g.players.map((p) => answerOf(p, hard)).filter((a) => a && a.k === 'geo').map((a) => a.km);
+      if (kms.length) hardSub += ' · prosečan promašaj ' + fmtKm(Math.round((kms.reduce((s, v) => s + v, 0) / kms.length) * 10) / 10);
+    }
+    const out = [card('Najteže pitanje', hard + 1 + '. ' + hq.text, hardSub)];
+
+    // Most common wrong answer.
+    const wrong = new Map();
+    g.questions.forEach((q, qi) => {
       g.players.forEach((p) => {
-        const row = byName.get(p.name) || { name: p.name, emoji: p.emoji, color: p.color, correct: 0, total: 0, points: 0, last: null };
+        if (p.results[qi] !== 0) return;
+        const lab = answerLabel(q, answerOf(p, qi));
+        if (!lab || q.type === 'geo') return;
+        const k = qi + '|' + lab.label.toLowerCase();
+        const w = wrong.get(k) || { qi, label: lab.label, who: [] };
+        w.who.push(p.name);
+        wrong.set(k, w);
+      });
+    });
+    const top = [...wrong.values()].sort((a, b) => b.who.length - a.who.length)[0];
+    out.push(
+      top
+        ? card('Najčešća greška', '„' + top.label + '" na pitanju ' + (top.qi + 1), top.who.slice(0, 3).join(', ') + (top.who.length > 3 ? ' i još ' + (top.who.length - 3) : ''))
+        : card('Najčešća greška', kept ? 'Nije bilo zajedničke greške' : '—', kept ? 'svako je grešio na svoj način' : 'stara partija, odgovori se nisu pamtili')
+    );
+
+    // Fastest correct.
+    let fast = null;
+    g.questions.forEach((q, qi) => {
+      g.players.forEach((p) => {
+        const ms = msOf(p, qi);
+        if (p.results[qi] === 1 && ms != null && (!fast || ms < fast.ms)) fast = { ms, p, q, qi };
+      });
+    });
+    out.push(
+      fast
+        ? card('Najbrži tačan', fast.p.name + ' · ' + fmtSec(fast.ms), 'pitanje ' + (fast.qi + 1) + ', ' + typeChip(fast.q))
+        : card('Najbrži tačan', '—', kept ? 'niko nije tačno odgovorio na vreme' : 'stara partija, vreme se nije pamtilo')
+    );
+    return out.join('');
+  }
+
+  /** Who answered what to one question, shaped by its type. */
+  function questionDetailHtml(g, qi) {
+    const q = g.questions[qi];
+    const n = g.players.length;
+    const kept = g.players.some((p) => p.answers);
+    const head =
+      '<div class="qd-head"><b class="num">' + (qi + 1) + '.</b><h2>' + esc(q.text) + '</h2>' +
+      '<span class="qtype">' + esc(typeChip(q)) + '</span><span class="sum">' + okCount(g, qi) + ' od ' + n + ' tačno</span></div>';
+    const who = (list) => '<span class="who">' + list.map((p) => face(p, 'mini')).join('') + '<b>' + list.length + '</b></span>';
+    const barRow = (lead, label, list, pct, tone, ok) =>
+      '<div class="qd-row' + (ok ? ' ok' : '') + (lead ? '' : ' nolead') + '">' + lead + '<span class="tx">' + esc(label) + '</span>' +
+      '<div class="bar"><div style="width:' + pct + '%;background:' + tone + '"></div></div>' + who(list) + '</div>';
+
+    if (!kept) {
+      const by = (r) => g.players.filter((p) => p.results[qi] === r);
+      return (
+        head +
+        '<div class="qd-list">' +
+        [[1, 'Tačno', 'var(--green)'], [0, 'Netačno', 'var(--red)'], [null, 'Bez odgovora', 'var(--line2)']]
+          .map(([r, l, tone]) => ({ list: by(r), l, tone, r }))
+          .filter((x) => x.list.length)
+          .map((x) => barRow('', x.l, x.list, n ? (100 * x.list.length) / n : 0, x.tone, x.r === 1))
+          .join('') +
+        '</div><p class="hint">Ova partija je odigrana pre nego što su se odgovori pamtili — vidi se samo ✓ / ✕.</p>'
+      );
+    }
+
+    // Choice: one row per option, with the faces that picked it.
+    if (q.options && typeof q.correct === 'number' && q.type !== 'broj') {
+      const rows = q.options.map((t, i) => {
+        const list = g.players.filter((p) => {
+          const a = answerOf(p, qi);
+          return a && a.k === 'opt' && a.i === i;
+        });
+        const ok = i === q.correct;
+        const lead = '<span class="letter' + (ok ? ' ok' : '') + '">' + (LETTERS[i] || i + 1) + '</span>';
+        return barRow(lead, (ok ? '✓ ' : '') + t, list, n ? (100 * list.length) / n : 0, ok ? 'var(--green)' : 'var(--red)', ok);
+      });
+      const none = g.players.filter((p) => !answerOf(p, qi));
+      if (none.length) rows.push(barRow('<span class="letter">—</span>', 'Bez odgovora', none, (100 * none.length) / n, 'var(--line2)', false));
+      return head + '<div class="qd-list">' + rows.join('') + '</div>';
+    }
+
+    // Broj: everyone on the number line, the correct value marked.
+    if (q.type === 'broj' && typeof q.correct === 'number' && q.min != null && q.max != null) {
+      const span = q.max - q.min || 1;
+      const pos = (v) => Math.max(0, Math.min(100, ((v - q.min) / span) * 100));
+      const used = {};
+      const dots = g.players
+        .map((p) => {
+          const a = answerOf(p, qi);
+          if (!a || a.k !== 'num') return '';
+          const slot = Math.round(pos(a.v) / 4);
+          const k = (used[slot] = (used[slot] || 0) + 1);
+          const ring = p.results[qi] === 1 ? 'var(--green)' : 'var(--red)';
+          return (
+            '<span class="dot" title="' + esc(p.name + ': ' + fmtNum(q, a.v)) + '" style="left:' + pos(a.v) + '%;top:' + (58 - (k - 1) * 28) + 'px;background:' + esc(p.color) + ';box-shadow:0 0 0 2px ' + ring + '">' + esc(p.emoji) + '</span>'
+          );
+        })
+        .join('');
+      const levels = Math.max(1, ...Object.values(used));
+      return (
+        head +
+        '<div class="axis" style="height:' + (110 + (levels - 1) * 28) + 'px;padding-top:' + (levels - 1) * 28 + 'px"><div class="axis-in">' +
+        '<div class="line"></div><div class="mark" style="left:' + pos(q.correct) + '%"></div>' +
+        '<span class="mark-l" style="left:' + pos(q.correct) + '%">✓ ' + esc(fmtNum(q, q.correct)) + '</span>' + dots +
+        '<span class="end l">' + esc(fmtNum(q, q.min)) + '</span><span class="end r">' + esc(fmtNum(q, q.max)) + '</span></div></div>'
+      );
+    }
+
+    // Everything else: identical answers grouped (geo by distance).
+    const groups = new Map();
+    g.players.forEach((p) => {
+      const a = answerOf(p, qi);
+      const lab = answerLabel(q, a);
+      const key = lab ? lab.label.toLowerCase() : '\u0000';
+      const gr = groups.get(key) || { label: lab ? lab.label : 'Bez odgovora', a, r: lab ? p.results[qi] : null, list: [] };
+      gr.list.push(p);
+      groups.set(key, gr);
+    });
+    let arr = [...groups.values()];
+    const geo = q.type === 'geo';
+    const maxKm = geo ? Math.max(1, ...arr.filter((x) => x.a).map((x) => x.a.km)) : 1;
+    arr = arr.sort(geo ? (x, y) => (x.a ? x.a.km : 1e9) - (y.a ? y.a.km : 1e9) : (x, y) => y.list.length - x.list.length);
+    const right = rightLabel(q);
+    return (
+      head +
+      (right ? '<p class="qd-right">Tačno: <b>' + esc(right) + '</b></p>' : '') +
+      '<div class="qd-list">' +
+      arr
+        .map((x) => {
+          const ok = x.r === 1;
+          const tone = x.r === null ? 'var(--line2)' : ok ? 'var(--green)' : 'var(--red)';
+          const pct = geo && x.a ? (100 * x.a.km) / maxKm : n ? (100 * x.list.length) / n : 0;
+          return barRow('', (ok ? '✓ ' : '') + (geo && x.a ? 'promašaj ' : '') + x.label, x.list, pct, tone, ok);
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+
+  // ---- All games: players + hardest questions ------------------------------------------------------------
+
+  function statsAllHtml(games) {
+    const byName = new Map();
+    games.forEach((g) => {
+      g.players.forEach((p) => {
+        const row = byName.get(p.name) || { name: p.name, emoji: p.emoji, color: p.color, correct: 0, total: 0, points: 0, games: 0 };
         row.correct += p.correct;
         row.total += g.questions.length;
         row.points += p.points;
-        row.last = { game: g, player: p };
+        row.games++;
         byName.set(p.name, row);
       });
     });
     const players = [...byName.values()].sort((a, b) => b.points - a.points);
-    if (!picked || !byName.has(picked)) picked = players.length ? players[0].name : null;
 
-    // Questions: % correct among those who answered, hardest first.
     const byKey = new Map();
-    sel.forEach((g) => {
+    games.forEach((g) => {
       g.questions.forEach((q, qi) => {
         const k = q.key || q.text;
-        const row = byKey.get(k) || { key: q.key, text: q.text, type: q.type, answered: 0, correct: 0 };
+        const row = byKey.get(k) || { q, answered: 0, correct: 0 };
         g.players.forEach((p) => {
           const r = p.results[qi];
           if (r === null || r === undefined) return;
@@ -1804,77 +2135,146 @@
       });
     });
     const qs = [...byKey.values()]
-      .map((q) => Object.assign(q, { pct: q.answered ? Math.round((100 * q.correct) / q.answered) : 0 }))
+      .map((x) => Object.assign(x, { pct: x.answered ? Math.round((100 * x.correct) / x.answered) : 0 }))
       .sort((a, b) => a.pct - b.pct);
 
-    const pick = picked ? byName.get(picked) : null;
-    const chips = pick
-      ? pick.last.player.results
-          .map((r, i) => '<span class="' + (r === 1 ? 'ok1' : r === 0 ? 'ok0' : 'okn') + '" title="' + esc(pick.last.game.questions[i].text) + '">' + (i + 1) + '</span>')
-          .join('')
-      : '';
-
-    body.innerHTML =
-      '<div class="stats">' +
-      '<div class="card"><div class="card-head"><h2>Igrači</h2>' +
-      '<label class="hint" style="margin:0">Partija: <select id="game">' +
-      '<option value="all">sve (' + games.length + ')</option>' +
-      games
-        .map((g, i) => ({ g, i }))
-        .reverse()
-        .map((x) => '<option value="' + x.i + '"' + (String(filter) === String(x.i) ? ' selected' : '') + '>' + esc(fmtDateTime(x.g.at)) + ' · ' + x.g.players.length + ' igr.</option>')
-        .join('') +
-      '</select></label></div>' +
+    return (
+      '<div class="stats-2">' +
+      '<div class="card"><div class="card-head"><h2>Igrači · sve partije</h2><span class="hint" style="margin:0">spojeni po imenu</span></div>' +
       '<div class="ptable-h"><span></span><span>Ime</span><span>Tačno</span><span>Poeni</span></div><div class="prows">' +
       players
         .map(
           (p, i) =>
-            '<button class="prow' + (i === 0 ? ' top' : '') + (p.name === picked ? ' picked' : '') + '" data-name="' + esc(p.name) + '">' +
-            '<span class="face" style="background:' + esc(p.color) + '">' + esc(p.emoji) + '</span>' +
-            '<span class="nm">' + esc(p.name) + '</span><span>' + p.correct + '/' + p.total + '</span>' +
-            '<span class="pts">' + p.points.toLocaleString('sr-RS') + '</span></button>'
+            '<button class="prow' + (i === 0 ? ' top' : '') + '" data-name="' + esc(p.name) + '">' + face(p) +
+            '<span class="nm">' + esc(p.name) + '<small>' + p.games + ' ' + plural(p.games, 'partija', 'partije', 'partija') + '</small></span>' +
+            '<span>' + p.correct + '/' + p.total + '</span><span class="pts">' + fmtInt(p.points) + '</span></button>'
         )
         .join('') +
-      '</div>' +
-      (pick
-        ? '<div class="perq"><b>' + esc(pick.name) + ' · po pitanjima' + (filter === 'all' && sel.length > 1 ? ' (poslednja partija)' : '') + '</b><div>' + chips + '</div></div>'
-        : '') +
-      '</div>' +
+      '</div></div>' +
       '<div class="card"><div class="card-head"><h2>Pitanja · najteža prva</h2><span class="hint" style="margin:0">% tačnih odgovora</span></div>' +
       '<div class="qstats">' +
       qs
-        .map((q) => {
-          const own = q.key && q.key.indexOf('own:') === 0;
-          const bar = q.pct < 35 ? 'var(--red)' : q.pct < 65 ? 'var(--gold)' : 'var(--green)';
-          return (
-            '<div class="qstat"><div style="min-width:0"><div class="tx">' + esc(q.text) + '</div>' +
-            '<div class="mt">' + (own ? '🔒 Privatno' : esc((TYPE[q.type] || { chip: q.type }).chip)) + ' · ' + q.answered + ' odgovora</div></div>' +
-            '<div class="bar"><div style="width:' + q.pct + '%;background:' + bar + '"></div></div><span class="pc">' + q.pct + '%</span></div>'
-          );
-        })
+        .map(
+          (x) =>
+            '<div class="qstat"><div style="min-width:0"><div class="tx">' + esc(x.q.text) + '</div>' +
+            '<div class="mt">' + esc(typeChip(x.q)) + ' · ' + x.answered + ' odgovora</div></div>' +
+            '<div class="bar"><div style="width:' + x.pct + '%;background:' + pctTone(x.pct) + '"></div></div><span class="pc">' + x.pct + '%</span></div>'
+        )
         .join('') +
-      '</div><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-ghost btn-sm" id="csv">⬇ Izvezi CSV</button></div></div>' +
-      '</div>';
-
-    $('#game', body).onchange = (e) => {
-      const v = e.target.value;
-      drawStats(body, games, v === 'all' ? 'all' : parseInt(v, 10), picked);
-    };
-    $$('.prow', body).forEach((b) => (b.onclick = () => drawStats(body, games, filter, b.dataset.name)));
-    $('#csv', body).onclick = () => exportCsv(sel);
+      '</div><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-ghost btn-sm" id="csv">⬇ Izvezi CSV (sve partije)</button></div></div>' +
+      '</div>'
+    );
   }
 
-  function exportCsv(games) {
+  // ---- 1b: one player across every game -----------------------------------------------------------------
+
+  function statsPlayerHtml(games, name) {
+    const mine = [];
+    games.forEach((g, gi) => {
+      const p = g.players.find((x) => x.name === name);
+      if (p) mine.push({ g, gi, p });
+    });
+    if (!mine.length) {
+      sv.mode = 'game';
+      return statsGameHtml(games, sv.gi);
+    }
+    const me = mine[mine.length - 1].p;
+    const correct = mine.reduce((s, m) => s + m.p.correct, 0);
+    const total = mine.reduce((s, m) => s + m.g.questions.length, 0);
+    const wins = mine.filter((m) => placeOf(m.g, m.p) === 1).length;
+
+    const rows = mine
+      .slice()
+      .reverse()
+      .map(({ g, gi, p }) => {
+        const cells = g.questions
+          .map((q, qi) => {
+            const r = p.results[qi];
+            const lab = answerLabel(q, answerOf(p, qi));
+            const text = lab ? (lab.tag.length === 1 && /[A-F]/.test(lab.tag) ? lab.tag + ' ' : '') + lab.label : r === 1 ? '✓' : r === 0 ? '✕' : '—';
+            return '<span class="pg-cell ' + resTone(r) + '" title="' + esc((qi + 1) + '. ' + q.text + ' → ' + text) + '">' + esc(text) + '</span>';
+          })
+          .join('');
+        return (
+          '<div class="pg-row"><div class="pg-t"><b>' + gameTitle(gi) + '</b><span>' + placeOf(g, p) + '. mesto · ' + esc(fmtDateTime(g.at)) + '</span></div>' +
+          '<div class="pg-cells">' + cells + '</div><span class="pg-pts">' + fmtInt(p.points) + '</span></div>'
+        );
+      })
+      .join('');
+
+    const types = new Map();
+    const misses = new Map();
+    mine.forEach(({ g, gi, p }) => {
+      g.questions.forEach((q, qi) => {
+        const t = types.get(q.type) || { label: SHORT[q.type] || q.type, ok: 0, of: 0 };
+        t.of++;
+        if (p.results[qi] === 1) t.ok++;
+        types.set(q.type, t);
+        if (p.results[qi] !== 0) return;
+        const k = q.key || q.text;
+        const lab = answerLabel(q, answerOf(p, qi));
+        const m = misses.get(k) || { q, games: [], hers: [] };
+        m.games.push('#' + (gi + 1));
+        if (lab) m.hers.push(lab.label);
+        misses.set(k, m);
+      });
+    });
+    const byType = [...types.values()]
+      .sort((a, b) => b.of - a.of)
+      .map((t) => {
+        const pct = Math.round((100 * t.ok) / t.of);
+        return (
+          '<div class="pt-row"><span>' + esc(t.label) + '</span><div class="bar"><div style="width:' + pct + '%;background:' + pctTone(pct) + '"></div></div>' +
+          '<b>' + t.ok + '/' + t.of + '</b></div>'
+        );
+      })
+      .join('');
+    const missList = [...misses.values()].slice(0, 8);
+
+    return (
+      '<div class="card pl-card"><div class="pl-head"><span class="face big" style="background:' + esc(me.color) + '">' + esc(me.emoji) + '</span>' +
+      '<div class="pl-t"><b>' + esc(name) + '</b><span>' + mine.length + ' ' + plural(mine.length, 'partija', 'partije', 'partija') + ' · ' + correct + ' / ' + total + ' tačnih · ' +
+      wins + ' ' + plural(wins, 'pobeda', 'pobede', 'pobeda') + '</span></div>' +
+      '<button class="btn btn-ghost btn-sm" id="st-back">← Nazad</button></div>' +
+      '<p class="hint" style="margin:.2rem 0 0">Igrači se spajaju po imenu — dva igrača istog imena ovde su jedan.</p></div>' +
+      '<div class="card"><h2>Po partijama</h2><div class="pg">' + rows + '</div></div>' +
+      '<div class="stats-2">' +
+      '<div class="card"><h2>Po vrsti pitanja</h2><div class="pt">' + byType + '</div></div>' +
+      '<div class="card"><h2>Promašaji</h2>' +
+      (missList.length
+        ? '<div class="miss">' +
+          missList
+            .map((m) => {
+              const right = rightLabel(m.q);
+              return (
+                '<div class="miss-row"><span class="q">' + esc(m.q.text) + ' <small>(' + m.games.join(', ') + ')</small></span>' +
+                '<span class="a">' + (m.hers.length ? '<b class="no">' + esc(m.hers.join(' i ')) + '</b>' : 'netačno') +
+                (right ? ' · tačno: <b class="yes">' + esc(right) + '</b>' : '') + '</span></div>'
+              );
+            })
+            .join('') +
+          '</div>'
+        : '<div class="empty">Nijedan promašaj. 🎯</div>') +
+      '</div></div>'
+    );
+  }
+
+  function exportCsv(games, firstIndex) {
     const cell = (v) => {
       const s = String(v == null ? '' : v);
       return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };
-    const rows = [['partija', 'vreme', 'igrac', 'poeni', 'tacno', 'odgovoreno', 'pitanje_br', 'pitanje', 'tip', 'rezultat']];
+    const rows = [['partija', 'vreme', 'igrac', 'poeni', 'tacno', 'odgovoreno', 'pitanje_br', 'pitanje', 'tip', 'rezultat', 'odgovor', 'vreme_ms']];
     games.forEach((g, gi) => {
       g.players.forEach((p) => {
         g.questions.forEach((q, qi) => {
           const r = p.results[qi];
-          rows.push([gi + 1, fmtDateTime(g.at), p.name, p.points, p.correct, p.answered, qi + 1, q.text, q.type, r === 1 ? 'tacno' : r === 0 ? 'netacno' : '']);
+          const lab = answerLabel(q, answerOf(p, qi));
+          const ms = msOf(p, qi);
+          rows.push([
+            firstIndex + gi + 1, fmtDateTime(g.at), p.name, p.points, p.correct, p.answered, qi + 1, q.text, q.type,
+            r === 1 ? 'tacno' : r === 0 ? 'netacno' : '', lab ? lab.label : '', ms == null ? '' : ms,
+          ]);
         });
       });
     });
