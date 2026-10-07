@@ -1,3 +1,5 @@
+import type { KvizLinkPublic } from '../games/kviz-link.js';
+
 export type RoomStatus = 'lobby' | 'in-game' | 'game-over';
 
 export interface Player {
@@ -55,6 +57,10 @@ export interface Room {
   // no connected players for IDLE_ROOM_TTL_MS gets deleted by the sweeper.
   hostConnected: boolean;
   idleSince: number | null;
+  // Set on rooms opened through a kviz link (/k/<naziv>): the lobby shows the
+  // quiz card instead of the room code and the only game it starts is that
+  // quiz. Answer-free public info only — the questions stay server-side.
+  kvizLink?: KvizLinkPublic;
 }
 
 export type PublicRoom = Omit<Room, 'players' | 'chatMessages'> & {

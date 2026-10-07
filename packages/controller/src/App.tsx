@@ -8,6 +8,7 @@ import { useNavStore } from './store/navStore';
 import { useWakeLock } from './hooks/useWakeLock';
 import { prefetchGameComponents } from './games/registry';
 import { JoinScreen } from './screens/JoinScreen';
+import { KvizLinkJoinScreen } from './screens/KvizLinkJoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameSelectScreen } from './screens/GameSelectScreen';
 import { GameScreen } from './screens/GameScreen';
@@ -246,8 +247,15 @@ function KickedOverlay({
   return <ProblemScreen icon="🚪" title={message} primary={{ label: t('kicked.ok'), run: onClose }} />;
 }
 
+/** `?kviz=<naziv>` — the phone arrived through a kviz link (/k/<naziv>). */
+function readKvizParam(): string | null {
+  const v = new URLSearchParams(window.location.search).get('kviz');
+  return v && /^[a-z0-9-]{3,40}$/.test(v) ? v : null;
+}
+
 export function App() {
   const { player, setPlayer, setRoom, setConnected, reset } = usePlayerStore();
+  const [kvizSlug, setKvizSlug] = useState(readKvizParam);
   const { gameId, setGameState, setPlayerData, resetGame } = useGameStore();
   const [gameEndedNotice, setGameEndedNotice] = useState(false);
   const [finalPlacement, setFinalPlacement] = useState<{
@@ -597,7 +605,18 @@ export function App() {
 
   let body: React.ReactNode;
   if (!player) {
-    body = <JoinScreen />;
+    body = kvizSlug ? (
+      <KvizLinkJoinScreen
+        slug={kvizSlug}
+        onExit={() => {
+          // Back to the plain join screen. Relative URL keeps the /play path.
+          history.replaceState(null, '', './');
+          setKvizSlug(null);
+        }}
+      />
+    ) : (
+      <JoinScreen />
+    );
   } else if (gameId) {
     body = <GameScreen />;
   } else if (screen === 'game-select') {

@@ -61,6 +61,11 @@ Ostale zavisnosti (React, three.js, Socket.IO, Express, Zustand, Framer Motion,
 Howler.js i druge) distribuiraju se pod sopstvenim licencama, pretežno MIT.
 Vidite `package.json` svakog paketa i `node_modules/<paket>/LICENSE`.
 
+### qrcode-generator (`packages/server/assets/kviz-link/qrcode.min.js`)
+
+Ugrađena kopija biblioteke [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
+1.4.4 (QR kod na stranici kviz linka) — Copyright (c) 2009 Kazuhiko Arase, MIT licenca.
+
 ---
 
 ## Pun tekst licence

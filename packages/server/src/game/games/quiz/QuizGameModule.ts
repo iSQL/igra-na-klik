@@ -29,6 +29,7 @@ import {
   checkTextGuess,
   clampGameRounds,
   haversineKm,
+  kvizLinkStatus,
   packLatLngToPin,
   packPinToLatLng,
   parseQuizImport,
@@ -46,6 +47,8 @@ import type {
   QuizRoundShame,
 } from './QuizState.js';
 import { inlineQuestionsToRuntime, resolveQuizPack } from './quiz-pack-resolver.js';
+import type { KvizLinkStore, StoredKvizLink } from '../../../kviz-links/kviz-link-store.js';
+import { resolveLinkItems } from '../../../kviz-links/kviz-link-questions.js';
 import {
   SERBIA_DECAY_KM,
   decayKmForMapDiagonal,
@@ -64,6 +67,19 @@ interface QuizCustomContent {
   quizPackIds?: unknown;
   quizTypes?: unknown;
   roundCount?: unknown;
+  /** Kviz-link slug — set server-side only, for rooms opened through a link. */
+  kvizLink?: unknown;
+}
+
+/** Bookkeeping for a game played through a kviz link (its statistics). */
+interface QuizLinkRun {
+  slug: string;
+  /** Runtime question id → the link's source key. */
+  keys: Map<string, string>;
+  /** Question indices that reached their results, in play order. */
+  played: number[];
+  /** playerId → question index → 1 correct / 0 wrong (absent = no answer). */
+  results: Map<string, Map<number, 0 | 1>>;
 }
 
 const ALL_KVIZ_TYPES: KvizQuestionType[] = [
@@ -115,14 +131,36 @@ export class QuizGameModule extends BaseGameModule {
   // the category is omitted.
   private packNames = new Map<string, string>();
 
-  constructor(private readonly packsDir: string = '') {
+  // Kviz link: "Brzina donosi bodove" off = a correct answer is worth the
+  // full 1000 whenever it lands. Always on outside links.
+  private speedBonus = true;
+  private linkRun: QuizLinkRun | null = null;
+
+  constructor(
+    private readonly packsDir: string = '',
+    private readonly kvizLinks?: KvizLinkStore
+  ) {
     super();
+  }
+
+  validateStart(_room: Room, customContent?: unknown): string | null {
+    const slug = (customContent as QuizCustomContent | undefined)?.kvizLink;
+    if (slug === undefined) return null;
+    const link = typeof slug === 'string' ? this.kvizLinks?.get(slug) : undefined;
+    if (!link) return 'Ovaj kviz link više ne postoji.';
+    const status = kvizLinkStatus(link);
+    if (status === 'scheduled') return 'Kviz još nije počeo.';
+    if (status === 'expired') return 'Kviz je istekao — nove partije ne mogu da počnu.';
+    if (link.items.length === 0) return 'Ovaj kviz još nema pitanja.';
+    return null;
   }
 
   onStart(room: Room, customContent?: unknown): GameState {
     this.timings = getGameTimings(this.gameId);
     const cc = (customContent as QuizCustomContent | undefined) ?? {};
     this.desiredRounds = clampGameRounds(this.gameId, cc.roundCount);
+    this.speedBonus = true;
+    this.linkRun = null;
 
     this.state = {
       questions: [],
@@ -160,7 +198,15 @@ export class QuizGameModule extends BaseGameModule {
       : [];
     const types = this.parseTypeFilter(cc.quizTypes);
 
-    if (packIds.length > 0) {
+    const link =
+      typeof cc.kvizLink === 'string' ? this.kvizLinks?.get(cc.kvizLink) : undefined;
+
+    if (link) {
+      this.speedBonus = link.speedBonus;
+      this.linkRun = { slug: link.slug, keys: new Map(), played: [], results: new Map() };
+      // Same async path as packs: the first preview waits for the load.
+      void this.loadLink(link);
+    } else if (packIds.length > 0) {
       // Pack questions load from disk; onStart can't be async, so start with
       // an empty question list — advancePhase waits in showing-question until
       // the load resolves (or falls back to the built-in bank).
@@ -253,6 +299,43 @@ export class QuizGameModule extends BaseGameModule {
     this.setQuestions(this.filterByTypes(pool, types));
   }
 
+  /**
+   * A kviz link's questions: its own order (or a fresh random draw each game),
+   * its clock override, and pack questions registered for feedback like in
+   * any other game. Private questions stay out of the feedback file — they
+   * belong to the link's creator, not the shared packs.
+   */
+  private async loadLink(link: StoredKvizLink): Promise<void> {
+    const { resolved, packs } = await resolveLinkItems(
+      this.packsDir,
+      link.slug,
+      link.items,
+      link.own
+    );
+    for (const pack of packs) {
+      this.feedback.registerPack(pack.id, pack.questions);
+      for (const q of pack.questions) this.packNames.set(q.id, pack.name);
+    }
+    if (resolved.length === 0) {
+      this.setQuestions(QUIZ_QUESTION_BANK);
+      return;
+    }
+    const picked =
+      link.order === 'random'
+        ? shuffled(resolved).slice(0, Math.min(link.drawCount, resolved.length))
+        : resolved;
+    for (const r of picked) this.linkRun?.keys.set(r.question.id, r.key);
+    this.state.questions = picked.map((r) =>
+      link.timeLimit ? { ...r.question, timeLimit: link.timeLimit } : r.question
+    );
+  }
+
+  /** Share of the 1000 points a correct timed answer keeps. */
+  private speedShare(timeMs: number, timeLimitS: number): number {
+    if (!this.speedBonus) return 1;
+    return Math.max(0, timeLimitS * 1000 - timeMs) / (timeLimitS * 1000);
+  }
+
   onPlayerAction(
     room: Room,
     _gameState: GameState,
@@ -292,10 +375,7 @@ export class QuizGameModule extends BaseGameModule {
       const correct = optionIndex === question.correctIndex;
       answer = { kind: 'choice', optionIndex, timeMs, correct };
       if (correct) {
-        const timeRemaining = Math.max(0, question.timeLimit * 1000 - timeMs);
-        const score = Math.round(
-          1000 * (timeRemaining / (question.timeLimit * 1000))
-        );
+        const score = Math.round(1000 * this.speedShare(timeMs, question.timeLimit));
         const player = room.players.find((p) => p.id === playerId);
         if (player) player.score += score;
       }
@@ -344,10 +424,7 @@ export class QuizGameModule extends BaseGameModule {
         return this.buildGameState(room);
       }
       const timeMs = Date.now() - this.state.questionStartTime;
-      const timeRemaining = Math.max(0, question.timeLimit * 1000 - timeMs);
-      const points = Math.round(
-        1000 * (timeRemaining / (question.timeLimit * 1000))
-      );
+      const points = Math.round(1000 * this.speedShare(timeMs, question.timeLimit));
       this.state.emojiWrong.delete(playerId);
       const player = room.players.find((p) => p.id === playerId);
       if (player) player.score += points;
@@ -383,9 +460,8 @@ export class QuizGameModule extends BaseGameModule {
       let hit = 0;
       for (const v of cells) if (correctSet.has(v)) hit++;
       const timeMs = Date.now() - this.state.questionStartTime;
-      const timeRemaining = Math.max(0, question.timeLimit * 1000 - timeMs);
       const points = Math.round(
-        1000 * (timeRemaining / (question.timeLimit * 1000)) * (hit / question.correct.length)
+        1000 * this.speedShare(timeMs, question.timeLimit) * (hit / question.correct.length)
       );
       const player = room.players.find((p) => p.id === playerId);
       if (player) player.score += points;
@@ -521,8 +597,40 @@ export class QuizGameModule extends BaseGameModule {
     return this.buildGameState(room);
   }
 
-  onEnd(_room: Room, _gameState: GameState): void {
-    // cleanup
+  onEnd(room: Room, _gameState: GameState): void {
+    this.recordLinkGame(room);
+  }
+
+  /**
+   * Kviz link statistics: one record per game with every question that
+   * reached its results (a game stopped early still counts what was played).
+   */
+  private recordLinkGame(room: Room): void {
+    const run = this.linkRun;
+    this.linkRun = null;
+    if (!run || run.played.length === 0 || !this.kvizLinks) return;
+    const questions = run.played.map((i) => {
+      const q = this.state.questions[i];
+      return { key: run.keys.get(q.id) ?? '', text: q.text, type: q.type };
+    });
+    const players = room.players
+      .filter((p) => run.results.has(p.id) || this.state.playerStats.has(p.id))
+      .map((p) => {
+        const mine = run.results.get(p.id);
+        const results = run.played.map((i) => mine?.get(i) ?? null);
+        return {
+          name: p.name,
+          emoji: p.avatarEmoji,
+          color: p.avatarColor,
+          points: p.score,
+          correct: results.filter((r) => r === 1).length,
+          answered: results.filter((r) => r !== null).length,
+          results,
+        };
+      })
+      .sort((a, b) => b.points - a.points);
+    if (players.length === 0) return;
+    void this.kvizLinks.recordGame(run.slug, { at: Date.now(), questions, players });
   }
 
   private advancePhase(room: Room): void {
@@ -629,7 +737,11 @@ export class QuizGameModule extends BaseGameModule {
       for (const [playerId, answer] of this.state.answers) {
         if (answer.kind !== 'value') continue;
         const distance = Math.abs(answer.value - question.answer);
-        const points = pointsForGuess(distance, span, answer.speedFraction);
+        const points = pointsForGuess(
+          distance,
+          span,
+          this.speedBonus ? answer.speedFraction : 1
+        );
         this.state.lastRoundScores.set(playerId, points);
         this.state.lastRoundDistances.set(playerId, distance);
         const player = room.players.find((p) => p.id === playerId);
@@ -713,6 +825,9 @@ export class QuizGameModule extends BaseGameModule {
       return;
     }
     const timeLimitMs = Math.max(1, question.timeLimit * 1000);
+    if (this.linkRun && !this.linkRun.played.includes(this.state.currentQuestionIndex)) {
+      this.linkRun.played.push(this.state.currentQuestionIndex);
+    }
     // Per-round timeMs for connected answerers (drives the "Puž" trophy).
     const roundTimeMs = new Map<string, number>();
 
@@ -749,6 +864,12 @@ export class QuizGameModule extends BaseGameModule {
             correct = (this.state.lastRoundScores.get(id) ?? 0) >= 500;
             break;
         }
+      }
+
+      if (this.linkRun && attempted) {
+        const perPlayer = this.linkRun.results.get(id) ?? new Map<number, 0 | 1>();
+        perPlayer.set(this.state.currentQuestionIndex, correct ? 1 : 0);
+        this.linkRun.results.set(id, perPlayer);
       }
 
       if (attempted) {
@@ -1139,12 +1260,8 @@ export class QuizGameModule extends BaseGameModule {
               const answer = this.state.answers.get(p.id);
               let roundScore = 0;
               if (answer?.kind === 'choice' && answer.correct) {
-                const timeRemaining = Math.max(
-                  0,
-                  question.timeLimit * 1000 - answer.timeMs
-                );
                 roundScore = Math.round(
-                  1000 * (timeRemaining / (question.timeLimit * 1000))
+                  1000 * this.speedShare(answer.timeMs, question.timeLimit)
                 );
               }
               return {

@@ -43,6 +43,7 @@ import { authMiddleware, getReconnectToken } from './middleware/auth.js';
 import { hostRoom, playerRoom } from './rooms.js';
 import { KnockManager } from './knocks.js';
 import { createThrottle } from './rate-limit.js';
+import type { KvizLinkStore } from '../kviz-links/kviz-link-store.js';
 
 export function setupSocket(
   httpServer: HttpServer,
@@ -52,6 +53,7 @@ export function setupSocket(
     asocijacijePacksDir?: string;
     bitkaMapsDir?: string;
     fibbagePacksDir?: string;
+    kvizLinks?: KvizLinkStore;
   }
 ): { io: Server; roomManager: RoomManager; gameManager: GameManager } {
   const io = new Server<
@@ -88,7 +90,8 @@ export function setupSocket(
   const bitkaMapsDir = options?.bitkaMapsDir ?? '';
   const fibbagePacksDir = options?.fibbagePacksDir ?? '';
   gameRegistry.register(() => new TestGameModule());
-  gameRegistry.register(() => new QuizGameModule(questionPacksDir));
+  const kvizLinks = options?.kvizLinks;
+  gameRegistry.register(() => new QuizGameModule(questionPacksDir, kvizLinks));
   gameRegistry.register(() => new DrawGuessModule());
   gameRegistry.register(() => new FakeArtistModule());
   gameRegistry.register(() => new KoBiPreModule());
@@ -252,7 +255,8 @@ export function setupSocket(
       roomManager,
       cancelGraceTimer,
       destroyRoom,
-      (code) => knockManager.syncHolder(code)
+      (code) => knockManager.syncHolder(code),
+      kvizLinks
     );
 
     // Pokucaj — knocking on a running game (see knocks.ts).
@@ -265,7 +269,7 @@ export function setupSocket(
     socket.on('host:answer-knock', (data) => {
       knockManager.answer(socket, data?.knockId, !!data?.admit);
     });
-    registerGameHandlers(io, socket, gameManager, roomManager);
+    registerGameHandlers(io, socket, gameManager, roomManager, kvizLinks);
 
     socket.on('host:kick-player', ({ playerId }) => {
       const { roomCode, playerId: requesterId, isHost } = socket.data;

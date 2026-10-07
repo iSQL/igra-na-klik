@@ -26,6 +26,7 @@ export * from './games/flood-fill.js';
 export * from './games/fibbage-questions.js';
 export * from './games/fibbage-import.js';
 export * from './games/quiz-import.js';
+export * from './games/kviz-link.js';
 export * from './games/serbia-projection.js';
 export * from './games/ko-sam-ja-import.js';
 export * from './games/spot-it-deck.js';

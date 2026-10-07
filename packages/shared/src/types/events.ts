@@ -114,6 +114,14 @@ export interface ClientToServerEvents {
   // player and automatically receives the remote-host claim. Responds with
   // player:joined like a normal join.
   'player:create-room': (data: { playerName: string; playedGames?: string[] }) => void;
+  // Enter a kviz link (/k/<naziv>): joins the link's open lobby, or opens a
+  // new hostless room for it whose first player holds control. Answered with
+  // player:joined, or error JOIN_ERROR (unknown/expired link, room full…).
+  'player:join-kviz-link': (data: {
+    slug: string;
+    playerName: string;
+    playedGames?: string[];
+  }) => void;
   // Ask to join a room whose game is running. Answered with knock:status /
   // knock:closed (or error). One knock per socket at a time.
   'player:knock': (data: { roomCode: string; playerName: string }) => void;

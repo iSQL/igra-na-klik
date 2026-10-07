@@ -7,6 +7,7 @@ import type {
 } from '@igra/shared';
 import { GameManager } from '../../game/GameManager.js';
 import { RoomManager } from '../../room/RoomManager.js';
+import type { KvizLinkStore } from '../../kviz-links/kviz-link-store.js';
 import { createRateLimiter, createThrottle } from '../rate-limit.js';
 import {
   puzlaImages,
@@ -31,7 +32,8 @@ export function registerGameHandlers(
   _io: IoServer,
   socket: IoSocket,
   gameManager: GameManager,
-  roomManager: RoomManager
+  roomManager: RoomManager,
+  kvizLinks?: KvizLinkStore
 ) {
   // Drawing batches arrive at ~20/s per drawer — 60/s leaves headroom for
   // that plus normal gameplay, while capping what a flooding client costs.
@@ -57,6 +59,19 @@ export function registerGameHandlers(
         code: 'NOT_HOST',
         message: 'Only the host or remote host can start a game',
       });
+      return;
+    }
+
+    // A kviz-link room plays its own quiz and nothing else; the questions
+    // resolve server-side from the link, whatever the client sent.
+    const room = roomManager.getRoom(roomCode);
+    if (room?.kvizLink) {
+      const link = kvizLinks?.get(room.kvizLink.slug);
+      if (link) room.kvizLink = kvizLinks!.publicInfo(link);
+      const linked = gameManager.startGame(roomCode, 'quiz', { kvizLink: room.kvizLink.slug });
+      if (linked.error) {
+        socket.emit('error', { code: 'START_ERROR', message: linked.error });
+      }
       return;
     }
 

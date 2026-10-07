@@ -261,6 +261,13 @@ export class RoomManager {
     return { player };
   }
 
+  /** Rooms opened through a kviz link, newest first. */
+  findKvizLinkRooms(slug: string): Room[] {
+    return [...this.rooms.values()]
+      .filter((r) => r.kvizLink?.slug === slug)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
+
   getRoom(roomCode: string): Room | undefined {
     return this.rooms.get(roomCode);
   }
@@ -366,7 +373,9 @@ export class RoomManager {
 
   /** Safe per-room summaries for the public room list on the join screen. */
   listRoomSummaries(): RoomSummary[] {
-    return [...this.rooms.values()].map((room) => {
+    // Kviz-link rooms are reached through their link, not the public list —
+    // a pub quiz shouldn't invite every passer-by on the join screen.
+    return [...this.rooms.values()].filter((room) => !room.kvizLink).map((room) => {
       const connected = room.players.filter((p) => p.isConnected);
       return {
         code: room.code,

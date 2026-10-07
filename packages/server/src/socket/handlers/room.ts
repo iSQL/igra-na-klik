@@ -5,8 +5,9 @@ import type {
   InterServerEvents,
   SocketData,
 } from '@igra/shared';
-import { CHAT_MAX_LENGTH, CHAT_THROTTLE_MS } from '@igra/shared';
+import { CHAT_MAX_LENGTH, CHAT_THROTTLE_MS, kvizLinkStatus } from '@igra/shared';
 import { RoomManager } from '../../room/RoomManager.js';
+import type { KvizLinkStore } from '../../kviz-links/kviz-link-store.js';
 import { hostRoom, playerRoom } from '../rooms.js';
 import { createThrottle } from '../rate-limit.js';
 
@@ -34,7 +35,8 @@ export function registerRoomHandlers(
     silentHostSocketId?: string
   ) => void,
   /** The remote-host claim moved — re-send the knock list to the new holder. */
-  onHolderChanged: (roomCode: string) => void
+  onHolderChanged: (roomCode: string) => void,
+  kvizLinks?: KvizLinkStore
 ) {
   // Per-socket chat throttle timestamp.
   let lastChatAt = 0;
@@ -130,6 +132,101 @@ export function registerRoomHandlers(
     socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
     console.log(`Hostless room ${room.code} created by ${player.name}`);
   });
+
+  // Kviz link (/k/<naziv>): everyone who opens the link lands in the same
+  // lobby — the newest link room still in its lobby with someone in it — and
+  // the first one in opens it and holds control, as in a phone-made room.
+  socket.on('player:join-kviz-link', (data) => {
+    if (!roomOpThrottle()) {
+      emitRateLimited('JOIN_ERROR');
+      return;
+    }
+    const joinError = (message: string) =>
+      socket.emit('error', { code: 'JOIN_ERROR', message });
+    const playerName = (data?.playerName ?? '').trim();
+    if (!playerName) {
+      joinError('Name required');
+      return;
+    }
+    if (socket.data.roomCode) {
+      joinError('Already in a room');
+      return;
+    }
+    const slug = typeof data?.slug === 'string' ? data.slug : '';
+    const link = kvizLinks?.get(slug);
+    if (!link) {
+      joinError('Ovaj kviz link ne postoji.');
+      return;
+    }
+    const status = kvizLinkStatus(link);
+    if (status === 'scheduled') {
+      joinError('Kviz još nije počeo.');
+      return;
+    }
+    if (status === 'expired') {
+      joinError('Kviz je istekao.');
+      return;
+    }
+
+    const open = roomManager
+      .findKvizLinkRooms(slug)
+      .find((r) => r.status === 'lobby' && r.players.some((p) => p.isConnected));
+    if (open) {
+      const result = roomManager.joinRoom(open.code, playerName);
+      if ('error' in result) {
+        joinError(result.error);
+        return;
+      }
+      roomManager.mergePlayedGames(result.player, data.playedGames);
+      if (result.reclaimed) cancelGraceTimer(result.player.id);
+      seat(result.room.code, result.player, !!result.reclaimed);
+      return;
+    }
+
+    const room = roomManager.createHostlessRoom({ maxPlayers: link.maxPlayers });
+    if (!room) {
+      joinError('Server je trenutno pun. Pokušaj ponovo kasnije.');
+      return;
+    }
+    room.kvizLink = kvizLinks!.publicInfo(link);
+    const result = roomManager.joinRoom(room.code, playerName);
+    if ('error' in result) {
+      roomManager.deleteRoom(room.code);
+      joinError(result.error);
+      return;
+    }
+    roomManager.mergePlayedGames(result.player, data.playedGames);
+    room.remoteHostPlayerId = result.player.id;
+    seat(room.code, result.player, false);
+    console.log(`Kviz link ${slug}: room ${room.code} opened by ${result.player.name}`);
+  });
+
+  /** Bind this socket to a freshly seated player and tell everyone. */
+  const seat = (
+    roomCode: string,
+    player: Parameters<RoomManager['toPublicPlayer']>[0],
+    reclaimed: boolean
+  ) => {
+    const room = roomManager.getRoom(roomCode)!;
+    socket.data.roomCode = roomCode;
+    socket.data.playerId = player.id;
+    socket.join(roomCode);
+    socket.join(playerRoom(player.id));
+    socket.emit('player:joined', { player, room: roomManager.toPublicRoom(room) });
+    if (reclaimed) {
+      socket.to(roomCode).emit('room:player-reconnected', {
+        playerId: player.id,
+        player: roomManager.toPublicPlayer(player),
+      });
+    } else {
+      socket.to(roomCode).emit('room:player-joined', {
+        player: roomManager.toPublicPlayer(player),
+      });
+    }
+    if (room.status === 'lobby' && room.chatMessages.length > 0) {
+      socket.emit('room:chat-history', { messages: room.chatMessages });
+    }
+  };
 
   socket.on('player:join-room', (data) => {
     if (!roomOpThrottle()) {

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { GAME_DEFINITIONS, MAX_PLAYERS_DEFAULT, ROOM_CODE_LENGTH } from '@igra/shared';
+import { GAME_DEFINITIONS, ROOM_CODE_LENGTH } from '@igra/shared';
 import { usePlayerStore } from '../store/playerStore';
 import { useNavStore } from '../store/navStore';
 import { useGameStore } from '../store/gameStore';
@@ -39,7 +39,20 @@ export function LobbyScreen() {
   const [kickTarget, setKickTarget] = useState<{ id: string; name: string } | null>(
     null
   );
+  const [startError, setStartError] = useState('');
   const t = useT();
+
+  // A kviz-link room starts straight from the lobby (no game select), so a
+  // refused start ("Kviz je istekao") has to surface here.
+  useEffect(() => {
+    const onError = ({ code, message }: { code: string; message: string }) => {
+      if (code === 'START_ERROR') setStartError(message);
+    };
+    socket.on('error', onError);
+    return () => {
+      socket.off('error', onError);
+    };
+  }, []);
 
   if (!player || !room) return null;
 
@@ -50,7 +63,13 @@ export function LobbyScreen() {
     : null;
 
   const players = room.players.filter((p) => 'name' in p);
-  const joinUrl = roomJoinUrl(room.code);
+  const maxPlayers = room.settings.maxPlayers;
+  // Kviz-link room: the link itself is the invitation, the quiz card replaces
+  // the room code and the only thing to start is that quiz.
+  const kviz = room.kvizLink;
+  const joinUrl = kviz
+    ? `${window.location.origin}/k/${kviz.slug}`
+    : roomJoinUrl(room.code);
 
   // Native share sheet where there is one (phones), clipboard otherwise —
   // plain-http LAN origins have neither navigator.share nor clipboard.
@@ -169,41 +188,94 @@ export function LobbyScreen() {
                 color: 'var(--amber)',
               }}
             >
-              {t('lobby.room')}
+              {kviz ? t('kviz.kicker') : t('lobby.room')}
             </span>
-            {room.hostless && (
+            {kviz ? (
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                {t('lobby.inviteCrew')}
+                {t('lobby.room')}{' '}
+                <b
+                  className="display"
+                  style={{ letterSpacing: '0.12em', color: 'var(--text-primary)' }}
+                >
+                  {room.code}
+                </b>
               </span>
+            ) : (
+              room.hostless && (
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  {t('lobby.inviteCrew')}
+                </span>
+              )
             )}
           </div>
-          <div
-            aria-label={room.code}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${ROOM_CODE_LENGTH}, 1fr)`,
-              gap: '0.6rem',
-            }}
-          >
-            {room.code.split('').map((ch, i) => (
-              <div
-                key={i}
-                className="display"
+          {kviz ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+              <span
+                aria-hidden
                 style={{
-                  height: 76,
+                  width: 56,
+                  height: 56,
                   borderRadius: 16,
-                  background: 'var(--bg-primary)',
+                  flex: 'none',
                   display: 'grid',
                   placeItems: 'center',
-                  fontWeight: 700,
-                  fontSize: '2.75rem',
-                  lineHeight: 1,
+                  fontSize: '1.7rem',
+                  backgroundColor: kviz.color,
+                  backgroundImage: kviz.coverUrl ? `url("${kviz.coverUrl}")` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                 }}
               >
-                {ch}
+                {!kviz.coverUrl && kviz.emoji}
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <span
+                  className="display"
+                  style={{ fontWeight: 700, fontSize: '1.4rem', lineHeight: 1.05, overflowWrap: 'anywhere' }}
+                >
+                  {kviz.coverUrl ? `${kviz.emoji} ` : ''}
+                  {kviz.name}
+                </span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  {[
+                    t('kviz.questions', { n: kviz.questionCount }),
+                    kviz.timeLimit ? `${kviz.timeLimit} s` : t('kviz.perQuestion'),
+                    kviz.typeSummary === 'mešovito' ? t('kviz.mixed') : kviz.typeSummary,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div
+              aria-label={room.code}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${ROOM_CODE_LENGTH}, 1fr)`,
+                gap: '0.6rem',
+              }}
+            >
+              {room.code.split('').map((ch, i) => (
+                <div
+                  key={i}
+                  className="display"
+                  style={{
+                    height: 76,
+                    borderRadius: 16,
+                    background: 'var(--bg-primary)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: 700,
+                    fontSize: '2.75rem',
+                    lineHeight: 1,
+                  }}
+                >
+                  {ch}
+                </div>
+              ))}
+            </div>
+          )}
           {room.hostless && (
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <button
@@ -251,7 +323,7 @@ export function LobbyScreen() {
             {t('lobby.players')}
           </span>
           <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
-            {players.filter((p) => p.isConnected).length} / {MAX_PLAYERS_DEFAULT}
+            {players.filter((p) => p.isConnected).length} / {maxPlayers}
           </span>
         </div>
 
@@ -342,7 +414,7 @@ export function LobbyScreen() {
               </span>
             </div>
           ))}
-          {room.hostless && players.length < MAX_PLAYERS_DEFAULT && (
+          {room.hostless && players.length < maxPlayers && (
             <button
               onClick={share}
               aria-label={t('lobby.invite')}
@@ -386,29 +458,49 @@ export function LobbyScreen() {
           background: 'linear-gradient(180deg, rgba(22,46,78,0), var(--bg-primary) 30%)',
         }}
       >
+        {startError && (
+          <p
+            role="alert"
+            style={{ margin: 0, textAlign: 'center', color: 'var(--danger)', fontWeight: 700, fontSize: '0.9rem' }}
+          >
+            {startError}
+          </p>
+        )}
         {iAmRemoteHost ? (
           <>
-            <div style={{ display: 'flex', gap: '0.6rem' }}>
-              {lastStartPayload && (
-                <button
-                  className="btn-ghost"
-                  onClick={() => socket.emit('host:start-game', lastStartPayload)}
-                  aria-label={t('lobby.playAgain', {
-                    name: t(`game.${lastStartPayload.gameId}.name`),
-                  })}
-                  style={{ minHeight: 56, padding: '0 1rem', whiteSpace: 'nowrap' }}
-                >
-                  🔁 {t(`game.${lastStartPayload.gameId}.name`)}
-                </button>
-              )}
+            {kviz ? (
               <button
                 className="btn-primary"
-                onClick={() => setScreen('game-select')}
-                style={{ flex: 1 }}
+                onClick={() => {
+                  setStartError('');
+                  socket.emit('host:start-game', { gameId: 'quiz' });
+                }}
               >
-                {t('lobby.chooseGameArrow')}
+                {t('kviz.start')}
               </button>
-            </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                {lastStartPayload && (
+                  <button
+                    className="btn-ghost"
+                    onClick={() => socket.emit('host:start-game', lastStartPayload)}
+                    aria-label={t('lobby.playAgain', {
+                      name: t(`game.${lastStartPayload.gameId}.name`),
+                    })}
+                    style={{ minHeight: 56, padding: '0 1rem', whiteSpace: 'nowrap' }}
+                  >
+                    🔁 {t(`game.${lastStartPayload.gameId}.name`)}
+                  </button>
+                )}
+                <button
+                  className="btn-primary"
+                  onClick={() => setScreen('game-select')}
+                  style={{ flex: 1 }}
+                >
+                  {t('lobby.chooseGameArrow')}
+                </button>
+              </div>
+            )}
             <span
               style={{
                 textAlign: 'center',
@@ -524,9 +616,15 @@ export function LobbyScreen() {
             level="M"
             style={{ borderRadius: 16, padding: 14, background: '#F5EBE0' }}
           />
-          <div className="display" style={{ fontWeight: 700, fontSize: '2.6rem', letterSpacing: '0.18em' }}>
-            {room.code}
-          </div>
+          {kviz ? (
+            <div className="display" style={{ fontWeight: 700, fontSize: '1.6rem', textAlign: 'center' }}>
+              {kviz.emoji} {kviz.name}
+            </div>
+          ) : (
+            <div className="display" style={{ fontWeight: 700, fontSize: '2.6rem', letterSpacing: '0.18em' }}>
+              {room.code}
+            </div>
+          )}
           <button className="btn-ghost" style={{ padding: '0 1.6rem' }}>
             {t('lobby.hideQr')}
           </button>

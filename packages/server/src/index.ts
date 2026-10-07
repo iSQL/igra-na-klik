@@ -45,6 +45,12 @@ import { renderAdminApp } from './admin/admin-app.js';
 import { renderKvizGeneratorPage } from './kviz-generator-page.js';
 import { createDataAdminRouter } from './admin/data-admin.js';
 import {
+  KVIZ_LINK_MEDIA_FILE_RE,
+  KvizLinkStore,
+  isValidKvizLinkSlug,
+} from './kviz-links/kviz-link-store.js';
+import { createKvizLinkRouter } from './kviz-links/kviz-link-api.js';
+import {
   resolveContentDir,
   resolveTimingFile,
   resolveQuizFeedbackFile,
@@ -103,6 +109,14 @@ const BITKA_MAPS_DIR = resolveContentDir(
   'bitka-maps',
   process.env.BITKA_MAPS_DIR
 );
+// Kviz linkovi (/k/<naziv>): user-made quizzes, one folder per link. Not a
+// seeded content dir — nothing ships by default, and a factory reset of the
+// packs must not delete what visitors made.
+const KVIZ_LINKS_DIR = resolveContentDir('kviz-links', process.env.KVIZ_LINKS_DIR);
+const kvizLinks = new KvizLinkStore(KVIZ_LINKS_DIR);
+kvizLinks.load();
+void kvizLinks.purgeExpired();
+setInterval(() => void kvizLinks.purgeExpired(), 12 * 3600_000).unref();
 // Admin-configurable "wait" timings live in a single JSON file (overrides only).
 const TIMING_CONFIG_FILE = resolveTimingFile(process.env.TIMING_CONFIG_FILE);
 initTimingConfig(TIMING_CONFIG_FILE);
@@ -130,7 +144,12 @@ app.use(cors({ origin: corsOrigins }));
 // 100 kb with a 413 before the admin router's parser ever runs.
 const defaultJsonParser = express.json();
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/admin')) {
+  // The kviz-link API parses its own bodies too (covers ride as data: URLs).
+  if (
+    req.path.startsWith('/api/admin') ||
+    req.path === '/api/k' ||
+    req.path.startsWith('/api/k/')
+  ) {
     next();
     return;
   }
@@ -400,6 +419,36 @@ app.use(
   express.static(QUIZ_IMAGES_DIR, { maxAge: '7d', etag: true })
 );
 
+/**
+ * Guard for the static content mounts below: only `/<folder>/<file>` and never
+ * a manifest. The check runs on the DECODED path — express.static decodes
+ * before reading the disk, so testing the raw path let `link%2ejson` through.
+ */
+function contentFileGuard(
+  allow: (folder: string, file: string) => boolean
+): express.RequestHandler {
+  return (req, res, next) => {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(req.path);
+    } catch {
+      res.status(404).end();
+      return;
+    }
+    const m = /^\/([^/\\]+)\/([^/\\]+)$/.exec(decoded);
+    if (
+      !m ||
+      m[2].startsWith('.') ||
+      m[2].toLowerCase().endsWith('.json') ||
+      !allow(m[1], m[2])
+    ) {
+      res.status(404).end();
+      return;
+    }
+    next();
+  };
+}
+
 // Kviz pack assets (images/audio/custom maps) in per-pack subfolders:
 // /kviz-files/<packId>/<file>. The manifests at the dir root carry answers
 // (correctIndex, lat/lng, broj answers) — only files one level inside a
@@ -407,17 +456,21 @@ app.use(
 app.use(
   '/kviz-files',
   cors({ origin: corsOrigins }),
-  (req, res, next) => {
-    if (
-      !/^\/[a-zA-Z0-9_-]+\/[^/]+$/.test(req.path) ||
-      req.path.toLowerCase().endsWith('.json')
-    ) {
-      res.status(404).end();
-      return;
-    }
-    next();
-  },
+  contentFileGuard((folder) => /^[a-zA-Z0-9_-]+$/.test(folder)),
   express.static(QUESTION_PACKS_DIR, { maxAge: '7d', etag: true })
+);
+
+// Kviz link media (cover + private-question images/audio):
+// /k-files/<slug>/<file>. link.json carries the answers and the PIN hash, so
+// the same guard as the packs applies — one level deep, never *.json.
+app.use(
+  '/k-files',
+  cors({ origin: corsOrigins }),
+  // Allowlist, not just "no .json": only names the store itself generates.
+  contentFileGuard(
+    (slug, file) => isValidKvizLinkSlug(slug) && KVIZ_LINK_MEDIA_FILE_RE.test(file)
+  ),
+  express.static(KVIZ_LINKS_DIR, { maxAge: '7d', etag: true })
 );
 
 // Slike mapa za Osvajanje: /bitka-files/<mapId>/<file>. Isti guard kao kod
@@ -426,16 +479,7 @@ app.use(
 app.use(
   '/bitka-files',
   cors({ origin: corsOrigins }),
-  (req, res, next) => {
-    if (
-      !/^\/[a-zA-Z0-9_-]+\/[^/]+$/.test(req.path) ||
-      req.path.toLowerCase().endsWith('.json')
-    ) {
-      res.status(404).end();
-      return;
-    }
-    next();
-  },
+  contentFileGuard((folder) => /^[a-zA-Z0-9_-]+$/.test(folder)),
   express.static(BITKA_MAPS_DIR, { maxAge: '7d', etag: true })
 );
 
@@ -536,6 +580,32 @@ const { roomManager } = setupSocket(httpServer, socketOrigins, {
   asocijacijePacksDir: ASOCIJACIJE_PACKS_DIR,
   bitkaMapsDir: BITKA_MAPS_DIR,
   fibbagePacksDir: FIBBAGE_PACKS_DIR,
+  kvizLinks,
+});
+
+// ---- Kviz linkovi -------------------------------------------------------------
+// API (public create/join card + PIN-gated editing) and the editor pages. The
+// pages are one static app (assets/kviz-link/) that routes on the path:
+// /k = my links, /k/novi = new link, /k/<naziv>/uredi = edit behind the PIN.
+// /k/<naziv> itself is the link players get — it sends them to the phone app.
+app.use('/api/k', createKvizLinkRouter({ store: kvizLinks, questionPacksDir: QUESTION_PACKS_DIR, roomManager }));
+const KVIZ_LINK_APP_DIR = path.resolve(__dirname, '..', 'assets', 'kviz-link');
+app.use('/k-app', express.static(KVIZ_LINK_APP_DIR, { maxAge: '1h', etag: true }));
+const sendKvizLinkApp = (_req: express.Request, res: express.Response) => {
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(KVIZ_LINK_APP_DIR, 'index.html'));
+};
+app.get('/k', sendKvizLinkApp);
+app.get('/k/', sendKvizLinkApp);
+app.get('/k/novi', sendKvizLinkApp);
+app.get('/k/:slug/uredi', sendKvizLinkApp);
+app.get('/k/:slug', (req, res) => {
+  const slug = req.params.slug.toLowerCase();
+  if (!isValidKvizLinkSlug(slug)) {
+    res.redirect(302, '/k');
+    return;
+  }
+  res.redirect(302, `/play/?kviz=${encodeURIComponent(slug)}`);
 });
 
 if (SINGLE_ROOM_MODE) {
@@ -725,6 +795,7 @@ httpServer.listen(PORT, () => {
   console.log(`Spijun packs dir: ${SPIJUN_PACKS_DIR}`);
   console.log(`Asocijacije packs dir: ${ASOCIJACIJE_PACKS_DIR}`);
   console.log(`Bitka maps dir: ${BITKA_MAPS_DIR}`);
+  console.log(`Kviz links dir: ${KVIZ_LINKS_DIR}`);
   if (SINGLE_ROOM_MODE) {
     console.log('Single-room mode enabled: room code auto-fill active');
   }
@@ -743,5 +814,6 @@ httpServer.listen(PORT, () => {
   console.log('\n  ▶ Otvori igru na:');
   console.log(`      TV / host:   ${base}/host/`);
   console.log(`      Telefoni:    ${base}/play/`);
+  console.log(`      Kviz link:   ${base}/k`);
   console.log(`      Početna:     ${base}/\n`);
 });
