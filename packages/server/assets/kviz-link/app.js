@@ -1157,7 +1157,7 @@
       d.maxPlayers = parseInt(e.target.value, 10);
       markDirty();
     };
-    bindReorder($('#sel', body), redraw);
+    bindReorder($('#sel', body));
     $('#save', body).onclick = async (e) => {
       if (ed.wizard && d.items.length === 0) return toast('Dodaj bar jedno pitanje.', true);
       const ok = await save(['items', 'own', 'order', 'drawCount', 'timeLimit', 'speedBonus', 'maxPlayers'], e.currentTarget);
@@ -1181,36 +1181,77 @@
     );
   }
 
-  /** Drag by the grip — pointer events, so it works with a finger too. */
-  function bindReorder(list, done) {
+  /**
+   * Drag by the grip — pointer events, so it works with a finger too.
+   *
+   * Kept cheap on purpose: pointer moves only record the position and the
+   * work runs once per frame; a row moves in the DOM only when its slot really
+   * changes; and the drop renumbers the list in place instead of redrawing the
+   * whole three-column screen (300 bank rows and every handler).
+   */
+  function bindReorder(list) {
     let dragging = null;
+    let lastY = 0;
+    let frame = 0;
+
+    const step = () => {
+      frame = 0;
+      if (!dragging) return;
+      // Auto-scroll the list when the finger/cursor nears its edges.
+      const box = list.getBoundingClientRect();
+      const edge = 36;
+      if (lastY < box.top + edge) list.scrollTop -= Math.ceil((box.top + edge - lastY) / 3);
+      else if (lastY > box.bottom - edge) list.scrollTop += Math.ceil((lastY - box.bottom + edge) / 3);
+
+      // Slot = before the first other row whose middle is below the pointer.
+      const rows = list.children;
+      let before = null;
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row === dragging) continue;
+        const r = row.getBoundingClientRect();
+        if (lastY < r.top + r.height / 2) {
+          before = row;
+          break;
+        }
+      }
+      if (before !== dragging.nextElementSibling && !(before === null && dragging === list.lastElementChild)) {
+        list.insertBefore(dragging, before);
+      }
+      // Keep scrolling while the pointer rests on an edge.
+      if (lastY < box.top + edge || lastY > box.bottom - edge) frame = requestAnimationFrame(step);
+    };
+
+    const finish = () => {
+      if (!dragging) return;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      dragging.classList.remove('dragging');
+      dragging = null;
+      const rows = $$('.sel-row', list);
+      const order = rows.map((r) => r.dataset.key);
+      if (order.join('|') === ed.draft.items.join('|')) return;
+      ed.draft.items = order;
+      rows.forEach((r, i) => ($('.sel-num', r).textContent = i + 1 + '.'));
+      markDirty();
+    };
+
     $$('.grip', list).forEach((grip) => {
       grip.style.touchAction = 'none';
       grip.onpointerdown = (e) => {
         e.preventDefault();
         dragging = grip.closest('.sel-row');
         dragging.classList.add('dragging');
+        lastY = e.clientY;
         grip.setPointerCapture(e.pointerId);
       };
       grip.onpointermove = (e) => {
         if (!dragging) return;
-        const el = document.elementFromPoint(e.clientX, e.clientY);
-        const over = el && el.closest('.sel-row');
-        if (!over || over === dragging || over.parentNode !== list) return;
-        const r = over.getBoundingClientRect();
-        list.insertBefore(dragging, e.clientY < r.top + r.height / 2 ? over : over.nextSibling);
+        lastY = e.clientY;
+        if (!frame) frame = requestAnimationFrame(step);
       };
-      grip.onpointerup = grip.onpointercancel = () => {
-        if (!dragging) return;
-        dragging.classList.remove('dragging');
-        dragging = null;
-        const order = $$('.sel-row', list).map((r) => r.dataset.key);
-        if (order.join('|') !== ed.draft.items.join('|')) {
-          ed.draft.items = order;
-          markDirty();
-        }
-        done();
-      };
+      grip.onpointerup = grip.onpointercancel = finish;
+      grip.onlostpointercapture = finish;
     });
   }
 
