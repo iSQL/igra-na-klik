@@ -167,6 +167,15 @@ export function registerRoomHandlers(
       joinError('Kviz je istekao.');
       return;
     }
+    const pinCheck = kvizLinks!.checkJoinPin(link, data.joinPin);
+    if (pinCheck === 'locked') {
+      joinError('Previše pogrešnih PIN-ova — sačekaj 10 minuta.');
+      return;
+    }
+    if (pinCheck === 'wrong') {
+      joinError('Pogrešan PIN za ulaz.');
+      return;
+    }
 
     const open = roomManager
       .findKvizLinkRooms(slug)
@@ -260,6 +269,17 @@ export function registerRoomHandlers(
         if (room.remoteHostPlayerId === found.playerId) onHolderChanged(found.roomCode);
         return;
       }
+    }
+
+    // A kviz link with an entry PIN can't be walked into by room code (codes
+    // are three letters) — only through the link, where the PIN is checked.
+    const target = roomManager.getRoom(String(roomCode ?? '').toUpperCase());
+    if (target?.kvizLink && kvizLinks?.get(target.kvizLink.slug)?.joinPin) {
+      socket.emit('error', {
+        code: 'JOIN_ERROR',
+        message: 'Ovaj kviz traži PIN — uđi preko linka kviza.',
+      });
+      return;
     }
 
     const result = roomManager.joinRoom(roomCode.toUpperCase(), playerName);

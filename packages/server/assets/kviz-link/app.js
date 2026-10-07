@@ -278,6 +278,7 @@
     if (st === 'scheduled') parts.push('od ' + fmtDay(l.validFrom));
     else if (st === 'expired') parts.push('isteklo ' + fmtDay(l.expiresAt));
     else parts.push(fmtRange(l.validFrom, l.expiresAt));
+    if (l.joinPin) parts.push('🔒 PIN za ulaz');
     return parts.join(' · ');
   }
 
@@ -753,6 +754,7 @@
       timeLimit: l.timeLimit,
       speedBonus: l.speedBonus,
       maxPlayers: l.maxPlayers,
+      joinPin: l.joinPin || '',
     };
   }
 
@@ -1689,7 +1691,13 @@
       '<div><label class="lbl" for="to" style="margin-top:0">Ističe</label><input class="field" type="datetime-local" id="to" value="' + toLocalInput(d.expiresAt) + '"></div></div>' +
       '<p class="hint">Sada: ' + esc(fmtDateTime(d.validFrom)) + ' – ' + esc(fmtDateTime(d.expiresAt)) + '. Posle isteka link prikazuje rezultate, ali nove partije ne mogu da počnu.</p>' +
       '<div style="margin-top:.9rem"><button class="btn btn-gold" id="save-dates">Sačuvaj rok</button></div></div>' +
-      '<div class="card"><h2>🔑 Promeni PIN</h2><div class="pin-row">' + pinHtml([], 'new-pin') +
+      '<div class="card"><h2>🎟 PIN za ulaz igrača</h2>' +
+      '<p class="hint" style="margin-top:0">Ako ga postaviš, igrači moraju da ga unesu da bi ušli u kviz preko linka (4–6 cifara). Bez njega ulazi svako ko ima link.</p>' +
+      '<div class="pin-row" style="margin-top:.6rem"><input class="field mono" id="join-pin" inputmode="numeric" maxlength="6" placeholder="npr. 2468" value="' + esc(d.joinPin) + '" style="max-width:180px;font-size:1.3rem;letter-spacing:.25em;text-align:center">' +
+      '<p class="hint">' + (ed.link.joinPin ? 'Trenutno: <b class="mono">' + esc(ed.link.joinPin) + '</b> — reci ga igračima.' : 'Trenutno: bez PIN-a, link je otvoren.') + '</p></div>' +
+      '<div style="margin-top:.9rem;display:flex;gap:.6rem;flex-wrap:wrap"><button class="btn btn-gold" id="save-join">Sačuvaj PIN za ulaz</button>' +
+      (ed.link.joinPin ? '<button class="btn btn-ghost" id="clear-join">Ukloni PIN za ulaz</button>' : '') + '</div></div>' +
+      '<div class="card"><h2>🔑 Promeni PIN za uređivanje</h2><div class="pin-row">' + pinHtml([], 'new-pin') +
       '<p class="hint">Novi PIN važi odmah; drugi uređaji moraju da ga unesu ponovo.</p></div>' +
       '<div style="margin-top:.9rem"><button class="btn btn-primary" id="save-pin">Promeni PIN</button></div></div>' +
       '<div class="card danger-zone"><h2>🗑 Obriši kviz link</h2><p class="hint" style="margin-top:0">Briše pitanja, sliku i statistiku. Link prestaje da radi. Ne može da se vrati.</p>' +
@@ -1704,6 +1712,21 @@
       d.expiresAt = to;
       if (await save(['validFrom', 'expiresAt'], e.currentTarget)) renderEditorShell();
     };
+    const joinInput = $('#join-pin', body);
+    joinInput.oninput = () => (joinInput.value = joinInput.value.replace(/\D/g, '').slice(0, 6));
+    $('#save-join', body).onclick = async (e) => {
+      const v = joinInput.value.trim();
+      if (!/^\d{4,6}$/.test(v)) return toast('PIN za ulaz mora imati 4 do 6 cifara.', true);
+      d.joinPin = v;
+      if (await save(['joinPin'], e.currentTarget)) renderEditorShell();
+    };
+    const clearJoin = $('#clear-join', body);
+    if (clearJoin)
+      clearJoin.onclick = async (e) => {
+        if (!confirm('Ukloniti PIN za ulaz? Link će biti otvoren svima koji ga imaju.')) return;
+        d.joinPin = '';
+        if (await save(['joinPin'], e.currentTarget)) renderEditorShell();
+      };
     const getPin = bindPin($('#new-pin', body));
     $('#save-pin', body).onclick = async () => {
       const pin = getPin();
@@ -1899,6 +1922,9 @@
         ? '<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap"><span class="pinshow">' + esc(pin.split('').join(' ')) + '</span>' +
           '<span style="font-size:.76rem;color:var(--red);font-weight:700">Zapiši ga — ne možemo da ga pošaljemo ponovo.</span></div>'
         : '<span class="hint" style="margin:0">PIN koji si izabrao na prvom koraku. Zapamćen je i u ovom pregledaču.</span>') +
+      (l.joinPin
+        ? '<span class="lbl" style="margin:.2rem 0 0">PIN za ulaz igrača</span><span class="pinshow" style="font-size:1.3rem">' + esc(l.joinPin) + '</span>'
+        : '') +
       '</div></div>' +
       '<div style="display:flex;gap:.6rem;flex-wrap:wrap"><button class="btn btn-primary" style="flex:1;min-height:48px" id="share">Podeli link</button>' +
       '<a class="btn btn-ghost" style="flex:1;min-height:48px" href="/k/' + esc(l.slug) + '" target="_blank" rel="noopener">Probaj kao igrač</a></div>' +

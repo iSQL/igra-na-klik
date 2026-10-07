@@ -19,6 +19,7 @@ import { setupSocket } from '../packages/server/src/socket/setup.js';
 import { initTimingConfig } from '../packages/server/src/game/timing-config.js';
 import { KvizLinkStore } from '../packages/server/src/kviz-links/kviz-link-store.js';
 import { createKvizLinkRouter } from '../packages/server/src/kviz-links/kviz-link-api.js';
+import { createKvizLinkAdminRouter } from '../packages/server/src/admin/kviz-link-admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -81,13 +82,16 @@ async function main(): Promise<void> {
   const httpServer = createServer(app);
   const { roomManager } = setupSocket(httpServer, '*', { questionPacksDir: packsDir, kvizLinks: store });
   app.use('/api/k', createKvizLinkRouter({ store, questionPacksDir: packsDir, roomManager }));
+  process.env.ADMIN_TOKEN = 'test-admin';
+  app.use('/api/admin', createKvizLinkAdminRouter({ store, roomManager }));
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   const base = `http://localhost:${(httpServer.address() as { port: number }).port}`;
 
-  const call = async (method: string, url: string, body?: unknown, token?: string) => {
+  const call = async (method: string, url: string, body?: unknown, token?: string, admin?: boolean) => {
     const res = await fetch(base + url, {
       method,
       headers: {
+        ...(admin ? { 'X-Admin-Token': 'test-admin' } : {}),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { 'X-Kviz-Token': token } : {}),
       },
@@ -261,6 +265,37 @@ async function main(): Promise<void> {
   const manage = await call('GET', `/api/k/${slug}/manage`, undefined, token);
   check('upravljanje: zbir igrača', (manage.json.stats as { players?: number })?.players === 2);
 
+  // --- PIN za ulaz ------------------------------------------------------------------
+  const setJoin = await call('PUT', `/api/k/${slug}`, { joinPin: '2468' }, token);
+  check('PIN za ulaz: sačuvan', setJoin.status === 200 && (setJoin.json.link as { joinPin?: string }).joinPin === '2468');
+  check('PIN za ulaz: ne ide u javnu karticu', !(await call('GET', `/api/k/${slug}`)).text.includes('2468'));
+  check('PIN za ulaz: kartica kaže da je potreban', ((await call('GET', `/api/k/${slug}`)).json.link as { joinPinRequired?: boolean }).joinPinRequired === true);
+  check('PIN za ulaz: loš format odbijen', (await call('PUT', `/api/k/${slug}`, { joinPin: '12' }, token)).status === 400);
+  const tryJoin = async (name: string, joinPin?: string) => {
+    const s = connect();
+    await once(s, 'connect');
+    emit(s, 'player:join-kviz-link', { slug, playerName: name, joinPin });
+    const r = await Promise.race([
+      once<{ room: { code: string } }>(s, 'player:joined').then((j) => ({ ok: true as const, code: j.room.code })),
+      once<{ message: string }>(s, 'error').then((e) => ({ ok: false as const, message: e.message })),
+    ]);
+    return { s, r };
+  };
+  const noPin = await tryJoin('Dejan');
+  check('PIN za ulaz: bez PIN-a odbijen', !noPin.r.ok, JSON.stringify(noPin.r));
+  const wrongPin = await tryJoin('Dejan', '1111');
+  check('PIN za ulaz: pogrešan odbijen', !wrongPin.r.ok && /Pogrešan/.test(wrongPin.r.message), JSON.stringify(wrongPin.r));
+  const byCode = connect();
+  await once(byCode, 'connect');
+  emit(byCode, 'player:join-room', { roomCode: ana.room.code, playerName: 'Dejan' });
+  const codeErr = await once<{ message: string }>(byCode, 'error').catch(() => null);
+  check('PIN za ulaz: kod sobe ne zaobilazi PIN', !!codeErr && /PIN/.test(codeErr.message), JSON.stringify(codeErr));
+  const goodPin = await tryJoin('Dejan', '2468');
+  check('PIN za ulaz: tačan pušta u isti lobi', goodPin.r.ok && goodPin.r.code === ana.room.code, JSON.stringify(goodPin.r));
+  for (const x of [noPin.s, wrongPin.s, byCode, goodPin.s]) x.disconnect();
+  await call('PUT', `/api/k/${slug}`, { joinPin: '' }, token);
+  check('PIN za ulaz: uklonjen', !((await call('GET', `/api/k/${slug}`)).json.link as { joinPinRequired?: boolean }).joinPinRequired);
+
   // --- Istek -----------------------------------------------------------------------
   await call('PUT', `/api/k/${slug}`, { validFrom: now - 7200_000, expiresAt: now - 60_000 }, token);
   emit(ana.s, 'host:start-game', { gameId: 'quiz' });
@@ -276,6 +311,17 @@ async function main(): Promise<void> {
     'istek: javna kartica pokazuje rezultate',
     expired.json.status === 'expired' && Array.isArray(expired.json.results) && (expired.json.results as unknown[]).length === 2
   );
+
+  // --- Admin --------------------------------------------------------------------
+  check('admin: bez tokena 403/401', (await call('GET', '/api/admin/kviz-links')).status >= 401);
+  const adminList = await call('GET', '/api/admin/kviz-links', undefined, undefined, true);
+  const row = ((adminList.json.links ?? []) as { slug: string; games: number; players: number }[]).find((l) => l.slug === slug);
+  check('admin: lista sa partijama i igračima', row?.games === 1 && row?.players === 2, adminList.text.slice(0, 200));
+  const adminTok = await call('POST', `/api/admin/kviz-links/${slug}/token`, undefined, undefined, true);
+  check('admin: token za uređivanje važi', (await call('GET', `/api/k/${slug}/manage`, undefined, String(adminTok.json.token))).status === 200);
+  await call('POST', '/api/k', { ...createBody, slug: 'za-brisanje' });
+  check('admin: brisanje', (await call('DELETE', '/api/admin/kviz-links/za-brisanje', undefined, undefined, true)).status === 200);
+  check('admin: obrisan link nestaje', (await call('GET', '/api/k/za-brisanje')).status === 404);
 
   // --- PIN i brisanje -----------------------------------------------------------------
   const newPin = await call('POST', `/api/k/${slug}/pin`, { pin: '1234' }, token);

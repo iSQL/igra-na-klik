@@ -121,6 +121,8 @@ export interface ClientToServerEvents {
     slug: string;
     playerName: string;
     playedGames?: string[];
+    /** The link's entry PIN, when the editor set one. */
+    joinPin?: string;
   }) => void;
   // Ask to join a room whose game is running. Answered with knock:status /
   // knock:closed (or error). One knock per socket at a time.

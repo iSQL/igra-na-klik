@@ -298,6 +298,7 @@ function kvizCatById(id){
     { id:'asocijacije',  label:'Asocijacije',  icon:'🧩', route:'asocijacije-packs',  listKey:'packs', kind:'asoc',   itemNoun:'slagalica' },
     { id:'osvajanje',    label:'Mape',         icon:'🏰', route:'bitka-maps',         listKey:'maps',  kind:'bitka',  itemNoun:'teritorija' },
     { id:'prigovori',    label:'Prigovori',    icon:'🚩', route:null,                 listKey:null,    kind:'feedback', itemNoun:'' },
+    { id:'kviz-linkovi', label:'Kviz linkovi', icon:'🔗', route:null,                 listKey:null,    kind:'kvizlinks', itemNoun:'' },
     { id:'timinzi',      label:'Timinzi',      icon:'⏱️', route:null,                 listKey:null,    kind:'timinzi', itemNoun:'' },
     { id:'podaci',       label:'Podaci',       icon:'💾', route:null,                 listKey:null,    kind:'data',    itemNoun:'' }
   ];
@@ -2970,7 +2971,91 @@ function kvizCatById(id){
   window.AdminApp.register('gluvo',    { renderMain: renderGluvo });
   window.AdminApp.register('spijun',   { renderMain: renderSpijun });
   window.AdminApp.register('asoc',     { renderMain: renderAsoc });
+  // ---------- Kviz linkovi (/k/<naziv>) ----------
+  // Every link made on the site. "Uredi" asks the server for the link's edit
+  // token, stores it where the /k editor looks for it (localStorage
+  // 'igra-kviz-links', same origin) and opens the editor — no PIN needed.
+  var klData=null, klQuery='';
+  var KL_STATUS={ active:['Aktivan','#3E7D57','rgba(62,125,87,.12)'], scheduled:['Zakazan','#8a6f2c','rgba(194,155,71,.16)'], expired:['Istekao','#6b7688','#f4eee4'] };
+  var KL_MONTHS=['jan','feb','mar','apr','maj','jun','jul','avg','sep','okt','nov','dec'];
+  function klDay(ms){ var d=new Date(ms); return d.getDate()+'. '+KL_MONTHS[d.getMonth()]+' '+d.getFullYear()+'.'; }
+  function klRemember(slug, token, name){
+    try{
+      var list=JSON.parse(localStorage.getItem('igra-kviz-links')||'[]'); if(!Array.isArray(list)) list=[];
+      list=list.filter(function(l){ return l && l.slug!==slug; });
+      list.unshift({ slug:slug, token:token, name:name });
+      localStorage.setItem('igra-kviz-links', JSON.stringify(list));
+      return true;
+    }catch(e){ return false; }
+  }
+  function renderKvizLinks(host, ctx){
+    if(klData){ paintKvizLinks(host); return; }
+    host.innerHTML='<div class="empty">Učitavanje kviz linkova…</div>';
+    api('GET','/api/admin/kviz-links').then(function(d){ klData=d.links||[]; paintKvizLinks(host); })
+      .catch(function(e){ host.innerHTML='<div class="empty">Greška pri učitavanju: '+esc(e.message)+'</div>'; });
+  }
+  function paintKvizLinks(host){
+    var q=klQuery.trim().toLowerCase();
+    var list=klData.filter(function(l){ return !q || (l.name+' '+l.slug).toLowerCase().indexOf(q)>=0; });
+    var head='<div class="fb-head"><div><div class="fb-title">🔗 Kviz linkovi ('+klData.length+')</div>'
+      +'<div class="hint" style="margin:.2rem 0 0">Kvizovi koje su posetioci napravili na <a href="/k" target="_blank" style="color:var(--gold);font-weight:700">/k</a>. „Uredi" otvara njihov editor bez PIN-a; statistika pamti poslednjih 50 partija.</div></div>'
+      +'<div style="display:flex;gap:.5rem;align-items:center"><input class="field" id="kl-q" placeholder="Pretraži…" value="'+esc(klQuery)+'" style="min-height:38px;max-width:220px">'
+      +'<button class="btn btn-ghost btn-sm" id="kl-refresh">↻ Osveži</button></div></div>';
+    var body='';
+    if(!list.length){
+      body='<div class="empty">'+(klData.length?'Nema linkova za ovu pretragu.':'Još niko nije napravio kviz link.')+'</div>';
+    } else {
+      list.forEach(function(l){
+        var st=KL_STATUS[l.status]||KL_STATUS.active;
+        var meta=l.items+' pitanja'+(l.own?' ('+l.own+' sopstvenih)':'')
+          +' · '+(l.order==='random'?'nasumično '+Math.min(l.drawCount,l.items||l.drawCount):'fiksan redosled')
+          +' · važi '+klDay(l.validFrom)+' – '+klDay(l.expiresAt);
+        var played=l.games+' partija · '+l.players+' igrača'+(l.lastPlayedAt?' · poslednja '+klDay(l.lastPlayedAt):'')
+          +(l.online?' · <b style="color:#3E7D57">● '+l.online+' sada igra</b>':'');
+        body+='<div class="fb-row">'
+          +'<div style="width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:1.2rem;flex:none;background:'+esc(l.color)+'33">'+esc(l.emoji)+'</div>'
+          +'<div class="fb-main"><div class="fb-text">'+esc(l.name)
+          +' <span class="fb-badge" style="color:'+st[1]+';background:'+st[2]+'">'+st[0]+'</span></div>'
+          +'<div class="fb-meta" style="font-family:ui-monospace,monospace">/k/'+esc(l.slug)+'</div>'
+          +'<div class="fb-meta">'+esc(meta)+'</div><div class="fb-meta">'+played+'</div></div>'
+          +'<div class="fb-acts" style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end">'
+          +'<a class="btn btn-ghost btn-sm" href="/k/'+esc(l.slug)+'" target="_blank" rel="noopener">Otvori</a>'
+          +'<button class="btn btn-ghost btn-sm kl-edit" data-slug="'+esc(l.slug)+'" data-hash="statistika">Statistika</button>'
+          +'<button class="btn btn-primary btn-sm kl-edit" data-slug="'+esc(l.slug)+'" data-hash="">Uredi</button>'
+          +'<button class="btn btn-danger btn-sm kl-del" data-slug="'+esc(l.slug)+'">Obriši</button></div>'
+          +'</div>';
+      });
+    }
+    host.innerHTML=head+'<div class="fb-list">'+body+'</div>';
+
+    var qi=$('kl-q');
+    qi.oninput=function(){ var pos=qi.selectionStart; klQuery=qi.value; paintKvizLinks(host); var n=$('kl-q'); n.focus(); n.setSelectionRange(pos,pos); };
+    $('kl-refresh').onclick=function(){ klData=null; renderKvizLinks(host); };
+    var edits=host.querySelectorAll('.kl-edit');
+    for(var i=0;i<edits.length;i++) edits[i].onclick=function(){
+      var slug=this.getAttribute('data-slug'), hash=this.getAttribute('data-hash');
+      var link=null; for(var k=0;k<klData.length;k++) if(klData[k].slug===slug) link=klData[k];
+      // Open the tab inside the click, or popup blockers eat it after the await.
+      var win=window.open('about:blank','_blank');
+      api('POST','/api/admin/kviz-links/'+slug+'/token').then(function(d){
+        if(!klRemember(slug, d.token, link?link.name:slug)) throw new Error('Pregledač ne dozvoljava čuvanje (localStorage).');
+        var url='/k/'+slug+'/uredi'+(hash?'#'+hash:'');
+        if(win) win.location.href=url; else window.location.href=url;
+      }).catch(function(e){ if(win) win.close(); showErr(e.message); });
+    };
+    var dels=host.querySelectorAll('.kl-del');
+    for(var j=0;j<dels.length;j++) dels[j].onclick=function(){
+      var slug=this.getAttribute('data-slug');
+      if(!window.confirm('Obrisati kviz link /k/'+slug+' sa pitanjima, slikama i statistikom? Ne može da se vrati.')) return;
+      api('DELETE','/api/admin/kviz-links/'+slug).then(function(){
+        klData=klData.filter(function(l){ return l.slug!==slug; });
+        paintKvizLinks(host); showOk('Link /k/'+slug+' je obrisan.');
+      }).catch(function(e){ showErr(e.message); });
+    };
+  }
+
   window.AdminApp.register('feedback', { renderMain: renderFeedback });
+  window.AdminApp.register('kvizlinks', { renderMain: renderKvizLinks });
   window.AdminApp.register('timinzi',  { renderMain: renderTiminzi });
   window.AdminApp.register('data',     { renderMain: renderData });
 })();

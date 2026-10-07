@@ -308,6 +308,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'kviz.perQuestion': 'vreme po pitanju',
     'kviz.mixed': 'mešovito',
     'kviz.start': 'Pokreni kviz →',
+    'kviz.joinPin': 'PIN za ulaz',
+    'kviz.joinPinHint': 'Dobićeš ga od organizatora kviza.',
+    'kviz.enterPin': 'Unesi PIN za ulaz.',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Konačni poredak',
@@ -984,6 +987,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'kviz.perQuestion': 'own timer',
     'kviz.mixed': 'mixed',
     'kviz.start': 'Start the quiz →',
+    'kviz.joinPin': 'Entry PIN',
+    'kviz.joinPinHint': 'Ask the quiz organiser for it.',
+    'kviz.enterPin': 'Enter the entry PIN.',
 
     // --- leaderboard (shared host) ---------------------------------------
     'leaderboard.final': 'Final standings',

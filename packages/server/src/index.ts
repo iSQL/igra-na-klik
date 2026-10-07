@@ -50,6 +50,7 @@ import {
   isValidKvizLinkSlug,
 } from './kviz-links/kviz-link-store.js';
 import { createKvizLinkRouter } from './kviz-links/kviz-link-api.js';
+import { createKvizLinkAdminRouter } from './admin/kviz-link-admin.js';
 import {
   resolveContentDir,
   resolveTimingFile,
@@ -589,6 +590,8 @@ const { roomManager } = setupSocket(httpServer, socketOrigins, {
 // /k = my links, /k/novi = new link, /k/<naziv>/uredi = edit behind the PIN.
 // /k/<naziv> itself is the link players get — it sends them to the phone app.
 app.use('/api/k', createKvizLinkRouter({ store: kvizLinks, questionPacksDir: QUESTION_PACKS_DIR, roomManager }));
+// Admin "Kviz linkovi" tab: list, edit (hands the admin an edit token), delete.
+app.use('/api/admin', createKvizLinkAdminRouter({ store: kvizLinks, roomManager }));
 const KVIZ_LINK_APP_DIR = path.resolve(__dirname, '..', 'assets', 'kviz-link');
 app.use('/k-app', express.static(KVIZ_LINK_APP_DIR, { maxAge: '1h', etag: true }));
 const sendKvizLinkApp = (_req: express.Request, res: express.Response) => {

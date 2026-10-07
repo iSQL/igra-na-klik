@@ -5,6 +5,7 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import type { KvizLinkPublic, KvizQuestionType } from '@igra/shared';
 import {
   KVIZ_LINK_COLORS,
+  KVIZ_LINK_JOIN_PIN_RE,
   KVIZ_LINK_MAX_DAYS,
   KVIZ_LINK_MAX_ITEMS,
   KVIZ_LINK_MAX_MESSAGE,
@@ -57,6 +58,11 @@ export interface KvizLinkSettings {
   timeLimit: number | null;
   speedBonus: boolean;
   maxPlayers: number;
+  /**
+   * Entry PIN players must know to join. Kept in plain text on purpose: the
+   * editor shows it so they can tell the players; it guards a party, not data.
+   */
+  joinPin?: string;
 }
 
 export interface StoredKvizLink extends KvizLinkSettings {
@@ -88,7 +94,8 @@ export interface KvizLinkGameRecord {
 
 const LINK_FILE = 'link.json';
 const STATS_FILE = 'stats.json';
-const MAX_GAMES_KEPT = 300;
+/** Statistics keep the newest games only — older ones drop off on append. */
+const MAX_GAMES_KEPT = 50;
 /** Server-wide cap on links — creation is public. */
 export const KVIZ_LINK_MAX_TOTAL = 3000;
 /** Expired links (and their stats) are deleted this long after expiry. */
@@ -100,6 +107,8 @@ const MAX_FOLDER_BYTES = 60_000_000;
 const ORPHAN_GRACE_MS = 3600_000;
 
 const DAY_MS = 24 * 3600_000;
+const JOIN_FAIL_MAX = 20;
+const JOIN_FAIL_WINDOW_MS = 10 * 60_000;
 export const KVIZ_LINK_MEDIA_FILE_RE = /^(?:img|aud|cover)-[a-z0-9]{6,20}\.(?:jpg|png|webp|mp3|ogg|m4a)$/;
 
 export function normalizeKvizLinkSlug(raw: string): string {
@@ -135,6 +144,8 @@ export class KvizLinkStore {
   private links = new Map<string, StoredKvizLink>();
   /** Per-slug write queue so stats appends and saves never interleave. */
   private queues = new Map<string, Promise<unknown>>();
+  /** slug → timestamps of wrong entry-PIN guesses (see checkJoinPin). */
+  private joinFails = new Map<string, number[]>();
 
   constructor(readonly root: string) {}
 
@@ -157,6 +168,11 @@ export class KvizLinkStore {
 
   get(slug: string): StoredKvizLink | undefined {
     return this.links.get(slug);
+  }
+
+  /** Every link, newest edit first (admin overview). */
+  list(): StoredKvizLink[] {
+    return [...this.links.values()].sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
   get size(): number {
@@ -186,6 +202,27 @@ export class KvizLinkStore {
     return /^[0-9a-f]{64}$/.test(token) && safeEqualHex(this.tokenFor(link), token);
   }
 
+  /**
+   * Check a player's entry PIN. Wrong guesses are counted per link: after 20
+   * in ten minutes the link refuses every guess for ten minutes, so a 4-digit
+   * PIN can't be walked through by opening new sockets.
+   */
+  checkJoinPin(link: StoredKvizLink, pin: unknown): 'ok' | 'wrong' | 'locked' {
+    if (!link.joinPin) return 'ok';
+    const now = Date.now();
+    const fails = (this.joinFails.get(link.slug) ?? []).filter((t) => now - t < JOIN_FAIL_WINDOW_MS);
+    if (fails.length >= JOIN_FAIL_MAX) {
+      this.joinFails.set(link.slug, fails);
+      return 'locked';
+    }
+    const given = Buffer.from(typeof pin === 'string' ? pin.trim() : '');
+    const want = Buffer.from(link.joinPin);
+    if (given.length === want.length && timingSafeEqual(given, want)) return 'ok';
+    fails.push(now);
+    this.joinFails.set(link.slug, fails);
+    return 'wrong';
+  }
+
   // ---- Public view -----------------------------------------------------------
 
   publicInfo(link: StoredKvizLink): KvizLinkPublic {
@@ -209,6 +246,7 @@ export class KvizLinkStore {
       validFrom: link.validFrom,
       expiresAt: link.expiresAt,
       maxPlayers: link.maxPlayers,
+      ...(link.joinPin ? { joinPinRequired: true } : {}),
     };
   }
 
@@ -327,6 +365,11 @@ export class KvizLinkStore {
     const maxRaw = pick('maxPlayers');
     const maxPlayers =
       typeof maxRaw === 'number' && KVIZ_LINK_PLAYER_LIMITS.includes(maxRaw) ? maxRaw : 8;
+    const joinRaw = pick('joinPin');
+    const joinPin = typeof joinRaw === 'string' ? joinRaw.trim() : '';
+    if (joinPin && !KVIZ_LINK_JOIN_PIN_RE.test(joinPin)) {
+      return { ok: false, error: 'PIN za ulaz mora imati 4 do 6 cifara.' };
+    }
     const coverRaw = pick('cover');
     const cover = typeof coverRaw === 'string' && KVIZ_LINK_MEDIA_FILE_RE.test(coverRaw) ? coverRaw : undefined;
 
@@ -347,6 +390,7 @@ export class KvizLinkStore {
         timeLimit,
         speedBonus,
         maxPlayers,
+        ...(joinPin ? { joinPin } : {}),
       },
     };
   }
@@ -422,6 +466,7 @@ export class KvizLinkStore {
     Object.assign(link, settings, { types, updatedAt: Date.now() });
     if (!settings.message) delete link.message;
     if (!settings.cover) delete link.cover;
+    if (!settings.joinPin) delete link.joinPin;
     await this.enqueue(slug, () => writeJsonAtomic(path.join(this.dir(slug), LINK_FILE), link));
     void this.cleanupOrphans(slug);
     return link;

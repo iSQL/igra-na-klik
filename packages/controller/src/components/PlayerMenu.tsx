@@ -13,7 +13,8 @@ import { BottomSheet } from './BottomSheet';
 import { previewSound, useCueSettings, vibrate } from '../utils/cues';
 import { useLanguageStore } from '../store/languageStore';
 import { useGameStore } from '../store/gameStore';
-import { flowAction, useFlowStore } from '../store/flowStore';
+import { flowAction, formatClock, useFlowStore } from '../store/flowStore';
+import { useWaitingOn } from '../hooks/useWaitingOn';
 
 type ConfirmKind = 'leave' | 'close' | null;
 
@@ -56,6 +57,7 @@ export function PlayerMenu({
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const gameName = useGameName();
+  const waiting = useWaitingOn();
 
   if (!player || !room) return null;
 
@@ -132,6 +134,9 @@ export function PlayerMenu({
           </span>
         ) : (
           <span
+            // Gold ⏭ = most of the room is done and the holder can move on
+            // from the menu ("Nastavi ▸").
+            aria-label={waiting ? t('flow.waitingFor', { names: waiting.names }) : undefined}
             style={{
               position: 'absolute',
               right: '-3px',
@@ -139,14 +144,16 @@ export function PlayerMenu({
               width: '20px',
               height: '20px',
               borderRadius: '50%',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--line2)',
+              background: waiting ? 'var(--accent)' : 'var(--bg-secondary)',
+              border: waiting ? 'none' : '1px solid var(--line2)',
+              color: waiting ? 'var(--bg-primary)' : undefined,
               fontSize: '0.7rem',
               display: 'grid',
               placeItems: 'center',
+              animation: waiting ? 'igra-pop .3s' : undefined,
             }}
           >
-            ⚙
+            {waiting ? '⏭' : '⚙'}
           </span>
         )}
       </button>
@@ -195,6 +202,27 @@ export function PlayerMenu({
             {inGame && (
               <>
                 <SectionLabel accent>{t('playerMenu.gameSection', { game: gameName })}</SectionLabel>
+                {waiting && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '10px 14px',
+                      borderRadius: 14,
+                      background: 'var(--bg-primary)',
+                      border: '1px solid rgba(194,155,71,.5)',
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>
+                      {t('flow.waitingFor', { names: waiting.names })}
+                    </span>
+                    {waiting.timeRemaining > 0 && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        {t('flow.timeLeft', { time: formatClock(waiting.timeRemaining) })}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {iAmRemoteHost && (
                   <div
                     style={{
@@ -215,7 +243,8 @@ export function PlayerMenu({
                     {flow?.skipLabel && (
                       <BigTile
                         icon="⏭"
-                        label={flow.skipLabel}
+                        label={waiting ? t('flow.continue') : flow.skipLabel}
+                        accent={!!waiting}
                         disabled={flow.paused}
                         onClick={() => {
                           setOpen(false);
@@ -469,11 +498,14 @@ export function SectionLabel({ children, accent }: { children: ReactNode; accent
 function BigTile({
   icon,
   label,
+  accent,
   disabled,
   onClick,
 }: {
   icon: string;
   label: string;
+  /** Gold — the move the holder is most likely here for. */
+  accent?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -484,9 +516,9 @@ function BigTile({
       style={{
         height: 72,
         borderRadius: 16,
-        background: 'var(--bg-primary)',
-        border: '1px solid var(--line)',
-        color: 'var(--text-primary)',
+        background: accent ? 'var(--accent)' : 'var(--bg-primary)',
+        border: accent ? 'none' : '1px solid var(--line)',
+        color: accent ? 'var(--bg-primary)' : 'var(--text-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

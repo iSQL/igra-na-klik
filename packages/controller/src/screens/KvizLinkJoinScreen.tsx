@@ -37,6 +37,7 @@ export function KvizLinkJoinScreen({ slug, onExit }: { slug: string; onExit: () 
   const [missing, setMissing] = useState(false);
   const [playerName, setPlayerName] = useState(() => localStorage.getItem(LAST_NAME_KEY) ?? '');
   const [error, setError] = useState('');
+  const [joinPin, setJoinPin] = useState('');
   const [joining, setJoining] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -99,9 +100,18 @@ export function KvizLinkJoinScreen({ slug, onExit }: { slug: string; onExit: () 
   const enter = () => {
     const name = needName();
     if (!name) return;
+    if (info?.link.joinPinRequired && !/^\d{4,6}$/.test(joinPin)) {
+      setError(t('kviz.enterPin'));
+      return;
+    }
     setError('');
     setJoining(true);
-    socket.emit('player:join-kviz-link', { slug, playerName: name, playedGames: readSeen() });
+    socket.emit('player:join-kviz-link', {
+      slug,
+      playerName: name,
+      playedGames: readSeen(),
+      ...(info?.link.joinPinRequired ? { joinPin } : {}),
+    });
   };
 
   const knockOn = (code: string) => {
@@ -324,6 +334,43 @@ export function KvizLinkJoinScreen({ slug, onExit }: { slug: string; onExit: () 
                   }}
                 />
               </div>
+
+              {/* The editor's entry PIN — checked server-side, never sent to the phone. */}
+              {link.joinPinRequired && info.status === 'active' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.25rem' }}>
+                  <label htmlFor="kviz-pin" style={labelStyle}>
+                    🔒 {t('kviz.joinPin')}
+                  </label>
+                  <input
+                    id="kviz-pin"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="••••"
+                    maxLength={6}
+                    value={joinPin}
+                    onChange={(e) => setJoinPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={(e) => e.key === 'Enter' && enter()}
+                    style={{
+                      width: '100%',
+                      height: '64px',
+                      padding: '0 1.1rem',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '1.6rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.3em',
+                      textAlign: 'center',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      border: '1.5px solid var(--line2)',
+                      borderRadius: '18px',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {t('kviz.joinPinHint')}
+                  </span>
+                </div>
+              )}
 
               {error && (
                 <p role="alert" style={{ color: 'var(--danger)', textAlign: 'center', fontWeight: 700, margin: '0.9rem 0 0' }}>

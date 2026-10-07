@@ -49,6 +49,8 @@ export const KVIZ_LINK_MAX_MESSAGE = 120;
 /** Longest allowed validity window. */
 export const KVIZ_LINK_MAX_DAYS = 366;
 export const KVIZ_LINK_PIN_RE = /^\d{4}$/;
+/** Optional entry PIN players must type to join (set by the editor). */
+export const KVIZ_LINK_JOIN_PIN_RE = /^\d{4,6}$/;
 
 export type KvizLinkStatus = 'scheduled' | 'active' | 'expired';
 
@@ -99,6 +101,8 @@ export interface KvizLinkPublic {
   validFrom: number;
   expiresAt: number;
   maxPlayers: number;
+  /** Players must type the editor's entry PIN to join (the PIN itself never leaves the server). */
+  joinPinRequired?: boolean;
 }
 
 /** Rough game length for the join card ("≈ 8 min"). */

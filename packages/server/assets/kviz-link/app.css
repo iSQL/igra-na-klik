@@ -203,7 +203,9 @@ a.back { font-size: .9rem; text-decoration: none; }
 .toggle.on { background: var(--green); }
 .toggle.on::after { left: 19px; }
 .rule select { padding: .25rem .4rem; border-radius: 8px; border: 1.5px solid var(--line2); font-weight: 800; color: var(--navy); background: #fff; }
-.qright .save { margin-top: auto; }
+/* Right under the rules — the column stretches to the bank list's height, so
+   pushing the button to its bottom hid it below 100+ rows. */
+.qright .save { margin-top: .2rem; }
 .dirty { font-size: .78rem; font-weight: 800; color: #8a6f2c; text-align: center; }
 
 /* ---- Modal (1d) ---- */
