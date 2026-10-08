@@ -23,6 +23,7 @@ import type { PlayerAward } from '../games/awards.js';
 import type { AsocijacijeMode, AsocijacijePuzzle } from './asocijacije.js';
 import type { PuzlaMode, PuzlaUploadAck } from './puzla.js';
 import type { BedemLength, BedemMode } from './bedem.js';
+import type { PotegniBot, PotegniMode, PotegniPredmet, PotegniTezina } from './povuci-potegni.js';
 import type { KnockRequest, KnockStatus } from './knock.js';
 
 export interface ServerToClientEvents {
@@ -230,6 +231,14 @@ export interface ClientToServerEvents {
     // the gate falls). Both re-clamped server-side (clampBedemMode/Length).
     bedemMode?: BedemMode;
     bedemLength?: BedemLength;
+    // Povuci-potegni: two teams vs solo against a bot, which subjects (empty =
+    // all three), difficulty, length in seconds (120/180/300) and the bot's
+    // pace. All re-clamped server-side (clampPotegni*).
+    potegniMode?: PotegniMode;
+    potegniPredmeti?: PotegniPredmet[];
+    potegniTezina?: PotegniTezina;
+    potegniTrajanje?: number;
+    potegniBot?: PotegniBot;
     // Host's current UI language — a content hint so the server can pick
     // the matching draw-words bank. NOT a room-wide language sync; each
     // device's chrome language is its own per-device preference.

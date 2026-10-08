@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Igra Na Klik reel: Kviz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Platno je 1080x1920 (Instagram reel 9:16) i skalira se na prozor, pa snimak ekrana daje tacan kadar.
+     Tokeni su iz packages/{host,controller}/src/styles/global.css i brand.md (Sunrise Hill). */
+  :root {
+    --navy-deep: #162E4E; --navy: #1D3557; --card: #274469;
+    --gold: #C29B47; --gold-deep: #B89040;
+    --cream: #F5EBE0; --cream-hi: #FAF6F0; --beige: #E6DCD2;
+    --ink: #1D3557; --body-ink: #2B2B2B; --muted: #6B6458; --soft: #C9C2B3;
+    --success: #57B380; --success-ink: #7FD3A3;
+    /* QUIZ_OPTION_COLORS iz packages/shared/src/types/quiz.ts */
+    --o1: #C75146; --o2: #6FC2BB; --o3: #E3B45E; --o4: #7C5FA8;
+    --display: 'Baloo 2', 'Manrope', system-ui, sans-serif;
+    --sans: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --ease: cubic-bezier(.22, .61, .36, 1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; background: #0d1622; overflow: hidden; }
+  body { display: grid; place-items: center; font-family: var(--sans); }
+  #stage {
+    width: 1080px; height: 1920px; position: relative; overflow: hidden;
+    background: var(--navy-deep); color: var(--cream-hi); transform-origin: center;
+  }
+  .scene { position: absolute; inset: 0; padding: 140px 90px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center; opacity: 0; transition: opacity .45s var(--ease);
+    background:
+      radial-gradient(1300px 800px at 50% -10%, rgba(194, 155, 71, .22), transparent 60%),
+      radial-gradient(1000px 600px at 50% 112%, rgba(9, 20, 36, .6), transparent 65%),
+      var(--navy-deep); }
+  .scene.on { opacity: 1; }
+  .light { background: var(--cream); color: var(--body-ink); }
+  .light h1, .light h2 { color: var(--ink); }
+
+  /* svaki element ulazi tek kad mu scena postane aktivna; --d je kasnjenje */
+  .in { opacity: 0; transform: translateY(60px); }
+  .on .in { animation: rise .7s var(--ease) forwards; animation-delay: var(--d, 0s); }
+  .pop { opacity: 0; transform: scale(.6); }
+  .on .pop { animation: pop .55s cubic-bezier(.34, 1.56, .64, 1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @keyframes pop { to { opacity: 1; transform: none; } }
+  /* pogresni odgovori se ugase kad stigne tacan */
+  .on .miss { animation: dim .4s forwards; animation-delay: var(--m, 2s); }
+  @keyframes dim { to { opacity: .22; } }
+
+  h1 { font-family: var(--display); font-weight: 800; font-size: 120px; line-height: 1; }
+  h2 { font-family: var(--display); font-weight: 800; font-size: 96px; line-height: 1.02; margin-bottom: 56px; }
+  .kicker { font-family: var(--display); font-size: 38px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--gold); font-weight: 700; margin-bottom: 30px; }
+  .light .kicker { color: var(--gold-deep); }
+  .sub { font-size: 48px; line-height: 1.35; color: var(--soft); margin-top: 50px; font-weight: 500; }
+  .light .sub { color: var(--muted); }
+  .gold { color: var(--gold); }
+
+  /* svetla kartica nosi svoju boju teksta, inace u tamnoj sceni nasledi kremasti tekst i nestane */
+  .card { background: var(--cream-hi); color: var(--body-ink); border: 3px solid var(--beige); border-radius: 40px;
+    padding: 50px; box-shadow: 0 30px 60px -30px rgba(9, 20, 36, .55); width: 100%; text-align: left; }
+
+  /* telefon: navy ekran kao u aplikaciji */
+  .phone { width: 540px; border-radius: 70px; padding: 22px; background: #0b1726;
+    box-shadow: 0 40px 80px -30px rgba(9, 20, 36, .6), inset 0 0 0 3px rgba(245, 235, 224, .12); }
+  .screen { border-radius: 52px; padding: 50px 38px 42px; color: var(--cream-hi);
+    background: radial-gradient(500px 300px at 50% -10%, rgba(194, 155, 71, .2), transparent 60%), var(--navy-deep); }
+  .qcard { font-size: 40px; font-weight: 800; line-height: 1.25; text-align: center; margin-bottom: 34px; }
+
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+  .opt { height: 170px; border-radius: 30px; display: grid; place-items: center; color: #fff;
+    font-family: var(--display); font-size: 84px; font-weight: 800; position: relative; }
+  .on .opt.tap { animation: tap .35s ease-out 1.6s; }
+  @keyframes tap { 50% { transform: scale(.9); } }
+  .on .opt.tap::after { content: ''; position: absolute; inset: 0; border-radius: 30px;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, .9); animation: ring .7s ease-out 1.7s forwards; }
+  @keyframes ring { to { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0); } }
+  .verdict { margin-top: 36px; display: inline-flex; align-items: center; gap: 16px; font-size: 44px; font-weight: 800;
+    color: var(--success-ink); background: rgba(87, 179, 128, .18); padding: 18px 34px; border-radius: 999px; }
+  .verdict b { font-family: var(--display); color: var(--gold); font-size: 56px; }
+  /* --success-ink je svetla zelena za navy; na kremi treba tamnija */
+  .light .verdict { color: #2F7D4F; background: #DDEEDF; }
+  .light .verdict b { color: var(--gold-deep); }
+
+  /* 1: udica */
+  .hook-q { font-size: 104px; }
+  .hook .opts { margin-top: 70px; }
+  .hook .opt { height: 200px; font-size: 100px; }
+  .timer { width: 100%; height: 22px; border-radius: 999px; background: var(--beige); margin-top: 50px; overflow: hidden; }
+  .timer i { display: block; height: 100%; width: 100%; background: var(--gold); border-radius: 999px; transform-origin: left; }
+  .on .timer i { animation: drain 3.4s linear forwards .4s; }
+  @keyframes drain { to { transform: scaleX(.12); background: #C75146; } }
+
+  /* 2: logo */
+  .mark { width: 300px; height: 300px; margin-bottom: 40px; }
+  .on .mark { animation: spin-in 1s var(--ease) forwards; }
+  @keyframes spin-in { from { transform: rotate(-90deg) scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+  .word { font-family: var(--display); font-weight: 800; font-size: 230px; line-height: .85; color: var(--gold); }
+  .types { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 50px; }
+  .types span { font-size: 36px; font-weight: 700; padding: 16px 30px; border-radius: 999px;
+    background: var(--card); border: 3px solid rgba(245, 235, 224, .12); }
+  .types .big { background: var(--gold); color: var(--navy-deep); border-color: var(--gold); }
+
+  /* 4: ko je sta odgovorio */
+  .q2 { font-family: var(--display); font-weight: 800; font-size: 74px; line-height: 1.08; margin-bottom: 56px; }
+  .rows { display: flex; flex-direction: column; gap: 22px; width: 100%; }
+  .row { display: flex; align-items: center; gap: 26px; height: 136px; padding: 0 30px; border-radius: 34px;
+    color: #fff; font-family: var(--display); font-size: 64px; font-weight: 800; text-align: left; position: relative; }
+  .row .nm { flex: 1; }
+  .row .who { display: flex; gap: 12px; }
+  .face { width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; font-size: 50px;
+    border: 4px solid rgba(255, 255, 255, .85); }
+  .ok { position: absolute; right: 14px; top: -30px; width: 76px; height: 76px; border-radius: 50%;
+    background: var(--success); color: #fff; display: grid; place-items: center; font-size: 44px; }
+
+  /* 5: geo, prava mapa iz aplikacije; pinovi su van zumiranog sloja da im se ne poveca debljina */
+  .map { position: relative; width: 456px; height: 572px; border-radius: 24px; overflow: hidden; background: #0B1728; }
+  .map .layer { position: absolute; inset: 0; transform-origin: 61.88% 44.33%; }
+  .on .map .layer { animation: zoom 1.2s var(--ease) forwards .6s; }
+  @keyframes zoom { to { transform: scale(4); } }
+  .map img { width: 100%; height: 100%; display: block; }
+  .pin { position: absolute; transform: translate(-50%, -50%) scale(.4); opacity: 0; border-radius: 50%; }
+  .on .pin { animation: pin .45s cubic-bezier(.34, 1.56, .64, 1) forwards; animation-delay: var(--d); }
+  @keyframes pin { to { opacity: 1; transform: translate(-50%, -50%); } }
+  .pin.me { width: 64px; height: 64px; background: #c75146; border: 5px solid #fff; display: grid; place-items: center; font-size: 34px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .35); }
+  .pin.true { width: 52px; height: 52px; background: #F2CE74; border: 6px solid var(--navy-deep);
+    box-shadow: 0 0 0 10px rgba(242, 206, 116, .35); }
+  .dist { position: absolute; inset: 0; pointer-events: none; }
+  .dist line { stroke: var(--navy-deep); stroke-width: 5; stroke-dasharray: 10 9; stroke-linecap: round; opacity: 0; }
+  .on .dist line { animation: show .3s forwards 3s; }
+  @keyframes show { to { opacity: 1; } }
+  .geo-q { font-size: 36px; font-weight: 800; margin-bottom: 26px; }
+  /* jedan red naslova, da presuda ispod telefona ostane iznad donje zone Instagrama */
+  .geo-h { font-size: 84px; margin-bottom: 44px; }
+
+  /* 6: rang lista */
+  .board { display: flex; flex-direction: column; gap: 24px; width: 100%; }
+  .lb { display: grid; grid-template-columns: 60px 110px 1fr; align-items: center; gap: 22px; text-align: left; }
+  .lb .rk { font-family: var(--display); font-size: 60px; font-weight: 800; color: var(--gold-deep); text-align: center; }
+  .lb .av { width: 110px; height: 110px; border-radius: 50%; display: grid; place-items: center; font-size: 60px; }
+  .lb .nm { font-size: 42px; font-weight: 800; color: var(--ink); display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .lb .nm b { font-family: var(--display); color: var(--gold-deep); }
+  .track { height: 30px; background: var(--beige); border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; width: 0; border-radius: 999px; }
+  .on .fill { animation: grow 1.3s var(--ease) forwards; animation-delay: var(--d, 0s); }
+  @keyframes grow { to { width: var(--w); } }
+
+  /* 7: poziv */
+  .cta { margin-top: 80px; background: linear-gradient(125deg, #c0964a, #8f6e2c); color: var(--cream-hi);
+    font-family: var(--display); font-size: 62px; font-weight: 800; padding: 34px 84px; border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(194, 155, 71, .4); }
+  .on .cta { animation: pop .55s cubic-bezier(.34, 1.56, .64, 1) forwards 1s, pulse 1.6s ease-in-out infinite 1.8s; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+  .url { margin-top: 50px; font-size: 54px; font-weight: 800; letter-spacing: .02em; }
+  .mark-sm { width: 150px; height: 150px; margin-bottom: 50px; }
+
+  #progress { position: absolute; left: 0; top: 0; height: 10px; background: var(--gold); width: 0; z-index: 5; }
+  #controls { position: fixed; bottom: 16px; right: 16px; display: flex; gap: 8px; z-index: 10; }
+  #controls button { font: 700 14px var(--sans); padding: 10px 16px; border-radius: 999px; border: 0;
+    background: var(--gold); color: #fff; cursor: pointer; }
+  body.rec #controls { display: none; }
+  body.render .scene { transition: none; }
+  body.render #stage { transform: none !important; margin: 0 !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="progress"></div>
+
+  <!-- znak: packages/controller/public/ink-mark-reverse.svg (za tamnu podlogu) -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <clipPath id="inkClip"><circle cx="50" cy="50" r="46"/></clipPath>
+      <symbol id="mark" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="#1D3557"/>
+        <g clip-path="url(#inkClip)">
+          <circle cx="50" cy="58" r="26" fill="#C29B47"/>
+          <path d="M-4 100 C12 78 30 70 50 70 C70 70 88 78 104 100 Z" fill="#F5EBE0"/>
+          <g fill="#1D3557">
+            <rect x="38.8" y="44.4" width="6.4" height="3.2"/><rect x="54.8" y="44.4" width="6.4" height="3.2"/>
+            <rect x="38.8" y="47.6" width="6.4" height="3.2"/><rect x="54.8" y="47.6" width="6.4" height="3.2"/>
+            <rect x="35.6" y="50.8" width="28.8" height="3.2"/><rect x="32.4" y="54" width="35.2" height="3.2"/>
+            <rect x="32.4" y="57.2" width="35.2" height="3.2"/><rect x="35.6" y="60.4" width="28.8" height="3.2"/>
+            <rect x="32.4" y="63.6" width="6.4" height="3.2"/><rect x="42" y="63.6" width="16" height="3.2"/>
+            <rect x="61.2" y="63.6" width="6.4" height="3.2"/><rect x="32.4" y="66.8" width="6.4" height="3.2"/>
+            <rect x="61.2" y="66.8" width="6.4" height="3.2"/>
+          </g>
+          <g fill="#F5EBE0">
+            <rect x="42" y="47.6" width="3.2" height="3.2"/><rect x="54.8" y="47.6" width="3.2" height="3.2"/>
+            <rect x="42" y="60.4" width="3.2" height="3.2"/><rect x="54.8" y="60.4" width="3.2" height="3.2"/>
+            <rect x="45.2" y="63.6" width="9.6" height="3.2"/>
+          </g>
+          <path d="M14 90 C26 86 34 94 46 90 C58 86 66 94 86 90" fill="none" stroke="#1D3557" stroke-width="2.4" stroke-linecap="round"/>
+        </g>
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#F5EBE0" stroke-width="2.5"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 1: udica, pitanje iz question-packs/zabari.json (tacno: 15) -->
+  <section class="scene light hook" data-dur="3.8">
+    <div class="kicker in">Bez guglanja!</div>
+    <h1 class="hook-q in" style="--d:.15s">Koliko naselja čini opštinu Žabari?</h1>
+    <div class="opts">
+      <div class="opt pop" style="--d:.6s;background:var(--o1)">10</div>
+      <div class="opt pop" style="--d:.7s;background:var(--o2)">15</div>
+      <div class="opt pop" style="--d:.8s;background:var(--o3)">20</div>
+      <div class="opt pop" style="--d:.9s;background:var(--o4)">25</div>
+    </div>
+    <div class="timer in" style="--d:.3s"><i></i></div>
+  </section>
+
+  <section class="scene" data-dur="3.2">
+    <svg class="mark"><use href="#mark"/></svg>
+    <div class="kicker in" style="--d:.4s">Igra Na Klik</div>
+    <div class="word in" style="--d:.5s">Kviz</div>
+    <div class="sub in" style="--d:.9s">Svi odgovaraju u isto vreme,<br>svako sa svog telefona.</div>
+    <div class="types">
+      <span class="big pop" style="--d:1.4s">1.600+ pitanja</span>
+      <span class="pop" style="--d:1.55s">🗺️ mapa</span>
+      <span class="pop" style="--d:1.65s">🔢 broj</span>
+      <span class="pop" style="--d:1.75s">😀 emoji</span>
+      <span class="pop" style="--d:1.85s">🧩 piksel slika</span>
+    </div>
+  </section>
+
+  <!-- 3: odgovor; +867 = round(1000 * 13 / 15), odgovor posle 2 s od 15 (ilustrativno) -->
+  <section class="scene light" data-dur="4.4">
+    <div class="kicker in">Tačan odgovor: 15</div>
+    <h2 class="in" style="--d:.1s">Brži tačan<br>nosi više poena</h2>
+    <div class="phone in" style="--d:.3s">
+      <div class="screen">
+        <div class="qcard">Koliko naselja čini opštinu Žabari?</div>
+        <div class="opts">
+          <div class="opt miss" style="--m:2.1s;background:var(--o1)">10</div>
+          <div class="opt tap" style="background:var(--o2)">15</div>
+          <div class="opt miss" style="--m:2.1s;background:var(--o3)">20</div>
+          <div class="opt miss" style="--m:2.1s;background:var(--o4)">25</div>
+        </div>
+      </div>
+    </div>
+    <div class="verdict pop" style="--d:2.3s">✓ Tačno! <b>+867</b></div>
+  </section>
+
+  <!-- 4: pitanje iz zabari.json (tacno: Jela); ko je sta izabrao je ilustrativno -->
+  <section class="scene" data-dur="4.4">
+    <div class="kicker in">Pitanja o tvom mestu</div>
+    <div class="q2 in" style="--d:.1s">Žena koja često šeta Žabarima sa zvučnikom u ruci je:</div>
+    <div class="rows">
+      <div class="row in" style="--d:.5s;background:var(--o1)"><span class="nm">Jela</span>
+        <span class="who"><span class="face pop" style="--d:1.3s;background:#c75146">🦊</span><span class="face pop" style="--d:1.5s;background:#5fa173">🐼</span></span>
+        <span class="ok pop" style="--d:2.7s">✓</span></div>
+      <div class="in" style="--d:.6s"><div class="row miss" style="--m:2.5s;background:var(--o2)"><span class="nm">Nela</span>
+        <span class="who"><span class="face pop" style="--d:1.4s;background:#4f80b8">🐸</span></span></div></div>
+      <div class="in" style="--d:.7s"><div class="row miss" style="--m:2.5s;background:var(--o3)"><span class="nm">Željana</span>
+        <span class="who"><span class="face pop" style="--d:1.6s;background:#8b6bae">🦉</span></span></div></div>
+      <div class="in" style="--d:.8s"><div class="row miss" style="--m:2.5s;background:var(--o4)"><span class="nm">Jana</span></div></div>
+    </div>
+  </section>
+
+  <!-- 5: geo; tacka 44,315 N 21,193 E projektovana kao latLngToSvg (61,88% / 44,33%).
+       Igla igraca je 20 km severozapadno: 1000 * e^(-20/220) = 913 (ilustrativno). -->
+  <section class="scene light" data-dur="4.8">
+    <div class="kicker in">Geo pitanje</div>
+    <h2 class="in geo-h" style="--d:.1s">Postavi iglu na mapi</h2>
+    <div class="phone in" style="--d:.3s">
+      <div class="screen">
+        <div class="geo-q">Gde se nalazi opština Žabari?</div>
+        <div class="map">
+          <div class="layer"><img src="../../../packages/controller/src/games/quiz/assets/serbia-map.png" alt=""></div>
+          <svg class="dist" viewBox="0 0 456 572"><line x1="219.4" y1="190.8" x2="282.2" y2="253.6"/></svg>
+          <div class="pin me" style="left:219.4px;top:190.8px;--d:2s">🦊</div>
+          <div class="pin true" style="left:282.2px;top:253.6px;--d:2.6s"></div>
+        </div>
+      </div>
+    </div>
+    <div class="verdict pop" style="--d:3.3s">📍 20 km od cilja <b>+913</b></div>
+  </section>
+
+  <!-- 6: rang lista; poeni su ilustrativni (najvise 3.000 za tri pitanja) -->
+  <section class="scene light" data-dur="4">
+    <h2 class="in">Ko najbolje<br>zna svoj komšiluk?</h2>
+    <div class="board">
+      <div class="lb in" style="--d:.4s"><div class="rk">👑</div><div class="av" style="background:#5fa173">🐼</div>
+        <div><div class="nm">Mina <b>2.710</b></div><div class="track"><div class="fill" style="--w:100%;--d:.7s;background:var(--gold)"></div></div></div></div>
+      <div class="lb in" style="--d:.55s"><div class="rk">2</div><div class="av" style="background:#c75146">🦊</div>
+        <div><div class="nm">Ana <b>2.480</b></div><div class="track"><div class="fill" style="--w:91.5%;--d:.85s;background:var(--o1)"></div></div></div></div>
+      <div class="lb in" style="--d:.7s"><div class="rk">3</div><div class="av" style="background:#4f80b8">🐸</div>
+        <div><div class="nm">Luka <b>1.390</b></div><div class="track"><div class="fill" style="--w:51.3%;--d:1s;background:var(--o2)"></div></div></div></div>
+      <div class="lb in" style="--d:.85s"><div class="rk">4</div><div class="av" style="background:#8b6bae">🦉</div>
+        <div><div class="nm">Đole <b>920</b></div><div class="track"><div class="fill" style="--w:33.9%;--d:1.15s;background:var(--o4)"></div></div></div></div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="5">
+    <svg class="mark-sm in"><use href="#mark"/></svg>
+    <h1 class="in" style="--d:.2s">Ko u društvu<br><span class="gold">najbolje zna</span><br>svoje mesto?</h1>
+    <div class="cta pop">Igraj besplatno</div>
+    <div class="url in" style="--d:1.5s">igranaklik.com</div>
+  </section>
+</div>
+
+<div id="controls">
+  <button id="replay">Ponovi</button>
+  <button id="rec">Režim snimanja</button>
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const scenes = [...document.querySelectorAll('.scene')];
+  const bar = document.getElementById('progress');
+  const total = scenes.reduce((s, el) => s + +el.dataset.dur, 0);
+  let timers = [];
+
+  function fit() {
+    const k = Math.min(innerWidth / 1080, innerHeight / 1920);
+    stage.style.transform = `scale(${k})`;
+    stage.style.margin = `${(1920 * k - 1920) / 2}px ${(1080 * k - 1080) / 2}px`;
+  }
+
+  function play() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    scenes.forEach(s => s.classList.remove('on'));
+    // restart animacije traka napretka: ukloni prelaz, vrati na nulu, pa pusti
+    bar.style.transition = 'none';
+    bar.style.width = '0';
+    void bar.offsetWidth;
+    bar.style.transition = `width ${total}s linear`;
+    bar.style.width = '100%';
+    let t = 0;
+    scenes.forEach((s, i) => {
+      timers.push(setTimeout(() => {
+        scenes.forEach(o => o !== s && o.classList.remove('on'));
+        s.classList.add('on');
+      }, t * 1000));
+      t += +s.dataset.dur;
+    });
+    timers.push(setTimeout(play, t * 1000 + 600));
+  }
+
+  // Render kadar po kadar (scripts/render-reel.mjs): umesto pravog vremena svaka animacija se
+  // pauzira i postavi na trenutak t, pa je snimak deterministican bez obzira na brzinu masine
+  const FADE = 0.45;
+  window.TOTAL = total;
+  window.renderAt = t => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    document.body.classList.add('rec', 'render');
+    let start = 0;
+    scenes.forEach(s => {
+      const end = start + +s.dataset.dur;
+      // scena ostaje "on" i tokom odlaska, da joj se elementi ne vrate na pocetno stanje dok bledi
+      const on = t >= start && t < end + FADE;
+      s.classList.toggle('on', on);
+      const fadeIn = Math.min(1, (t - start) / FADE);
+      const fadeOut = Math.min(1, Math.max(0, 1 - (t - end) / FADE));
+      s.style.opacity = on ? (start === 0 ? 1 : Math.min(fadeIn, fadeOut)) : 0;
+      s.dataset.start = start;
+      start = end;
+    });
+    bar.style.transition = 'none';
+    bar.style.width = `${Math.min(100, (t / total) * 100)}%`;
+    document.getAnimations().forEach(a => {
+      const scene = a.effect?.target?.closest?.('.scene');
+      if (!scene) return;
+      a.pause();
+      a.currentTime = Math.max(0, (t - +scene.dataset.start) * 1000);
+    });
+  };
+
+  document.getElementById('replay').onclick = play;
+  // sakriva dugmad pa pusti od pocetka, da snimak ekrana nema nista osim kadra
+  document.getElementById('rec').onclick = () => { document.body.classList.add('rec'); setTimeout(play, 1500); };
+  addEventListener('keydown', e => { if (e.key === 'Escape') document.body.classList.remove('rec'); });
+  addEventListener('resize', fit);
+  fit();
+  if (!location.hash.includes('render')) document.fonts.ready.then(play);
+</script>
+</body>
+</html>

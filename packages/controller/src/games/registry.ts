@@ -25,6 +25,7 @@ export const CONTROLLER_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   splav: () => import('./splav/SplavController'),
   bedem: () => import('./bedem/BedemController'),
   puzla: () => import('./puzla/PuzlaController'),
+  'povuci-potegni': () => import('./povuci-potegni/PovuciPotegniController'),
 };
 
 let prefetchStarted = false;

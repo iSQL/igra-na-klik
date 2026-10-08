@@ -5,6 +5,9 @@ import {
   GAME_DEFINITIONS,
   GAME_ROUND_CONFIG,
   DRAW_GUESS_TIME_OPTIONS,
+  POTEGNI_PREDMETI,
+  POTEGNI_PREDMET_LABEL,
+  POTEGNI_TRAJANJA,
   PUZLA_PIECE_OPTIONS,
   SLOZILICA_LETTER_OPTIONS,
 } from '@igra/shared';
@@ -499,6 +502,16 @@ export function GameSelectScreen() {
       puzlaMode: gameId === 'puzla' ? newGamesConfig.puzlaMode : undefined,
       bedemMode: gameId === 'bedem' ? newGamesConfig.bedemMode : undefined,
       bedemLength: gameId === 'bedem' ? newGamesConfig.bedemLength : undefined,
+      potegniMode: gameId === 'povuci-potegni' ? newGamesConfig.potegniMode : undefined,
+      potegniPredmeti:
+        gameId === 'povuci-potegni' ? newGamesConfig.potegniPredmeti : undefined,
+      potegniTezina: gameId === 'povuci-potegni' ? newGamesConfig.potegniTezina : undefined,
+      potegniTrajanje:
+        gameId === 'povuci-potegni' ? newGamesConfig.potegniTrajanje : undefined,
+      potegniBot:
+        gameId === 'povuci-potegni' && newGamesConfig.potegniMode === 'solo'
+          ? newGamesConfig.potegniBot
+          : undefined,
       language: useLanguageStore.getState().language,
     };
     // Remember for the lobby's "Igraj ponovo" rematch shortcut.
@@ -1027,6 +1040,85 @@ export function GameSelectScreen() {
             {newGamesConfig.bedemMode === 'zajedno'
               ? 'Jedna mapa i jedna kapija za sve — igra se na telefonima.'
               : 'Svako brani svoju mapu i šalje neprijatelje drugima.'}
+          </p>
+        </>
+      )}
+      {game.id === 'povuci-potegni' && (
+        <>
+          <TextPillRow
+            label="Mod"
+            value={newGamesConfig.potegniMode}
+            options={[
+              { value: 'timovi', label: '👥 Dva tima' },
+              { value: 'solo', label: '🤖 Solo protiv bota' },
+            ]}
+            onSelect={(v) => newGamesConfig.setPotegniMode(v === 'solo' ? 'solo' : 'timovi')}
+          />
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+              Predmet (sva tri = mešano)
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {POTEGNI_PREDMETI.map((p) => {
+                const on = newGamesConfig.potegniPredmeti.includes(p);
+                return (
+                  <TogglePill
+                    key={p}
+                    label={POTEGNI_PREDMET_LABEL[p]}
+                    checked={on}
+                    onToggle={() => {
+                      const cur = newGamesConfig.potegniPredmeti;
+                      if (on && cur.length === 1) return;
+                      newGamesConfig.setPotegniPredmeti(
+                        on ? cur.filter((x) => x !== p) : POTEGNI_PREDMETI.filter((x) => x === p || cur.includes(x))
+                      );
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <TextPillRow
+            label="Težina"
+            value={newGamesConfig.potegniTezina}
+            options={[
+              { value: 'osnovna', label: 'Osnovna' },
+              { value: 'srednja', label: 'Srednja' },
+              { value: 'mesovito', label: 'Mešovito' },
+            ]}
+            onSelect={(v) =>
+              newGamesConfig.setPotegniTezina(v === 'osnovna' || v === 'mesovito' ? v : 'srednja')
+            }
+          />
+          <TextPillRow
+            label="Trajanje"
+            value={String(newGamesConfig.potegniTrajanje)}
+            options={POTEGNI_TRAJANJA.map((s) => ({ value: String(s), label: `${s / 60} min` }))}
+            onSelect={(v) => newGamesConfig.setPotegniTrajanje(Number(v))}
+          />
+          {newGamesConfig.potegniMode === 'solo' && (
+            <TextPillRow
+              label="Bot"
+              value={newGamesConfig.potegniBot}
+              options={[
+                { value: 'lak', label: 'Lak' },
+                { value: 'srednji', label: 'Srednji' },
+                { value: 'tezak', label: 'Težak' },
+              ]}
+              onSelect={(v) => newGamesConfig.setPotegniBot(v === 'lak' || v === 'tezak' ? v : 'srednji')}
+            />
+          )}
+          <p
+            style={{
+              fontSize: '0.72rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            {newGamesConfig.potegniMode === 'solo'
+              ? 'Svi igrači vuku zajedno protiv bota.'
+              : 'Tačno vuče tim za 1 korak podeljen brojem igrača u timu; netačno daje pola koraka protivniku i blokira 3 s. Timove birate posle pokretanja.'}
           </p>
         </>
       )}

@@ -116,6 +116,11 @@ export function registerGameHandlers(
       puzlaMode: data.puzlaMode,
       bedemMode: data.bedemMode,
       bedemLength: data.bedemLength,
+      potegniMode: data.potegniMode,
+      potegniPredmeti: data.potegniPredmeti,
+      potegniTezina: data.potegniTezina,
+      potegniTrajanje: data.potegniTrajanje,
+      potegniBot: data.potegniBot,
       language: data.language,
     });
     if (result.error) {

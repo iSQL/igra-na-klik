@@ -327,6 +327,35 @@ export const GAME_RULES: Record<string, GameRuleEntry> = {
 </ul>
 <p class="tip">Radi i bez TV-a — ceo sto je ionako na svakom telefonu. Za 64 i 100 komadića zumirajte slobodno.</p>`,
   },
+  'povuci-potegni': {
+    hint: { title: 'Tačno vuče, netačno koči', text: 'Reši svoj zadatak što brže. Promašaj daje pola koraka protivniku i blokira te 3 sekunde.' },
+    emoji: '🪢',
+    body: `<p>Dva tima vuku konopac preko provalije. Čvor kreće sa sredine, a crta svakog tima je na ivici njegove obale.</p>
+<ul>
+<li>Svako na svom telefonu dobija <strong>svoj zadatak</strong> iz matematike, fizike ili hemije i rešava ga koliko brzo stigne — ne čeka se niko.</li>
+<li><strong>Tačan odgovor</strong> vuče čvor ka tvojoj strani za jedan korak <strong>podeljen brojem igrača u timu</strong>, pa je i 3 na 4 fer: manji tim vuče jače po odgovoru.</li>
+<li><strong>Netačan odgovor</strong> daje protivniku pola tvog koraka i blokira te <strong>3 sekunde</strong>. Pogađanje se ne isplati.</li>
+<li>Neki zadaci traže broj (tastatura, decimalni zarez je dozvoljen), a neki imaju ponuđene odgovore — tap odmah šalje.</li>
+<li>Pobeđuje tim koji dovuče čvor do <strong>svoje crte</strong>. Kad istekne vreme (2, 3 ili 5 minuta), pobeđuje tim kome je čvor bliži.</li>
+<li><strong>Poeni:</strong> 100 za svaki tačan odgovor, a pobedničkom timu još 500.</li>
+<li><strong>Solo protiv bota:</strong> svi igrači su na jednoj strani, a bot vuče sam, svojim tempom (lak, srednji ili težak).</li>
+</ul>
+<p class="tip">Pre početka svako bira stranu konopca na telefonu, a domaćin može jednim tapom da pomiri timove. Radi i bez TV-a.</p>`,
+    steps: [
+      'Izaberi stranu konopca: Crveni ili Plavi.',
+      'Reši svoj zadatak — broj ukucaj ili tapni ponuđeni odgovor.',
+      'Tačno vuče čvor ka tvom timu, netačno ga pomera ka protivniku i blokira te 3 s.',
+      'Ko dovuče čvor do svoje crte pobeđuje; kad istekne vreme, pobeđuje strana kojoj je čvor bliži.',
+    ],
+    points: [
+      { value: '100', label: 'tačan odgovor' },
+      { value: '+500', label: 'pobednički tim' },
+    ],
+    notes: [
+      'Korak se deli brojem igrača u timu, pa nejednaki timovi vuku podjednako.',
+      'Solo: svi zajedno protiv bota.',
+    ],
+  },
   osvajanje: {
     hint: { title: 'Tačan i brz bira prvi', text: 'Odgovorom osvajaš zemlju, a u duelu napadaš susede dok ne padne zamak.' },
     emoji: '🏰',

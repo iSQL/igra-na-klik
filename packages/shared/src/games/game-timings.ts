@@ -150,6 +150,14 @@ export const GAME_TIMING_DEFS: readonly GameTimingDef[] = [
     ],
   },
   {
+    gameId: 'povuci-potegni',
+    gameName: 'Povuci-potegni',
+    fields: [
+      { key: 'SPREMNI_DURATION', label: 'Odbrojavanje pre vuče', min: 2, max: 10, def: 4 },
+      { key: 'KRAJ_DURATION', label: 'Prikaz pobednika', min: 4, max: 40, def: 12 },
+    ],
+  },
+  {
     gameId: 'puzla',
     gameName: 'Puzla',
     fields: [

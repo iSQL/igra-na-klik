@@ -65,3 +65,5 @@ export * from './games/bedem-rules.js';
 export * from './types/puzla.js';
 export * from './games/puzla-rules.js';
 export * from './games/bedem-sprites.js';
+export * from './types/povuci-potegni.js';
+export * from './games/povuci-potegni-rules.js';

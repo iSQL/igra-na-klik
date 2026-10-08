@@ -12,6 +12,10 @@ import type {
   BitkaMode,
   GluvoDobaDeathReveal,
   HotPotatoMode,
+  PotegniBot,
+  PotegniMode,
+  PotegniPredmet,
+  PotegniTezina,
   PuzlaMode,
   TajniAgentiMode,
 } from '@igra/shared';
@@ -63,6 +67,13 @@ interface NewGamesConfigStore {
   // Bedem: shared map vs a map each, and how many waves.
   bedemMode: BedemMode;
   bedemLength: BedemLength;
+  // Povuci-potegni: two teams vs solo against a bot, subjects, difficulty,
+  // length (s) and the bot's pace.
+  potegniMode: PotegniMode;
+  potegniPredmeti: PotegniPredmet[];
+  potegniTezina: PotegniTezina;
+  potegniTrajanje: number;
+  potegniBot: PotegniBot;
   // Generic per-game round count (quiz, draw-guess, fibbage, ko-sam-ja,
   // spot-it). Missing key → use GAME_ROUND_CONFIG default.
   roundCounts: Record<string, number>;
@@ -94,6 +105,11 @@ interface NewGamesConfigStore {
   setPuzlaMode: (m: PuzlaMode) => void;
   setBedemMode: (m: BedemMode) => void;
   setBedemLength: (l: BedemLength) => void;
+  setPotegniMode: (m: PotegniMode) => void;
+  setPotegniPredmeti: (p: PotegniPredmet[]) => void;
+  setPotegniTezina: (t: PotegniTezina) => void;
+  setPotegniTrajanje: (s: number) => void;
+  setPotegniBot: (b: PotegniBot) => void;
   setRoundCount: (gameId: string, n: number) => void;
 }
 
@@ -130,6 +146,11 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       puzlaMode: 'vreme',
       bedemMode: 'zajedno',
       bedemLength: 'standard',
+      potegniMode: 'timovi',
+      potegniPredmeti: ['matematika', 'fizika', 'hemija'],
+      potegniTezina: 'srednja',
+      potegniTrajanje: 180,
+      potegniBot: 'srednji',
       roundCounts: {},
       setKoBiPreRounds: (n) => set({ koBiPreRounds: n }),
       setFakeArtistRounds: (n) => set({ fakeArtistRounds: n }),
@@ -161,6 +182,11 @@ export const useNewGamesConfigStore = create<NewGamesConfigStore>()(
       setPuzlaMode: (m) => set({ puzlaMode: m }),
       setBedemMode: (m) => set({ bedemMode: m }),
       setBedemLength: (l) => set({ bedemLength: l }),
+      setPotegniMode: (m) => set({ potegniMode: m }),
+      setPotegniPredmeti: (p) => set({ potegniPredmeti: p }),
+      setPotegniTezina: (t) => set({ potegniTezina: t }),
+      setPotegniTrajanje: (s) => set({ potegniTrajanje: s }),
+      setPotegniBot: (b) => set({ potegniBot: b }),
       setRoundCount: (gameId, n) =>
         set((s) => ({ roundCounts: { ...s.roundCounts, [gameId]: n } })),
     }),

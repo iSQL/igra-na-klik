@@ -25,6 +25,7 @@ export const HOST_GAME_COMPONENTS: Record<string, LazyGameComponent> = {
   splav: () => import('./splav/SplavHost'),
   bedem: () => import('./bedem/BedemHost'),
   puzla: () => import('./puzla/PuzlaHost'),
+  'povuci-potegni': () => import('./povuci-potegni/PovuciPotegniHost'),
 };
 
 let prefetchStarted = false;

@@ -50,6 +50,7 @@ import { useT } from '../i18n/useT';
 import { ACCENT_HEX } from '../utils/gameAccent';
 import { unpackQuizZip } from '../utils/quizZipImport';
 import { PuzlaImagePicker } from '../components/PuzlaImagePicker';
+import { PotegniConfig, POTEGNI_CONFIG_DEFAULT } from '../components/PotegniConfig';
 import { ProbaPicker, probaRecommended } from '../components/ProbaPicker';
 
 interface QuestionPackSummary {
@@ -299,6 +300,8 @@ export function GameSelectScreen() {
   // Bedem: shared map vs a map each, and how long it runs.
   const [bedemMode, setBedemMode] = useState<BedemMode>('zajedno');
   const [bedemLength, setBedemLength] = useState<BedemLength>('standard');
+  // Povuci-potegni: mod, predmeti, težina, trajanje i bot (dizajn 1c).
+  const [potegni, setPotegni] = useState(POTEGNI_CONFIG_DEFAULT);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -517,6 +520,13 @@ export function GameSelectScreen() {
     if (game.id === 'bedem') {
       payload.bedemMode = bedemMode;
       payload.bedemLength = bedemLength;
+    }
+    if (game.id === 'povuci-potegni') {
+      payload.potegniMode = potegni.mode;
+      payload.potegniPredmeti = potegni.predmeti;
+      payload.potegniTezina = potegni.tezina;
+      payload.potegniTrajanje = potegni.trajanje;
+      if (potegni.mode === 'solo') payload.potegniBot = potegni.bot;
     }
     if (game.id === 'quiz') {
       // Inline file import wins; otherwise the pack multi-select travels as
@@ -1429,6 +1439,9 @@ export function GameSelectScreen() {
                         </div>
                       </div>
                     </>
+                  )}
+                  {game.id === 'povuci-potegni' && (
+                    <PotegniConfig value={potegni} onChange={setPotegni} players={connectedCount} />
                   )}
                   {game.id === 'puzla' && (
                     <>

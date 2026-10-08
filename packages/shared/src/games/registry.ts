@@ -305,6 +305,22 @@ export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
     // Every phone renders the whole table anyway — the TV only mirrors it.
     supportsHostless: true,
   },
+  'povuci-potegni': {
+    id: 'povuci-potegni',
+    name: 'Povuci-potegni',
+    // Jedan igrač igra solo protiv bota; „Dva tima" traže bar dvoje, što
+    // proverava validateStart (platforma gleda samo minimum).
+    minPlayers: 1,
+    maxPlayers: 12,
+    description:
+      'Dva tima vuku konopac preko provalije. Svako na svom telefonu rešava zadatke iz matematike, fizike ili hemije — tačan odgovor vuče čvor ka tvojoj strani!',
+    icon: '🪢',
+    accent: 'amber',
+    category: 'team',
+    estimatedMinutes: 5,
+    // Ceo konopac i zadatak su na svakom telefonu — TV ga samo pokaže veće.
+    supportsHostless: true,
+  },
   osvajanje: {
     id: 'osvajanje',
     // Ime igre je „KvizAtar"; id ostaje `osvajanje` jer po njemu idu

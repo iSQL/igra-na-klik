@@ -546,6 +546,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bedem.name': 'Bedem',
     'game.bedem.description':
       'Odbrana kulama: neprijatelji idu stazom ka kapiji, a vi tapkate po mapi i gradite strelce, katapulte, led i munje. Branite bedem zajedno ili šaljite vukove jedni drugima!',
+    'game.povuci-potegni.name': 'Povuci-potegni',
+    'game.povuci-potegni.description':
+      'Dva tima vuku konopac preko provalije. Svako na svom telefonu rešava zadatke iz matematike, fizike ili hemije — tačan odgovor vuče čvor ka tvojoj strani!',
     'game.puzla.name': 'Puzla',
     'game.puzla.description':
       'Izaberi svoju sliku, igra je iseče na komadiće — složite je zajedno, svako sa svog telefona, pre nego što istekne vreme!',
@@ -673,6 +676,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Svako ima svoje zlato: ubistva i plata pred talas. Kule se nadograđuju do 3. nivoa.',
     'game.bedem.rule3':
       'Zajedno branite jednu kapiju, ili svako svoju — i šaljete neprijatelje protivnicima.',
+    'game.povuci-potegni.blurb': 'Rešavaj zadatke, vuci konopac.',
+    'game.povuci-potegni.rule1':
+      'Dva tima vuku konopac — svako na svom telefonu rešava svoj zadatak iz matematike, fizike ili hemije.',
+    'game.povuci-potegni.rule2':
+      'Tačno vuče čvor ka tvom timu (korak podeljen brojem igrača), netačno daje pola koraka protivniku i blokira te 3 s.',
+    'game.povuci-potegni.rule3':
+      'Ko dovuče čvor do svoje crte pobeđuje; kad istekne vreme, pobeđuje strana kojoj je čvor bliži. Može i solo protiv bota.',
     'game.puzla.blurb': 'Složite svoju sliku zajedno.',
     'game.puzla.rule1':
       'Domaćin izabere sliku sa svog uređaja, a igra je iseče na 16, 36, 64 ili 100 komadića.',
@@ -1226,6 +1236,9 @@ export const STRINGS: Record<Language, Record<string, string>> = {
     'game.bedem.name': 'Rampart',
     'game.bedem.description':
       'Tower defense: enemies march down the path to the gate while you tap the map to build archers, catapults, frost and lightning. Hold the wall together or send wolves at each other!',
+    'game.povuci-potegni.name': 'Tug of War',
+    'game.povuci-potegni.description':
+      'Two teams pull a rope across a chasm. Everyone solves maths, physics or chemistry problems on their own phone — a right answer pulls the knot your way!',
     'game.puzla.name': 'Jigsaw',
     'game.puzla.description':
       'Pick your own picture, the game cuts it into pieces — put it back together as a team, each from your own phone, before time runs out!',
@@ -1357,6 +1370,13 @@ export const STRINGS: Record<Language, Record<string, string>> = {
       'Everyone has their own gold: kills plus pay before each wave. Towers upgrade to level 3.',
     'game.bedem.rule3':
       'Defend one gate together, or one each — and send enemies at your opponents.',
+    'game.povuci-potegni.blurb': 'Solve problems, pull the rope.',
+    'game.povuci-potegni.rule1':
+      'Two teams pull one rope — everyone solves their own maths, physics or chemistry problem on their phone.',
+    'game.povuci-potegni.rule2':
+      'A right answer pulls the knot your way (one step split across your team), a wrong one gives the other side half a step and locks you out for 3 s.',
+    'game.povuci-potegni.rule3':
+      'Drag the knot to your line to win; when time runs out, the side it is closer to wins. You can also play solo against a bot.',
     'game.puzla.blurb': 'Assemble your own picture together.',
     'game.puzla.rule1':
       'The host picks a picture from their device and the game cuts it into 16, 36, 64 or 100 pieces.',

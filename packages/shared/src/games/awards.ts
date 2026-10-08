@@ -283,6 +283,28 @@ export const DIPLOMA_CATALOG: Record<string, DiplomaDef> = {
     tone: 'positive',
     subtitle: 'Poslednji komadić je njegov',
   },
+  // Povuci-potegni
+  'brzi-racun': {
+    id: 'brzi-racun',
+    title: 'Brzi račun',
+    emoji: '🧮',
+    tone: 'positive',
+    subtitle: 'Najviše rešenih zadataka',
+  },
+  'hladna-glava': {
+    id: 'hladna-glava',
+    title: 'Hladna glava',
+    emoji: '🧊',
+    tone: 'positive',
+    subtitle: 'Nijedan promašaj',
+  },
+  'klizav-konopac': {
+    id: 'klizav-konopac',
+    title: 'Klizav konopac',
+    emoji: '🪢',
+    tone: 'shame',
+    subtitle: 'Najviše poklonjenih koraka',
+  },
   // Neutral fillers — guarantee everyone gets a diploma
   'dusa-drustva': {
     id: 'dusa-drustva',

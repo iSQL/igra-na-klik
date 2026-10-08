@@ -348,6 +348,7 @@ async function main(): Promise<void> {
     'asocijacije',
     'spijun',
     'bedem',
+    'povuci-potegni',
   ];
   for (const gameId of SKIP_GAMES) {
     await sleep(600);
