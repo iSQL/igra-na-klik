@@ -64,3 +64,4 @@ export * from './types/bedem.js';
 export * from './games/bedem-rules.js';
 export * from './types/puzla.js';
 export * from './games/puzla-rules.js';
+export * from './games/bedem-sprites.js';

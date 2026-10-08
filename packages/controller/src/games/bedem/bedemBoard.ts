@@ -14,6 +14,7 @@ import type { BedemFrameMap, BedemTowerType } from '@igra/shared';
 import {
   BEDEM_ENEMIES,
   BEDEM_RENDER_DELAY_MS,
+  BEDEM_SPRITES,
   BEDEM_TOWERS,
   bedemPathLength,
   bedemPathPoint,
@@ -148,6 +149,8 @@ export class BedemBoard {
   private dirty = true;
   private activeUntil = 0;
   private sprites = new Map<string, HTMLCanvasElement>();
+  /** Decoded vector art by sprite key; an entry exists once its decode was requested. */
+  private art = new Map<string, HTMLImageElement>();
   private disposed = false;
   private reduced = reducedMotion();
 
@@ -332,25 +335,49 @@ export class BedemBoard {
     return { x: this.px(p.x), y: this.py(p.y) };
   }
 
-  private sprite(emoji: string, size: number): HTMLCanvasElement {
+  /** The decoded vector art for a key, or null while it is still loading (or has none). */
+  private artFor(key: string): HTMLImageElement | null {
+    const have = this.art.get(key);
+    if (have) return have.complete && have.naturalWidth > 0 ? have : null;
+    const svg = BEDEM_SPRITES[key];
+    if (!svg) return null;
+    const img = new Image();
+    img.onload = () => {
+      if (this.disposed) return;
+      this.sprites.clear();
+      this.dirty = true;
+    };
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    this.art.set(key, img);
+    return null;
+  }
+
+  /** Vector art when it is ready, the emoji glyph until then. */
+  private sprite(key: string, emoji: string, size: number): HTMLCanvasElement {
     const px = Math.max(8, Math.round(size * this.dpr));
-    const key = `${emoji}@${px}`;
-    let s = this.sprites.get(key);
+    const art = this.artFor(key);
+    const cacheKey = `${art ? key : emoji}@${px}`;
+    let s = this.sprites.get(cacheKey);
     if (!s) {
       s = document.createElement('canvas');
       s.width = s.height = Math.ceil(px * 1.3);
       const c = s.getContext('2d')!;
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      c.font = `${px}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-      c.fillText(emoji, s.width / 2, s.height / 2 + px * 0.06);
-      this.sprites.set(key, s);
+      if (art) {
+        const off = (s.width - px) / 2;
+        c.drawImage(art, off, off, px, px);
+      } else {
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.font = `${px}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+        c.fillText(emoji, s.width / 2, s.height / 2 + px * 0.06);
+      }
+      this.sprites.set(cacheKey, s);
     }
     return s;
   }
 
-  private drawEmoji(emoji: string, x: number, y: number, size: number): void {
-    const s = this.sprite(emoji, size);
+  private drawSprite(key: string, emoji: string, x: number, y: number, size: number): void {
+    const s = this.sprite(key, emoji, size);
     const w = s.width / this.dpr;
     this.ctx.drawImage(s, x - w / 2, y - w / 2, w, w);
   }
@@ -499,7 +526,7 @@ export class BedemBoard {
       ctx.lineWidth = Math.max(1.5, cell * (own ? 0.09 : 0.06));
       ctx.strokeStyle = ring;
       ctx.stroke();
-      this.drawEmoji(BEDEM_TOWERS[t.type].emoji, x + cell / 2, y + cell * (0.45 + 0.03 * pulse), cell * (0.5 - 0.06 * pulse));
+      this.drawSprite(t.type, BEDEM_TOWERS[t.type].emoji, x + cell / 2, y + cell * (0.45 + 0.03 * pulse), cell * (0.62 - 0.06 * pulse));
       // Level pips.
       for (let k = 0; k < t.level; k++) {
         ctx.beginPath();
@@ -560,7 +587,7 @@ export class BedemBoard {
         ctx.strokeStyle = COLORS.frost;
         ctx.stroke();
       }
-      this.drawEmoji(def.emoji, x, y, rad * 1.45);
+      this.drawSprite(e.t, def.emoji, x, y, rad * 1.7);
       if (hp < 100) {
         const w = Math.max(rad * 2, cell * 0.5);
         const hh = Math.max(2, cell * 0.07);
