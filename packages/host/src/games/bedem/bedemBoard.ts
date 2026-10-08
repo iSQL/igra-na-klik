@@ -122,6 +122,14 @@ const reducedMotion = () =>
 const lerp = (a: Pt, b: Pt, k: number): Pt => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
 const easeOut = (t: number) => 1 - (1 - t) * (1 - t);
 
+/** Per-frame transform for an animated sprite: dy in px, rot in radians. */
+interface Pose {
+  dy: number;
+  rot: number;
+  sx: number;
+  sy: number;
+}
+
 export class BedemBoard {
   private ctx: CanvasRenderingContext2D;
   private cols = 8;
@@ -376,10 +384,52 @@ export class BedemBoard {
     return s;
   }
 
-  private drawSprite(key: string, emoji: string, x: number, y: number, size: number): void {
+  private drawSprite(key: string, emoji: string, x: number, y: number, size: number, pose?: Pose): void {
     const s = this.sprite(key, emoji, size);
     const w = s.width / this.dpr;
-    this.ctx.drawImage(s, x - w / 2, y - w / 2, w, w);
+    if (!pose) {
+      this.ctx.drawImage(s, x - w / 2, y - w / 2, w, w);
+      return;
+    }
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y + pose.dy);
+    ctx.rotate(pose.rot);
+    ctx.scale(pose.sx, pose.sy);
+    ctx.drawImage(s, -w / 2, -w / 2, w, w);
+    ctx.restore();
+  }
+
+  /** A light walk cycle per enemy type. Phase is offset by id so a pack doesn't move in lockstep. */
+  private enemyPose(type: string, id: number, now: number, slowed: boolean, rad: number): Pose | undefined {
+    if (this.reduced) return undefined;
+    const t = (now / 1000) * (slowed ? 0.5 : 1) + id * 1.7;
+    const tau = Math.PI * 2;
+    switch (type) {
+      case 'vuk': {
+        const w = t * tau * 1.6;
+        return { dy: -Math.abs(Math.sin(w)) * rad * 0.22, rot: Math.sin(w) * 0.1, sx: 1, sy: 1 + Math.sin(w * 2) * 0.04 };
+      }
+      case 'pesak': {
+        const w = t * tau * 1.1;
+        return { dy: -Math.abs(Math.sin(w)) * rad * 0.08, rot: Math.sin(w) * 0.17, sx: 1, sy: 1 };
+      }
+      case 'oklopnik': {
+        const w = t * tau * 0.9;
+        return { dy: -Math.abs(Math.sin(w)) * rad * 0.1, rot: Math.sin(w) * 0.05, sx: 1, sy: 1 + Math.sin(w * 2) * 0.03 };
+      }
+      case 'roj': {
+        const w = t * tau * 3.2;
+        return { dy: Math.sin(w * 0.5) * rad * 0.2, rot: Math.sin(w * 0.5) * 0.08, sx: 0.84 + Math.cos(w) * 0.16, sy: 1 };
+      }
+      case 'azdaja': {
+        const w = t * tau * 0.7;
+        const k = 1 + Math.sin(w) * 0.05;
+        return { dy: 0, rot: Math.sin(w * 0.5) * 0.04, sx: k, sy: k };
+      }
+      default:
+        return undefined;
+    }
   }
 
   /** A projectile's target right now: the live enemy, or where it was last seen. */
@@ -587,7 +637,7 @@ export class BedemBoard {
         ctx.strokeStyle = COLORS.frost;
         ctx.stroke();
       }
-      this.drawSprite(e.t, def.emoji, x, y, rad * 1.7);
+      this.drawSprite(e.t, def.emoji, x, y, rad * 1.7, this.enemyPose(e.t, e.i, now, slowed, rad));
       if (hp < 100) {
         const w = Math.max(rad * 2, cell * 0.5);
         const hh = Math.max(2, cell * 0.07);
